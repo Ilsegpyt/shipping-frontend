@@ -22,10 +22,10 @@ import {
 const PAGE_SIZE = 10;
 
 const statusStyles = {
-    ReadyToShip: 'bg-amber-100 text-amber-700',
-    Shipped: 'bg-blue-100 text-blue-700',
-    Returned: 'bg-red-100 text-red-700',
-    Delivered: 'bg-emerald-100 text-emerald-700',
+    ReadyToShip: 'bg-amber-50 text-amber-700 ring-amber-200',
+    Shipped: 'bg-blue-50 text-blue-700 ring-blue-200',
+    Returned: 'bg-red-50 text-red-700 ring-red-200',
+    Delivered: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
 };
 
 function formatDate(value) {
@@ -47,8 +47,35 @@ function formatNumber(value) {
 function getStatusClass(status) {
     return (
         statusStyles[status] ??
-        'bg-slate-100 text-slate-700'
+        'bg-slate-50 text-slate-700 ring-slate-200'
     );
+}
+
+function formatStatus(status) {
+    if (!status) return '-';
+
+    return status
+        .replace(/([a-z])([A-Z])/g, '$1 $2')
+        .replace(/_/g, ' ');
+}
+
+function getStatusDotClass(status) {
+    switch (status) {
+        case 'Delivered':
+            return 'bg-emerald-500';
+
+        case 'Shipped':
+            return 'bg-blue-500';
+
+        case 'ReadyToShip':
+            return 'bg-amber-500';
+
+        case 'Returned':
+            return 'bg-red-500';
+
+        default:
+            return 'bg-slate-400';
+    }
 }
 
 export default function CustomerShipments() {
@@ -84,7 +111,7 @@ export default function CustomerShipments() {
 
             setError(
                 err?.response?.data?.message ??
-                'Unable to load your shipments. Please try again.'
+                    'Unable to load your shipments. Please try again.'
             );
         } finally {
             setLoading(false);
@@ -113,7 +140,7 @@ export default function CustomerShipments() {
 
             setFilesError(
                 err?.response?.data?.message ??
-                'Unable to load declaration files.'
+                    'Unable to load declaration files.'
             );
         } finally {
             setFilesLoading(false);
@@ -159,54 +186,66 @@ export default function CustomerShipments() {
     return (
         <>
             <section className="space-y-6">
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                {/* Header */}
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                     <div>
-                        <h1 className="text-2xl font-semibold text-gray-900">
-                            My Shipments
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-sm">
+                                <Package className="h-5 w-5" />
+                            </div>
 
-                        <p className="mt-2 text-gray-500">
-                            View and track your shipments.
-                        </p>
+                            <div>
+                                <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
+                                    My Shipments
+                                </h1>
+
+                                <p className="mt-1 text-sm text-slate-500">
+                                    View and track your shipments.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <button
                         type="button"
                         onClick={() => loadShipments(pageNumber)}
                         disabled={loading}
-                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <RefreshCw
-                            className={`h-4 w-4 ${loading ? 'animate-spin' : ''
-                                }`}
+                            className={`h-4 w-4 ${
+                                loading ? 'animate-spin' : ''
+                            }`}
                         />
 
                         Refresh
                     </button>
                 </div>
 
+                {/* Summary */}
                 <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm font-medium text-slate-500">
                                     Total Shipments
                                 </p>
 
-                                <p className="mt-2 text-2xl font-semibold text-gray-900">
+                                <p className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
                                     {totalCount}
                                 </p>
                             </div>
 
-                            <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                                <Package className="h-6 w-6" />
+                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+                                <Package className="h-5 w-5" />
                             </div>
                         </div>
                     </div>
                 </div>
 
+                {/* Error */}
                 {error && (
-                    <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                         <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
 
                         <div>
@@ -221,218 +260,317 @@ export default function CustomerShipments() {
                     </div>
                 )}
 
-                <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 px-6 py-4">
-                        <h2 className="font-semibold text-gray-900">
-                            Shipment List
-                        </h2>
+                {/* Shipment List */}
+                <div>
+                    <div className="mb-4 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-base font-semibold text-slate-900">
+                                Your Shipments
+                            </h2>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                {totalCount} shipment
+                                {totalCount !== 1 ? 's' : ''} in your account
+                            </p>
+                        </div>
                     </div>
 
                     {loading ? (
-                        <div className="flex min-h-64 items-center justify-center">
-                            <Loader2 className="h-7 w-7 animate-spin text-blue-600" />
+                        <div className="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white">
+                            <Loader2 className="h-7 w-7 animate-spin text-slate-700" />
                         </div>
                     ) : shipments.length === 0 ? (
-                        <div className="flex min-h-64 flex-col items-center justify-center px-6 text-center">
-                            <div className="rounded-full bg-gray-100 p-4">
-                                <Package className="h-8 w-8 text-gray-400" />
+                        <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 text-center">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-100">
+                                <Package className="h-7 w-7 text-slate-400" />
                             </div>
 
-                            <h3 className="mt-4 font-medium text-gray-900">
+                            <h3 className="mt-4 font-medium text-slate-900">
                                 No shipments found
                             </h3>
 
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 max-w-sm text-sm text-slate-500">
                                 Your shipments will appear here once they are
                                 created.
                             </p>
                         </div>
                     ) : (
-                        <>
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        <div className="grid gap-4">
+                            {shipments.map((shipment) => (
+                                <div
+                                    key={shipment.id}
+                                    className="group rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                                >
+                                    {/* Card Header */}
+                                    <div className="flex flex-col gap-4 border-b border-slate-100 px-5 py-5 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-medium uppercase tracking-wider text-slate-400">
                                                 Shipment Reference
-                                            </th>
+                                            </p>
 
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Mode
-                                            </th>
+                                            <div className="mt-1 flex items-center gap-3">
+                                                <h3 className="truncate text-lg font-semibold text-slate-900">
+                                                    {shipment.shipmentRef ??
+                                                        shipment.id ??
+                                                        '-'}
+                                                </h3>
 
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Carrier
-                                            </th>
-
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Quantity
-                                            </th>
-
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Status
-                                            </th>
-
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Created
-                                            </th>
-
-                                            <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                Actions
-                                            </th>
-                                        </tr>
-                                    </thead>
-
-                                    <tbody className="divide-y divide-gray-100 bg-white">
-                                        {shipments.map((shipment) => (
-                                            <tr
-                                                key={shipment.id}
-                                                className="transition hover:bg-gray-50"
-                                            >
-                                                <td className="whitespace-nowrap px-6 py-4">
-                                                    <span className="font-medium text-gray-900">
-                                                        {shipment.shipmentRef ??
-                                                            shipment.id ??
-                                                            '-'}
-                                                    </span>
-                                                </td>
-
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                                                    {shipment.mode ?? '-'}
-                                                </td>
-
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                                                    {shipment.carrier ?? '-'}
-                                                </td>
-
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                                                    {formatNumber(
-                                                        shipment.quantity
-                                                    )}
-                                                </td>
-
-                                                <td className="whitespace-nowrap px-6 py-4">
+                                                <span
+                                                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${getStatusClass(
+                                                        shipment.status
+                                                    )}`}
+                                                >
                                                     <span
-                                                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusClass(
+                                                        className={`h-1.5 w-1.5 rounded-full ${getStatusDotClass(
                                                             shipment.status
                                                         )}`}
-                                                    >
-                                                        {shipment.status ?? '-'}
-                                                    </span>
-                                                </td>
+                                                    />
 
-                                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-600">
-                                                    {formatDate(
-                                                        shipment.createdAtUtc
+                                                    {formatStatus(
+                                                        shipment.status
                                                     )}
-                                                </td>
+                                                </span>
+                                            </div>
+                                        </div>
 
-                                                <td className="relative whitespace-nowrap px-6 py-4">
+                                        {/* Actions */}
+                                        <div className="relative shrink-0">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setOpenMenuId(
+                                                        openMenuId ===
+                                                            shipment.id
+                                                            ? null
+                                                            : shipment.id
+                                                    )
+                                                }
+                                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                aria-label="Shipment actions"
+                                            >
+                                                <MoreVertical className="h-5 w-5" />
+                                            </button>
+
+                                            {openMenuId === shipment.id && (
+                                                <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white py-1 text-sm shadow-lg">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setOpenMenuId(null);
+
+                                                            navigate(
+                                                                `/customer/shipments/${shipment.id}`
+                                                            );
+                                                        }}
+                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-slate-700 transition hover:bg-slate-50"
+                                                    >
+                                                        <Package className="h-4 w-4" />
+
+                                                        View Tracking
+                                                    </button>
+
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            setOpenMenuId(
-                                                                openMenuId ===
-                                                                    shipment.id
-                                                                    ? null
-                                                                    : shipment.id
+                                                            handleOpenDeclarationFiles(
+                                                                shipment
                                                             )
                                                         }
-                                                        className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-700"
-                                                        aria-label="Shipment actions"
+                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-slate-700 transition hover:bg-slate-50"
                                                     >
-                                                        <MoreVertical className="h-5 w-5" />
+                                                        <FileText className="h-4 w-4" />
+
+                                                        Declaration Files
                                                     </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
 
-                                                    {openMenuId ===
-                                                        shipment.id && (
-                                                            <div className="absolute right-4 z-20 mt-2 w-52 rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-lg">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setOpenMenuId(null);
-                                                                        navigate(
-                                                                            `/customer/shipments/${shipment.id}`
-                                                                        );
-                                                                    }}
-                                                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-gray-700 transition hover:bg-gray-50"
-                                                                >
-                                                                    <Package className="h-4 w-4" />
-                                                                    View Details
-                                                                </button>
+                                    {/* Main Information */}
+                                    <div className="grid gap-0 divide-y divide-slate-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
+                                        <div className="px-5 py-4">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                Mode
+                                            </p>
 
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleOpenDeclarationFiles(
-                                                                            shipment
-                                                                        )
-                                                                    }
-                                                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-gray-700 transition hover:bg-gray-50"
-                                                                >
-                                                                    <FileText className="h-4 w-4" />
-                                                                    Declaration Files
-                                                                </button>
-                                                            </div>
-                                                        )}
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                            <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                                                {shipment.mode ?? '-'}
+                                            </p>
+                                        </div>
 
-                            <div className="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-gray-500">
-                                    Page {pageNumber} of {totalPages}
-                                </p>
+                                        <div className="px-5 py-4">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                Carrier
+                                            </p>
 
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            loadShipments(pageNumber - 1)
-                                        }
-                                        disabled={
-                                            loading || pageNumber <= 1
-                                        }
-                                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                        Previous
-                                    </button>
+                                            <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                                                {shipment.carrier ?? '-'}
+                                            </p>
+                                        </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            loadShipments(pageNumber + 1)
-                                        }
-                                        disabled={
-                                            loading ||
-                                            pageNumber >= totalPages
-                                        }
-                                        className="inline-flex items-center gap-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        Next
-                                        <ChevronRight className="h-4 w-4" />
-                                    </button>
+                                        <div className="px-5 py-4">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                Container
+                                            </p>
+
+                                            <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                                                {shipment.containerType ??
+                                                    '-'}
+                                            </p>
+                                        </div>
+
+                                        <div className="px-5 py-4">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                Quantity
+                                            </p>
+
+                                            <p className="mt-1.5 text-sm font-semibold text-slate-800">
+                                                {formatNumber(
+                                                    shipment.quantity
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Reference Information */}
+                                    <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-5">
+                                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                    Booking
+                                                </p>
+
+                                                <p className="mt-1 text-sm font-medium text-slate-700">
+                                                    {shipment.bookingConfirmationNumber ??
+                                                        '-'}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                    MBL
+                                                </p>
+
+                                                <p className="mt-1 text-sm font-medium text-slate-700">
+                                                    {shipment.MBL ?? '-'}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                    HBL
+                                                </p>
+
+                                                <p className="mt-1 text-sm font-medium text-slate-700">
+                                                    {shipment.HBL ?? '-'}
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                                    Created
+                                                </p>
+
+                                                <p className="mt-1 text-sm font-medium text-slate-700">
+                                                    {formatDate(
+                                                        shipment.createdAtUtc
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Card Footer */}
+                                    <div className="flex flex-col gap-3 border-t border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="text-xs text-slate-400">
+                                                Shipment total
+                                            </p>
+
+                                            <p className="mt-0.5 text-sm font-semibold text-slate-900">
+                                                {shipment.total ?? '-'}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                navigate(
+                                                    `/customer/shipments/${shipment.id}`
+                                                )
+                                            }
+                                            className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
+                                        >
+                                            View Tracking
+                                            <ChevronRight className="ml-1.5 h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
-                        </>
+                            ))}
+                        </div>
                     )}
                 </div>
+
+                {/* Pagination */}
+                {!loading && shipments.length > 0 && (
+                    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-slate-500">
+                            Page{' '}
+                            <span className="font-medium text-slate-700">
+                                {pageNumber}
+                            </span>{' '}
+                            of{' '}
+                            <span className="font-medium text-slate-700">
+                                {totalPages}
+                            </span>
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    loadShipments(pageNumber - 1)
+                                }
+                                disabled={
+                                    loading || pageNumber <= 1
+                                }
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                                Previous
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    loadShipments(pageNumber + 1)
+                                }
+                                disabled={
+                                    loading ||
+                                    pageNumber >= totalPages
+                                }
+                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </section>
 
+            {/* Declaration Files Modal */}
             {selectedShipment && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 backdrop-blur-sm">
+                    <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <div>
-                                <h2 className="text-lg font-semibold text-gray-900">
+                                <h2 className="text-lg font-semibold text-slate-900">
                                     Declaration Files
                                 </h2>
 
-                                <p className="mt-1 text-sm text-gray-500">
+                                <p className="mt-1 text-sm text-slate-500">
                                     Shipment:{' '}
                                     {selectedShipment.shipmentRef ??
                                         selectedShipment.id}
@@ -442,7 +580,7 @@ export default function CustomerShipments() {
                             <button
                                 type="button"
                                 onClick={handleCloseDeclarationFiles}
-                                className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100"
+                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                                 aria-label="Close"
                             >
                                 <X className="h-5 w-5" />
@@ -452,7 +590,7 @@ export default function CustomerShipments() {
                         <div className="max-h-96 overflow-y-auto px-6 py-5">
                             {filesLoading ? (
                                 <div className="flex min-h-32 items-center justify-center">
-                                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                                    <Loader2 className="h-6 w-6 animate-spin text-slate-700" />
                                 </div>
                             ) : filesError ? (
                                 <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -460,9 +598,9 @@ export default function CustomerShipments() {
                                 </div>
                             ) : declarationFiles.length === 0 ? (
                                 <div className="flex min-h-32 flex-col items-center justify-center text-center">
-                                    <FileText className="h-8 w-8 text-gray-400" />
+                                    <FileText className="h-8 w-8 text-slate-400" />
 
-                                    <p className="mt-3 text-sm text-gray-500">
+                                    <p className="mt-3 text-sm text-slate-500">
                                         No declaration files available.
                                     </p>
                                 </div>
@@ -471,19 +609,21 @@ export default function CustomerShipments() {
                                     {declarationFiles.map((file) => (
                                         <div
                                             key={file.id}
-                                            className="flex items-center justify-between rounded-xl border border-gray-200 px-4 py-3"
+                                            className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3"
                                         >
                                             <div className="flex min-w-0 items-center gap-3">
-                                                <FileText className="h-5 w-5 shrink-0 text-blue-600" />
+                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100">
+                                                    <FileText className="h-5 w-5 text-slate-600" />
+                                                </div>
 
                                                 <div className="min-w-0">
-                                                    <p className="truncate text-sm font-medium text-gray-900">
+                                                    <p className="truncate text-sm font-medium text-slate-900">
                                                         {file.fileName ??
                                                             file.originalFileName ??
                                                             'Declaration file'}
                                                     </p>
 
-                                                    <p className="text-xs text-gray-500">
+                                                    <p className="text-xs text-slate-500">
                                                         {file.contentType ??
                                                             'File'}
                                                     </p>
@@ -497,7 +637,7 @@ export default function CustomerShipments() {
                                                         file
                                                     )
                                                 }
-                                                className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50"
+                                                className="rounded-lg p-2 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                                                 title="Download file"
                                             >
                                                 <Download className="h-5 w-5" />
