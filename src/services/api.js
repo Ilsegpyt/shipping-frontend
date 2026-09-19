@@ -9,41 +9,15 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('accessToken');
+        const accessToken = localStorage.getItem('accessToken');
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
         }
 
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
-
-export const downloadDeclarationFile = async (
-    shipmentId,
-    fileId
-) => {
-    const response = await api.get(
-        `/api/shipments/${shipmentId}/declaration-files/${fileId}/download`,
-        {
-            responseType: 'blob',
-        }
-    );
-
-    const blobUrl = window.URL.createObjectURL(response.data);
-
-    const link = document.createElement('a');
-    link.href = blobUrl;
-    link.download = 'declaration-file';
-
-    document.body.appendChild(link);
-    link.click();
-
-    link.remove();
-    window.URL.revokeObjectURL(blobUrl);
-};
 
 export default api;

@@ -5,7 +5,6 @@ import {
     RefreshCw,
     MoreHorizontal,
     Eye,
-    Pencil,
     FileText,
     Download,
 } from "lucide-react";
@@ -15,9 +14,8 @@ import { useNavigate } from "react-router-dom";
 import {
     getShipments,
     getDeclarationFilesByShipmentId,
+    downloadDeclarationFile,
 } from "../../../services/shipmentsService";
-
-import { downloadDeclarationFile } from "../../../services/api";
 
 const PAGE_SIZE = 10;
 
@@ -438,22 +436,7 @@ export default function Shipments() {
                                                                     View Details
                                                                 </button>
 
-                                                                {!isAccountManager && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            navigate(
-                                                                                `/shipments/${shipment.id}/edit`
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                                    >
-                                                                        <Pencil
-                                                                            size={16}
-                                                                        />
-                                                                        Edit Shipment
-                                                                    </button>
-                                                                )}
+
 
                                                                 <button
                                                                     type="button"

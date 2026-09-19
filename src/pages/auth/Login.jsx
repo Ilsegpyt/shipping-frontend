@@ -31,7 +31,14 @@ export default function Login() {
             const currentUser = await getMe();
             setUser(currentUser);
 
-            navigate('/dashboard');
+            if (
+                currentUser.tokenType === 'customer' ||
+                currentUser.tokenType === 'subaccount'
+            ) {
+                navigate('/customer');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             console.error(err);
             setError(
