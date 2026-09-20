@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from '../auth/ProtectedRoute';
 import InternalLayout from '../layouts/InternalLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
+import SubAccountLayout from '../layouts/SubAccountLayout';
 import Login from '../pages/auth/Login';
 
 // Internal pages
@@ -15,6 +16,7 @@ import Schedules from '../pages/internal/super-admin/Schedules';
 import ScheduleDetails from '../pages/internal/super-admin/ScheduleDetails';
 import ScheduleEdit from '../pages/internal/super-admin/ScheduleEdit';
 import ShipmentDetails from '../pages/internal/super-admin/ShipmentDetails';
+import ShipmentEdit from '../pages/internal/shared/ShipmentEdit';
 import Shipments from '../pages/internal/super-admin/Shipments';
 
 // Customer pages
@@ -27,6 +29,10 @@ import CustomerTeamAccess from '../pages/customer/CustomerTeamAccess';
 import CustomerReports from '../pages/customer/CustomerReports';
 import CustomerNotifications from '../pages/customer/CustomerNotifications';
 import CustomerVoice from '../pages/customer/CustomerVoice';
+
+// Sub Account pages
+import SubAccountDashboard from '../pages/sub-account/SubAccountDashboard';
+import SubAccountReports from '../pages/sub-account/SubAccountReports';
 
 export default function AppRoutes() {
     return (
@@ -88,6 +94,7 @@ export default function AppRoutes() {
                     >
                         <Route index element={<Shipments />} />
                         <Route path=":id" element={<ShipmentDetails />} />
+                        <Route path=":id/edit" element={<ShipmentEdit />} />
                     </Route>
                 </Route>
 
@@ -119,6 +126,7 @@ export default function AppRoutes() {
                         }
                     >
                         <Route index element={<CustomerShipments />} />
+
                         <Route
                             path=":id"
                             element={<CustomerShipmentDetails />}
@@ -153,10 +161,30 @@ export default function AppRoutes() {
                         element={<CustomerVoice />}
                     />
                 </Route>
+
+                {/* Sub Account Portal */}
+                <Route element={<SubAccountLayout />}>
+                    <Route
+                        path="/subaccount"
+                        element={<ProtectedRoute />}
+                    >
+                        <Route index element={<SubAccountDashboard />} />
+                    </Route>
+
+                    <Route
+                        path="/subaccount/reports"
+                        element={<ProtectedRoute />}
+                    >
+                        <Route index element={<SubAccountReports />} />
+                    </Route>
+                </Route>
             </Route>
 
             {/* Fallback */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route
+                path="*"
+                element={<Navigate to="/login" replace />}
+            />
         </Routes>
     );
 }

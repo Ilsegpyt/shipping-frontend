@@ -29,18 +29,21 @@ export default function Login() {
             );
 
             const currentUser = await getMe();
+
+            console.log('LOGIN USER:', currentUser);
+
             setUser(currentUser);
 
-            if (
-                currentUser.tokenType === 'customer' ||
-                currentUser.tokenType === 'subaccount'
-            ) {
+            if (currentUser.tokenType === 'subaccount') {
+                navigate('/subaccount');
+            } else if (currentUser.tokenType === 'customer') {
                 navigate('/customer');
             } else {
                 navigate('/dashboard');
             }
         } catch (err) {
             console.error(err);
+
             setError(
                 'Login failed. Please check your email or password.'
             );

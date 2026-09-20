@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
     getShipmentById,
     updateShipment,
-} from '../services/shipmentsService';
+} from '../../../services/shipmentsService';
 
 const shipmentStatuses = [
     { value: 'Received', label: 'Received' },

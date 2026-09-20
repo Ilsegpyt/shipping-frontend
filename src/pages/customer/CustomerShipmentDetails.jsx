@@ -10,6 +10,7 @@ import {
     Loader2,
     MapPin,
     Package,
+    Plane,
     Ship,
     Upload,
     X,
@@ -358,57 +359,59 @@ export default function CustomerShipmentDetails() {
             return null;
         }
 
-        const departureDate =
-            schedule.departureDate;
-
-        const arrivalDate =
-            schedule.arrival;
+        const departureDate = schedule.departureDate;
+        const arrivalDate = schedule.arrival;
 
         if (!departureDate || !arrivalDate) {
             return null;
         }
 
-        const departure = new Date(
-            departureDate
-        );
-
-        const arrival = new Date(
-            arrivalDate
-        );
-
+        const departure = new Date(departureDate);
+        const arrival = new Date(arrivalDate);
         const today = new Date();
+
+        const total = arrival.getTime() - departure.getTime();
+        const elapsed = today.getTime() - departure.getTime();
 
         let progress = 0;
 
-        if (today <= departure) {
-            progress = 0;
-        } else if (today >= arrival) {
+        if (today >= arrival) {
             progress = 100;
-        } else {
-            const total =
-                arrival.getTime() -
-                departure.getTime();
+        } else if (today > departure && total > 0) {
+            progress = Math.round(
+                Math.min(100, Math.max(0, (elapsed / total) * 100))
+            );
+        }
 
-            const elapsed =
-                today.getTime() -
-                departure.getTime();
+        const totalDays = Math.max(0, Math.ceil(total / 86400000));
+        const elapsedDays = Math.min(
+            totalDays,
+            Math.max(0, Math.floor(elapsed / 86400000))
+        );
+        const remainingDays = Math.max(0, totalDays - elapsedDays);
 
-            progress =
-                total > 0
-                    ? Math.round(
-                          (elapsed / total) * 100
-                      )
-                    : 0;
+        let phase = 'Scheduled';
+        if (today >= arrival) {
+            phase = 'Completed';
+        } else if (today > departure) {
+            phase = 'In Transit';
         }
 
         return {
             departureDate,
             arrivalDate,
             progress,
-            isBeforeDeparture:
-                today < departure,
-            isAfterArrival:
-                today >= arrival,
+            phase,
+            elapsedLabel:
+                phase === 'Scheduled'
+                    ? 'Not departed'
+                    : `${elapsedDays} day${elapsedDays === 1 ? '' : 's'} elapsed`,
+            durationLabel:
+                `${totalDays} day${totalDays === 1 ? '' : 's'} planned`,
+            remainingLabel:
+                phase === 'Completed'
+                    ? 'Arrived'
+                    : `${remainingDays} day${remainingDays === 1 ? '' : 's'} remaining`,
         };
     }, [schedule]);
 
@@ -509,202 +512,215 @@ export default function CustomerShipmentDetails() {
                 </div>
             </div>
 
-            {/* Shipment Route */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                            <MapPin className="h-6 w-6" />
-                        </div>
-
-                        <div>
-                            <h2 className="font-semibold text-gray-900">
-                                Shipment Route
-                            </h2>
-
-                            <p className="mt-1 text-sm text-gray-500">
-                                Planned route based on
-                                the shipment schedule.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {scheduleLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                    </div>
-                ) : scheduleError ? (
-                    <div className="p-6">
-                        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-
-                            <div>
-                                <p className="font-medium">
-                                    Schedule information
-                                </p>
-
-                                <p className="mt-1">
-                                    {scheduleError}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                ) : schedule ? (
-                    <div className="px-6 py-8">
-                        <div className="grid gap-8 md:grid-cols-[1fr_auto_1fr] md:items-center">
-                            <div>
-                                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                                    Origin
-                                </p>
-
-                                <p className="mt-2 text-xl font-semibold text-gray-900">
-                                    {schedule.origin ??
-                                        '-'}
-                                </p>
-
-                                <p className="mt-1 text-sm text-gray-500">
-                                    {schedule.departurePortCode ??
-                                        '-'}
-                                    {schedule.departureCountry
-                                        ? ` · ${schedule.departureCountry}`
-                                        : ''}
-                                </p>
-                            </div>
-
-                            <div className="hidden md:block">
-                                <div className="flex items-center gap-2 text-blue-600">
-                                    <div className="h-px w-16 bg-blue-200" />
-
-                                    <Ship className="h-5 w-5" />
-
-                                    <div className="h-px w-16 bg-blue-200" />
-                                </div>
-                            </div>
-
-                            <div className="md:text-right">
-                                <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
-                                    Destination
-                                </p>
-
-                                <p className="mt-2 text-xl font-semibold text-gray-900">
-                                    {schedule.destination ??
-                                        '-'}
-                                </p>
-
-                                <p className="mt-1 text-sm text-gray-500">
-                                    {schedule.arrivalPortCode ??
-                                        '-'}
-                                    {schedule.arrivalCountry
-                                        ? ` · ${schedule.arrivalCountry}`
-                                        : ''}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="px-6 py-8 text-center text-sm text-gray-500">
-                        No schedule information
-                        available.
-                    </div>
-                )}
-            </div>
-
             {/* Time-Based Tracking */}
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                        <div className="rounded-xl bg-indigo-50 p-3 text-indigo-600">
-                            <Clock3 className="h-6 w-6" />
-                        </div>
-
-                        <div>
-                            <h2 className="font-semibold text-gray-900">
-                                Time-Based Tracking
-                            </h2>
-
-                            <p className="mt-1 text-sm text-gray-500">
-                                Planned shipment timeline
-                                based on the schedule.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
                 {scheduleLoading ? (
                     <div className="flex items-center justify-center py-12">
                         <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                     </div>
                 ) : !schedule || !timeline ? (
                     <div className="px-6 py-10 text-center text-sm text-gray-500">
-                        No timeline information
-                        available.
+                        No timeline information available.
                     </div>
                 ) : (
-                    <div className="space-y-8 px-6 py-8">
-                        <div>
-                            <div className="mb-3 flex items-center justify-between text-sm">
-                                <span className="font-medium text-gray-700">
-                                    Schedule Progress
-                                </span>
+                    <div className="px-6 py-8">
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                        Journey status
+                                    </p>
 
-                                <span className="font-semibold text-blue-600">
-                                    {timeline.progress}%
-                                </span>
+                                    <p className="mt-1 text-lg font-semibold text-slate-900">
+                                        {timeline.phase}
+                                    </p>
+                                </div>
+
+                                <div className="text-left sm:text-right">
+                                    <p className="text-2xl font-bold text-blue-600">
+                                        {timeline.progress}%
+                                    </p>
+
+                                    <p className="text-xs text-slate-500">
+                                        Planned journey progress
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                    className="h-full rounded-full bg-blue-600 transition-all duration-500"
-                                    style={{
-                                        width: `${timeline.progress}%`,
-                                    }}
-                                />
-                            </div>
+                            <div className="mt-8">
+                                <div className="relative mx-5 h-11 sm:mx-8">
+                                    {/* One shared track: points, progress, and vehicle all use the same coordinate system. */}
+                                    <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-slate-200" />
 
-                            <p className="mt-3 text-xs text-gray-500">
-                                This represents the
-                                planned schedule timeline,
-                                not actual tracking
-                                events.
-                            </p>
-                        </div>
+                                    <div
+                                        className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-blue-600 transition-all duration-500"
+                                        style={{ width: `${timeline.progress}%` }}
+                                    />
 
-                        <div className="relative">
-                            <div className="absolute bottom-5 left-5 top-5 w-px bg-slate-200" />
-
-                            <div className="relative space-y-8">
-                                <TimelinePoint
-                                    title="Departure"
-                                    date={formatDate(
-                                        timeline.departureDate
-                                    )}
-                                    icon={
+                                    <div
+                                        className={`absolute left-0 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${
+                                            timeline.progress > 0
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white text-slate-500 ring-1 ring-slate-200'
+                                        }`}
+                                    >
                                         <CalendarDays className="h-5 w-5" />
-                                    }
-                                    active={
-                                        !timeline.isBeforeDeparture
-                                    }
-                                />
+                                    </div>
 
-                                <TimelinePoint
-                                    title="Arrival"
-                                    date={formatDate(
-                                        timeline.arrivalDate
-                                    )}
-                                    icon={
+                                    <div
+                                        className="absolute top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-blue-600 text-white shadow-md transition-all duration-500"
+                                        style={{ left: `${timeline.progress}%` }}
+                                        title={`${timeline.progress}% of planned journey`}
+                                    >
+                                        {schedule.mode === 'Air' ? (
+                                            <Plane className="h-5 w-5" />
+                                        ) : (
+                                            <Ship className="h-5 w-5" />
+                                        )}
+                                    </div>
+
+                                    <div
+                                        className={`absolute left-full top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${
+                                            timeline.progress === 100
+                                                ? 'bg-emerald-600 text-white'
+                                                : 'bg-white text-slate-500 ring-1 ring-slate-200'
+                                        }`}
+                                    >
                                         <CheckCircle2 className="h-5 w-5" />
-                                    }
-                                    active={
-                                        timeline.isAfterArrival
-                                    }
-                                />
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-3 gap-4 text-center">
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Departure</p>
+                                        <p className="mt-1 font-semibold text-slate-900">{schedule.origin ?? '-'}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{schedule.departurePortCode ?? '-'}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{formatDate(timeline.departureDate)}</p>
+                                    </div>
+
+                                    <div className="self-center">
+                                        <p className="text-sm font-semibold text-blue-600">{timeline.phase}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{formatTimeSpan(schedule.transitTime)} planned transit</p>
+                                    </div>
+
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Arrival</p>
+                                        <p className="mt-1 font-semibold text-slate-900">{schedule.destination ?? '-'}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{schedule.arrivalPortCode ?? '-'}</p>
+                                        <p className="mt-1 text-xs text-slate-500">{formatDate(timeline.arrivalDate)}</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3 text-xs font-medium text-slate-600">
+                                    <span>{timeline.elapsedLabel}</span>
+                                    <span className="text-blue-600">{timeline.progress}% complete</span>
+                                    <span>{timeline.remainingLabel}</span>
+                                </div>
+                            </div>
+
+                            <div className="mt-5 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
+                                <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
+                                <p>
+                                    This is a schedule-based estimate calculated from the planned departure and arrival dates. It does not represent live shipment tracking.
+                                </p>
                             </div>
                         </div>
                     </div>
                 )}
             </div>
 
+            {/* Shipment Information */}
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div className="flex items-center gap-3 border-b border-gray-200 px-6 py-5">
+                    <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                        <Package className="h-6 w-6" />
+                    </div>
+
+                    <div>
+                        <h2 className="font-semibold text-gray-900">
+                            Shipment Information
+                        </h2>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Shipment details and
+                            references.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid gap-6 px-6 py-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <DetailItem
+                        label="Shipment Reference"
+                        value={
+                            shipment.shipmentRef ??
+                            shipment.id
+                        }
+                    />
+
+                    <DetailItem
+                        label="Shipment ID"
+                        value={shipment.id}
+                    />
+
+                    <DetailItem
+                        label="Status"
+                        value={shipment.status}
+                    />
+
+                    <DetailItem
+                        label="Mode"
+                        value={shipment.mode}
+                    />
+
+                    <DetailItem
+                        label="Carrier"
+                        value={shipment.carrier}
+                    />
+
+                    <DetailItem
+                        label="Container Type"
+                        value={
+                            shipment.containerType
+                        }
+                    />
+
+                    <DetailItem
+                        label="Quantity"
+                        value={shipment.quantity}
+                    />
+
+                    <DetailItem
+                        label="Booking Confirmation"
+                        value={
+                            shipment.bookingConfirmationNumber
+                        }
+                    />
+
+                    <DetailItem
+                        label="MBL"
+                        value={shipment.mbl}
+                    />
+
+                    <DetailItem
+                        label="HBL"
+                        value={shipment.hbl}
+                    />
+
+                    <DetailItem
+                        label="MAWB"
+                        value={shipment.mawb}
+                    />
+
+                    <DetailItem
+                        label="Created"
+                        value={formatDateTime(
+                            shipment.createdAtUtc
+                        )}
+                    />
+                </div>
+            </div>
+
+            
             {/* Schedule Details */}
             {schedule && (
                 <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -805,97 +821,6 @@ export default function CustomerShipmentDetails() {
                     </div>
                 </div>
             )}
-
-            {/* Shipment Information */}
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="flex items-center gap-3 border-b border-gray-200 px-6 py-5">
-                    <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
-                        <Package className="h-6 w-6" />
-                    </div>
-
-                    <div>
-                        <h2 className="font-semibold text-gray-900">
-                            Shipment Information
-                        </h2>
-
-                        <p className="mt-1 text-sm text-gray-500">
-                            Shipment details and
-                            references.
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid gap-6 px-6 py-6 sm:grid-cols-2 lg:grid-cols-3">
-                    <DetailItem
-                        label="Shipment Reference"
-                        value={
-                            shipment.shipmentRef ??
-                            shipment.id
-                        }
-                    />
-
-                    <DetailItem
-                        label="Shipment ID"
-                        value={shipment.id}
-                    />
-
-                    <DetailItem
-                        label="Status"
-                        value={shipment.status}
-                    />
-
-                    <DetailItem
-                        label="Mode"
-                        value={shipment.mode}
-                    />
-
-                    <DetailItem
-                        label="Carrier"
-                        value={shipment.carrier}
-                    />
-
-                    <DetailItem
-                        label="Container Type"
-                        value={
-                            shipment.containerType
-                        }
-                    />
-
-                    <DetailItem
-                        label="Quantity"
-                        value={shipment.quantity}
-                    />
-
-                    <DetailItem
-                        label="Booking Confirmation"
-                        value={
-                            shipment.bookingConfirmationNumber
-                        }
-                    />
-
-                    <DetailItem
-                        label="MBL"
-                        value={shipment.mbl}
-                    />
-
-                    <DetailItem
-                        label="HBL"
-                        value={shipment.hbl}
-                    />
-
-                    <DetailItem
-                        label="MAWB"
-                        value={shipment.mawb}
-                    />
-
-                    <DetailItem
-                        label="Created"
-                        value={formatDateTime(
-                            shipment.createdAtUtc
-                        )}
-                    />
-                </div>
-            </div>
 
             {/* Declaration Files */}
             <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
