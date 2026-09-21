@@ -122,11 +122,20 @@ export default function CustomerReports() {
 
             const matchesService =
                 !scopeForm.service ||
-                report.service === scopeForm.service;
+                (scopeForm.service === 'Both'
+                    ? report.service === 'CustomsClearance' ||
+                    report.service === 'Customs Clearance' ||
+                    report.service === 'Transportation' ||
+                    report.service === 'Both'
+                    : report.service === scopeForm.service);
 
             const matchesType =
                 !scopeForm.type ||
-                report.shipmentType === scopeForm.type;
+                (scopeForm.type === 'All Shipments'
+                    ? report.shipmentType === 'Import' ||
+                    report.shipmentType === 'Export' ||
+                    report.shipmentType === 'All'
+                    : report.shipmentType === scopeForm.type);
 
             return (
                 matchesSearch &&

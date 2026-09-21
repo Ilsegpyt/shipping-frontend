@@ -11,7 +11,7 @@ import Dashboard from '../pages/internal/shared/Dashboard';
 import Profile from '../pages/internal/shared/Profile';
 import Users from '../pages/internal/super-admin/Users';
 import Customers from '../pages/internal/shared/Customers';
-import Reports from '../pages/internal/super-admin/Reports';
+import Reports from '../pages/internal/shared/Reports';
 import Schedules from '../pages/internal/super-admin/Schedules';
 import ScheduleDetails from '../pages/internal/super-admin/ScheduleDetails';
 import ScheduleEdit from '../pages/internal/super-admin/ScheduleEdit';

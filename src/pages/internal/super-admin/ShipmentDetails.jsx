@@ -1,15 +1,22 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '../../../auth/AuthContext';
 import { useNavigate, useParams } from 'react-router-dom';
+
 import {
     ArrowLeft,
     FileText,
     Pencil,
     RefreshCw,
+    Upload,
+    Download,
 } from 'lucide-react';
+
+import api from '../../../services/api';
 
 import {
     getShipmentById,
     getDeclarationFilesByShipmentId,
+    downloadDeclarationFile,
 } from '../../../services/shipmentsService';
 
 function formatDate(value) {
@@ -89,24 +96,69 @@ function Section({ title, children }) {
     );
 }
 
+const categoryOptions = [
+    { value: '1', label: 'Sea' },
+    { value: '2', label: 'Air' },
+    { value: '3', label: 'Domestic' },
+    { value: '4', label: 'Financial' },
+];
+
+const serviceOptions = [
+    { value: '1', label: 'Freight' },
+    { value: '2', label: 'Customs Clearance' },
+    { value: '3', label: 'Transportation' },
+    { value: '4', label: 'Both' },
+];
+
+const shipmentTypeOptions = [
+    { value: '1', label: 'All' },
+    { value: '2', label: 'Import' },
+    { value: '3', label: 'Export' },
+];
+
 export default function ShipmentDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
 
     const [shipment, setShipment] = useState(null);
     const [declarationFiles, setDeclarationFiles] = useState([]);
+
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    const [uploadModalOpen, setUploadModalOpen] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const [uploadSuccess, setUploadSuccess] = useState('');
+
+    const [selectedFile, setSelectedFile] = useState(null);
+
+    const [uploadForm, setUploadForm] = useState({
+        category: '',
+        service: '',
+        shipmentType: '',
+    });
+
+    const [downloadingFileId, setDownloadingFileId] = useState(null);
+
+    const isAccountManager =
+        user?.roleName === 'Account Manager';
+
+    const canUploadReport =
+        isAccountManager &&
+        user?.permissions?.includes('reports.upload');
 
     const loadShipment = async () => {
         try {
             setLoading(true);
             setError('');
 
-            const [shipmentData, declarationFilesData] = await Promise.all([
-                getShipmentById(id),
-                getDeclarationFilesByShipmentId(id),
-            ]);
+            const [shipmentData, declarationFilesData] =
+                await Promise.all([
+                    getShipmentById(id),
+                    getDeclarationFilesByShipmentId(id),
+                ]);
 
             setShipment(shipmentData);
             setDeclarationFiles(declarationFilesData);
@@ -124,6 +176,164 @@ export default function ShipmentDetails() {
     useEffect(() => {
         loadShipment();
     }, [id]);
+
+    const resetUploadForm = () => {
+        setUploadForm({
+            category: '',
+            service: '',
+            shipmentType: '',
+        });
+
+        setSelectedFile(null);
+        setUploadError('');
+        setUploadSuccess('');
+    };
+
+    const openUploadModal = () => {
+        resetUploadForm();
+        setUploadModalOpen(true);
+    };
+
+    const closeUploadModal = () => {
+        if (uploading) return;
+
+        setUploadModalOpen(false);
+        resetUploadForm();
+    };
+
+    const handleUploadChange = (event) => {
+        const { name, value } = event.target;
+
+        setUploadForm((previous) => ({
+            ...previous,
+            [name]: value,
+        }));
+
+        setUploadError('');
+    };
+
+    const handleFileChange = (event) => {
+        const file = event.target.files?.[0] ?? null;
+
+        setSelectedFile(file);
+        setUploadError('');
+    };
+
+    const handleUpload = async (event) => {
+        event.preventDefault();
+
+        setUploadError('');
+        setUploadSuccess('');
+
+        if (!shipment?.customerId) {
+            setUploadError('Customer ID is missing.');
+            return;
+        }
+
+        if (!shipment?.shipmentRef) {
+            setUploadError('Shipment Reference is missing.');
+            return;
+        }
+
+        if (!uploadForm.category) {
+            setUploadError('Category is required.');
+            return;
+        }
+
+        if (!uploadForm.service) {
+            setUploadError('Service is required.');
+            return;
+        }
+
+        if (!uploadForm.shipmentType) {
+            setUploadError('Shipment Type is required.');
+            return;
+        }
+
+        if (!selectedFile) {
+            setUploadError('Please select a file.');
+            return;
+        }
+
+        try {
+            setUploading(true);
+
+            const formData = new FormData();
+
+            formData.append(
+                'customerId',
+                shipment.customerId
+            );
+
+            formData.append(
+                'shipmentRef',
+                shipment.shipmentRef
+            );
+
+            formData.append(
+                'category',
+                uploadForm.category
+            );
+
+            formData.append(
+                'service',
+                uploadForm.service
+            );
+
+            formData.append(
+                'shipmentType',
+                uploadForm.shipmentType
+            );
+
+            formData.append('file', selectedFile);
+
+            await api.post('/api/reports', formData);
+
+            setUploadSuccess(
+                'Report uploaded successfully.'
+            );
+
+            setTimeout(() => {
+                setUploadModalOpen(false);
+                resetUploadForm();
+            }, 800);
+        } catch (err) {
+            console.error('Failed to upload report:', err);
+
+            setUploadError(
+                err.response?.data?.error ||
+                err.response?.data?.message ||
+                err.response?.data ||
+                'Failed to upload report.'
+            );
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleDownloadDeclarationFile = async (file) => {
+        try {
+            setDownloadingFileId(file.id);
+
+            await downloadDeclarationFile(
+                id,
+                file.id
+            );
+        } catch (err) {
+            console.error(
+                'Failed to download declaration file:',
+                err
+            );
+
+            setError(
+                err.response?.data?.error ||
+                err.response?.data?.message ||
+                'Failed to download declaration file.'
+            );
+        } finally {
+            setDownloadingFileId(null);
+        }
+    };
 
     if (loading) {
         return (
@@ -166,6 +376,7 @@ export default function ShipmentDetails() {
     return (
         <div className="min-h-full bg-gray-50 p-4 sm:p-6">
             <div className="mx-auto max-w-7xl space-y-6">
+
                 {/* Header */}
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                     <div>
@@ -199,7 +410,9 @@ export default function ShipmentDetails() {
 
                         <button
                             type="button"
-                            onClick={() => navigate(`/shipments/${id}/edit`)}
+                            onClick={() =>
+                                navigate(`/shipments/${id}/edit`)
+                            }
                             className="inline-flex items-center gap-2 rounded-lg bg-[#111827] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1f2937]"
                         >
                             <Pencil className="h-4 w-4" />
@@ -348,13 +561,232 @@ export default function ShipmentDetails() {
                                                 </p>
                                             </div>
                                         </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleDownloadDeclarationFile(file)
+                                            }
+                                            disabled={
+                                                downloadingFileId === file.id
+                                            }
+                                            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <Download className="h-4 w-4" />
+
+                                            {downloadingFileId === file.id
+                                                ? 'Downloading...'
+                                                : 'Download'}
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
                 </Section>
+
+                {/* Reports */}
+                <Section title="Reports">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm font-medium text-slate-800">
+                                Shipment Reports
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                                Upload reports related to this customer and shipment.
+                            </p>
+                        </div>
+
+                        {canUploadReport && (
+                            <button
+                                type="button"
+                                onClick={openUploadModal}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#111827] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1f2937]"
+                            >
+                                <Upload className="h-4 w-4" />
+                                Upload Report
+                            </button>
+                        )}
+                    </div>
+                </Section>
             </div>
+
+            {/* Upload Report Modal */}
+            {uploadModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                        <div className="mb-5">
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Upload Report
+                            </h2>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                                Upload a report for the current shipment.
+                            </p>
+                        </div>
+
+                        <div className="mb-5 grid grid-cols-1 gap-3 rounded-lg bg-slate-50 p-4 sm:grid-cols-2">
+                            <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                    Customer ID
+                                </p>
+
+                                <p className="mt-1 break-all text-sm font-medium text-slate-800">
+                                    {shipment.customerId}
+                                </p>
+                            </div>
+
+                            <div>
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                    Shipment Reference
+                                </p>
+
+                                <p className="mt-1 break-all text-sm font-medium text-slate-800">
+                                    {shipment.shipmentRef}
+                                </p>
+                            </div>
+                        </div>
+
+                        {uploadError && (
+                            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                                {typeof uploadError === 'string'
+                                    ? uploadError
+                                    : 'Failed to upload report.'}
+                            </div>
+                        )}
+
+                        {uploadSuccess && (
+                            <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-600">
+                                {uploadSuccess}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleUpload}>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                        Category *
+                                    </label>
+
+                                    <select
+                                        name="category"
+                                        value={uploadForm.category}
+                                        onChange={handleUploadChange}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        <option value="">
+                                            Select category
+                                        </option>
+
+                                        {categoryOptions.map((option) => (
+                                            <option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                        Service *
+                                    </label>
+
+                                    <select
+                                        name="service"
+                                        value={uploadForm.service}
+                                        onChange={handleUploadChange}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        <option value="">
+                                            Select service
+                                        </option>
+
+                                        {serviceOptions.map((option) => (
+                                            <option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                        Shipment Type *
+                                    </label>
+
+                                    <select
+                                        name="shipmentType"
+                                        value={uploadForm.shipmentType}
+                                        onChange={handleUploadChange}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                                    >
+                                        <option value="">
+                                            Select shipment type
+                                        </option>
+
+                                        {shipmentTypeOptions.map((option) => (
+                                            <option
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                        Report File *
+                                    </label>
+
+                                    <input
+                                        type="file"
+                                        onChange={handleFileChange}
+                                        className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700"
+                                    />
+
+                                    {selectedFile && (
+                                        <p className="mt-2 text-xs text-slate-500">
+                                            Selected: {selectedFile.name}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="mt-6 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={closeUploadModal}
+                                        disabled={uploading}
+                                        className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        disabled={uploading}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-[#111827] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Upload className="h-4 w-4" />
+
+                                        {uploading
+                                            ? 'Uploading...'
+                                            : 'Upload Report'}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
