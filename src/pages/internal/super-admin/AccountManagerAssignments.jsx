@@ -9,6 +9,7 @@ import {
     CheckCircle2,
     XCircle,
     UserPlus,
+    UserMinus,
 } from "lucide-react";
 
 import {
@@ -16,6 +17,7 @@ import {
     getUnassignedCustomers,
     assignAccountManager,
     changeAccountManager,
+    removeAccountManager,
 } from "../../../services/accountManagerAssignmentsService";
 
 const PAGE_SIZE = 10;
@@ -45,7 +47,7 @@ export default function AccountManagerAssignments() {
     const [assigning, setAssigning] = useState(false);
     const [assignError, setAssignError] = useState("");
 
-    // Change modal
+    // Change manager modal
     const [changeModalCustomer, setChangeModalCustomer] =
         useState(null);
 
@@ -57,6 +59,13 @@ export default function AccountManagerAssignments() {
 
     const [changing, setChanging] = useState(false);
     const [changeError, setChangeError] = useState("");
+
+    // Remove manager modal
+    const [removeModalCustomer, setRemoveModalCustomer] =
+        useState(null);
+
+    const [removing, setRemoving] = useState(false);
+    const [removeError, setRemoveError] = useState("");
 
     async function loadAssignments() {
         try {
@@ -206,19 +215,13 @@ export default function AccountManagerAssignments() {
         if (managerPage > managerTotalPages) {
             setManagerPage(managerTotalPages);
         }
-    }, [
-        managerPage,
-        managerTotalPages,
-    ]);
+    }, [managerPage, managerTotalPages]);
 
     useEffect(() => {
         if (customerPage > customerTotalPages) {
             setCustomerPage(customerTotalPages);
         }
-    }, [
-        customerPage,
-        customerTotalPages,
-    ]);
+    }, [customerPage, customerTotalPages]);
 
     const toggleManager = (managerId) => {
         setExpandedManagers((current) => ({
@@ -226,6 +229,10 @@ export default function AccountManagerAssignments() {
             [managerId]: !current[managerId],
         }));
     };
+
+    // =========================
+    // Assign
+    // =========================
 
     const openAssignModal = (customer) => {
         setAssignModalCustomer(customer);
@@ -274,6 +281,10 @@ export default function AccountManagerAssignments() {
             setAssigning(false);
         }
     };
+
+    // =========================
+    // Change Manager
+    // =========================
 
     const openChangeModal = (
         customer,
@@ -327,6 +338,52 @@ export default function AccountManagerAssignments() {
             );
         } finally {
             setChanging(false);
+        }
+    };
+
+    // =========================
+    // Remove Manager
+    // =========================
+
+    const openRemoveModal = (customer) => {
+        setRemoveModalCustomer(customer);
+        setRemoveError("");
+    };
+
+    const closeRemoveModal = () => {
+        if (removing) {
+            return;
+        }
+
+        setRemoveModalCustomer(null);
+        setRemoveError("");
+    };
+
+    const handleRemoveAccountManager = async () => {
+        if (!removeModalCustomer) {
+            return;
+        }
+
+        try {
+            setRemoving(true);
+            setRemoveError("");
+
+            await removeAccountManager(
+                removeModalCustomer.customerId
+            );
+
+            closeRemoveModal();
+
+            await loadAssignments();
+        } catch (error) {
+            console.error(error);
+
+            setRemoveError(
+                error?.response?.data?.error ||
+                "Failed to remove account manager."
+            );
+        } finally {
+            setRemoving(false);
         }
     };
 
@@ -524,7 +581,7 @@ export default function AccountManagerAssignments() {
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full min-w-[850px]">
+                                        <table className="w-full min-w-[900px]">
                                             <thead>
                                                 <tr className="border-b border-slate-200 bg-slate-50">
                                                     <th className="w-8 px-4 py-3"></th>
@@ -548,8 +605,7 @@ export default function AccountManagerAssignments() {
                                                     (manager) => {
                                                         const isExpanded =
                                                             expandedManagers[
-                                                            manager
-                                                                .accountManagerId
+                                                            manager.accountManagerId
                                                             ];
 
                                                         return (
@@ -647,7 +703,7 @@ export default function AccountManagerAssignments() {
                                                                                 </div>
                                                                             ) : (
                                                                                 <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-                                                                                    <table className="w-full min-w-[750px]">
+                                                                                    <table className="w-full min-w-[850px]">
                                                                                         <thead>
                                                                                             <tr className="border-b border-slate-200 bg-slate-50">
                                                                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -716,23 +772,40 @@ export default function AccountManagerAssignments() {
                                                                                                             )}
                                                                                                         </td>
 
-                                                                                                        <td className="px-4 py-3 text-right">
-                                                                                                            {!customer.isDeleted &&
-                                                                                                                customer.isActive && (
-                                                                                                                    <button
-                                                                                                                        type="button"
-                                                                                                                        onClick={() =>
-                                                                                                                            openChangeModal(
-                                                                                                                                customer,
-                                                                                                                                manager.accountManagerId
-                                                                                                                            )
-                                                                                                                        }
-                                                                                                                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
-                                                                                                                    >
-                                                                                                                        <UserPlus className="h-3.5 w-3.5" />
-                                                                                                                        Change Manager
-                                                                                                                    </button>
-                                                                                                                )}
+                                                                                                        <td className="px-4 py-3">
+                                                                                                            <div className="flex items-center justify-end gap-2">
+                                                                                                                {!customer.isDeleted &&
+                                                                                                                    customer.isActive && (
+                                                                                                                        <>
+                                                                                                                            <button
+                                                                                                                                type="button"
+                                                                                                                                onClick={() =>
+                                                                                                                                    openChangeModal(
+                                                                                                                                        customer,
+                                                                                                                                        manager.accountManagerId
+                                                                                                                                    )
+                                                                                                                                }
+                                                                                                                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                                                                                            >
+                                                                                                                                <UserPlus className="h-3.5 w-3.5" />
+                                                                                                                                Change Manager
+                                                                                                                            </button>
+
+                                                                                                                            <button
+                                                                                                                                type="button"
+                                                                                                                                onClick={() =>
+                                                                                                                                    openRemoveModal(
+                                                                                                                                        customer
+                                                                                                                                    )
+                                                                                                                                }
+                                                                                                                                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                                                                                                                            >
+                                                                                                                                <UserMinus className="h-3.5 w-3.5" />
+                                                                                                                                Remove
+                                                                                                                            </button>
+                                                                                                                        </>
+                                                                                                                    )}
+                                                                                                            </div>
                                                                                                         </td>
                                                                                                     </tr>
                                                                                                 )
@@ -1170,6 +1243,100 @@ export default function AccountManagerAssignments() {
                                 {changing
                                     ? "Changing..."
                                     : "Change Manager"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Remove Account Manager Modal */}
+            {removeModalCustomer && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
+                        <div className="border-b border-slate-200 px-6 py-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Remove Account Manager
+                                    </h2>
+
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Remove the current Account Manager assignment from this customer.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={closeRemoveModal}
+                                    disabled={removing}
+                                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <XCircle className="h-5 w-5" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-5 px-6 py-5">
+                            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4">
+                                <div className="flex items-start gap-3">
+                                    <UserMinus className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+
+                                    <div>
+                                        <p className="text-sm font-semibold text-red-800">
+                                            Are you sure?
+                                        </p>
+
+                                        <p className="mt-1 text-sm text-red-700">
+                                            This will remove the Account Manager assignment from:
+                                        </p>
+
+                                        <p className="mt-2 text-sm font-semibold text-red-900">
+                                            {
+                                                removeModalCustomer.companyName
+                                            }
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-red-700">
+                                            {
+                                                removeModalCustomer.ownerName
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {removeError && (
+                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                    <p className="text-sm text-red-700">
+                                        {removeError}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={closeRemoveModal}
+                                disabled={removing}
+                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    handleRemoveAccountManager
+                                }
+                                disabled={removing}
+                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <UserMinus className="h-4 w-4" />
+
+                                {removing
+                                    ? "Removing..."
+                                    : "Remove Manager"}
                             </button>
                         </div>
                     </div>

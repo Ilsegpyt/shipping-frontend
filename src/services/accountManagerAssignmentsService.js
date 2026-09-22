@@ -41,3 +41,13 @@ export const changeAccountManager = async (
     }
   );
 };
+export const removeAccountManager = async (customerId) => {
+  await api.delete(
+    "/api/account-manager-assignments/",
+    {
+      data: {
+        customerId,
+      },
+    }
+  );
+};
