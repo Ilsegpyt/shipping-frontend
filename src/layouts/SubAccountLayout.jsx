@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom';
-import { HelpCircle, Search } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
 import ilsLogo from '../assets/branding/ils-logo-horizontal.png';
 import SubAccountSidebar from '../components/navigation/SubAccountSidebar';
@@ -23,18 +23,8 @@ export default function SubAccountLayout() {
             </aside>
 
             <div className="ml-64 min-h-screen">
-                <header className="flex h-20 items-center justify-between border-b border-gray-200 bg-white px-6">
-                    <div className="relative w-full max-w-xl">
-                        <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-
-                        <input
-                            type="search"
-                            placeholder="Search reports..."
-                            className="h-11 w-full rounded-xl border border-gray-200 bg-gray-50 pl-11 pr-4 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                        />
-                    </div>
-
-                    <div className="ml-6 flex items-center gap-2">
+                <header className="flex h-20 items-center justify-end border-b border-gray-200 bg-white px-6">
+                    <div className="flex items-center gap-2">
                         <NotificationBell />
 
                         <button

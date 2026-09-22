@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../../auth/AuthContext';
 
@@ -13,6 +14,7 @@ import {
     Ban,
     Mail,
     Trash2,
+    LogIn,
 } from 'lucide-react';
 
 import {
@@ -24,6 +26,8 @@ import {
     deleteCustomers,
     activateCustomer,
     suspendCustomer,
+    getCustomerOwner,
+    impersonateCustomer,
 } from '../../../services/customersService';
 
 const PAGE_SIZE = 10;
@@ -52,7 +56,8 @@ function getApiErrorMessage(error, fallbackMessage) {
 }
 
 export default function Customers() {
-    const { user } = useAuth();
+    const { user, startImpersonation } = useAuth();
+    const navigate = useNavigate();
 
     const permissions = user?.permissions ?? [];
 
@@ -60,6 +65,10 @@ export default function Customers() {
     const canEdit = permissions.includes('customers.edit');
     const canDelete = permissions.includes('customers.delete');
     const canSuspend = permissions.includes('customers.suspend');
+
+    const canImpersonate =
+        user?.tokenType === 'internal' &&
+        permissions.includes('customers.impersonate');
 
     const isAccountManager = user?.roleName === 'Account Manager';
 
@@ -144,9 +153,7 @@ export default function Customers() {
     useEffect(() => {
         console.log('Customers mounted');
         console.log('Current user:', user);
-
         console.log('Before loadCustomers');
-
 
         loadCustomers(1);
     }, [recordStatus]);
@@ -255,6 +262,36 @@ export default function Customers() {
             console.error(err);
         } finally {
             setLoadingDetails(false);
+        }
+    };
+
+    const handleImpersonateCustomer = async (customerId) => {
+        try {
+            setOpenActionsId(null);
+
+            const owner = await getCustomerOwner(customerId);
+
+            if (!owner?.ownerUserId) {
+                setError('Customer owner user was not found.');
+                return;
+            }
+
+            const response = await impersonateCustomer(
+                owner.ownerUserId,
+                'Customer support access'
+            );
+
+            await startImpersonation(response);
+            navigate('/customer');
+        } catch (err) {
+            console.error('Failed to impersonate customer:', err);
+
+            setError(
+                getApiErrorMessage(
+                    err,
+                    'Failed to impersonate customer.'
+                )
+            );
         }
     };
 
@@ -594,7 +631,9 @@ export default function Customers() {
                                 event.stopPropagation();
                                 handleRecordStatusChange(event);
                             }}
-                            onClick={(event) => event.stopPropagation()}
+                            onClick={(event) =>
+                                event.stopPropagation()
+                            }
                             className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                         >
                             <option value="notDeleted">
@@ -611,25 +650,26 @@ export default function Customers() {
                         </select>
                     )}
 
-                    {canDelete && selectedCustomerIds.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={(event) => {
-                                event.stopPropagation();
-                                openDeleteConfirmation(
-                                    selectedCustomerIds
-                                );
-                            }}
-                            disabled={isDeleting}
-                            className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            <Trash2 size={17} />
+                    {canDelete &&
+                        selectedCustomerIds.length > 0 && (
+                            <button
+                                type="button"
+                                onClick={(event) => {
+                                    event.stopPropagation();
+                                    openDeleteConfirmation(
+                                        selectedCustomerIds
+                                    );
+                                }}
+                                disabled={isDeleting}
+                                className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <Trash2 size={17} />
 
-                            {isDeleting
-                                ? 'Deleting...'
-                                : `Delete Selected (${selectedCustomerIds.length})`}
-                        </button>
-                    )}
+                                {isDeleting
+                                    ? 'Deleting...'
+                                    : `Delete Selected (${selectedCustomerIds.length})`}
+                            </button>
+                        )}
 
                     <button
                         type="button"
@@ -684,7 +724,8 @@ export default function Customers() {
                                                     type="checkbox"
                                                     className="h-4 w-4 rounded border-slate-300"
                                                     checked={
-                                                        filteredCustomers.length > 0 &&
+                                                        filteredCustomers.length >
+                                                        0 &&
                                                         filteredCustomers.every(
                                                             (customer) =>
                                                                 selectedCustomerIds.includes(
@@ -697,7 +738,8 @@ export default function Customers() {
                                                     }
                                                     disabled={
                                                         isDeleting ||
-                                                        filteredCustomers.length === 0
+                                                        filteredCustomers.length ===
+                                                        0
                                                     }
                                                     onClick={(event) =>
                                                         event.stopPropagation()
@@ -741,7 +783,9 @@ export default function Customers() {
                                         <tr>
                                             <td
                                                 colSpan={
-                                                    isAccountManager ? 7 : 8
+                                                    isAccountManager
+                                                        ? 7
+                                                        : 8
                                                 }
                                                 className="px-6 py-12 text-center text-sm text-slate-500"
                                             >
@@ -749,173 +793,229 @@ export default function Customers() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredCustomers.map((customer) => (
-                                            <tr
-                                                key={customer.id}
-                                                className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70"
-                                            >
-                                                {!isAccountManager && (
-                                                    <td className="px-6 py-5">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="h-4 w-4 rounded border-slate-300"
-                                                            checked={selectedCustomerIds.includes(
-                                                                customer.id
-                                                            )}
-                                                            onChange={() =>
-                                                                handleSelectCustomer(
+                                        filteredCustomers.map(
+                                            (customer) => (
+                                                <tr
+                                                    key={customer.id}
+                                                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70"
+                                                >
+                                                    {!isAccountManager && (
+                                                        <td className="px-6 py-5">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="h-4 w-4 rounded border-slate-300"
+                                                                checked={selectedCustomerIds.includes(
                                                                     customer.id
-                                                                )
-                                                            }
-                                                            disabled={isDeleting}
-                                                            onClick={(event) =>
-                                                                event.stopPropagation()
-                                                            }
-                                                        />
-                                                    </td>
-                                                )}
-
-                                                <td className="px-4 py-5 text-sm font-semibold text-slate-900">
-                                                    {customer.ownerName}
-                                                </td>
-
-                                                <td className="px-4 py-5 text-sm text-slate-700">
-                                                    {customer.companyName}
-                                                </td>
-
-                                                <td className="px-4 py-5 text-sm text-slate-700">
-                                                    {customer.ownerEmail}
-                                                </td>
-
-                                                <td className="px-4 py-5 text-sm text-slate-700">
-                                                    {customer.ownerPhone}
-                                                </td>
-
-                                                <td className="px-4 py-5 text-sm text-slate-700">
-                                                    {customer.industry || '-'}
-                                                </td>
-
-                                                <td className="px-4 py-5">
-                                                    <span
-                                                        className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${customer.status?.toLowerCase() ===
-                                                            'active'
-                                                            ? 'bg-emerald-50 text-emerald-600'
-                                                            : 'bg-slate-100 text-slate-600'
-                                                            }`}
-                                                    >
-                                                        {customer.status}
-                                                    </span>
-                                                </td>
-
-                                                <td className="relative px-6 py-5 text-right">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(event) => {
-                                                            event.stopPropagation();
-                                                            handleActionToggle(
-                                                                customer.id
-                                                            );
-                                                        }}
-                                                        className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                                                    >
-                                                        <MoreHorizontal
-                                                            size={20}
-                                                        />
-                                                    </button>
-
-                                                    {openActionsId ===
-                                                        customer.id && (
-                                                            <div
-                                                                className="absolute right-6 top-14 z-20 w-48 rounded-lg border border-slate-200 bg-white py-1 text-left shadow-lg"
-                                                                onClick={(event) =>
+                                                                )}
+                                                                onChange={() =>
+                                                                    handleSelectCustomer(
+                                                                        customer.id
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isDeleting
+                                                                }
+                                                                onClick={(
+                                                                    event
+                                                                ) =>
                                                                     event.stopPropagation()
                                                                 }
-                                                            >
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        handleViewCustomer(
-                                                                            customer.id
-                                                                        )
+                                                            />
+                                                        </td>
+                                                    )}
+
+                                                    <td className="px-4 py-5 text-sm font-semibold text-slate-900">
+                                                        {customer.ownerName}
+                                                    </td>
+
+                                                    <td className="px-4 py-5 text-sm text-slate-700">
+                                                        {customer.companyName}
+                                                    </td>
+
+                                                    <td className="px-4 py-5 text-sm text-slate-700">
+                                                        {customer.ownerEmail}
+                                                    </td>
+
+                                                    <td className="px-4 py-5 text-sm text-slate-700">
+                                                        {customer.ownerPhone}
+                                                    </td>
+
+                                                    <td className="px-4 py-5 text-sm text-slate-700">
+                                                        {customer.industry ||
+                                                            '-'}
+                                                    </td>
+
+                                                    <td className="px-4 py-5">
+                                                        <span
+                                                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${customer.status?.toLowerCase() ===
+                                                                'active'
+                                                                ? 'bg-emerald-50 text-emerald-600'
+                                                                : 'bg-slate-100 text-slate-600'
+                                                                }`}
+                                                        >
+                                                            {
+                                                                customer.status
+                                                            }
+                                                        </span>
+                                                    </td>
+
+                                                    <td className="relative px-6 py-5 text-right">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(
+                                                                event
+                                                            ) => {
+                                                                event.stopPropagation();
+                                                                handleActionToggle(
+                                                                    customer.id
+                                                                );
+                                                            }}
+                                                            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                                        >
+                                                            <MoreHorizontal
+                                                                size={20}
+                                                            />
+                                                        </button>
+
+                                                        {openActionsId ===
+                                                            customer.id && (
+                                                                <div
+                                                                    className="absolute right-6 top-14 z-20 w-48 rounded-lg border border-slate-200 bg-white py-1 text-left shadow-lg"
+                                                                    onClick={(
+                                                                        event
+                                                                    ) =>
+                                                                        event.stopPropagation()
                                                                     }
-                                                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
                                                                 >
-                                                                    <Eye size={16} />
-                                                                    View Details
-                                                                </button>
-
-                                                                {canEdit && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() =>
-                                                                            handleEditCustomer(
+                                                                            handleViewCustomer(
                                                                                 customer.id
                                                                             )
                                                                         }
                                                                         className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
                                                                     >
-                                                                        <Pencil
-                                                                            size={16}
+                                                                        <Eye
+                                                                            size={
+                                                                                16
+                                                                            }
                                                                         />
-                                                                        Edit Customer
+                                                                        View
+                                                                        Details
                                                                     </button>
-                                                                )}
 
-                                                                {canEdit && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleChangeEmail(
-                                                                                customer.id
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                                    >
-                                                                        <Mail size={16} />
-                                                                        Change Email
-                                                                    </button>
-                                                                )}
+                                                                    {canImpersonate && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleImpersonateCustomer(
+                                                                                    customer.id
+                                                                                )
+                                                                            }
+                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                        >
+                                                                            <LogIn
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                            Impersonate
+                                                                            Customer
+                                                                        </button>
+                                                                    )}
 
-                                                                {canDelete && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            openDeleteConfirmation(
-                                                                                [customer.id]
-                                                                            )
-                                                                        }
-                                                                        disabled={
-                                                                            isDeleting
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                                                    >
-                                                                        <Trash2
-                                                                            size={16}
-                                                                        />
-                                                                        Delete Customer
-                                                                    </button>
-                                                                )}
+                                                                    {canEdit && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleEditCustomer(
+                                                                                    customer.id
+                                                                                )
+                                                                            }
+                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                        >
+                                                                            <Pencil
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                            Edit
+                                                                            Customer
+                                                                        </button>
+                                                                    )}
 
-                                                                {canSuspend && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleSuspendCustomer(
-                                                                                customer.id
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-                                                                    >
-                                                                        <Ban size={16} />
-                                                                        Suspend /
-                                                                        Activate
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        )}
-                                                </td>
-                                            </tr>
-                                        ))
+                                                                    {canEdit && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleChangeEmail(
+                                                                                    customer.id
+                                                                                )
+                                                                            }
+                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                        >
+                                                                            <Mail
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                            Change
+                                                                            Email
+                                                                        </button>
+                                                                    )}
+
+                                                                    {canDelete && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                openDeleteConfirmation(
+                                                                                    [
+                                                                                        customer.id,
+                                                                                    ]
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                isDeleting
+                                                                            }
+                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                        >
+                                                                            <Trash2
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                            Delete
+                                                                            Customer
+                                                                        </button>
+                                                                    )}
+
+                                                                    {canSuspend && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleSuspendCustomer(
+                                                                                    customer.id
+                                                                                )
+                                                                            }
+                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
+                                                                        >
+                                                                            <Ban
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                            Suspend
+                                                                            /
+                                                                            Activate
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        )
                                     )}
                                 </tbody>
                             </table>
@@ -982,8 +1082,12 @@ export default function Customers() {
                         <div className="px-6 py-7">
                             <p className="text-sm text-slate-600">
                                 Are you sure you want to delete{' '}
-                                {pendingDeleteIds.length} selected customer
-                                {pendingDeleteIds.length === 1 ? '' : 's'}?
+                                {pendingDeleteIds.length} selected
+                                customer
+                                {pendingDeleteIds.length === 1
+                                    ? ''
+                                    : 's'}
+                                ?
                             </p>
 
                             <p className="mt-3 text-sm font-medium text-red-600">
@@ -1059,7 +1163,9 @@ export default function Customers() {
                                     type="text"
                                     name="ownerName"
                                     value={newCustomer.ownerName}
-                                    onChange={handleNewCustomerChange}
+                                    onChange={
+                                        handleNewCustomerChange
+                                    }
                                     required
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                     placeholder="Enter owner name"
@@ -1075,7 +1181,9 @@ export default function Customers() {
                                     type="text"
                                     name="companyName"
                                     value={newCustomer.companyName}
-                                    onChange={handleNewCustomerChange}
+                                    onChange={
+                                        handleNewCustomerChange
+                                    }
                                     required
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                     placeholder="Enter company name"
@@ -1091,7 +1199,9 @@ export default function Customers() {
                                     type="tel"
                                     name="ownerPhone"
                                     value={newCustomer.ownerPhone}
-                                    onChange={handleNewCustomerChange}
+                                    onChange={
+                                        handleNewCustomerChange
+                                    }
                                     required
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                     placeholder="Enter phone number"
@@ -1107,7 +1217,9 @@ export default function Customers() {
                                     type="email"
                                     name="ownerEmail"
                                     value={newCustomer.ownerEmail}
-                                    onChange={handleNewCustomerChange}
+                                    onChange={
+                                        handleNewCustomerChange
+                                    }
                                     required
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                     placeholder="Enter email address"
@@ -1123,7 +1235,9 @@ export default function Customers() {
                                     type="text"
                                     name="industry"
                                     value={newCustomer.industry}
-                                    onChange={handleNewCustomerChange}
+                                    onChange={
+                                        handleNewCustomerChange
+                                    }
                                     className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
                                     placeholder="Enter industry"
                                 />
@@ -1194,7 +1308,8 @@ export default function Customers() {
                                         </p>
 
                                         <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.ownerName || '-'}
+                                            {selectedCustomer.ownerName ||
+                                                '-'}
                                         </p>
                                     </div>
 
@@ -1204,7 +1319,8 @@ export default function Customers() {
                                         </p>
 
                                         <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.companyName || '-'}
+                                            {selectedCustomer.companyName ||
+                                                '-'}
                                         </p>
                                     </div>
 
@@ -1214,7 +1330,8 @@ export default function Customers() {
                                         </p>
 
                                         <p className="mt-1 break-all font-medium text-slate-900">
-                                            {selectedCustomer.ownerEmail || '-'}
+                                            {selectedCustomer.ownerEmail ||
+                                                '-'}
                                         </p>
                                     </div>
 
@@ -1224,7 +1341,8 @@ export default function Customers() {
                                         </p>
 
                                         <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.ownerPhone || '-'}
+                                            {selectedCustomer.ownerPhone ||
+                                                '-'}
                                         </p>
                                     </div>
 
@@ -1234,7 +1352,8 @@ export default function Customers() {
                                         </p>
 
                                         <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.industry || '-'}
+                                            {selectedCustomer.industry ||
+                                                '-'}
                                         </p>
                                     </div>
 
@@ -1244,7 +1363,8 @@ export default function Customers() {
                                         </p>
 
                                         <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.status || '-'}
+                                            {selectedCustomer.status ||
+                                                '-'}
                                         </p>
                                     </div>
 
@@ -1332,10 +1452,16 @@ export default function Customers() {
                                         <input
                                             type="text"
                                             name="ownerName"
-                                            value={editingCustomer.ownerName}
-                                            onChange={handleEditCustomerChange}
+                                            value={
+                                                editingCustomer.ownerName
+                                            }
+                                            onChange={
+                                                handleEditCustomerChange
+                                            }
                                             required
-                                            disabled={updatingCustomer}
+                                            disabled={
+                                                updatingCustomer
+                                            }
                                             className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                                             placeholder="Enter owner name"
                                         />
@@ -1349,10 +1475,16 @@ export default function Customers() {
                                         <input
                                             type="text"
                                             name="companyName"
-                                            value={editingCustomer.companyName}
-                                            onChange={handleEditCustomerChange}
+                                            value={
+                                                editingCustomer.companyName
+                                            }
+                                            onChange={
+                                                handleEditCustomerChange
+                                            }
                                             required
-                                            disabled={updatingCustomer}
+                                            disabled={
+                                                updatingCustomer
+                                            }
                                             className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                                             placeholder="Enter company name"
                                         />
@@ -1366,10 +1498,16 @@ export default function Customers() {
                                         <input
                                             type="tel"
                                             name="ownerPhone"
-                                            value={editingCustomer.ownerPhone}
-                                            onChange={handleEditCustomerChange}
+                                            value={
+                                                editingCustomer.ownerPhone
+                                            }
+                                            onChange={
+                                                handleEditCustomerChange
+                                            }
                                             required
-                                            disabled={updatingCustomer}
+                                            disabled={
+                                                updatingCustomer
+                                            }
                                             className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                                             placeholder="Enter phone number"
                                         />
@@ -1383,9 +1521,15 @@ export default function Customers() {
                                         <input
                                             type="text"
                                             name="industry"
-                                            value={editingCustomer.industry}
-                                            onChange={handleEditCustomerChange}
-                                            disabled={updatingCustomer}
+                                            value={
+                                                editingCustomer.industry
+                                            }
+                                            onChange={
+                                                handleEditCustomerChange
+                                            }
+                                            disabled={
+                                                updatingCustomer
+                                            }
                                             className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                                             placeholder="Enter industry"
                                         />
@@ -1394,8 +1538,12 @@ export default function Customers() {
                                     <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
                                         <button
                                             type="button"
-                                            onClick={closeEditModal}
-                                            disabled={updatingCustomer}
+                                            onClick={
+                                                closeEditModal
+                                            }
+                                            disabled={
+                                                updatingCustomer
+                                            }
                                             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Cancel
@@ -1403,7 +1551,9 @@ export default function Customers() {
 
                                         <button
                                             type="submit"
-                                            disabled={updatingCustomer}
+                                            disabled={
+                                                updatingCustomer
+                                            }
                                             className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {updatingCustomer
@@ -1428,7 +1578,8 @@ export default function Customers() {
                                 </h2>
 
                                 <p className="mt-1 text-sm text-slate-500">
-                                    Update the email address associated with this customer
+                                    Update the email address associated
+                                    with this customer
                                 </p>
                             </div>
 
@@ -1469,7 +1620,8 @@ export default function Customers() {
                                         <input
                                             type="text"
                                             value={
-                                                emailCustomer?.companyName ?? ''
+                                                emailCustomer?.companyName ??
+                                                ''
                                             }
                                             disabled
                                             className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-500 outline-none"
@@ -1485,7 +1637,9 @@ export default function Customers() {
                                             type="email"
                                             value={newEmail}
                                             onChange={(event) =>
-                                                setNewEmail(event.target.value)
+                                                setNewEmail(
+                                                    event.target.value
+                                                )
                                             }
                                             required
                                             disabled={updatingEmail}
@@ -1497,8 +1651,12 @@ export default function Customers() {
                                     <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
                                         <button
                                             type="button"
-                                            onClick={closeEmailModal}
-                                            disabled={updatingEmail}
+                                            onClick={
+                                                closeEmailModal
+                                            }
+                                            disabled={
+                                                updatingEmail
+                                            }
                                             className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             Cancel
@@ -1506,7 +1664,9 @@ export default function Customers() {
 
                                         <button
                                             type="submit"
-                                            disabled={updatingEmail}
+                                            disabled={
+                                                updatingEmail
+                                            }
                                             className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
                                         >
                                             {updatingEmail

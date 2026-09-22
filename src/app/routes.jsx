@@ -19,6 +19,7 @@ import ScheduleEdit from '../pages/internal/super-admin/ScheduleEdit';
 import ShipmentDetails from '../pages/internal/super-admin/ShipmentDetails';
 import ShipmentEdit from '../pages/internal/shared/ShipmentEdit';
 import Shipments from '../pages/internal/super-admin/Shipments';
+import ClientsSearchHistory from '../pages/internal/super-admin/ClientsSearchHistory';
 
 // Customer pages
 import CustomerDashboard from '../pages/customer/CustomerDashboard';
@@ -86,6 +87,18 @@ export default function AppRoutes() {
                         }
                     >
                         <Route index element={<Customers />} />
+                    </Route>
+
+                    <Route
+                        path="/clients/search-history"
+                        element={
+                            <ProtectedRoute requiredPermission="customers.view" />
+                        }
+                    >
+                        <Route
+                            index
+                            element={<ClientsSearchHistory />}
+                        />
                     </Route>
 
                     <Route
@@ -188,7 +201,8 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="notifications.view" />
                         }
                     >
-                        <Route index element={<CustomerNotifications />} />
+                        <Route index element={<CustomerNotifications />}
+                        />
                     </Route>
 
                     <Route

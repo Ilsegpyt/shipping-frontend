@@ -20,28 +20,57 @@ export const getScheduleById = async (id) => {
     return response.data;
 };
 
+// Super Admin / Internal Users
 export const searchSchedules = async ({
     origin,
     destination,
     departureDate,
     containerSize,
 }) => {
-    const response = await api.get('/api/schedules/search', {
-        params: {
-            origin,
-            destination,
-            departureDate,
-            containerSize,
-        },
-    });
+    const response = await api.get(
+        '/api/schedules/search',
+        {
+            params: {
+                origin,
+                destination,
+                departureDate,
+                containerSize,
+            },
+        }
+    );
+
+    return response.data;
+};
+
+// Customer Portal
+export const searchCustomerSchedules = async ({
+    origin,
+    destination,
+    departureDate,
+    containerSize,
+}) => {
+    const response = await api.get(
+        '/api/customers/schedules/search',
+        {
+            params: {
+                origin,
+                destination,
+                departureDate,
+                containerSize,
+            },
+        }
+    );
 
     return response.data;
 };
 
 export const multiRouteSearch = async (routes) => {
-    const response = await api.post('/api/schedules/multi-search', {
-        routes,
-    });
+    const response = await api.post(
+        '/api/schedules/multi-search',
+        {
+            routes,
+        }
+    );
 
     return response.data;
 };

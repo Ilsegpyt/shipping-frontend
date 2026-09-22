@@ -28,20 +28,20 @@ const containerSizeMap = {
 };
 
 const containerSizes = [
-    { value: 1, label: 'Dry 20 Standard' },
-    { value: 2, label: 'Dry 40 Standard' },
-    { value: 3, label: 'Dry 40 High' },
-    { value: 4, label: 'Dry 45 High' },
-    { value: 5, label: 'Reefer 20 Standard' },
-    { value: 6, label: 'Reefer 40 High' },
-    { value: 7, label: 'Open Top 20' },
-    { value: 8, label: 'Open Top 40' },
-    { value: 9, label: 'Open Top 40 High' },
-    { value: 10, label: 'Flat 40 Standard' },
-    { value: 11, label: 'Flat 40 High' },
-    { value: 12, label: 'Flat 20' },
-    { value: 13, label: 'Tank 20' },
-    { value: 14, label: 'Tank 40' },
+    { value: 'Dry 20 Standard', label: 'Dry 20 Standard' },
+    { value: 'Dry 40 Standard', label: 'Dry 40 Standard' },
+    { value: 'Dry 40 High', label: 'Dry 40 High' },
+    { value: 'Dry 45 High', label: 'Dry 45 High' },
+    { value: 'Reefer 20 Standard', label: 'Reefer 20 Standard' },
+    { value: 'Reefer 40 High', label: 'Reefer 40 High' },
+    { value: 'Open Top 20', label: 'Open Top 20' },
+    { value: 'Open Top 40', label: 'Open Top 40' },
+    { value: 'Open Top 40 High', label: 'Open Top 40 High' },
+    { value: 'Flat 40 Standard', label: 'Flat 40 Standard' },
+    { value: 'Flat 40 High', label: 'Flat 40 High' },
+    { value: 'Flat 20', label: 'Flat 20' },
+    { value: 'Tank 20', label: 'Tank 20' },
+    { value: 'Tank 40', label: 'Tank 40' },
 ];
 
 function normalizeContainerSize(value) {
@@ -188,7 +188,7 @@ export default function CustomerDashboard() {
             setError('');
             setResults([]);
 
-            const response = await api.get('/api/schedules/search', {
+            const response = await api.get('/api/customers/schedules/search', {
                 params: {
                     origin: form.origin,
                     destination: form.destination,

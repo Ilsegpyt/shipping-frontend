@@ -69,13 +69,6 @@ export const getInternalNavigation = (user) => [
                         icon: History,
                     },
                 ]),
-
-            {
-                label: "Sub Accounts",
-                path: "/sub-accounts",
-                permission: "identity.subaccounts.view",
-                icon: UserRoundCog,
-            },
         ],
     },
 

@@ -1,10 +1,39 @@
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
 import dashboardHero from '../../../assets/branding/dashboard-hero.png';
+import { getCustomers } from '../../../services/customersService';
 
 export default function Dashboard() {
     const { user } = useAuth();
 
+    const [totalCustomers, setTotalCustomers] = useState(0);
+    const [loadingCustomers, setLoadingCustomers] = useState(true);
+
+    useEffect(() => {
+        const loadTotalCustomers = async () => {
+            try {
+                setLoadingCustomers(true);
+
+                const result = await getCustomers(1, 1, 'notDeleted');
+
+                setTotalCustomers(result.totalCount ?? 0);
+            } catch (error) {
+                console.error('Failed to load total customers:', error);
+                setTotalCustomers(0);
+            } finally {
+                setLoadingCustomers(false);
+            }
+        };
+
+        loadTotalCustomers();
+    }, []);
+
     const stats = [
+        {
+            label: 'Total Customers',
+            value: loadingCustomers ? '...' : totalCustomers,
+            description: 'Active customer accounts',
+        },
         {
             label: 'Total Shipments',
             value: '0',
@@ -19,11 +48,6 @@ export default function Dashboard() {
             label: 'Delivered',
             value: '0',
             description: 'Successfully delivered',
-        },
-        {
-            label: 'Pending',
-            value: '0',
-            description: 'Awaiting action',
         },
     ];
 
@@ -43,7 +67,7 @@ export default function Dashboard() {
                 <div className="relative flex h-full items-center px-8">
                     <div className="max-w-xl text-white">
                         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-200">
-                            Global Shipping Solutions
+                            We Make Shipping Easy
                         </p>
 
                         <h2 className="mt-3 text-3xl font-semibold tracking-tight">
