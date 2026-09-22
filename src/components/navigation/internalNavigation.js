@@ -33,6 +33,13 @@ export const getInternalNavigation = (user) => [
             },
 
             {
+                label: "Account Managers",
+                path: "/account-manager-assignments",
+                permission: "identity.users.view",
+                icon: UserRoundCog,
+            },
+
+            {
                 label: "Customers",
                 path: "/customers",
                 permission: "customers.view",
@@ -62,6 +69,7 @@ export const getInternalNavigation = (user) => [
                         icon: History,
                     },
                 ]),
+
             {
                 label: "Sub Accounts",
                 path: "/sub-accounts",

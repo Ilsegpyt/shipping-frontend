@@ -10,6 +10,7 @@ import Login from '../pages/auth/Login';
 import Dashboard from '../pages/internal/shared/Dashboard';
 import Profile from '../pages/internal/shared/Profile';
 import Users from '../pages/internal/super-admin/Users';
+import AccountManagerAssignments from '../pages/internal/super-admin/AccountManagerAssignments';
 import Customers from '../pages/internal/shared/Customers';
 import Reports from '../pages/internal/shared/Reports';
 import Schedules from '../pages/internal/super-admin/Schedules';
@@ -43,10 +44,19 @@ export default function AppRoutes() {
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
+
                 {/* Internal Portal */}
                 <Route element={<InternalLayout />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/profile" element={<Profile />} />
+
+                    <Route
+                        path="/dashboard"
+                        element={<Dashboard />}
+                    />
+
+                    <Route
+                        path="/profile"
+                        element={<Profile />}
+                    />
 
                     <Route
                         path="/users"
@@ -55,6 +65,18 @@ export default function AppRoutes() {
                         }
                     >
                         <Route index element={<Users />} />
+                    </Route>
+
+                    <Route
+                        path="/account-manager-assignments"
+                        element={
+                            <ProtectedRoute requiredPermission="identity.users.view" />
+                        }
+                    >
+                        <Route
+                            index
+                            element={<AccountManagerAssignments />}
+                        />
                     </Route>
 
                     <Route
@@ -82,8 +104,14 @@ export default function AppRoutes() {
                         }
                     >
                         <Route index element={<Schedules />} />
-                        <Route path=":id" element={<ScheduleDetails />} />
-                        <Route path=":id/edit" element={<ScheduleEdit />} />
+                        <Route
+                            path=":id"
+                            element={<ScheduleDetails />}
+                        />
+                        <Route
+                            path=":id/edit"
+                            element={<ScheduleEdit />}
+                        />
                     </Route>
 
                     <Route
@@ -93,13 +121,20 @@ export default function AppRoutes() {
                         }
                     >
                         <Route index element={<Shipments />} />
-                        <Route path=":id" element={<ShipmentDetails />} />
-                        <Route path=":id/edit" element={<ShipmentEdit />} />
+                        <Route
+                            path=":id"
+                            element={<ShipmentDetails />}
+                        />
+                        <Route
+                            path=":id/edit"
+                            element={<ShipmentEdit />}
+                        />
                     </Route>
                 </Route>
 
                 {/* Customer Portal */}
                 <Route element={<CustomerLayout />}>
+
                     <Route
                         path="/customer"
                         element={
@@ -164,18 +199,25 @@ export default function AppRoutes() {
 
                 {/* Sub Account Portal */}
                 <Route element={<SubAccountLayout />}>
+
                     <Route
                         path="/subaccount"
                         element={<ProtectedRoute />}
                     >
-                        <Route index element={<SubAccountDashboard />} />
+                        <Route
+                            index
+                            element={<SubAccountDashboard />}
+                        />
                     </Route>
 
                     <Route
                         path="/subaccount/reports"
                         element={<ProtectedRoute />}
                     >
-                        <Route index element={<SubAccountReports />} />
+                        <Route
+                            index
+                            element={<SubAccountReports />}
+                        />
                     </Route>
                 </Route>
             </Route>
