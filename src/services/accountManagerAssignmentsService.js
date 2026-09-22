@@ -28,3 +28,16 @@ export const assignAccountManager = async (
     }
   );
 };
+
+export const changeAccountManager = async (
+  customerId,
+  newAccountManagerId
+) => {
+  await api.put(
+    "/api/account-manager-assignments/",
+    {
+      customerId,
+      newAccountManagerId,
+    }
+  );
+};
