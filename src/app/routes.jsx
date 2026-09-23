@@ -20,6 +20,8 @@ import ShipmentDetails from '../pages/internal/super-admin/ShipmentDetails';
 import ShipmentEdit from '../pages/internal/shared/ShipmentEdit';
 import Shipments from '../pages/internal/super-admin/Shipments';
 import ClientsSearchHistory from '../pages/internal/super-admin/ClientsSearchHistory';
+import CustomerVoices from '../pages/internal/super-admin/CustomerVoices';
+import Notifications from '../pages/internal/super-admin/Notifications';
 
 // Customer pages
 import CustomerDashboard from '../pages/customer/CustomerDashboard';
@@ -40,8 +42,15 @@ export default function AppRoutes() {
     return (
         <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="/login" element={<Login />} />
+            <Route
+                path="/"
+                element={<Navigate to="/login" replace />}
+            />
+
+            <Route
+                path="/login"
+                element={<Login />}
+            />
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
@@ -65,7 +74,10 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="identity.users.view" />
                         }
                     >
-                        <Route index element={<Users />} />
+                        <Route
+                            index
+                            element={<Users />}
+                        />
                     </Route>
 
                     <Route
@@ -86,7 +98,10 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="customers.view" />
                         }
                     >
-                        <Route index element={<Customers />} />
+                        <Route
+                            index
+                            element={<Customers />}
+                        />
                     </Route>
 
                     <Route
@@ -107,7 +122,34 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="reports.view" />
                         }
                     >
-                        <Route index element={<Reports />} />
+                        <Route
+                            index
+                            element={<Reports />}
+                        />
+                    </Route>
+
+                    <Route
+                        path="/customer-voices"
+                        element={
+                            <ProtectedRoute requiredPermission="customers.voice.view" />
+                        }
+                    >
+                        <Route
+                            index
+                            element={<CustomerVoices />}
+                        />
+                    </Route>
+
+                    <Route
+                        path="/notifications"
+                        element={
+                            <ProtectedRoute requiredPermission="notifications.view" />
+                        }
+                    >
+                        <Route
+                            index
+                            element={<Notifications />}
+                        />
                     </Route>
 
                     <Route
@@ -116,11 +158,16 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="schedules.view" />
                         }
                     >
-                        <Route index element={<Schedules />} />
+                        <Route
+                            index
+                            element={<Schedules />}
+                        />
+
                         <Route
                             path=":id"
                             element={<ScheduleDetails />}
                         />
+
                         <Route
                             path=":id/edit"
                             element={<ScheduleEdit />}
@@ -133,11 +180,16 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="shipments.view" />
                         }
                     >
-                        <Route index element={<Shipments />} />
+                        <Route
+                            index
+                            element={<Shipments />}
+                        />
+
                         <Route
                             path=":id"
                             element={<ShipmentDetails />}
                         />
+
                         <Route
                             path=":id/edit"
                             element={<ShipmentEdit />}
@@ -154,7 +206,10 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="shipments.view" />
                         }
                     >
-                        <Route index element={<CustomerDashboard />} />
+                        <Route
+                            index
+                            element={<CustomerDashboard />}
+                        />
                     </Route>
 
                     <Route
@@ -173,7 +228,10 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="shipments.view" />
                         }
                     >
-                        <Route index element={<CustomerShipments />} />
+                        <Route
+                            index
+                            element={<CustomerShipments />}
+                        />
 
                         <Route
                             path=":id"
@@ -192,7 +250,10 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="reports.view" />
                         }
                     >
-                        <Route index element={<CustomerReports />} />
+                        <Route
+                            index
+                            element={<CustomerReports />}
+                        />
                     </Route>
 
                     <Route
@@ -201,7 +262,9 @@ export default function AppRoutes() {
                             <ProtectedRoute requiredPermission="notifications.view" />
                         }
                     >
-                        <Route index element={<CustomerNotifications />}
+                        <Route
+                            index
+                            element={<CustomerNotifications />}
                         />
                     </Route>
 

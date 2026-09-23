@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
     ArrowLeft,
@@ -9,6 +9,9 @@ import {
     RefreshCw,
     Upload,
     Download,
+    MessageSquare,
+    Loader2,
+    AlertCircle,
 } from 'lucide-react';
 
 import api from '../../../services/api';
@@ -18,6 +21,8 @@ import {
     getDeclarationFilesByShipmentId,
     downloadDeclarationFile,
 } from '../../../services/shipmentsService';
+
+import { getCustomerVoices } from '../../../services/customerVoicesService';
 
 function formatDate(value) {
     if (!value) return '—';
@@ -118,11 +123,18 @@ const shipmentTypeOptions = [
 
 export default function ShipmentDetails() {
     const { id } = useParams();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+
+    const customerVoiceId = searchParams.get('customerVoiceId');
     const { user } = useAuth();
 
     const [shipment, setShipment] = useState(null);
     const [declarationFiles, setDeclarationFiles] = useState([]);
+    const [customerVoices, setCustomerVoices] = useState([]);
+    const [customerVoicesLoading, setCustomerVoicesLoading] = useState(false);
+    const [customerVoiceError, setCustomerVoiceError] = useState('');
+    const customerVoiceRefs = useRef({});
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -149,6 +161,37 @@ export default function ShipmentDetails() {
         isAccountManager &&
         user?.permissions?.includes('reports.upload');
 
+    const loadCustomerVoices = async () => {
+        try {
+            setCustomerVoicesLoading(true);
+            setCustomerVoiceError('');
+
+            const result = await getCustomerVoices();
+
+            const shipmentVoices = (result ?? []).filter(
+                (voice) =>
+                    String(voice.shipmentId).toLowerCase() ===
+                    String(id).toLowerCase()
+            );
+
+            setCustomerVoices(shipmentVoices);
+        } catch (err) {
+            console.error(
+                'Failed to load customer voices:',
+                err
+            );
+
+            setCustomerVoices([]);
+            setCustomerVoiceError(
+                err?.response?.data?.message ??
+                err?.response?.data?.detail ??
+                'Failed to load customer voice requests.'
+            );
+        } finally {
+            setCustomerVoicesLoading(false);
+        }
+    };
+
     const loadShipment = async () => {
         try {
             setLoading(true);
@@ -162,6 +205,8 @@ export default function ShipmentDetails() {
 
             setShipment(shipmentData);
             setDeclarationFiles(declarationFilesData);
+
+            await loadCustomerVoices();
         } catch (err) {
             setError(
                 err.response?.data?.error ||
@@ -176,6 +221,60 @@ export default function ShipmentDetails() {
     useEffect(() => {
         loadShipment();
     }, [id]);
+
+    useEffect(() => {
+        if (!customerVoiceId || customerVoices.length === 0) {
+            return;
+        }
+
+        const targetVoice = customerVoices.find(
+            (voice) =>
+                String(voice.id).toLowerCase() ===
+                String(customerVoiceId).toLowerCase()
+        );
+
+        if (!targetVoice) {
+            console.log(
+                'Customer Voice not found:',
+                customerVoiceId
+            );
+            return;
+        }
+
+        const timeoutId = setTimeout(() => {
+            const element =
+                customerVoiceRefs.current[customerVoiceId];
+
+            if (!element) {
+                console.log(
+                    'Customer Voice element not found:',
+                    customerVoiceId
+                );
+                return;
+            }
+
+            element.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+
+            element.classList.add(
+                'ring-2',
+                'ring-blue-500',
+                'ring-offset-4'
+            );
+
+            setTimeout(() => {
+                element.classList.remove(
+                    'ring-2',
+                    'ring-blue-500',
+                    'ring-offset-4'
+                );
+            }, 4000);
+        }, 300);
+
+        return () => clearTimeout(timeoutId);
+    }, [customerVoiceId, customerVoices]);
 
     const resetUploadForm = () => {
         setUploadForm({
@@ -610,6 +709,81 @@ export default function ShipmentDetails() {
                         )}
                     </div>
                 </Section>
+
+
+                {/* Customer Voice */}
+                <Section title="Customer Voice">
+                    <div id="customer-voice-section">
+                        {customerVoicesLoading ? (
+                            <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                            </div>
+                        ) : customerVoiceError && customerVoices.length === 0 ? (
+                            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                <span>{customerVoiceError}</span>
+                            </div>
+                        ) : customerVoices.length === 0 ? (
+                            <div className="py-8 text-center">
+                                <MessageSquare className="mx-auto h-10 w-10 text-slate-400" />
+                                <p className="mt-3 text-sm font-medium text-slate-700">
+                                    No customer voice requests yet.
+                                </p>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    No customer voice requests have been created for this shipment.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {customerVoices.map((voice) => {
+                                    const isHighlighted =
+                                        customerVoiceId &&
+                                        String(voice.id).toLowerCase() ===
+                                        String(customerVoiceId).toLowerCase();
+
+                                    return (
+                                        <div
+                                            key={voice.id}
+                                            ref={(element) => {
+                                                customerVoiceRefs.current[voice.id] =
+                                                    element;
+                                            }}
+                                            id={`customer-voice-${voice.id}`}
+                                            className={`rounded-xl border p-4 transition-all duration-300 ${isHighlighted
+                                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                                : 'border-slate-200 bg-slate-50'
+                                                }`}
+                                        >
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <MessageSquare className="h-4 w-4 text-slate-500" />
+                                                        <h3 className="text-sm font-semibold text-slate-900">
+                                                            {voice.subject || 'Customer Voice'}
+                                                        </h3>
+                                                    </div>
+
+                                                    <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                                        {voice.message}
+                                                    </p>
+                                                </div>
+
+                                                <span className="inline-flex w-fit shrink-0 rounded-full bg-slate-200 px-3 py-1 text-xs font-medium text-slate-700">
+                                                    {voice.status || 'Open'}
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-4 border-t border-slate-200 pt-3 text-xs text-slate-500">
+                                                Created {formatDate(voice.createdAtUtc)}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </Section>
+
             </div>
 
             {/* Upload Report Modal */}

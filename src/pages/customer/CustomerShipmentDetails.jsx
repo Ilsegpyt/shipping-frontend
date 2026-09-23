@@ -15,6 +15,7 @@ import {
     Upload,
     X,
     Clock3,
+    MessageSquare,
 } from 'lucide-react';
 
 import {
@@ -25,6 +26,10 @@ import {
 } from '../../services/shipmentsService';
 
 import { getScheduleById } from '../../services/schedulesService';
+import {
+    getCustomerVoices,
+    createCustomerVoice,
+} from '../../services/customerVoicesService';
 
 const statusStyles = {
     ReadyToShip: 'bg-amber-100 text-amber-700',
@@ -89,6 +94,21 @@ function getStatusClass(status) {
     );
 }
 
+function getCustomerVoiceStatusClass(status) {
+    switch (String(status).toLowerCase()) {
+        case 'open':
+            return 'bg-blue-100 text-blue-700';
+        case 'inprogress':
+            return 'bg-amber-100 text-amber-700';
+        case 'resolved':
+            return 'bg-emerald-100 text-emerald-700';
+        case 'closed':
+            return 'bg-slate-100 text-slate-700';
+        default:
+            return 'bg-slate-100 text-slate-700';
+    }
+}
+
 function DetailItem({ label, value }) {
     return (
         <div>
@@ -112,11 +132,10 @@ function TimelinePoint({
     return (
         <div className="flex items-start gap-4">
             <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
-                    active
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-100 text-slate-500'
-                }`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${active
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-slate-100 text-slate-500'
+                    }`}
             >
                 {icon}
             </div>
@@ -141,6 +160,16 @@ export default function CustomerShipmentDetails() {
     const [schedule, setSchedule] = useState(null);
 
     const [declarationFiles, setDeclarationFiles] = useState([]);
+    const [customerVoices, setCustomerVoices] = useState([]);
+    const [customerVoicesLoading, setCustomerVoicesLoading] = useState(false);
+    const [customerVoiceModalOpen, setCustomerVoiceModalOpen] = useState(false);
+    const [customerVoiceSubmitting, setCustomerVoiceSubmitting] = useState(false);
+    const [customerVoiceError, setCustomerVoiceError] = useState('');
+    const [customerVoiceSuccess, setCustomerVoiceSuccess] = useState('');
+    const [customerVoiceForm, setCustomerVoiceForm] = useState({
+        subject: '',
+        message: '',
+    });
 
     const [loading, setLoading] = useState(true);
     const [scheduleLoading, setScheduleLoading] =
@@ -178,6 +207,7 @@ export default function CustomerShipmentDetails() {
             }
 
             await loadDeclarationFiles();
+            await loadCustomerVoices();
         } catch (err) {
             console.error(
                 'Failed to load shipment details:',
@@ -186,8 +216,8 @@ export default function CustomerShipmentDetails() {
 
             setError(
                 err?.response?.data?.message ??
-                    err?.response?.data?.detail ??
-                    'Unable to load shipment details.'
+                err?.response?.data?.detail ??
+                'Unable to load shipment details.'
             );
         } finally {
             setLoading(false);
@@ -211,8 +241,8 @@ export default function CustomerShipmentDetails() {
 
             setScheduleError(
                 err?.response?.data?.message ??
-                    err?.response?.data?.detail ??
-                    'Unable to load schedule details.'
+                err?.response?.data?.detail ??
+                'Unable to load schedule details.'
             );
         } finally {
             setScheduleLoading(false);
@@ -236,6 +266,108 @@ export default function CustomerShipmentDetails() {
             setDeclarationFiles([]);
         } finally {
             setFilesLoading(false);
+        }
+    };
+
+    const loadCustomerVoices = async () => {
+        try {
+            setCustomerVoicesLoading(true);
+            setCustomerVoiceError('');
+
+            const result = await getCustomerVoices();
+            console.log('Current shipment id:', id);
+            console.log('Customer voices result:', result);
+
+            const shipmentVoices = (result ?? []).filter(
+                (voice) => voice.shipmentId === id
+            );
+
+            setCustomerVoices(shipmentVoices);
+        } catch (err) {
+            console.error('Failed to load customer voices:', err);
+            setCustomerVoices([]);
+            setCustomerVoiceError(
+                err?.response?.data?.message ??
+                err?.response?.data?.detail ??
+                'Failed to load customer voice requests.'
+            );
+        } finally {
+            setCustomerVoicesLoading(false);
+        }
+    };
+
+    const openCustomerVoiceModal = () => {
+        setCustomerVoiceForm({ subject: '', message: '' });
+        setCustomerVoiceError('');
+        setCustomerVoiceSuccess('');
+        setCustomerVoiceModalOpen(true);
+    };
+
+    const closeCustomerVoiceModal = () => {
+        if (customerVoiceSubmitting) return;
+        setCustomerVoiceModalOpen(false);
+        setCustomerVoiceError('');
+        setCustomerVoiceSuccess('');
+    };
+
+    const handleCustomerVoiceChange = (event) => {
+        const { name, value } = event.target;
+
+        setCustomerVoiceForm((current) => ({
+            ...current,
+            [name]: value,
+        }));
+
+        setCustomerVoiceError('');
+        setCustomerVoiceSuccess('');
+    };
+
+    const handleCreateCustomerVoice = async (event) => {
+        event.preventDefault();
+
+        if (!customerVoiceForm.subject.trim()) {
+            setCustomerVoiceError('Subject is required.');
+            return;
+        }
+
+        if (!customerVoiceForm.message.trim()) {
+            setCustomerVoiceError('Message is required.');
+            return;
+        }
+
+        try {
+            setCustomerVoiceSubmitting(true);
+            setCustomerVoiceError('');
+            setCustomerVoiceSuccess('');
+
+            await createCustomerVoice({
+                shipmentId: id,
+                subject: customerVoiceForm.subject.trim(),
+                message: customerVoiceForm.message.trim(),
+            });
+
+            setCustomerVoiceSuccess(
+                'Customer Voice request created successfully.'
+            );
+
+            await loadCustomerVoices();
+
+            setTimeout(() => {
+                setCustomerVoiceModalOpen(false);
+                setCustomerVoiceForm({ subject: '', message: '' });
+                setCustomerVoiceSuccess('');
+            }, 700);
+        } catch (err) {
+            console.error('Failed to create customer voice:', err);
+            setCustomerVoiceError(
+                err?.response?.data?.message ??
+                err?.response?.data?.detail ??
+                err?.response?.data?.title ??
+                err?.response?.data?.error ??
+                'Failed to create customer voice request.'
+            );
+        } finally {
+            setCustomerVoiceSubmitting(false);
         }
     };
 
@@ -305,9 +437,9 @@ export default function CustomerShipmentDetails() {
 
             setUploadError(
                 err?.response?.data?.message ??
-                    err?.response?.data?.detail ??
-                    err?.response?.data?.title ??
-                    'Failed to upload declaration file.'
+                err?.response?.data?.detail ??
+                err?.response?.data?.title ??
+                'Failed to upload declaration file.'
             );
         } finally {
             setUploading(false);
@@ -558,11 +690,10 @@ export default function CustomerShipmentDetails() {
                                     />
 
                                     <div
-                                        className={`absolute left-0 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${
-                                            timeline.progress > 0
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-white text-slate-500 ring-1 ring-slate-200'
-                                        }`}
+                                        className={`absolute left-0 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${timeline.progress > 0
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-white text-slate-500 ring-1 ring-slate-200'
+                                            }`}
                                     >
                                         <CalendarDays className="h-5 w-5" />
                                     </div>
@@ -580,11 +711,10 @@ export default function CustomerShipmentDetails() {
                                     </div>
 
                                     <div
-                                        className={`absolute left-full top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${
-                                            timeline.progress === 100
-                                                ? 'bg-emerald-600 text-white'
-                                                : 'bg-white text-slate-500 ring-1 ring-slate-200'
-                                        }`}
+                                        className={`absolute left-full top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${timeline.progress === 100
+                                            ? 'bg-emerald-600 text-white'
+                                            : 'bg-white text-slate-500 ring-1 ring-slate-200'
+                                            }`}
                                     >
                                         <CheckCircle2 className="h-5 w-5" />
                                     </div>
@@ -720,7 +850,7 @@ export default function CustomerShipmentDetails() {
                 </div>
             </div>
 
-            
+
             {/* Schedule Details */}
             {schedule && (
                 <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -965,7 +1095,7 @@ export default function CustomerShipmentDetails() {
                             <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                         </div>
                     ) : declarationFiles.length ===
-                      0 ? (
+                        0 ? (
                         <div className="py-8 text-center">
                             <FileText className="mx-auto h-10 w-10 text-gray-400" />
 
@@ -1017,8 +1147,8 @@ export default function CustomerShipmentDetails() {
                                                 <td className="px-4 py-4 text-gray-500">
                                                     {formatDateTime(
                                                         file.uploadedAtUtc ??
-                                                            file.createdAtUtc ??
-                                                            file.uploadedAt
+                                                        file.createdAtUtc ??
+                                                        file.uploadedAt
                                                     )}
                                                 </td>
 
@@ -1045,6 +1175,190 @@ export default function CustomerShipmentDetails() {
                     )}
                 </div>
             </div>
+
+            {/* Customer Voice */}
+            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-4 border-b border-gray-200 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
+                            <MessageSquare className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h2 className="font-semibold text-gray-900">Customer Voice</h2>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Submit and track requests related to this shipment.
+                            </p>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={openCustomerVoiceModal}
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+                    >
+                        <MessageSquare className="h-4 w-4" />
+                        Create Request
+                    </button>
+                </div>
+
+                <div className="px-6 py-6">
+                    {customerVoicesLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                        </div>
+                    ) : customerVoiceError && customerVoices.length === 0 ? (
+                        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>{customerVoiceError}</span>
+                        </div>
+                    ) : customerVoices.length === 0 ? (
+                        <div className="py-8 text-center">
+                            <MessageSquare className="mx-auto h-10 w-10 text-gray-400" />
+                            <p className="mt-3 text-sm font-medium text-gray-700">
+                                No customer voice requests yet.
+                            </p>
+                            <p className="mt-1 text-sm text-gray-500">
+                                If you have an issue with this shipment, create a request.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {customerVoices.map((voice) => (
+                                <div
+                                    key={voice.id}
+                                    className="rounded-xl border border-gray-200 bg-gray-50 p-4"
+                                >
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900">
+                                                {voice.subject}
+                                            </h3>
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                Created {formatDateTime(voice.createdAtUtc)}
+                                            </p>
+                                        </div>
+
+                                        <span
+                                            className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-medium ${getCustomerVoiceStatusClass(
+                                                voice.status
+                                            )}`}
+                                        >
+                                            {voice.status}
+                                        </span>
+                                    </div>
+
+                                    <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-gray-700">
+                                        {voice.message}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {customerVoiceModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl">
+                        <div className="mb-5">
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Create Customer Voice
+                            </h2>
+                            <p className="mt-1 text-sm text-gray-500">
+                                Submit a request related to this shipment.
+                            </p>
+                        </div>
+
+                        {customerVoiceError && (
+                            <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                                <span>{customerVoiceError}</span>
+                            </div>
+                        )}
+
+                        {customerVoiceSuccess && (
+                            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                                {customerVoiceSuccess}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleCreateCustomerVoice}>
+                            <div className="space-y-4">
+                                <div>
+                                    <label
+                                        htmlFor="customer-voice-subject"
+                                        className="mb-1.5 block text-sm font-medium text-gray-700"
+                                    >
+                                        Subject *
+                                    </label>
+                                    <input
+                                        id="customer-voice-subject"
+                                        name="subject"
+                                        type="text"
+                                        value={customerVoiceForm.subject}
+                                        onChange={handleCustomerVoiceChange}
+                                        disabled={customerVoiceSubmitting}
+                                        maxLength={200}
+                                        placeholder="Enter request subject"
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-50"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label
+                                        htmlFor="customer-voice-message"
+                                        className="mb-1.5 block text-sm font-medium text-gray-700"
+                                    >
+                                        Message *
+                                    </label>
+                                    <textarea
+                                        id="customer-voice-message"
+                                        name="message"
+                                        value={customerVoiceForm.message}
+                                        onChange={handleCustomerVoiceChange}
+                                        disabled={customerVoiceSubmitting}
+                                        maxLength={4000}
+                                        rows={6}
+                                        placeholder="Describe your issue or request"
+                                        className="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-50"
+                                    />
+                                </div>
+
+                                <div className="mt-6 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={closeCustomerVoiceModal}
+                                        disabled={customerVoiceSubmitting}
+                                        className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+
+                                    <button
+                                        type="submit"
+                                        disabled={customerVoiceSubmitting}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {customerVoiceSubmitting ? (
+                                            <>
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <MessageSquare className="h-4 w-4" />
+                                                Create Request
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+
         </section>
     );
 }

@@ -8,6 +8,7 @@ import {
     FileText,
     Bell,
     History,
+    MessageSquare,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -69,6 +70,16 @@ export const getInternalNavigation = (user) => [
                         icon: History,
                     },
                 ]),
+
+            ...(user?.roleName === "Super Admin"
+                ? [
+                    {
+                        label: "Customer Voice",
+                        path: "/customer-voices",
+                        icon: MessageSquare,
+                    },
+                ]
+                : []),
         ],
     },
 
