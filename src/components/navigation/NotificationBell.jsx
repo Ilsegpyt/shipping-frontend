@@ -146,16 +146,25 @@ export default function NotificationBell() {
 
             if (
                 user?.tokenType !== 'internal' &&
-                notification.shipmentId &&
-                notification.customerVoiceId
+                notification.shipmentId
             ) {
-                const params = new URLSearchParams({
-                    customerVoiceId:
-                        notification.customerVoiceId,
-                });
+                const params = new URLSearchParams();
+
+                if (notification.customerVoiceId) {
+                    params.set(
+                        'customerVoiceId',
+                        notification.customerVoiceId
+                    );
+                }
+
+                const queryString = params.toString();
 
                 navigate(
-                    `/customer/shipments/${notification.shipmentId}?${params.toString()}`
+                    `/customer/shipments/${notification.shipmentId}` +
+                    (queryString
+                        ? `?${queryString}`
+                        : '') +
+                    '#tracking'
                 );
             }
         } catch (error) {

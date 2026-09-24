@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import {
     AlertCircle,
     ArrowLeft,
@@ -133,8 +133,8 @@ function TimelinePoint({
         <div className="flex items-start gap-4">
             <div
                 className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${active
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 text-slate-500'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-slate-100 text-slate-500'
                     }`}
             >
                 {icon}
@@ -155,6 +155,7 @@ function TimelinePoint({
 
 export default function CustomerShipmentDetails() {
     const { id } = useParams();
+    const location = useLocation();
 
     const [shipment, setShipment] = useState(null);
     const [schedule, setSchedule] = useState(null);
@@ -186,6 +187,8 @@ export default function CustomerShipmentDetails() {
     const [uploadError, setUploadError] = useState('');
     const [uploadSuccess, setUploadSuccess] =
         useState('');
+
+    const trackingRef = useRef(null);
 
     useEffect(() => {
         loadShipment();
@@ -275,6 +278,7 @@ export default function CustomerShipmentDetails() {
             setCustomerVoiceError('');
 
             const result = await getCustomerVoices();
+
             console.log('Current shipment id:', id);
             console.log('Customer voices result:', result);
 
@@ -284,8 +288,13 @@ export default function CustomerShipmentDetails() {
 
             setCustomerVoices(shipmentVoices);
         } catch (err) {
-            console.error('Failed to load customer voices:', err);
+            console.error(
+                'Failed to load customer voices:',
+                err
+            );
+
             setCustomerVoices([]);
+
             setCustomerVoiceError(
                 err?.response?.data?.message ??
                 err?.response?.data?.detail ??
@@ -297,7 +306,11 @@ export default function CustomerShipmentDetails() {
     };
 
     const openCustomerVoiceModal = () => {
-        setCustomerVoiceForm({ subject: '', message: '' });
+        setCustomerVoiceForm({
+            subject: '',
+            message: '',
+        });
+
         setCustomerVoiceError('');
         setCustomerVoiceSuccess('');
         setCustomerVoiceModalOpen(true);
@@ -305,6 +318,7 @@ export default function CustomerShipmentDetails() {
 
     const closeCustomerVoiceModal = () => {
         if (customerVoiceSubmitting) return;
+
         setCustomerVoiceModalOpen(false);
         setCustomerVoiceError('');
         setCustomerVoiceSuccess('');
@@ -354,11 +368,18 @@ export default function CustomerShipmentDetails() {
 
             setTimeout(() => {
                 setCustomerVoiceModalOpen(false);
-                setCustomerVoiceForm({ subject: '', message: '' });
+                setCustomerVoiceForm({
+                    subject: '',
+                    message: '',
+                });
                 setCustomerVoiceSuccess('');
             }, 700);
         } catch (err) {
-            console.error('Failed to create customer voice:', err);
+            console.error(
+                'Failed to create customer voice:',
+                err
+            );
+
             setCustomerVoiceError(
                 err?.response?.data?.message ??
                 err?.response?.data?.detail ??
@@ -502,8 +523,13 @@ export default function CustomerShipmentDetails() {
         const arrival = new Date(arrivalDate);
         const today = new Date();
 
-        const total = arrival.getTime() - departure.getTime();
-        const elapsed = today.getTime() - departure.getTime();
+        const total =
+            arrival.getTime() -
+            departure.getTime();
+
+        const elapsed =
+            today.getTime() -
+            departure.getTime();
 
         let progress = 0;
 
@@ -511,18 +537,36 @@ export default function CustomerShipmentDetails() {
             progress = 100;
         } else if (today > departure && total > 0) {
             progress = Math.round(
-                Math.min(100, Math.max(0, (elapsed / total) * 100))
+                Math.min(
+                    100,
+                    Math.max(
+                        0,
+                        (elapsed / total) * 100
+                    )
+                )
             );
         }
 
-        const totalDays = Math.max(0, Math.ceil(total / 86400000));
+        const totalDays = Math.max(
+            0,
+            Math.ceil(total / 86400000)
+        );
+
         const elapsedDays = Math.min(
             totalDays,
-            Math.max(0, Math.floor(elapsed / 86400000))
+            Math.max(
+                0,
+                Math.floor(elapsed / 86400000)
+            )
         );
-        const remainingDays = Math.max(0, totalDays - elapsedDays);
+
+        const remainingDays = Math.max(
+            0,
+            totalDays - elapsedDays
+        );
 
         let phase = 'Scheduled';
+
         if (today >= arrival) {
             phase = 'Completed';
         } else if (today > departure) {
@@ -537,15 +581,42 @@ export default function CustomerShipmentDetails() {
             elapsedLabel:
                 phase === 'Scheduled'
                     ? 'Not departed'
-                    : `${elapsedDays} day${elapsedDays === 1 ? '' : 's'} elapsed`,
+                    : `${elapsedDays} day${elapsedDays === 1 ? '' : 's'
+                    } elapsed`,
             durationLabel:
-                `${totalDays} day${totalDays === 1 ? '' : 's'} planned`,
+                `${totalDays} day${totalDays === 1 ? '' : 's'
+                } planned`,
             remainingLabel:
                 phase === 'Completed'
                     ? 'Arrived'
-                    : `${remainingDays} day${remainingDays === 1 ? '' : 's'} remaining`,
+                    : `${remainingDays} day${remainingDays === 1 ? '' : 's'
+                    } remaining`,
         };
     }, [schedule]);
+
+    useEffect(() => {
+        if (
+            location.hash !== '#tracking' ||
+            !schedule ||
+            !timeline ||
+            !trackingRef.current
+        ) {
+            return;
+        }
+
+        const timer = setTimeout(() => {
+            trackingRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+            });
+
+            trackingRef.current.focus({
+                preventScroll: true,
+            });
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, [location.hash, schedule, timeline]);
 
     if (loading) {
         return (
@@ -645,7 +716,11 @@ export default function CustomerShipmentDetails() {
             </div>
 
             {/* Time-Based Tracking */}
-            <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+            <div
+                ref={trackingRef}
+                tabIndex={-1}
+                className="scroll-mt-24 rounded-2xl border border-gray-200 bg-white shadow-sm outline-none"
+            >
                 {scheduleLoading ? (
                     <div className="flex items-center justify-center py-12">
                         <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
@@ -686,13 +761,15 @@ export default function CustomerShipmentDetails() {
 
                                     <div
                                         className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-blue-600 transition-all duration-500"
-                                        style={{ width: `${timeline.progress}%` }}
+                                        style={{
+                                            width: `${timeline.progress}%`,
+                                        }}
                                     />
 
                                     <div
                                         className={`absolute left-0 top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${timeline.progress > 0
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white text-slate-500 ring-1 ring-slate-200'
+                                                ? 'bg-blue-600 text-white'
+                                                : 'bg-white text-slate-500 ring-1 ring-slate-200'
                                             }`}
                                     >
                                         <CalendarDays className="h-5 w-5" />
@@ -700,7 +777,9 @@ export default function CustomerShipmentDetails() {
 
                                     <div
                                         className="absolute top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white bg-blue-600 text-white shadow-md transition-all duration-500"
-                                        style={{ left: `${timeline.progress}%` }}
+                                        style={{
+                                            left: `${timeline.progress}%`,
+                                        }}
                                         title={`${timeline.progress}% of planned journey`}
                                     >
                                         {schedule.mode === 'Air' ? (
@@ -712,8 +791,8 @@ export default function CustomerShipmentDetails() {
 
                                     <div
                                         className={`absolute left-full top-1/2 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-4 border-white shadow-sm ${timeline.progress === 100
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'bg-white text-slate-500 ring-1 ring-slate-200'
+                                                ? 'bg-emerald-600 text-white'
+                                                : 'bg-white text-slate-500 ring-1 ring-slate-200'
                                             }`}
                                     >
                                         <CheckCircle2 className="h-5 w-5" />
@@ -722,34 +801,77 @@ export default function CustomerShipmentDetails() {
 
                                 <div className="mt-4 grid grid-cols-3 gap-4 text-center">
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Departure</p>
-                                        <p className="mt-1 font-semibold text-slate-900">{schedule.origin ?? '-'}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{schedule.departurePortCode ?? '-'}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{formatDate(timeline.departureDate)}</p>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                            Departure
+                                        </p>
+
+                                        <p className="mt-1 font-semibold text-slate-900">
+                                            {schedule.origin ?? '-'}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {schedule.departurePortCode ?? '-'}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {formatDate(
+                                                timeline.departureDate
+                                            )}
+                                        </p>
                                     </div>
 
                                     <div className="self-center">
-                                        <p className="text-sm font-semibold text-blue-600">{timeline.phase}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{formatTimeSpan(schedule.transitTime)} planned transit</p>
+                                        <p className="text-sm font-semibold text-blue-600">
+                                            {timeline.phase}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {formatTimeSpan(
+                                                schedule.transitTime
+                                            )}{' '}
+                                            planned transit
+                                        </p>
                                     </div>
 
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Arrival</p>
-                                        <p className="mt-1 font-semibold text-slate-900">{schedule.destination ?? '-'}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{schedule.arrivalPortCode ?? '-'}</p>
-                                        <p className="mt-1 text-xs text-slate-500">{formatDate(timeline.arrivalDate)}</p>
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                                            Arrival
+                                        </p>
+
+                                        <p className="mt-1 font-semibold text-slate-900">
+                                            {schedule.destination ?? '-'}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {schedule.arrivalPortCode ?? '-'}
+                                        </p>
+
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {formatDate(
+                                                timeline.arrivalDate
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
 
                                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-slate-50 px-4 py-3 text-xs font-medium text-slate-600">
-                                    <span>{timeline.elapsedLabel}</span>
-                                    <span className="text-blue-600">{timeline.progress}% complete</span>
-                                    <span>{timeline.remainingLabel}</span>
+                                    <span>
+                                        {timeline.elapsedLabel}
+                                    </span>
+
+                                    <span className="text-blue-600">
+                                        {timeline.progress}% complete
+                                    </span>
+
+                                    <span>
+                                        {timeline.remainingLabel}
+                                    </span>
                                 </div>
                             </div>
 
                             <div className="mt-5 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700">
                                 <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
+
                                 <p>
                                     This is a schedule-based estimate calculated from the planned departure and arrival dates. It does not represent live shipment tracking.
                                 </p>
@@ -849,7 +971,6 @@ export default function CustomerShipmentDetails() {
                     />
                 </div>
             </div>
-
 
             {/* Schedule Details */}
             {schedule && (
@@ -1094,8 +1215,7 @@ export default function CustomerShipmentDetails() {
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                         </div>
-                    ) : declarationFiles.length ===
-                        0 ? (
+                    ) : declarationFiles.length === 0 ? (
                         <div className="py-8 text-center">
                             <FileText className="mx-auto h-10 w-10 text-gray-400" />
 
@@ -1183,8 +1303,12 @@ export default function CustomerShipmentDetails() {
                         <div className="rounded-xl bg-blue-50 p-3 text-blue-600">
                             <MessageSquare className="h-6 w-6" />
                         </div>
+
                         <div>
-                            <h2 className="font-semibold text-gray-900">Customer Voice</h2>
+                            <h2 className="font-semibold text-gray-900">
+                                Customer Voice
+                            </h2>
+
                             <p className="mt-1 text-sm text-gray-500">
                                 Submit and track requests related to this shipment.
                             </p>
@@ -1206,7 +1330,8 @@ export default function CustomerShipmentDetails() {
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
                         </div>
-                    ) : customerVoiceError && customerVoices.length === 0 ? (
+                    ) : customerVoiceError &&
+                        customerVoices.length === 0 ? (
                         <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                             <span>{customerVoiceError}</span>
@@ -1214,9 +1339,11 @@ export default function CustomerShipmentDetails() {
                     ) : customerVoices.length === 0 ? (
                         <div className="py-8 text-center">
                             <MessageSquare className="mx-auto h-10 w-10 text-gray-400" />
+
                             <p className="mt-3 text-sm font-medium text-gray-700">
                                 No customer voice requests yet.
                             </p>
+
                             <p className="mt-1 text-sm text-gray-500">
                                 If you have an issue with this shipment, create a request.
                             </p>
@@ -1233,8 +1360,11 @@ export default function CustomerShipmentDetails() {
                                             <h3 className="font-semibold text-gray-900">
                                                 {voice.subject}
                                             </h3>
+
                                             <p className="mt-1 text-xs text-gray-500">
-                                                Created {formatDateTime(voice.createdAtUtc)}
+                                                Created {formatDateTime(
+                                                    voice.createdAtUtc
+                                                )}
                                             </p>
                                         </div>
 
@@ -1264,6 +1394,7 @@ export default function CustomerShipmentDetails() {
                             <h2 className="text-lg font-semibold text-gray-900">
                                 Create Customer Voice
                             </h2>
+
                             <p className="mt-1 text-sm text-gray-500">
                                 Submit a request related to this shipment.
                             </p>
@@ -1291,6 +1422,7 @@ export default function CustomerShipmentDetails() {
                                     >
                                         Subject *
                                     </label>
+
                                     <input
                                         id="customer-voice-subject"
                                         name="subject"
@@ -1311,6 +1443,7 @@ export default function CustomerShipmentDetails() {
                                     >
                                         Message *
                                     </label>
+
                                     <textarea
                                         id="customer-voice-message"
                                         name="message"
@@ -1357,8 +1490,6 @@ export default function CustomerShipmentDetails() {
                     </div>
                 </div>
             )}
-
-
         </section>
     );
 }
