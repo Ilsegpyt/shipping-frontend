@@ -5,6 +5,7 @@ import InternalLayout from '../layouts/InternalLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
 import SubAccountLayout from '../layouts/SubAccountLayout';
 import Login from '../pages/auth/Login';
+import ActivateAccount from '../pages/auth/ActivateAccount';
 
 // Internal pages
 import Dashboard from '../pages/internal/shared/Dashboard';
@@ -50,6 +51,11 @@ export default function AppRoutes() {
             <Route
                 path="/login"
                 element={<Login />}
+            />
+
+            <Route
+                path="/activate-account"
+                element={<ActivateAccount />}
             />
 
             {/* Protected Routes */}
