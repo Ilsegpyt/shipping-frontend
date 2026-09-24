@@ -74,3 +74,15 @@ export const suspendCustomer = async (customerId) => {
     const response = await api.post(`/api/customers/${customerId}/suspend`);
     return response.data;
 };
+export const getShipmentExceptions = async () => {
+    const response = await api.get('/api/shipments/exceptions');
+    return response.data;
+};
+export const getClientSearchActivity = async () => {
+    const response = await api.get('/api/customers/client-search-activity');
+    return response.data;
+};
+export const getAccountManagerWorkload = async () => {
+    const response = await api.get('/api/identity/account-manager-workload');
+    return response.data;
+};

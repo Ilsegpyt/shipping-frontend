@@ -1,7 +1,17 @@
 import { useEffect, useState } from 'react';
+import {
+    AlertTriangle,
+    Search,
+    Users,
+} from 'lucide-react';
 import { useAuth } from '../../../auth/AuthContext';
 import dashboardHero from '../../../assets/branding/dashboard-hero.png';
-import { getCustomers } from '../../../services/customersService';
+import {
+    getCustomers,
+    getShipmentExceptions,
+    getClientSearchActivity,
+    getAccountManagerWorkload,
+} from '../../../services/customersService';
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -9,177 +19,354 @@ export default function Dashboard() {
     const [totalCustomers, setTotalCustomers] = useState(0);
     const [loadingCustomers, setLoadingCustomers] = useState(true);
 
+    const [shipmentExceptions, setShipmentExceptions] = useState({
+        total: 0,
+        missingDocuments: 0,
+        cancelled: 0,
+    });
+
+    const [loadingShipmentExceptions, setLoadingShipmentExceptions] =
+        useState(true);
+
+    const [clientSearchActivity, setClientSearchActivity] = useState({
+        searchesToday: 0,
+        activeClients: 0,
+    });
+
+    const [loadingClientSearchActivity, setLoadingClientSearchActivity] =
+        useState(true);
+
+    const [accountManagerWorkload, setAccountManagerWorkload] = useState([]);
+    const [loadingAccountManagerWorkload, setLoadingAccountManagerWorkload] =
+        useState(true);
+
     useEffect(() => {
-        const loadTotalCustomers = async () => {
+        const loadDashboardData = async () => {
             try {
                 setLoadingCustomers(true);
+                setLoadingShipmentExceptions(true);
+                setLoadingClientSearchActivity(true);
+                setLoadingAccountManagerWorkload(true);
 
-                const result = await getCustomers(1, 1, 'notDeleted');
+                const [
+                    customersResult,
+                    exceptionsResult,
+                    searchActivityResult,
+                    workloadResult,
+                ] = await Promise.all([
+                    getCustomers(1, 1, 'notDeleted'),
+                    getShipmentExceptions(),
+                    getClientSearchActivity(),
+                    getAccountManagerWorkload(),
+                ]);
 
-                setTotalCustomers(result.totalCount ?? 0);
+                setTotalCustomers(customersResult.totalCount ?? 0);
+
+                setShipmentExceptions({
+                    total: exceptionsResult.total ?? 0,
+                    missingDocuments: exceptionsResult.missingDocuments ?? 0,
+                    cancelled: exceptionsResult.cancelled ?? 0,
+                });
+
+                setClientSearchActivity({
+                    searchesToday: searchActivityResult.searchesToday ?? 0,
+                    activeClients: searchActivityResult.activeClients ?? 0,
+                });
+
+                setAccountManagerWorkload(workloadResult.items ?? []);
             } catch (error) {
-                console.error('Failed to load total customers:', error);
+                console.error('Failed to load dashboard data:', error);
+
                 setTotalCustomers(0);
+                setShipmentExceptions({
+                    total: 0,
+                    missingDocuments: 0,
+                    cancelled: 0,
+                });
+
+                setClientSearchActivity({
+                    searchesToday: 0,
+                    activeClients: 0,
+                });
+
+                setAccountManagerWorkload([]);
             } finally {
                 setLoadingCustomers(false);
+                setLoadingShipmentExceptions(false);
+                setLoadingClientSearchActivity(false);
+                setLoadingAccountManagerWorkload(false);
             }
         };
 
-        loadTotalCustomers();
+        loadDashboardData();
     }, []);
 
-    const stats = [
-        {
-            label: 'Total Customers',
-            value: loadingCustomers ? '...' : totalCustomers,
-            description: 'Active customer accounts',
-        },
-        {
-            label: 'Total Shipments',
-            value: '0',
-            description: 'All shipments',
-        },
-        {
-            label: 'In Transit',
-            value: '0',
-            description: 'Currently moving',
-        },
-        {
-            label: 'Delivered',
-            value: '0',
-            description: 'Successfully delivered',
-        },
-    ];
-
     return (
-        <div className="space-y-8">
+        <div className="space-y-4">
             {/* Hero */}
             <section
-                className="relative h-64 overflow-hidden rounded-2xl"
+                className="relative overflow-hidden rounded-2xl"
                 style={{
                     backgroundImage: `url(${dashboardHero})`,
                     backgroundPosition: 'center',
                     backgroundSize: 'cover',
                 }}
             >
-                <div className="absolute inset-0 bg-slate-950/50" />
+                <div className="absolute inset-0 bg-slate-950/60" />
 
-                <div className="relative flex h-full items-center px-8">
-                    <div className="max-w-xl text-white">
-                        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-200">
-                            We Make Shipping Easy
+                <div className="relative flex min-h-48 items-center px-6 py-7 sm:px-8">
+                    <div className="max-w-2xl text-white">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-200">
+                            Logistics Operations Dashboard
                         </p>
 
-                        <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+                        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
                             Welcome back, {user?.name || 'User'}
-                        </h2>
+                        </h1>
 
-                        <p className="mt-2 text-sm leading-6 text-slate-200">
-                            Here’s what’s happening with your logistics
-                            operations today.
+                        <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">
+                            Monitor your customers, shipments, and operational
+                            activity from one place.
                         </p>
                     </div>
                 </div>
             </section>
 
-            {/* KPI Cards */}
-            <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-                {stats.map((stat) => (
-                    <div
-                        key={stat.label}
-                        className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
-                    >
-                        <p className="text-sm font-medium text-gray-500">
-                            {stat.label}
+            {/* Quick Overview */}
+            <section className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-none">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-slate-500">
+                            Total Customers
                         </p>
 
-                        <div className="mt-3 flex items-end justify-between">
-                            <p className="text-3xl font-semibold tracking-tight text-gray-900">
-                                {stat.value}
-                            </p>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                            <Users size={19} />
+                        </div>
+                    </div>
 
-                            <span className="text-xs font-medium text-gray-400">
-                                Today
-                            </span>
+                    <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+                        {loadingCustomers ? '...' : totalCustomers}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                        Active customer accounts
+                    </p>
+                </div>
+
+                <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-none">
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-slate-500">
+                            Client Search Activity
+                        </p>
+
+                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                            <Search size={19} />
+                        </div>
+                    </div>
+
+                    <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+                        {loadingClientSearchActivity
+                            ? '...'
+                            : clientSearchActivity.searchesToday}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                        Searches today
+                    </p>
+                </div>
+            </section>
+
+            {/* Main Operations */}
+            <section className="grid items-start gap-4 xl:grid-cols-[0.95fr_1.45fr]">
+                {/* Account Manager Workload */}
+                <div className="self-start rounded-lg border border-slate-200 bg-white p-4 shadow-none">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                                <Users size={18} />
+                            </div>
+
+                            <h2 className="text-base font-semibold text-slate-900">
+                                Account Manager Workload
+                            </h2>
                         </div>
 
-                        <p className="mt-2 text-xs text-gray-400">
-                            {stat.description}
+                        <p className="mt-1.5 text-sm text-slate-500">
+                            Assigned customers and active shipments by account manager.
                         </p>
                     </div>
-                ))}
-            </div>
 
-            {/* Dashboard Content */}
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Shipment Overview */}
-                <div className="min-h-80 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
-                    <div className="flex items-start justify-between">
+                    <div className="mt-4 max-h-52 overflow-y-auto rounded-md border border-slate-200 pr-1">
+                        {loadingAccountManagerWorkload ? (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
+                                Loading workload...
+                            </div>
+                        ) : accountManagerWorkload.length === 0 ? (
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
+                                No account manager workload data available.
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-slate-200">
+                                {accountManagerWorkload.map((manager) => (
+                                    <div
+                                        key={manager.accountManagerId}
+                                        className="flex items-center justify-between gap-4 px-3 py-2.5"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-slate-900">
+                                                {manager.accountManagerName}
+                                            </p>
+                                            <p className="mt-1 text-xs text-slate-400">
+                                                {manager.assignedCustomers} assigned customer
+                                                {manager.assignedCustomers === 1 ? '' : 's'}
+                                            </p>
+                                        </div>
+
+                                        <div className="shrink-0 text-right">
+                                            <p className="text-sm font-semibold text-slate-900">
+                                                {manager.activeShipments}
+                                            </p>
+                                            <p className="text-xs text-slate-400">
+                                                active shipments
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Shipment Exceptions */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm self-start">
+                    <div className="flex items-start justify-between gap-4">
                         <div>
-                            <h3 className="text-base font-semibold text-gray-900">
-                                Shipment Overview
-                            </h3>
+                            <div className="flex items-center gap-2">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-amber-50 text-amber-600">
+                                    <AlertTriangle size={18} />
+                                </div>
 
-                            <p className="mt-1 text-sm text-gray-500">
-                                Track shipment activity and routes.
+                                <h2 className="text-base font-semibold text-slate-900">
+                                    Shipment Exceptions
+                                </h2>
+                            </div>
+
+                            <p className="mt-1.5 text-sm text-slate-500">
+                                Shipments that currently need operational
+                                attention.
                             </p>
                         </div>
 
-                        <button
-                            type="button"
-                            className="text-sm font-medium text-blue-600 transition hover:text-blue-700"
-                        >
-                            View all
-                        </button>
                     </div>
 
-                    <div className="mt-6 flex min-h-52 items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-gray-600">
-                                Shipment data
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
+                        <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                Total
                             </p>
 
-                            <p className="mt-1 text-xs text-gray-400">
-                                Shipment activity and routes will appear here.
+                            <p className="mt-2 text-2xl font-semibold text-slate-900">
+                                {loadingShipmentExceptions
+                                    ? '...'
+                                    : shipmentExceptions.total}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                                Need attention
+                            </p>
+                        </div>
+
+                        <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                    Missing Documents
+                                </p>
+
+                                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                            </div>
+
+                            <p className="mt-2 text-2xl font-semibold text-slate-900">
+                                {loadingShipmentExceptions
+                                    ? '...'
+                                    : shipmentExceptions.missingDocuments}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                                Documentation required
+                            </p>
+                        </div>
+
+                        <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                                    Cancelled
+                                </p>
+
+                                <span className="h-2 w-2 rounded-full bg-red-500" />
+                            </div>
+
+                            <p className="mt-2 text-2xl font-semibold text-slate-900">
+                                {loadingShipmentExceptions
+                                    ? '...'
+                                    : shipmentExceptions.cancelled}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                                Shipment cancelled
                             </p>
                         </div>
                     </div>
                 </div>
+            </section>
 
-                {/* Recent Activity */}
-                <div className="min-h-80 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <h3 className="text-base font-semibold text-gray-900">
-                                Recent Activity
-                            </h3>
+            {/* Client Search Activity */}
+            <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-none">
+                <div className="flex items-start justify-between">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                                <Search size={18} />
+                            </div>
 
-                            <p className="mt-1 text-sm text-gray-500">
-                                Latest system activity.
-                            </p>
+                            <h2 className="text-base font-semibold text-slate-900">
+                                Client Search Activity
+                            </h2>
                         </div>
 
-                        <button
-                            type="button"
-                            className="text-sm font-medium text-blue-600 transition hover:text-blue-700"
-                        >
-                            View all
-                        </button>
-                    </div>
-
-                    <div className="mt-6 flex min-h-52 items-center justify-center rounded-xl border border-gray-200 bg-gray-50">
-                        <div className="text-center">
-                            <p className="text-sm font-medium text-gray-600">
-                                No recent activity
-                            </p>
-
-                            <p className="mt-1 text-xs text-gray-400">
-                                New system activity will appear here.
-                            </p>
-                        </div>
+                        <p className="mt-1.5 text-sm text-slate-500">
+                            Recent customer schedule search activity.
+                        </p>
                     </div>
                 </div>
-            </div>
+
+                <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            Searches Today
+                        </p>
+
+                        <p className="mt-2 text-2xl font-semibold text-slate-900">
+                            {loadingClientSearchActivity
+                                ? '...'
+                                : clientSearchActivity.searchesToday}
+                        </p>
+                    </div>
+
+                    <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            Active Clients
+                        </p>
+
+                        <p className="mt-2 text-2xl font-semibold text-slate-900">
+                            {loadingClientSearchActivity
+                                ? '...'
+                                : clientSearchActivity.activeClients}
+                        </p>
+                    </div>
+                </div>
+            </section>
+
         </div>
     );
 }
