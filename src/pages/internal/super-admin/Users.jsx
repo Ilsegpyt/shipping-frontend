@@ -69,6 +69,7 @@ export default function Users() {
     const [creatingUser, setCreatingUser] = useState(false);
     const [addUserError, setAddUserError] = useState('');
     const [createdPassword, setCreatedPassword] = useState('');
+    const [createSuccess, setCreateSuccess] = useState(false);
 
     const [newUser, setNewUser] = useState({
         name: '',
@@ -206,6 +207,7 @@ export default function Users() {
 
         setAddUserError('');
         setCreatedPassword('');
+        setCreateSuccess(false);
         setIsAddUserModalOpen(true);
 
         try {
@@ -227,6 +229,7 @@ export default function Users() {
         setIsAddUserModalOpen(false);
         setAddUserError('');
         setCreatedPassword('');
+        setCreateSuccess(false);
     }
 
     function handleNewUserChange(event) {
@@ -270,7 +273,7 @@ export default function Users() {
                 roleId,
             });
 
-            setCreatedPassword(result.defaultPassword ?? '');
+            setCreateSuccess(true);
 
             await loadUsers(pageNumber);
         } catch (error) {
@@ -878,23 +881,14 @@ export default function Users() {
                                 </div>
                             )}
 
-                            {createdPassword && (
-                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+                            {createSuccess && (
+                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                                     <p className="font-semibold">
-                                        User created successfully.
+                                        Internal user created successfully.
                                     </p>
 
-                                    <p className="mt-2">
-                                        Default password:
-                                    </p>
-
-                                    <code className="mt-1 block rounded bg-white px-3 py-2 font-mono text-sm">
-                                        {createdPassword}
-                                    </code>
-
-                                    <p className="mt-2 text-xs">
-                                        Share this password securely with the
-                                        user.
+                                    <p className="mt-1">
+                                        The user has been added successfully.
                                     </p>
                                 </div>
                             )}
@@ -913,7 +907,7 @@ export default function Users() {
                                     type="text"
                                     value={newUser.name}
                                     onChange={handleNewUserChange}
-                                    disabled={creatingUser || !!createdPassword}
+                                    disabled={creatingUser || createSuccess}
                                     className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                                 />
                             </div>
@@ -932,7 +926,7 @@ export default function Users() {
                                     type="email"
                                     value={newUser.email}
                                     onChange={handleNewUserChange}
-                                    disabled={creatingUser || !!createdPassword}
+                                    disabled={creatingUser || createSuccess}
                                     className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                                 />
                             </div>
@@ -951,7 +945,7 @@ export default function Users() {
                                     type="text"
                                     value={newUser.phone}
                                     onChange={handleNewUserChange}
-                                    disabled={creatingUser || !!createdPassword}
+                                    disabled={creatingUser || createSuccess}
                                     className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                                 />
                             </div>
@@ -972,7 +966,7 @@ export default function Users() {
                                     disabled={
                                         rolesLoading ||
                                         creatingUser ||
-                                        !!createdPassword
+                                        createSuccess
                                     }
                                     className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
                                 >
@@ -1001,10 +995,10 @@ export default function Users() {
                                 disabled={creatingUser}
                                 className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {createdPassword ? 'Close' : 'Cancel'}
+                                {createSuccess ? 'Close' : 'Cancel'}
                             </button>
 
-                            {!createdPassword && (
+                            {!createSuccess && (
                                 <button
                                     type="button"
                                     onClick={handleCreateUser}
