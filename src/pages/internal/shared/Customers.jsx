@@ -578,1108 +578,1023 @@ export default function Customers() {
 
     return (
         <div
-            className="min-h-full bg-gray-50 p-4 sm:p-6"
+            className="min-h-full bg-slate-50 p-4 sm:p-6"
             onClick={() => setOpenActionsId(null)}
         >
-            <div className="mb-6 flex items-start justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold text-gray-900">
-                        Customers
-                    </h1>
+            <div className="mx-auto max-w-[1600px] space-y-5">
+                {/* Page Header */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+                                <span className="text-sm font-semibold">C</span>
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-semibold tracking-tight text-slate-900">
+                                    Customers
+                                </h1>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    Manage customer accounts, access, and contact information.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <p className="mt-1 text-sm text-blue-900/70">
-                        Manage your customers and their accounts.
-                    </p>
-                </div>
-
-                {canCreate && (
-                    <button
-                        type="button"
-                        onClick={openAddCustomerModal}
-                        className="flex items-center gap-2 rounded-lg bg-[#111827] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1f2937]"
-                    >
-                        <Plus size={18} />
-                        Add Customer
-                    </button>
-                )}
-            </div>
-
-            <div className="mb-6 flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
-                <div className="relative w-full max-w-sm">
-                    <Search
-                        size={18}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                    />
-
-                    <input
-                        type="text"
-                        value={searchTerm}
-                        onChange={(event) =>
-                            setSearchTerm(event.target.value)
-                        }
-                        onClick={(event) => event.stopPropagation()}
-                        placeholder="Search customers..."
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                    />
-                </div>
-
-                <div className="ml-4 flex items-center gap-3">
-                    {!isAccountManager && (
-                        <select
-                            value={recordStatus}
-                            onChange={(event) => {
-                                event.stopPropagation();
-                                handleRecordStatusChange(event);
-                            }}
-                            onClick={(event) =>
-                                event.stopPropagation()
-                            }
-                            className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
+                    {canCreate && (
+                        <button
+                            type="button"
+                            onClick={openAddCustomerModal}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
                         >
-                            <option value="notDeleted">
-                                Not Deleted
-                            </option>
-
-                            <option value="deleted">
-                                Deleted
-                            </option>
-
-                            <option value="all">
-                                All Records
-                            </option>
-                        </select>
+                            <Plus size={17} />
+                            Add Customer
+                        </button>
                     )}
+                </div>
 
-                    {canDelete &&
-                        selectedCustomerIds.length > 0 && (
+                {/* Toolbar */}
+                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="relative w-full lg:max-w-md">
+                            <Search
+                                size={17}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(event) =>
+                                    setSearchTerm(event.target.value)
+                                }
+                                onClick={(event) => event.stopPropagation()}
+                                placeholder="Search by name, company, email or phone..."
+                                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            {!isAccountManager && (
+                                <select
+                                    value={recordStatus}
+                                    onChange={(event) => {
+                                        event.stopPropagation();
+                                        handleRecordStatusChange(event);
+                                    }}
+                                    onClick={(event) =>
+                                        event.stopPropagation()
+                                    }
+                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
+                                >
+                                    <option value="notDeleted">
+                                        Not Deleted
+                                    </option>
+                                    <option value="deleted">
+                                        Deleted
+                                    </option>
+                                    <option value="all">
+                                        All Records
+                                    </option>
+                                </select>
+                            )}
+
+                            {canDelete &&
+                                selectedCustomerIds.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            openDeleteConfirmation(
+                                                selectedCustomerIds
+                                            );
+                                        }}
+                                        disabled={isDeleting}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <Trash2 size={16} />
+                                        {isDeleting
+                                            ? 'Deleting...'
+                                            : `Delete Selected (${selectedCustomerIds.length})`}
+                                    </button>
+                                )}
+
                             <button
                                 type="button"
                                 onClick={(event) => {
                                     event.stopPropagation();
-                                    openDeleteConfirmation(
-                                        selectedCustomerIds
-                                    );
+                                    handleRefresh();
                                 }}
-                                disabled={isDeleting}
-                                className="flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                             >
-                                <Trash2 size={17} />
-
-                                {isDeleting
-                                    ? 'Deleting...'
-                                    : `Delete Selected (${selectedCustomerIds.length})`}
+                                <RefreshCw size={16} />
+                                Refresh
                             </button>
-                        )}
-
-                    <button
-                        type="button"
-                        onClick={(event) => {
-                            event.stopPropagation();
-                            handleRefresh();
-                        }}
-                        className="ml-4 flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                    >
-                        <RefreshCw size={17} />
-                        Refresh
-                    </button>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            {deleteError && !loading && (
-                <div className="mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                    <span>{deleteError}</span>
+                {deleteError && !loading && (
+                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <span>{deleteError}</span>
+                        <button
+                            type="button"
+                            onClick={() => setDeleteError('')}
+                            className="font-medium hover:underline"
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                )}
 
-                    <button
-                        type="button"
-                        onClick={() => setDeleteError('')}
-                        className="font-medium hover:underline"
-                    >
-                        Dismiss
-                    </button>
-                </div>
-            )}
+                {loading && (
+                    <div className="rounded-xl border border-slate-200 bg-white py-16 text-center text-sm text-slate-500 shadow-sm">
+                        <RefreshCw
+                            size={20}
+                            className="mx-auto mb-3 animate-spin text-slate-400"
+                        />
+                        Loading customers...
+                    </div>
+                )}
 
-            {loading && (
-                <div className="rounded-xl border border-slate-200 bg-white py-12 text-center text-sm text-slate-500">
-                    Loading customers...
-                </div>
-            )}
+                {!loading && error && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        {error}
+                    </div>
+                )}
 
-            {!loading && error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-600">
-                    {error}
-                </div>
-            )}
+                {!loading && !error && (
+                    <>
+                        {/* Customers Table */}
+                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <div className="flex flex-col gap-1 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <h2 className="text-sm font-semibold text-slate-900">
+                                        Customer Accounts
+                                    </h2>
+                                    <p className="mt-0.5 text-xs text-slate-500">
+                                        {totalCount} customer
+                                        {totalCount === 1 ? '' : 's'} in this view
+                                    </p>
+                                </div>
 
-            {!loading && !error && (
-                <>
-                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full">
-                                <thead className="border-b border-slate-200 bg-slate-50">
-                                    <tr>
-                                        {!isAccountManager && (
-                                            <th className="w-16 px-6 py-4 text-left">
-                                                <input
-                                                    type="checkbox"
-                                                    className="h-4 w-4 rounded border-slate-300"
-                                                    checked={
-                                                        filteredCustomers.length >
-                                                        0 &&
-                                                        filteredCustomers.every(
-                                                            (customer) =>
-                                                                selectedCustomerIds.includes(
-                                                                    customer.id
-                                                                )
-                                                        )
-                                                    }
-                                                    onChange={
-                                                        handleSelectAllCustomers
-                                                    }
-                                                    disabled={
-                                                        isDeleting ||
-                                                        filteredCustomers.length ===
-                                                        0
-                                                    }
-                                                    onClick={(event) =>
-                                                        event.stopPropagation()
-                                                    }
-                                                />
-                                            </th>
-                                        )}
+                                {selectedCustomerIds.length > 0 && (
+                                    <span className="text-xs font-medium text-slate-500">
+                                        {selectedCustomerIds.length} selected
+                                    </span>
+                                )}
+                            </div>
 
-                                        <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Owner Name
-                                        </th>
-
-                                        <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Company Name
-                                        </th>
-
-                                        <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Email
-                                        </th>
-
-                                        <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Phone
-                                        </th>
-
-                                        <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Industry
-                                        </th>
-
-                                        <th className="px-4 py-4 text-left text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Status
-                                        </th>
-
-                                        <th className="px-6 py-4 text-right text-xs font-medium uppercase tracking-wide text-slate-500">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-
-                                <tbody>
-                                    {filteredCustomers.length === 0 ? (
+                            <div className="overflow-x-auto">
+                                <table className="min-w-[900px] w-full">
+                                    <thead className="border-b border-slate-200 bg-slate-50/80">
                                         <tr>
-                                            <td
-                                                colSpan={
-                                                    isAccountManager
-                                                        ? 7
-                                                        : 8
-                                                }
-                                                className="px-6 py-12 text-center text-sm text-slate-500"
-                                            >
-                                                No customers found.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredCustomers.map(
-                                            (customer) => (
-                                                <tr
-                                                    key={customer.id}
-                                                    className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/70"
-                                                >
-                                                    {!isAccountManager && (
-                                                        <td className="px-6 py-5">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="h-4 w-4 rounded border-slate-300"
-                                                                checked={selectedCustomerIds.includes(
-                                                                    customer.id
-                                                                )}
-                                                                onChange={() =>
-                                                                    handleSelectCustomer(
+                                            {!isAccountManager && (
+                                                <th className="w-12 px-4 py-3.5 text-left">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                                        checked={
+                                                            filteredCustomers.length >
+                                                            0 &&
+                                                            filteredCustomers.every(
+                                                                (customer) =>
+                                                                    selectedCustomerIds.includes(
                                                                         customer.id
                                                                     )
-                                                                }
-                                                                disabled={
-                                                                    isDeleting
-                                                                }
-                                                                onClick={(
-                                                                    event
-                                                                ) =>
-                                                                    event.stopPropagation()
-                                                                }
+                                                            )
+                                                        }
+                                                        onChange={
+                                                            handleSelectAllCustomers
+                                                        }
+                                                        disabled={
+                                                            isDeleting ||
+                                                            filteredCustomers.length ===
+                                                            0
+                                                        }
+                                                        onClick={(event) =>
+                                                            event.stopPropagation()
+                                                        }
+                                                    />
+                                                </th>
+                                            )}
+
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                                Customer
+                                            </th>
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                                Contact
+                                            </th>
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                                Industry
+                                            </th>
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                                Status
+                                            </th>
+                                            <th className="w-20 px-4 py-3.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+
+                                    <tbody>
+                                        {filteredCustomers.length === 0 ? (
+                                            <tr>
+                                                <td
+                                                    colSpan={
+                                                        isAccountManager ? 5 : 6
+                                                    }
+                                                    className="px-6 py-16 text-center"
+                                                >
+                                                    <div className="mx-auto max-w-sm">
+                                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100">
+                                                            <Search
+                                                                size={19}
+                                                                className="text-slate-400"
                                                             />
-                                                        </td>
-                                                    )}
-
-                                                    <td className="px-4 py-5 text-sm font-semibold text-slate-900">
-                                                        {customer.ownerName}
-                                                    </td>
-
-                                                    <td className="px-4 py-5 text-sm text-slate-700">
-                                                        {customer.companyName}
-                                                    </td>
-
-                                                    <td className="px-4 py-5 text-sm text-slate-700">
-                                                        {customer.ownerEmail}
-                                                    </td>
-
-                                                    <td className="px-4 py-5 text-sm text-slate-700">
-                                                        {customer.ownerPhone}
-                                                    </td>
-
-                                                    <td className="px-4 py-5 text-sm text-slate-700">
-                                                        {customer.industry ||
-                                                            '-'}
-                                                    </td>
-
-                                                    <td className="px-4 py-5">
-                                                        <span
-                                                            className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${customer.status?.toLowerCase() ===
-                                                                'active'
-                                                                ? 'bg-emerald-50 text-emerald-600'
-                                                                : 'bg-slate-100 text-slate-600'
-                                                                }`}
-                                                        >
-                                                            {
-                                                                customer.status
-                                                            }
-                                                        </span>
-                                                    </td>
-
-                                                    <td className="relative px-6 py-5 text-right">
-                                                        <button
-                                                            type="button"
-                                                            onClick={(
-                                                                event
-                                                            ) => {
-                                                                event.stopPropagation();
-                                                                handleActionToggle(
-                                                                    customer.id
-                                                                );
-                                                            }}
-                                                            className="rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                                                        >
-                                                            <MoreHorizontal
-                                                                size={20}
-                                                            />
-                                                        </button>
-
-                                                        {openActionsId ===
-                                                            customer.id && (
-                                                                <div
-                                                                    className="absolute right-6 top-14 z-20 w-48 rounded-lg border border-slate-200 bg-white py-1 text-left shadow-lg"
+                                                        </div>
+                                                        <p className="mt-3 text-sm font-medium text-slate-700">
+                                                            No customers found
+                                                        </p>
+                                                        <p className="mt-1 text-xs text-slate-500">
+                                                            Try changing your search
+                                                            or record filter.
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredCustomers.map(
+                                                (customer) => (
+                                                    <tr
+                                                        key={customer.id}
+                                                        className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60"
+                                                    >
+                                                        {!isAccountManager && (
+                                                            <td className="px-4 py-4 align-middle">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                                                    checked={selectedCustomerIds.includes(
+                                                                        customer.id
+                                                                    )}
+                                                                    onChange={() =>
+                                                                        handleSelectCustomer(
+                                                                            customer.id
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        isDeleting
+                                                                    }
                                                                     onClick={(
                                                                         event
                                                                     ) =>
                                                                         event.stopPropagation()
                                                                     }
-                                                                >
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleViewCustomer(
-                                                                                customer.id
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                                    >
-                                                                        <Eye
-                                                                            size={
-                                                                                16
-                                                                            }
-                                                                        />
-                                                                        View
-                                                                        Details
-                                                                    </button>
+                                                                />
+                                                            </td>
+                                                        )}
 
-                                                                    {canImpersonate && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                handleImpersonateCustomer(
-                                                                                    customer.id
-                                                                                )
-                                                                            }
-                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                                        >
-                                                                            <LogIn
-                                                                                size={
-                                                                                    16
-                                                                                }
-                                                                            />
-                                                                            Impersonate
-                                                                            Customer
-                                                                        </button>
-                                                                    )}
-
-                                                                    {canEdit && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                handleEditCustomer(
-                                                                                    customer.id
-                                                                                )
-                                                                            }
-                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                                        >
-                                                                            <Pencil
-                                                                                size={
-                                                                                    16
-                                                                                }
-                                                                            />
-                                                                            Edit
-                                                                            Customer
-                                                                        </button>
-                                                                    )}
-
-                                                                    {canEdit && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                handleChangeEmail(
-                                                                                    customer.id
-                                                                                )
-                                                                            }
-                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                                        >
-                                                                            <Mail
-                                                                                size={
-                                                                                    16
-                                                                                }
-                                                                            />
-                                                                            Change
-                                                                            Email
-                                                                        </button>
-                                                                    )}
-
-                                                                    {canDelete && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                openDeleteConfirmation(
-                                                                                    [
-                                                                                        customer.id,
-                                                                                    ]
-                                                                                )
-                                                                            }
-                                                                            disabled={
-                                                                                isDeleting
-                                                                            }
-                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                                                        >
-                                                                            <Trash2
-                                                                                size={
-                                                                                    16
-                                                                                }
-                                                                            />
-                                                                            Delete
-                                                                            Customer
-                                                                        </button>
-                                                                    )}
-
-                                                                    {canSuspend && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                handleSuspendCustomer(
-                                                                                    customer.id
-                                                                                )
-                                                                            }
-                                                                            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-                                                                        >
-                                                                            <Ban
-                                                                                size={
-                                                                                    16
-                                                                                }
-                                                                            />
-                                                                            Suspend
-                                                                            /
-                                                                            Activate
-                                                                        </button>
-                                                                    )}
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600">
+                                                                    {(
+                                                                        customer.companyName ||
+                                                                        customer.ownerName ||
+                                                                        'C'
+                                                                    )
+                                                                        .charAt(0)
+                                                                        .toUpperCase()}
                                                                 </div>
-                                                            )}
-                                                    </td>
-                                                </tr>
+                                                                <div className="min-w-0">
+                                                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                                                        {customer.companyName ||
+                                                                            '-'}
+                                                                    </p>
+                                                                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                                        {customer.ownerName ||
+                                                                            'No owner name'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="px-4 py-4">
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-sm text-slate-700">
+                                                                    {customer.ownerEmail ||
+                                                                        '-'}
+                                                                </p>
+                                                                <p className="mt-1 text-xs text-slate-500">
+                                                                    {customer.ownerPhone ||
+                                                                        '-'}
+                                                                </p>
+                                                            </div>
+                                                        </td>
+
+                                                        <td className="px-4 py-4">
+                                                            <span className="inline-flex max-w-[180px] truncate rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                                                {customer.industry ||
+                                                                    '—'}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="px-4 py-4">
+                                                            <span
+                                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${customer.status?.toLowerCase() ===
+                                                                        'active'
+                                                                        ? 'bg-emerald-50 text-emerald-700'
+                                                                        : 'bg-slate-100 text-slate-600'
+                                                                    }`}
+                                                            >
+                                                                <span
+                                                                    className={`h-1.5 w-1.5 rounded-full ${customer.status?.toLowerCase() ===
+                                                                            'active'
+                                                                            ? 'bg-emerald-500'
+                                                                            : 'bg-slate-400'
+                                                                        }`}
+                                                                />
+                                                                {customer.status ||
+                                                                    'Unknown'}
+                                                            </span>
+                                                        </td>
+
+                                                        <td className="relative px-4 py-4 text-right">
+                                                            <button
+                                                                type="button"
+                                                                onClick={(
+                                                                    event
+                                                                ) => {
+                                                                    event.stopPropagation();
+                                                                    handleActionToggle(
+                                                                        customer.id
+                                                                    );
+                                                                }}
+                                                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                                aria-label="Customer actions"
+                                                            >
+                                                                <MoreHorizontal
+                                                                    size={18}
+                                                                />
+                                                            </button>
+
+                                                            {openActionsId ===
+                                                                customer.id && (
+                                                                    <div
+                                                                        className="absolute right-4 top-12 z-30 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-left shadow-xl"
+                                                                        onClick={(
+                                                                            event
+                                                                        ) =>
+                                                                            event.stopPropagation()
+                                                                        }
+                                                                    >
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                handleViewCustomer(
+                                                                                    customer.id
+                                                                                )
+                                                                            }
+                                                                            className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                        >
+                                                                            <Eye
+                                                                                size={
+                                                                                    16
+                                                                                }
+                                                                            />
+                                                                            View Details
+                                                                        </button>
+
+                                                                        {canImpersonate && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleImpersonateCustomer(
+                                                                                        customer.id
+                                                                                    )
+                                                                                }
+                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                            >
+                                                                                <LogIn
+                                                                                    size={
+                                                                                        16
+                                                                                    }
+                                                                                />
+                                                                                Impersonate Customer
+                                                                            </button>
+                                                                        )}
+
+                                                                        {canEdit && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleEditCustomer(
+                                                                                        customer.id
+                                                                                    )
+                                                                                }
+                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                            >
+                                                                                <Pencil
+                                                                                    size={
+                                                                                        16
+                                                                                    }
+                                                                                />
+                                                                                Edit Customer
+                                                                            </button>
+                                                                        )}
+
+                                                                        {canEdit && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleChangeEmail(
+                                                                                        customer.id
+                                                                                    )
+                                                                                }
+                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                            >
+                                                                                <Mail
+                                                                                    size={
+                                                                                        16
+                                                                                    }
+                                                                                />
+                                                                                Change Email
+                                                                            </button>
+                                                                        )}
+
+                                                                        {canDelete && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    openDeleteConfirmation(
+                                                                                        [
+                                                                                            customer.id,
+                                                                                        ]
+                                                                                    )
+                                                                                }
+                                                                                disabled={
+                                                                                    isDeleting
+                                                                                }
+                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                                                                            >
+                                                                                <Trash2
+                                                                                    size={
+                                                                                        16
+                                                                                    }
+                                                                                />
+                                                                                Delete Customer
+                                                                            </button>
+                                                                        )}
+
+                                                                        {canSuspend && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    handleSuspendCustomer(
+                                                                                        customer.id
+                                                                                    )
+                                                                                }
+                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
+                                                                            >
+                                                                                <Ban
+                                                                                    size={
+                                                                                        16
+                                                                                    }
+                                                                                />
+                                                                                Suspend / Activate
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                        </td>
+                                                    </tr>
+                                                )
                                             )
-                                        )
-                                    )}
-                                </tbody>
-                            </table>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
-                    </div>
 
-                    <div className="mt-4 flex items-center justify-between">
-                        <span className="text-sm text-slate-500">
-                            Total customers: {totalCount}
-                        </span>
+                        {/* Pagination */}
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs text-slate-500">
+                                Showing page {pageNumber} of {totalPages} ·{' '}
+                                {totalCount} total customer
+                                {totalCount === 1 ? '' : 's'}
+                            </p>
 
-                        <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                onClick={handlePreviousPage}
-                                disabled={pageNumber === 1}
-                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Previous
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handlePreviousPage}
+                                    disabled={pageNumber === 1}
+                                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Previous
+                                </button>
 
-                            <span className="text-sm text-slate-600">
-                                Page {pageNumber} of {totalPages}
-                            </span>
+                                <span className="min-w-20 text-center text-sm font-medium text-slate-600">
+                                    {pageNumber} / {totalPages}
+                                </span>
 
-                            <button
-                                type="button"
-                                onClick={handleNextPage}
-                                disabled={pageNumber >= totalPages}
-                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Next
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={handleNextPage}
+                                    disabled={pageNumber >= totalPages}
+                                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    Next
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                </>
-            )}
+                    </>
+                )}
 
-            {isDeleteModalOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4"
-                    onClick={closeDeleteConfirmation}
-                >
+                {/* Delete Confirmation Modal */}
+                {isDeleteModalOpen && (
                     <div
-                        className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl"
-                        onClick={(event) => event.stopPropagation()}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]"
+                        onClick={closeDeleteConfirmation}
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-                            <h2 className="text-xl font-semibold text-slate-900">
-                                Delete Selected Customers
-                            </h2>
+                        <div
+                            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Delete Selected Customers
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        This will remove the selected customer
+                                        accounts.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeDeleteConfirmation}
+                                    disabled={isDeleting}
+                                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+                                    aria-label="Close"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                            <button
-                                type="button"
-                                onClick={closeDeleteConfirmation}
-                                disabled={isDeleting}
-                                className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
-                                aria-label="Close delete confirmation"
-                            >
-                                <X size={22} />
-                            </button>
-                        </div>
+                            <div className="px-6 py-6">
+                                {deleteError && (
+                                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                        {deleteError}
+                                    </div>
+                                )}
 
-                        <div className="px-6 py-7">
-                            <p className="text-sm text-slate-600">
-                                Are you sure you want to delete{' '}
-                                {pendingDeleteIds.length} selected
-                                customer
-                                {pendingDeleteIds.length === 1
-                                    ? ''
-                                    : 's'}
-                                ?
-                            </p>
-
-                            <p className="mt-3 text-sm font-medium text-red-600">
-                                This action cannot be undone.
-                            </p>
-                        </div>
-
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                            <button
-                                type="button"
-                                onClick={closeDeleteConfirmation}
-                                disabled={isDeleting}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleConfirmDelete}
-                                disabled={isDeleting}
-                                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {isDeleting
-                                    ? 'Deleting...'
-                                    : 'Delete Selected'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {isAddModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                            <div>
-                                <h2 className="text-xl font-semibold text-slate-900">
-                                    Add Customer
-                                </h2>
-
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Create a new customer account
+                                <p className="text-sm text-slate-600">
+                                    Are you sure you want to delete{' '}
+                                    <span className="font-semibold text-slate-900">
+                                        {pendingDeleteIds.length}
+                                    </span>{' '}
+                                    selected customer
+                                    {pendingDeleteIds.length === 1
+                                        ? ''
+                                        : 's'}
+                                    ?
+                                </p>
+                                <p className="mt-2 text-sm font-medium text-red-600">
+                                    This action cannot be undone.
                                 </p>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={closeAddCustomerModal}
-                                disabled={creatingCustomer}
-                                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <X size={20} />
-                            </button>
+                            <div className="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+                                <button
+                                    type="button"
+                                    onClick={closeDeleteConfirmation}
+                                    disabled={isDeleting}
+                                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmDelete}
+                                    disabled={isDeleting}
+                                    className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                >
+                                    {isDeleting
+                                        ? 'Deleting...'
+                                        : 'Delete Selected'}
+                                </button>
+                            </div>
                         </div>
+                    </div>
+                )}
 
-                        <form
-                            onSubmit={handleCreateCustomer}
-                            className="space-y-4 p-6"
-                        >
-                            {createError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                    {createError}
+                {/* Add Customer Modal */}
+                {isAddModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
+                        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Add Customer
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Create a new customer account.
+                                    </p>
                                 </div>
-                            )}
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Owner Name
-                                </label>
-
-                                <input
-                                    type="text"
-                                    name="ownerName"
-                                    value={newCustomer.ownerName}
-                                    onChange={
-                                        handleNewCustomerChange
-                                    }
-                                    required
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Enter owner name"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Company Name
-                                </label>
-
-                                <input
-                                    type="text"
-                                    name="companyName"
-                                    value={newCustomer.companyName}
-                                    onChange={
-                                        handleNewCustomerChange
-                                    }
-                                    required
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Enter company name"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Owner Phone
-                                </label>
-
-                                <input
-                                    type="tel"
-                                    name="ownerPhone"
-                                    value={newCustomer.ownerPhone}
-                                    onChange={
-                                        handleNewCustomerChange
-                                    }
-                                    required
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Enter phone number"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Owner Email
-                                </label>
-
-                                <input
-                                    type="email"
-                                    name="ownerEmail"
-                                    value={newCustomer.ownerEmail}
-                                    onChange={
-                                        handleNewCustomerChange
-                                    }
-                                    required
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Enter email address"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-slate-700">
-                                    Industry
-                                </label>
-
-                                <input
-                                    type="text"
-                                    name="industry"
-                                    value={newCustomer.industry}
-                                    onChange={
-                                        handleNewCustomerChange
-                                    }
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Enter industry"
-                                />
-                            </div>
-
-                            <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
                                 <button
                                     type="button"
                                     onClick={closeAddCustomerModal}
                                     disabled={creatingCustomer}
-                                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                                 >
-                                    Cancel
+                                    <X size={20} />
                                 </button>
+                            </div>
 
+                            <form
+                                onSubmit={handleCreateCustomer}
+                                className="space-y-4 p-6"
+                            >
+                                {createError && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                        {createError}
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    {[
+                                        ['ownerName', 'Owner Name', 'Enter owner name'],
+                                        ['companyName', 'Company Name', 'Enter company name'],
+                                        ['ownerPhone', 'Owner Phone', 'Enter phone number'],
+                                        ['ownerEmail', 'Owner Email', 'Enter email address'],
+                                        ['industry', 'Industry', 'Enter industry'],
+                                    ].map(([name, label, placeholder]) => (
+                                        <div
+                                            key={name}
+                                            className={
+                                                name === 'industry'
+                                                    ? 'sm:col-span-2'
+                                                    : ''
+                                            }
+                                        >
+                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                {label}
+                                            </label>
+                                            <input
+                                                type={
+                                                    name === 'ownerEmail'
+                                                        ? 'email'
+                                                        : name === 'ownerPhone'
+                                                            ? 'tel'
+                                                            : 'text'
+                                                }
+                                                name={name}
+                                                value={newCustomer[name]}
+                                                onChange={
+                                                    handleNewCustomerChange
+                                                }
+                                                required={name !== 'industry'}
+                                                disabled={creatingCustomer}
+                                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                placeholder={placeholder}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                    <button
+                                        type="button"
+                                        onClick={closeAddCustomerModal}
+                                        disabled={creatingCustomer}
+                                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={creatingCustomer}
+                                        className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                    >
+                                        {creatingCustomer
+                                            ? 'Creating...'
+                                            : 'Create Customer'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Customer Details Modal */}
+                {isDetailsModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
+                        <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Customer Details
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        View customer account information.
+                                    </p>
+                                </div>
                                 <button
-                                    type="submit"
-                                    disabled={creatingCustomer}
-                                    className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
+                                    type="button"
+                                    onClick={closeDetailsModal}
+                                    disabled={loadingDetails}
+                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                                 >
-                                    {creatingCustomer
-                                        ? 'Creating...'
-                                        : 'Create Customer'}
+                                    <X size={20} />
                                 </button>
                             </div>
-                        </form>
-                    </div>
-                </div>
-            )}
 
-            {isDetailsModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                            <div>
-                                <h2 className="text-xl font-semibold text-slate-900">
-                                    Customer Details
-                                </h2>
+                            <div className="p-6">
+                                {loadingDetails ? (
+                                    <div className="flex items-center justify-center py-12">
+                                        <RefreshCw
+                                            size={24}
+                                            className="animate-spin text-slate-400"
+                                        />
+                                    </div>
+                                ) : selectedCustomer ? (
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        {[
+                                            ['Owner Name', selectedCustomer.ownerName],
+                                            ['Company Name', selectedCustomer.companyName],
+                                            ['Email', selectedCustomer.ownerEmail],
+                                            ['Phone', selectedCustomer.ownerPhone],
+                                            ['Industry', selectedCustomer.industry],
+                                            ['Status', selectedCustomer.status],
+                                        ].map(([label, value]) => (
+                                            <div
+                                                key={label}
+                                                className="rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+                                            >
+                                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                                    {label}
+                                                </p>
+                                                <p className="mt-1.5 break-all text-sm font-semibold text-slate-900">
+                                                    {value || '-'}
+                                                </p>
+                                            </div>
+                                        ))}
 
-                                <p className="mt-1 text-sm text-slate-500">
-                                    View customer information
-                                </p>
+                                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2">
+                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                                Customer ID
+                                            </p>
+                                            <p className="mt-1.5 break-all text-sm font-semibold text-slate-900">
+                                                {selectedCustomer.id || '-'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="py-10 text-center text-sm text-slate-500">
+                                        No customer details found.
+                                    </div>
+                                )}
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={closeDetailsModal}
-                                disabled={loadingDetails}
-                                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div className="p-6">
-                            {loadingDetails ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <RefreshCw
-                                        size={24}
-                                        className="animate-spin text-slate-500"
-                                    />
-                                </div>
-                            ) : selectedCustomer ? (
-                                <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-                                    <div>
-                                        <p className="text-sm text-slate-500">
-                                            Owner Name
-                                        </p>
-
-                                        <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.ownerName ||
-                                                '-'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-sm text-slate-500">
-                                            Company Name
-                                        </p>
-
-                                        <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.companyName ||
-                                                '-'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-sm text-slate-500">
-                                            Email
-                                        </p>
-
-                                        <p className="mt-1 break-all font-medium text-slate-900">
-                                            {selectedCustomer.ownerEmail ||
-                                                '-'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-sm text-slate-500">
-                                            Phone
-                                        </p>
-
-                                        <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.ownerPhone ||
-                                                '-'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-sm text-slate-500">
-                                            Industry
-                                        </p>
-
-                                        <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.industry ||
-                                                '-'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-sm text-slate-500">
-                                            Status
-                                        </p>
-
-                                        <p className="mt-1 font-medium text-slate-900">
-                                            {selectedCustomer.status ||
-                                                '-'}
-                                        </p>
-                                    </div>
-
-                                    <div className="md:col-span-2">
-                                        <p className="text-sm text-slate-500">
-                                            Customer ID
-                                        </p>
-
-                                        <p className="mt-1 break-all font-medium text-slate-900">
-                                            {selectedCustomer.id || '-'}
-                                        </p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="py-10 text-center text-sm text-slate-500">
-                                    No customer details found.
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
-                            <button
-                                type="button"
-                                onClick={closeDetailsModal}
-                                disabled={loadingDetails}
-                                className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Close
-                            </button>
+                            <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+                                <button
+                                    type="button"
+                                    onClick={closeDetailsModal}
+                                    disabled={loadingDetails}
+                                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {isEditModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                            <div>
-                                <h2 className="text-xl font-semibold text-slate-900">
-                                    Edit Customer
-                                </h2>
-
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Update customer information
-                                </p>
+                {/* Edit Customer Modal */}
+                {isEditModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
+                        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Edit Customer
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Update customer information.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeEditModal}
+                                    disabled={updatingCustomer}
+                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={closeEditModal}
-                                disabled={updatingCustomer}
-                                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            <form
+                                onSubmit={handleUpdateCustomer}
+                                className="space-y-4 p-6"
                             >
-                                <X size={20} />
-                            </button>
+                                {updateError && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                        {updateError}
+                                    </div>
+                                )}
+
+                                {!editingCustomer && !updateError ? (
+                                    <div className="flex items-center justify-center py-10">
+                                        <RefreshCw
+                                            size={24}
+                                            className="animate-spin text-slate-400"
+                                        />
+                                    </div>
+                                ) : (
+                                    editingCustomer && (
+                                        <>
+                                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                                {[
+                                                    ['ownerName', 'Owner Name', 'Enter owner name'],
+                                                    ['companyName', 'Company Name', 'Enter company name'],
+                                                    ['ownerPhone', 'Owner Phone', 'Enter phone number'],
+                                                    ['industry', 'Industry', 'Enter industry'],
+                                                ].map(
+                                                    ([
+                                                        name,
+                                                        label,
+                                                        placeholder,
+                                                    ]) => (
+                                                        <div key={name}>
+                                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                                {label}
+                                                            </label>
+                                                            <input
+                                                                type={
+                                                                    name ===
+                                                                        'ownerPhone'
+                                                                        ? 'tel'
+                                                                        : 'text'
+                                                                }
+                                                                name={name}
+                                                                value={
+                                                                    editingCustomer[
+                                                                    name
+                                                                    ]
+                                                                }
+                                                                onChange={
+                                                                    handleEditCustomerChange
+                                                                }
+                                                                required={
+                                                                    name !==
+                                                                    'industry'
+                                                                }
+                                                                disabled={
+                                                                    updatingCustomer
+                                                                }
+                                                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                                placeholder={
+                                                                    placeholder
+                                                                }
+                                                            />
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+
+                                            <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={closeEditModal}
+                                                    disabled={
+                                                        updatingCustomer
+                                                    }
+                                                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    type="submit"
+                                                    disabled={
+                                                        updatingCustomer
+                                                    }
+                                                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                                >
+                                                    {updatingCustomer
+                                                        ? 'Saving...'
+                                                        : 'Save Changes'}
+                                                </button>
+                                            </div>
+                                        </>
+                                    )
+                                )}
+                            </form>
                         </div>
-
-                        <form
-                            onSubmit={handleUpdateCustomer}
-                            className="space-y-4 p-6"
-                        >
-                            {updateError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                    {updateError}
-                                </div>
-                            )}
-
-                            {!editingCustomer && !updateError && (
-                                <div className="flex items-center justify-center py-10">
-                                    <RefreshCw
-                                        size={24}
-                                        className="animate-spin text-slate-500"
-                                    />
-                                </div>
-                            )}
-
-                            {editingCustomer && (
-                                <>
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Owner Name
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="ownerName"
-                                            value={
-                                                editingCustomer.ownerName
-                                            }
-                                            onChange={
-                                                handleEditCustomerChange
-                                            }
-                                            required
-                                            disabled={
-                                                updatingCustomer
-                                            }
-                                            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
-                                            placeholder="Enter owner name"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Company Name
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="companyName"
-                                            value={
-                                                editingCustomer.companyName
-                                            }
-                                            onChange={
-                                                handleEditCustomerChange
-                                            }
-                                            required
-                                            disabled={
-                                                updatingCustomer
-                                            }
-                                            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
-                                            placeholder="Enter company name"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Owner Phone
-                                        </label>
-
-                                        <input
-                                            type="tel"
-                                            name="ownerPhone"
-                                            value={
-                                                editingCustomer.ownerPhone
-                                            }
-                                            onChange={
-                                                handleEditCustomerChange
-                                            }
-                                            required
-                                            disabled={
-                                                updatingCustomer
-                                            }
-                                            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
-                                            placeholder="Enter phone number"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Industry
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            name="industry"
-                                            value={
-                                                editingCustomer.industry
-                                            }
-                                            onChange={
-                                                handleEditCustomerChange
-                                            }
-                                            disabled={
-                                                updatingCustomer
-                                            }
-                                            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
-                                            placeholder="Enter industry"
-                                        />
-                                    </div>
-
-                                    <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                closeEditModal
-                                            }
-                                            disabled={
-                                                updatingCustomer
-                                            }
-                                            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            disabled={
-                                                updatingCustomer
-                                            }
-                                            className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {updatingCustomer
-                                                ? 'Saving...'
-                                                : 'Save Changes'}
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </form>
                     </div>
-                </div>
-            )}
+                )}
 
-            {isEmailModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-                            <div>
-                                <h2 className="text-xl font-semibold text-slate-900">
-                                    Change Customer Email
-                                </h2>
-
-                                <p className="mt-1 text-sm text-slate-500">
-                                    Update the email address associated
-                                    with this customer
-                                </p>
+                {/* Change Email Modal */}
+                {isEmailModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
+                        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Change Customer Email
+                                    </h2>
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Update the email address associated with
+                                        this customer.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeEmailModal}
+                                    disabled={updatingEmail}
+                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                >
+                                    <X size={20} />
+                                </button>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={closeEmailModal}
-                                disabled={updatingEmail}
-                                className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            <form
+                                onSubmit={handleUpdateEmail}
+                                className="space-y-4 p-6"
                             >
-                                <X size={20} />
-                            </button>
+                                {emailError && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                        {emailError}
+                                    </div>
+                                )}
+
+                                {!emailCustomer && !emailError ? (
+                                    <div className="flex items-center justify-center py-10">
+                                        <RefreshCw
+                                            size={24}
+                                            className="animate-spin text-slate-400"
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                Customer
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={
+                                                    emailCustomer?.companyName ??
+                                                    ''
+                                                }
+                                                disabled
+                                                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500 outline-none"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                New Email
+                                            </label>
+                                            <input
+                                                type="email"
+                                                value={newEmail}
+                                                onChange={(event) =>
+                                                    setNewEmail(
+                                                        event.target.value
+                                                    )
+                                                }
+                                                required
+                                                disabled={updatingEmail}
+                                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                placeholder="Enter new email address"
+                                            />
+                                        </div>
+
+                                        <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                            <button
+                                                type="button"
+                                                onClick={closeEmailModal}
+                                                disabled={updatingEmail}
+                                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={updatingEmail}
+                                                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                            >
+                                                {updatingEmail
+                                                    ? 'Saving...'
+                                                    : 'Save Email'}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
+                            </form>
                         </div>
-
-                        <form
-                            onSubmit={handleUpdateEmail}
-                            className="space-y-4 p-6"
-                        >
-                            {emailError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                                    {emailError}
-                                </div>
-                            )}
-
-                            {!emailCustomer && !emailError ? (
-                                <div className="flex items-center justify-center py-10">
-                                    <RefreshCw
-                                        size={24}
-                                        className="animate-spin text-slate-500"
-                                    />
-                                </div>
-                            ) : (
-                                <>
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            Customer
-                                        </label>
-
-                                        <input
-                                            type="text"
-                                            value={
-                                                emailCustomer?.companyName ??
-                                                ''
-                                            }
-                                            disabled
-                                            className="w-full rounded-lg border border-slate-200 bg-slate-100 px-3 py-2.5 text-slate-500 outline-none"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="mb-1 block text-sm font-medium text-slate-700">
-                                            New Email
-                                        </label>
-
-                                        <input
-                                            type="email"
-                                            value={newEmail}
-                                            onChange={(event) =>
-                                                setNewEmail(
-                                                    event.target.value
-                                                )
-                                            }
-                                            required
-                                            disabled={updatingEmail}
-                                            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
-                                            placeholder="Enter new email address"
-                                        />
-                                    </div>
-
-                                    <div className="flex justify-end gap-3 border-t border-slate-200 pt-4">
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                closeEmailModal
-                                            }
-                                            disabled={
-                                                updatingEmail
-                                            }
-                                            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            Cancel
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            disabled={
-                                                updatingEmail
-                                            }
-                                            className="rounded-lg bg-[#111827] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2937] disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {updatingEmail
-                                                ? 'Saving...'
-                                                : 'Save Email'}
-                                        </button>
-                                    </div>
-                                </>
-                            )}
-                        </form>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }
