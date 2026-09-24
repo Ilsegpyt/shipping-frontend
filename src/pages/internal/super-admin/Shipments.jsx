@@ -275,7 +275,7 @@ export default function Shipments() {
                                     <tr>
                                         {[
                                             "Shipment Ref",
-                                            "Customer ID",
+                                            "Customer",
                                             "Schedule ID",
                                             "Mode",
                                             "Carrier",
@@ -323,7 +323,7 @@ export default function Shipments() {
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-4 py-5 text-sm text-slate-700">
-                                                    {shipment.customerId || "-"}
+                                                    {shipment.customerName || "-"}
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-4 py-5 text-sm text-slate-700">

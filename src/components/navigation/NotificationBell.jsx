@@ -19,9 +19,13 @@ export default function NotificationBell() {
     const canViewNotifications =
         user?.permissions?.includes('notifications.view');
 
-    const unreadCount = notifications.filter(
-        (notification) => !notification.isRead
-    ).length;
+    const unreadNotifications = notifications
+        .filter((notification) => !notification.isRead)
+        .sort(
+            (a, b) =>
+                new Date(b.createdAtUtc) -
+                new Date(a.createdAtUtc)
+        );
 
     const recentNotifications = [...notifications]
         .sort(
@@ -30,6 +34,13 @@ export default function NotificationBell() {
                 new Date(a.createdAtUtc)
         )
         .slice(0, 5);
+
+    const notificationsToDisplay =
+        unreadNotifications.length > 0
+            ? unreadNotifications
+            : recentNotifications;
+
+    const unreadCount = unreadNotifications.length;
 
     const loadNotifications = async () => {
         try {
@@ -197,17 +208,19 @@ export default function NotificationBell() {
                         </h3>
 
                         <p className="mt-1 text-xs text-gray-500">
-                            Latest notifications
+                            {unreadCount > 0
+                                ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`
+                                : 'No unread notifications'}
                         </p>
                     </div>
 
                     <div className="max-h-96 overflow-y-auto">
-                        {recentNotifications.length === 0 ? (
+                        {notificationsToDisplay.length === 0 ? (
                             <div className="px-4 py-8 text-center text-sm text-gray-500">
                                 No notifications.
                             </div>
                         ) : (
-                            recentNotifications.map(
+                            notificationsToDisplay.map(
                                 (notification) => (
                                     <button
                                         key={notification.id}
@@ -218,29 +231,25 @@ export default function NotificationBell() {
                                             )
                                         }
                                         className={`w-full border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 ${notification.isRead
-                                                ? 'bg-white'
-                                                : 'bg-blue-50/50'
+                                            ? 'bg-white'
+                                            : 'bg-blue-50/50'
                                             }`}
                                     >
                                         <div className="flex items-start gap-3">
                                             <span
                                                 className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${notification.isRead
-                                                        ? 'bg-gray-300'
-                                                        : 'bg-blue-600'
+                                                    ? 'bg-gray-300'
+                                                    : 'bg-blue-600'
                                                     }`}
                                             />
 
                                             <div className="min-w-0 flex-1">
                                                 <p className="text-sm font-semibold text-gray-900">
-                                                    {
-                                                        notification.title
-                                                    }
+                                                    {notification.title}
                                                 </p>
 
                                                 <p className="mt-1 text-xs leading-5 text-gray-600">
-                                                    {
-                                                        notification.message
-                                                    }
+                                                    {notification.message}
                                                 </p>
 
                                                 <p className="mt-2 text-[11px] text-gray-400">
