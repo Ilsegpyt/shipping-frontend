@@ -80,7 +80,7 @@ export default function Login() {
                         />
                     </div>
 
-                    <div className="mb-6">
+                    <div className="mb-2">
                         <label className="mb-2 block text-sm font-medium text-gray-700">
                             Password
                         </label>
@@ -92,6 +92,16 @@ export default function Login() {
                             className="w-full rounded-lg border border-gray-300 p-2.5 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             required
                         />
+                    </div>
+
+                    <div className="mb-6 text-right">
+                        <button
+                            type="button"
+                            onClick={() => navigate('/forgot-password')}
+                            className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                        >
+                            Forgot Password?
+                        </button>
                     </div>
 
                     <button

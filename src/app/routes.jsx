@@ -4,8 +4,12 @@ import ProtectedRoute from '../auth/ProtectedRoute';
 import InternalLayout from '../layouts/InternalLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
 import SubAccountLayout from '../layouts/SubAccountLayout';
+
+// Auth pages
 import Login from '../pages/auth/Login';
+import ForgotPassword from '../pages/auth/ForgotPassword';
 import ActivateAccount from '../pages/auth/ActivateAccount';
+import ResetPassword from '../pages/auth/ResetPassword';
 
 // Internal pages
 import Dashboard from '../pages/internal/shared/Dashboard';
@@ -54,8 +58,18 @@ export default function AppRoutes() {
             />
 
             <Route
+                path="/forgot-password"
+                element={<ForgotPassword />}
+            />
+
+            <Route
                 path="/activate-account"
                 element={<ActivateAccount />}
+            />
+
+            <Route
+                path="/reset-password"
+                element={<ResetPassword />}
             />
 
             {/* Protected Routes */}
