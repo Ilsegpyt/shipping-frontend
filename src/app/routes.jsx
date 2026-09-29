@@ -5,6 +5,37 @@ import InternalLayout from '../layouts/InternalLayout';
 import CustomerLayout from '../layouts/CustomerLayout';
 import SubAccountLayout from '../layouts/SubAccountLayout';
 
+// Public pages
+import Home from '../pages/public/Home';
+import News from '../pages/public/news/News';
+import BreakbulkShipment from '../pages/public/news/BreakbulkShipment';
+import RedSeaTerminal from '../pages/public/news/RedSeaTerminal';
+import EgyptChina from '../pages/public/news/EgyptChina';
+import MideaFactory from '../pages/public/news/MideaFactory';
+import GFSPartnership from '../pages/public/news/GFSPartnership';
+import WelcomeAboard from '../pages/public/news/WelcomeAboard';
+import SharedVision from '../pages/public/news/SharedVision';
+
+
+// Industry pages
+import HealthcareLogistics from '../pages/public/industries/HealthcareLogistics';
+import AutomotiveLogistics from '../pages/public/industries/AutomotiveLogistics';
+import Energy from '../pages/public/industries/Energy';
+import RetailLogistics from '../pages/public/industries/RetailLogistics';
+import IndustrialLogistics from '../pages/public/industries/IndustrialLogistics';
+import Technology from '../pages/public/industries/Technology';
+
+// Solutions
+import Solutions from '../pages/public/solutions/Solutions';
+import AirFreight from '../pages/public/solutions/AirFreight';
+import SeaFreight from '../pages/public/solutions/SeaFreight';
+import RoadTransportation from '../pages/public/solutions/RoadTransportation';
+import CustomsClearance from '../pages/public/solutions/CustomsClearance';
+import ProjectTransport from '../pages/public/solutions/ProjectTransport';
+import WarehousingDistribution from '../pages/public/solutions/WarehousingDistribution';
+import Consolidations from '../pages/public/solutions/Consolidations';
+import CargoInsurance from '../pages/public/solutions/CargoInsurance';
+
 // Auth pages
 import Login from '../pages/auth/Login';
 import ForgotPassword from '../pages/auth/ForgotPassword';
@@ -49,9 +80,113 @@ export default function AppRoutes() {
             {/* Public Routes */}
             <Route
                 path="/"
-                element={<Navigate to="/login" replace />}
+                element={<Home />}
+            />
+            <Route
+                path="/news"
+                element={<News />}
+            />
+            <Route
+                path="/news/breakbulk-shipment-of-industrial-machinery"
+                element={<BreakbulkShipment />}
+            />
+            <Route
+                path="/news/red-sea-container-terminal-no-1"
+                element={<RedSeaTerminal />}
+            />
+            <Route
+                path="/news/from-egypt-to-china"
+                element={<EgyptChina />}
+            />
+            <Route
+                path="/news/midea-factory-sadat-city"
+                element={<MideaFactory />}
+            />
+            <Route
+                path="/news/exclusive-partnership-and-deep-cooperation"
+                element={<GFSPartnership />}
+            />
+            <Route
+                path="/news/welcome-aboard"
+                element={<WelcomeAboard />}
+            />
+            <Route
+                path="/news/shared-vision-strong-coordination-and-trusted-expertise"
+                element={<SharedVision />}
+            />
+            {/* Industry Pages */}
+            <Route
+                path="/industries/healthcare"
+                element={<HealthcareLogistics />}
             />
 
+            <Route
+                path="/industries/automotive"
+                element={<AutomotiveLogistics />}
+            />
+
+            <Route
+                path="/industries/energy"
+                element={<Energy />}
+            />
+
+            <Route
+                path="/industries/retail"
+                element={<RetailLogistics />}
+            />
+
+            <Route
+                path="/industries/industrial"
+                element={<IndustrialLogistics />}
+            />
+
+            <Route
+                path="/industries/technology"
+                element={<Technology />}
+            />
+
+            {/* Solutions */}
+            <Route
+                path="/solutions"
+                element={<Solutions />}
+            />
+
+            <Route
+                path="/solutions/air-freight"
+                element={<AirFreight />}
+            />
+            <Route
+                path="/solutions/sea-freight"
+                element={<SeaFreight />}
+            />
+            <Route
+                path="/solutions/road-transportation"
+                element={<RoadTransportation />}
+            />
+            <Route
+                path="/solutions/customs-clearance"
+                element={<CustomsClearance />}
+            />
+            <Route
+                path="/solutions/project-transport"
+                element={<ProjectTransport />}
+            />
+            <Route
+                path="/solutions/warehousing-distribution"
+                element={<WarehousingDistribution />}
+            />
+
+            <Route
+                path="/solutions/consolidations"
+                element={<Consolidations />}
+            />
+
+            <Route
+                path="/solutions/cargo-insurance"
+                element={<CargoInsurance />}
+            />
+
+            {/* Auth Routes */}
             <Route
                 path="/login"
                 element={<Login />}

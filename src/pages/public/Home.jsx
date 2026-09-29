@@ -1,0 +1,1149 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+    HeartPulse,
+    CarFront,
+    Wind,
+    ShoppingBag,
+    Factory,
+    Cpu,
+    ArrowUpRight,
+} from 'lucide-react';
+
+import ilsLogo from '../../assets/branding/ils-logo-horizontal.png';
+import heroVideo from '../../assets/website/hero/ilsvideo.mp4';
+
+import seaFreight from '../../assets/website/solutions/seafreight.webp';
+import airFreight from '../../assets/website/solutions/airfreight.webp';
+import roadTransportation from '../../assets/website/solutions/roadtransportation.webp';
+import customsClearance from '../../assets/website/solutions/customclearence.webp';
+import consolidations from '../../assets/website/solutions/consolidations.webp';
+import projectTransportation from '../../assets/website/solutions/projectstransport.webp';
+import warehousing from '../../assets/website/solutions/warehousing.webp';
+import cargo from '../../assets/website/solutions/cargo.webp';
+
+import newsBreakbulk from '../../assets/website/news/6742896b-8bca-4ed9-9162-c46427b6b2f9.webp';
+import newsRedSea from '../../assets/website/news/06deaf3c-354a-4853-a3d6-9a2e79884141.jpg';
+import newsEgyptChina from '../../assets/website/news/651abe28-4f1d-4d6f-ac82-9bb6ae3016cf.webp';
+
+
+const InstagramIcon = ({ size = 17 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+    </svg>
+);
+
+const YoutubeIcon = ({ size = 17 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.8V8.2l6.4 3.8-6.4 3.8Z" />
+    </svg>
+);
+
+const LinkedinIcon = ({ size = 17 }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M5.2 3.5A2.2 2.2 0 1 1 5.2 8a2.2 2.2 0 0 1 0-4.5ZM3.3 9.7h3.8V21H3.3V9.7ZM9.4 9.7H13v1.55h.05c.5-.95 1.75-1.95 3.6-1.95 3.85 0 4.55 2.53 4.55 5.82V21h-3.8v-5.2c0-1.24-.02-2.83-1.72-2.83-1.72 0-1.98 1.35-1.98 2.74V21H9.4V9.7Z" />
+    </svg>
+);
+
+const FacebookIcon = ({ size = 17 }) => (
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+    >
+        <path d="M13.5 22v-8h2.75l.5-3h-3.25V9.1c0-.87.29-1.46 1.55-1.46h1.7V4.95c-.29-.04-1.28-.13-2.43-.13-2.4 0-4.05 1.47-4.05 4.17V11H7.5v3h2.77v8h3.23Z" />
+    </svg>
+);
+
+const XIcon = ({ size = 17 }) => (
+    <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        aria-hidden="true"
+    >
+        <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.24l-4.89-6.39L6.49 22H3.38l7.24-8.28L3 2h6.4l4.42 5.84L18.9 2Zm-1.1 17.8h1.73L8.47 4.08H6.61L17.8 19.8Z" />
+    </svg>
+);
+
+const partnerImages = import.meta.glob(
+    '../../assets/website/partners/*-small.webp',
+    {
+        eager: true,
+        import: 'default',
+    }
+);
+
+const partners = Object.entries(partnerImages)
+    .sort(([a], [b]) => {
+        const numberA = Number(a.match(/(\d+)-small\.webp$/)?.[1] ?? 0);
+        const numberB = Number(b.match(/(\d+)-small\.webp$/)?.[1] ?? 0);
+
+        return numberA - numberB;
+    })
+    .map(([, image]) => image);
+
+const newsItems = [
+    {
+        image: newsBreakbulk,
+        category: 'Case Study',
+        date: '29-Dec-2025',
+        title: 'Breakbulk Shipment of Industrial Machinery',
+        excerpt:
+            'We successfully shipped, cleared, and transported a 186-ton Breakbulk shipment with unmatched precision and seamless coordination.',
+        to: '/news/breakbulk-shipment-of-industrial-machinery',
+    },
+    {
+        image: newsRedSea,
+        category: 'Industry News',
+        date: '29-Dec-2025',
+        title:
+            'Red Sea Container Terminal No. 1 in Ain Sokhna Port Begins Trial Operations',
+        excerpt:
+            'Egypt has officially begun trial operations at the Red Sea Container Terminal No. 1 at Sokhna Port.',
+        to: '/news/red-sea-container-terminal-no-1',
+    },
+    {
+        image: newsEgyptChina,
+        category: 'ILS News',
+        date: '29-Dec-2025',
+        title: 'From Egypt to China',
+        excerpt:
+            'Together, ILS Egypt and Millennium FBA are creating seamless logistics solutions that connect markets, strengthen trade, and drive global growth.',
+        to: '/news/from-egypt-to-china',
+    },
+];
+
+export default function Home() {
+    const [isScrolled, setIsScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            setIsScrolled(window.scrollY > 24);
+        };
+
+        handleScroll();
+        window.addEventListener('scroll', handleScroll);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+        };
+    }, []);
+
+    return (
+        <main className="bg-white">
+
+            {/* ==================== Hero ==================== */}
+            <section className="relative min-h-screen overflow-hidden">
+
+                <video
+                    className="absolute inset-0 h-full w-full object-cover"
+                    src={heroVideo}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                />
+
+                <div className="absolute inset-0 bg-slate-950/55" />
+
+                <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950/60 to-transparent" />
+
+                {/* Navbar */}
+                <header className="fixed inset-x-0 top-0 z-50">
+                    <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                        <div
+                            className={`flex h-16 items-center justify-between rounded-2xl border px-5 shadow-lg backdrop-blur-xl transition-all duration-300 ${isScrolled
+                                ? 'mt-3 border-white/10 bg-slate-950/85 shadow-slate-950/20'
+                                : 'mt-5 border-white/15 bg-white/10'
+                                }`}
+                        >
+
+                            <Link to="/" className="shrink-0">
+                                <img
+                                    src={ilsLogo}
+                                    alt="ILS Egypt"
+                                    className="h-10 w-auto"
+                                />
+                            </Link>
+
+                            <nav className="hidden items-center gap-7 lg:flex">
+
+                                <a
+                                    href="#about"
+                                    className="text-sm font-medium text-white/90 transition hover:text-white"
+                                >
+                                    About ILS
+                                </a>
+
+                                <a
+                                    href="#solutions"
+                                    className="text-sm font-medium text-white/90 transition hover:text-white"
+                                >
+                                    Solutions
+                                </a>
+
+                                <a
+                                    href="#industries"
+                                    className="text-sm font-medium text-white/90 transition hover:text-white"
+                                >
+                                    Industries
+                                </a>
+
+                                <a
+                                    href="#news"
+                                    className="text-sm font-medium text-white/90 transition hover:text-white"
+                                >
+                                    Media Room
+                                </a>
+
+                                <a
+                                    href="#contact"
+                                    className="text-sm font-medium text-white/90 transition hover:text-white"
+                                >
+                                    Contact
+                                </a>
+
+                            </nav>
+
+                            <Link
+                                to="/login"
+                                className="rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100"
+                            >
+                                Client Portal
+                            </Link>
+
+                        </div>
+                    </div>
+                </header>
+
+                {/* Hero Content */}
+                <div className="relative z-10 flex min-h-screen w-full items-center px-6 pb-20 pt-32 lg:px-16">
+                    <div className="max-w-3xl">
+
+                        <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
+
+                            <span className="h-2 w-2 rounded-full bg-sky-400" />
+
+                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/90">
+                                International Logistics Solutions
+                            </span>
+
+                        </div>
+
+                        <h1 className="max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
+                            You grow your business.
+
+                            <span className="block text-sky-400">
+                                We'll take care of the logistics.
+                            </span>
+                        </h1>
+
+                        <p className="mt-7 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">
+                            As the world of commerce is changing, it's time to change your business with it. Move your logistics service from offline to online. With ILS, shipment, tracking and managing your shipments is easy
+                        </p>
+
+                        <div className="mt-9 flex flex-wrap gap-4">
+
+                            <a
+                                href="#solutions"
+                                className="rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/20 transition hover:bg-sky-400"
+                            >
+                                Explore Solutions
+                            </a>
+
+                            <a
+                                href="#contact"
+                                className="rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
+                            >
+                                Talk to ILS
+                            </a>
+
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+
+            {/* ==================== Industries ==================== */}
+            <section
+                id="industries"
+                className="bg-slate-50 py-24 sm:py-28"
+            >
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="max-w-2xl">
+
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                            Industries
+                        </p>
+
+                        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                            Logistics expertise built around your industry.
+                        </h2>
+
+                        <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+                            Industry-focused logistics solutions designed to
+                            support your operations, supply chain and business goals.
+                        </p>
+
+                    </div>
+
+                    <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+
+                        <IndustryCard
+                            icon={<HeartPulse size={24} strokeWidth={1.8} />}
+                            title="Healthcare Logistics"
+                            description="Tailor-made logistics solutions covering transport, storage and cold chain services."
+                            to="/industries/healthcare"
+                        />
+
+                        <IndustryCard
+                            icon={<CarFront size={24} strokeWidth={1.8} />}
+                            title="Automotive Logistics"
+                            description="Specialized logistics expertise supporting efficient manufacturing and vehicle supply chains."
+                            to="/industries/automotive"
+                        />
+
+                        <IndustryCard
+                            icon={<Wind size={24} strokeWidth={1.8} />}
+                            title="Energy"
+                            description="Safe and economic transport solutions for wind and solar energy industries."
+                            to="/industries/energy"
+                        />
+
+                        <IndustryCard
+                            icon={<ShoppingBag size={24} strokeWidth={1.8} />}
+                            title="Retail Logistics"
+                            description="Agile supply chain solutions tailored to business and customer requirements."
+                            to="/industries/retail"
+                        />
+
+                        <IndustryCard
+                            icon={<Factory size={24} strokeWidth={1.8} />}
+                            title="Industrial Logistics"
+                            description="Industry-specific solutions for materials, machinery, chemicals, construction and manufacturing."
+                            to="/industries/industrial"
+                        />
+
+                        <IndustryCard
+                            icon={<Cpu size={24} strokeWidth={1.8} />}
+                            title="Technology"
+                            description="Innovative and flexible supply chain solutions covering the entire technology lifecycle."
+                            to="/industries/technology"
+                        />
+
+                    </div>
+                </div>
+            </section>
+
+            {/* ==================== Solutions ==================== */}
+            <section
+                id="solutions"
+                className="bg-white py-24 sm:py-28"
+            >
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+
+                        <div className="max-w-2xl">
+
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                                ILS Solutions
+                            </p>
+
+                            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                                End-to-end logistics solutions.
+                            </h2>
+
+                            <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+                                Flexible logistics solutions designed to move
+                                your cargo efficiently across every stage of
+                                the supply chain.
+                            </p>
+
+                        </div>
+
+                        <a
+                            href="#contact"
+                            onClick={(e) => {
+                                e.preventDefault();
+                                document.getElementById('contact')?.scrollIntoView({
+                                    behavior: 'smooth',
+                                });
+                            }}
+                            className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600"
+                        >
+                            Discuss your requirements
+                            <ArrowUpRight size={17} />
+                        </a>
+
+                    </div>
+
+                    <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+
+                        <SolutionCard
+                            image={seaFreight}
+                            title="Sea Freight"
+                            to="/solutions/sea-freight"
+                        />
+
+                        <SolutionCard
+                            image={airFreight}
+                            title="Air Freight"
+                            to="/solutions/air-freight"
+                        />
+
+                        <SolutionCard
+                            image={roadTransportation}
+                            title="Road Transportation"
+                            to="/solutions/road-transportation"
+                        />
+
+                        <SolutionCard
+                            image={customsClearance}
+                            title="Customs Clearance"
+                            to="/solutions/customs-clearance"
+                        />
+
+                        <SolutionCard
+                            image={consolidations}
+                            title="Consolidations"
+                            to="/solutions/consolidations"
+                        />
+
+                        <SolutionCard
+                            image={projectTransportation}
+                            title="Project Transport"
+                            to="/solutions/project-transport"
+                        />
+
+                        <SolutionCard
+                            image={warehousing}
+                            title="Warehousing and Distribution"
+                            to="/solutions/warehousing-distribution"
+                        />
+
+                        <SolutionCard
+                            image={cargo}
+                            title="Cargo Insurance"
+                            to="/solutions/cargo-insurance"
+                        />
+
+                    </div>
+                </div>
+            </section>
+
+            {/* ==================== Partners ==================== */}
+            <section className="overflow-hidden bg-slate-50 py-24 sm:py-28">
+
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="mx-auto max-w-2xl text-center">
+
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                            ILS Partners
+                        </p>
+
+                        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                            Connected to a global network.
+                        </h2>
+
+                        <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+                            Strong partnerships help us deliver reliable
+                            logistics solutions across global markets.
+                        </p>
+
+                    </div>
+
+                    <div className="relative mt-16 overflow-hidden">
+
+                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-slate-50 to-transparent sm:w-40" />
+
+                        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-slate-50 to-transparent sm:w-40" />
+
+                        <div className="flex w-max animate-[partners-scroll_45s_linear_infinite]">
+
+                            <div className="flex items-center gap-6 px-3">
+
+                                {partners.map((partner, index) => (
+                                    <div
+                                        key={`partner-${index}`}
+                                        className="flex h-24 w-40 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 shadow-sm"
+                                    >
+                                        <img
+                                            src={partner}
+                                            alt={`ILS Partner ${index + 1}`}
+                                            className="max-h-12 max-w-full object-contain"
+                                        />
+                                    </div>
+                                ))}
+
+                            </div>
+
+                            <div
+                                aria-hidden="true"
+                                className="flex items-center gap-6 px-3"
+                            >
+
+                                {partners.map((partner, index) => (
+                                    <div
+                                        key={`partner-copy-${index}`}
+                                        className="flex h-24 w-40 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 shadow-sm"
+                                    >
+                                        <img
+                                            src={partner}
+                                            alt=""
+                                            className="max-h-12 max-w-full object-contain"
+                                        />
+                                    </div>
+                                ))}
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <style>
+                    {`
+                        @keyframes partners-scroll {
+                            from {
+                                transform: translateX(0);
+                            }
+
+                            to {
+                                transform: translateX(-50%);
+                            }
+                        }
+                    `}
+                </style>
+
+            </section>
+
+            {/* ==================== News ==================== */}
+            <section
+                id="news"
+                className="bg-white py-24 sm:py-28"
+            >
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+
+                        <div className="max-w-2xl">
+
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                                Media Room
+                            </p>
+
+                            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                                Latest from ILS.
+                            </h2>
+
+                            <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+                                Discover the latest news, industry insights and
+                                milestones from ILS Egypt.
+                            </p>
+
+                        </div>
+
+                        <a
+                            href="/news"
+                            className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600"
+                        >
+                            View All News
+                            <ArrowUpRight size={17} />
+                        </a>
+
+                    </div>
+
+                    <div className="mt-14 grid gap-6 lg:grid-cols-3">
+
+                        {newsItems.map((news) => (
+                            <article
+                                key={news.title}
+                                className="group overflow-hidden rounded-3xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60"
+                            >
+
+                                <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+
+                                    <img
+                                        src={news.image}
+                                        alt={news.title}
+                                        className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                                    />
+
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
+
+                                    <div className="absolute left-5 top-5">
+
+                                        <span className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur-sm">
+                                            {news.category}
+                                        </span>
+
+                                    </div>
+
+                                </div>
+
+                                <div className="p-6">
+
+                                    <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                                        <span>{news.date}</span>
+                                    </div>
+
+                                    <h3 className="mt-3 text-xl font-semibold leading-snug text-slate-900 transition group-hover:text-sky-600">
+                                        {news.title}
+                                    </h3>
+
+                                    <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-600">
+                                        {news.excerpt}
+                                    </p>
+
+                                    <Link
+                                        to={news.to}
+                                        className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 transition group-hover:text-sky-600"
+                                    >
+                                        Read more
+
+                                        <ArrowUpRight
+                                            size={16}
+                                            className="transition group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                                        />
+                                    </Link>
+
+                                </div>
+
+                            </article>
+                        ))}
+
+                    </div>
+                </div>
+            </section>
+
+            {/* ==================== Why ILS ==================== */}
+            <section
+                id="about"
+                className="bg-slate-950 py-24 sm:py-28"
+            >
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
+
+                        {/* Left */}
+                        <div>
+
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+                                Why ILS
+                            </p>
+
+                            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+                                WHY ILS SHOULD BE YOUR TRANSPORT AND LOGISTICS COMPANY OF CHOICE
+                            </h2>
+
+                            <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">
+                                As a global freight forwarder, ILS provides and manages supply chain solutions for thousands of companies every day. Whether you are a small family-run business or large global corporation ILS focus on keeping your supply chains flowing through operational excellence and sustainable growth. This is at the core of our purpose, vision and mission. Our skilled people with industry know-how, modern warehouses, strong carrier relationships and a global network across 80 countries position us to better serve your needs. ILS help you achieve your business objectives through a unique blend of optimized and flexible solutions, combined with visibility tools
+                            </p>
+
+                        </div>
+
+                        {/* Right */}
+                        <div className="grid gap-4 sm:grid-cols-2">
+
+                            <WhyCard
+                                number="01"
+                                title="Global Network"
+                                description="Connected to trusted partners and logistics networks across global markets."
+                            />
+
+                            <WhyCard
+                                number="02"
+                                title="Local Expertise"
+                                description="Deep knowledge of the Egyptian market, ports and logistics environment."
+                            />
+
+                            <WhyCard
+                                number="03"
+                                title="Integrated Solutions"
+                                description="Multiple logistics services working together to simplify your supply chain."
+                            />
+
+                            <WhyCard
+                                number="04"
+                                title="Reliable Partnership"
+                                description="A customer-focused approach built around communication and dependable execution."
+                            />
+
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+            {/* ==================== Contact ==================== */}
+            <section
+                id="contact"
+                className="bg-slate-50 py-24 sm:py-28"
+            >
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
+
+                        {/* Left */}
+                        <div>
+
+                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                                Contact ILS
+                            </p>
+
+                            <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+                                Let’s move your business forward.
+                            </h2>
+
+                            <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+                                Tell us what you need and our team will get back to you
+                                to discuss the right logistics solution for your business.
+                            </p>
+
+                            <div className="mt-10 space-y-6">
+
+                                <ContactInfo
+                                    label="Email"
+                                    value="info@ilsegypt.com"
+                                />
+
+                                <ContactInfo
+                                    label="Phone"
+                                    value="0222683311 - 0222683312"
+                                />
+
+                                <ContactInfo
+                                    label="Location"
+                                    value="ILS | (Egypt) Ltd. | Plot No. 5, Square 1258W, Behind Sun City Mall – Al Nozha – Sheraton - Heliopolis - Cairo, Egypt"
+                                />
+
+                            </div>
+
+                        </div>
+
+                        {/* Right */}
+                        <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+
+                            <form className="space-y-5">
+
+                                <div className="grid gap-5 sm:grid-cols-2">
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">
+                                            Full Name
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            placeholder="Your name"
+                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">
+                                            Company
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            placeholder="Company name"
+                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                        />
+                                    </div>
+
+                                </div>
+
+                                <div className="grid gap-5 sm:grid-cols-2">
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">
+                                            Email
+                                        </label>
+
+                                        <input
+                                            type="email"
+                                            placeholder="you@company.com"
+                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-sm font-medium text-slate-700">
+                                            Phone
+                                        </label>
+
+                                        <input
+                                            type="tel"
+                                            placeholder="+20"
+                                            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                        />
+                                    </div>
+
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                        Service
+                                    </label>
+
+                                    <select
+                                        className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                        defaultValue=""
+                                    >
+                                        <option value="" disabled>
+                                            Select a service
+                                        </option>
+
+                                        <option>Sea Freight</option>
+                                        <option>Air Freight</option>
+                                        <option>Road Transportation</option>
+                                        <option>Customs Clearance</option>
+                                        <option>Consolidations</option>
+                                        <option>Project Transportation</option>
+                                        <option>Warehousing</option>
+                                        <option>Cargo</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                        Message
+                                    </label>
+
+                                    <textarea
+                                        rows={5}
+                                        placeholder="Tell us about your requirements..."
+                                        className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                    />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+                                >
+                                    Send Inquiry
+                                    <ArrowUpRight size={17} />
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            {/* ==================== Footer ==================== */}
+            <footer className="bg-slate-950 text-white">
+                <div className="mx-auto max-w-7xl px-6 lg:px-8">
+
+                    <div className="grid gap-12 py-16 md:grid-cols-2 lg:grid-cols-4">
+
+                        {/* Brand */}
+                        <div className="lg:col-span-2">
+                            <Link to="/" className="inline-block">
+                                <img
+                                    src={ilsLogo}
+                                    alt="ILS Egypt"
+                                    className="h-11 w-auto"
+                                />
+                            </Link>
+
+                            <p className="mt-6 max-w-md text-sm leading-6 text-slate-400">
+                                Integrated logistics solutions connecting businesses
+                                to markets across Egypt and around the world.
+                            </p>
+
+                            <div className="mt-7 flex gap-3">
+                                <a
+                                    href="https://www.instagram.com/ilsegypt/?next=%2Fglamurabrand%2F"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:border-sky-400/40 hover:bg-sky-500 hover:text-white"
+                                    aria-label="Instagram"
+                                >
+                                    <InstagramIcon size={17} />
+                                </a>
+
+                                <a
+                                    href="https://www.youtube.com/@ILS-Egypt"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:border-sky-400/40 hover:bg-sky-500 hover:text-white"
+                                    aria-label="YouTube"
+                                >
+                                    <YoutubeIcon size={17} />
+                                </a>
+
+                                <a
+                                    href="https://www.facebook.com/ILSegypt"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:border-sky-400/40 hover:bg-sky-500 hover:text-white"
+                                    aria-label="Facebook"
+                                >
+                                    <FacebookIcon size={17} />
+                                </a>
+
+                                <a
+                                    href="https://www.linkedin.com/company/ils-egypt/"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:border-sky-400/40 hover:bg-sky-500 hover:text-white"
+                                    aria-label="LinkedIn"
+                                >
+                                    <LinkedinIcon size={17} />
+                                </a>
+
+                                <a
+                                    href="#"
+                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-slate-300 transition hover:border-sky-400/40 hover:bg-sky-500 hover:text-white"
+                                    aria-label="X"
+                                >
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                        className="h-4 w-4 fill-current"
+                                    >
+                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817-5.964 6.817H1.684l7.73-8.835L1.258 2.25H8.08l4.713 6.231 5.45-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77Z" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
+
+                        {/* Navigation */}
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">
+                                Navigation
+                            </h3>
+
+                            <ul className="mt-5 space-y-3">
+                                <li>
+                                    <a href="#about" className="text-sm text-slate-400 transition hover:text-white">
+                                        About ILS
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="#solutions" className="text-sm text-slate-400 transition hover:text-white">
+                                        Solutions
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="#industries" className="text-sm text-slate-400 transition hover:text-white">
+                                        Industries
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="#news" className="text-sm text-slate-400 transition hover:text-white">
+                                        Media Room
+                                    </a>
+                                </li>
+
+                                <li>
+                                    <a href="#contact" className="text-sm text-slate-400 transition hover:text-white">
+                                        Contact
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+
+                        {/* Contact */}
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">
+                                Contact
+                            </h3>
+
+                            <div className="mt-5 space-y-4">
+                                <div>
+                                    <p className="text-xs uppercase tracking-wider text-slate-500">
+                                        Email
+                                    </p>
+                                    <p className="mt-1 text-sm text-slate-400">
+                                        info@ilsegypt.com
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-xs uppercase tracking-wider text-slate-500">
+                                        Phone
+                                    </p>
+                                    <p className="mt-1 text-sm text-slate-400">
+                                        0222683311 - 0222683312
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <p className="text-xs uppercase tracking-wider text-slate-500">
+                                        Location
+                                    </p>
+                                    <p className="mt-1 text-sm text-slate-400">
+                                        Cairo, Egypt
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 border-t border-white/10 py-6 text-sm sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-slate-500">
+                            © {new Date().getFullYear()} ILS Egypt. All rights reserved.
+                        </p>
+
+                        <div className="flex gap-6">
+                            <a href="#" className="text-slate-500 transition hover:text-white">
+                                Privacy Policy
+                            </a>
+
+                            <a href="#" className="text-slate-500 transition hover:text-white">
+                                Terms & Conditions
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </footer>
+        </main>
+    );
+}
+
+function IndustryCard({
+    icon,
+    title,
+    description,
+    to,
+}) {
+    return (
+        <Link
+            to={to}
+            className="group relative block overflow-hidden rounded-3xl border border-slate-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60"
+        >
+
+            <div className="flex items-start justify-between">
+
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+                    {icon}
+                </div>
+
+                <ArrowUpRight
+                    size={20}
+                    className="text-slate-300 transition duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-sky-500"
+                />
+
+            </div>
+
+            <h3 className="mt-7 text-xl font-semibold text-slate-900">
+                {title}
+            </h3>
+
+            <p className="mt-4 text-sm leading-6 text-slate-600">
+                {description}
+            </p>
+
+        </Link>
+    );
+}
+
+function SolutionCard({
+    image,
+    title,
+    to,
+}) {
+    return (
+        <Link
+            to={to}
+            className="group relative block aspect-[4/5] overflow-hidden rounded-3xl bg-slate-900"
+        >
+
+            <img
+                src={image}
+                alt={title}
+                className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+
+            <div className="absolute inset-x-0 bottom-0 p-6">
+
+                <div className="flex items-end justify-between gap-4">
+
+                    <div>
+
+                        <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/60">
+                            Solution
+                        </p>
+
+                        <h3 className="mt-2 text-xl font-semibold text-white">
+                            {title}
+                        </h3>
+
+                    </div>
+
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition group-hover:bg-sky-500">
+                        <ArrowUpRight size={19} />
+                    </span>
+
+                </div>
+            </div>
+
+        </Link>
+    );
+}
+
+function WhyCard({
+    number,
+    title,
+    description,
+}) {
+    return (
+        <article className="group rounded-3xl border border-white/10 bg-white/[0.04] p-6 transition duration-300 hover:border-sky-400/30 hover:bg-white/[0.07]">
+
+            <span className="text-xs font-semibold tracking-[0.2em] text-sky-400">
+                {number}
+            </span>
+
+            <h3 className="mt-6 text-xl font-semibold text-white">
+                {title}
+            </h3>
+
+            <p className="mt-3 text-sm leading-6 text-slate-400">
+                {description}
+            </p>
+
+        </article>
+    );
+}
+function ContactInfo({
+    label,
+    value,
+}) {
+    return (
+        <div className="flex items-start gap-4">
+
+            <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" />
+
+            <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
+                    {label}
+                </p>
+
+                <p className="mt-1 text-base font-medium text-slate-900">
+                    {value}
+                </p>
+            </div>
+
+        </div>
+    );
+}
