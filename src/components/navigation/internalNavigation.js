@@ -78,6 +78,11 @@ export const getInternalNavigation = (user) => [
                         path: "/customer-voices",
                         icon: MessageSquare,
                     },
+                    {
+                        label: "Content Management",
+                        path: "/content",
+                        icon: FileText,
+                    },
                 ]
                 : []),
         ],

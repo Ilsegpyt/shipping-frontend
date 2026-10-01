@@ -7,7 +7,21 @@ import SubAccountLayout from '../layouts/SubAccountLayout';
 
 // Public pages
 import Home from '../pages/public/Home';
+import Philosophy from '../pages/public/About ILS/Philosophy';
+import PurposeAndStrategy from '../pages/public/About ILS/PurposeAndStrategy';
+import Values from '../pages/public/About ILS/Values';
+import Certificates from '../pages/public/About ILS/certificates';
 import News from '../pages/public/news/News';
+import Incoterms from '../pages/public/resources/Incoterms';
+import CbmCalculator from '../pages/public/resources/CbmCalculator';
+import ContainerTypes from '../pages/public/resources/ContainerTypes';
+import CustomsDutiesCalculator from '../pages/public/resources/CustomsDutiesCalculator';
+import DangerousGoodsLabels from '../pages/public/resources/DangerousGoodsLabels';
+import NafezaPlatform from '../pages/public/resources/NafezaPlatform';
+import AgentOpportunity from '../pages/public/Join ILS/AgentOpportunity';
+import Recruitment from '../pages/public/Join ILS/Recruitment';
+import ILSBranches from '../pages/public/Contact ILS/ILSBranches';
+import GetAQuote from '../pages/public/Contact ILS/GetAQuote';
 import BreakbulkShipment from '../pages/public/news/BreakbulkShipment';
 import RedSeaTerminal from '../pages/public/news/RedSeaTerminal';
 import EgyptChina from '../pages/public/news/EgyptChina';
@@ -34,8 +48,7 @@ import CustomsClearance from '../pages/public/solutions/CustomsClearance';
 import ProjectTransport from '../pages/public/solutions/ProjectTransport';
 import WarehousingDistribution from '../pages/public/solutions/WarehousingDistribution';
 import Consolidations from '../pages/public/solutions/Consolidations';
-import CargoInsurance from '../pages/public/solutions/CargoInsurance';
-
+import CargoInsurance from "../pages/public/solutions/CargoInsurance";
 // Auth pages
 import Login from '../pages/auth/Login';
 import ForgotPassword from '../pages/auth/ForgotPassword';
@@ -58,6 +71,7 @@ import Shipments from '../pages/internal/super-admin/Shipments';
 import ClientsSearchHistory from '../pages/internal/super-admin/ClientsSearchHistory';
 import CustomerVoices from '../pages/internal/super-admin/CustomerVoices';
 import Notifications from '../pages/internal/super-admin/Notifications';
+import Content from "../pages/internal/super-admin/Content";
 
 // Customer pages
 import CustomerDashboard from '../pages/customer/CustomerDashboard';
@@ -83,8 +97,64 @@ export default function AppRoutes() {
                 element={<Home />}
             />
             <Route
+                path="/about-ils/philosophy"
+                element={<Philosophy />}
+            />
+            <Route
+                path="/about-ils/purpose-and-strategy"
+                element={<PurposeAndStrategy />}
+            />
+            <Route
+                path="/about-ils/values"
+                element={<Values />}
+            />
+            <Route
+                path="/about-ils/certificates"
+                element={<Certificates />}
+            />
+            <Route
                 path="/news"
                 element={<News />}
+            />
+            <Route
+                path="/resources/incoterms"
+                element={<Incoterms />}
+            />
+            <Route
+                path="/resources/dangerous-goods-labels"
+                element={<DangerousGoodsLabels />}
+            />
+            <Route
+                path="/resources/cbm-calculator"
+                element={<CbmCalculator />}
+            />
+            <Route
+                path="/resources/container-types"
+                element={<ContainerTypes />}
+            />
+            <Route
+                path="/resources/nafeza-platform"
+                element={<NafezaPlatform />}
+            />
+            <Route
+                path="/resources/customs-duties-calculator"
+                element={<CustomsDutiesCalculator />}
+            />
+            <Route
+                path="/join-ils/agent-opportunity"
+                element={<AgentOpportunity />}
+            />
+            <Route
+                path="/join-ils/recruitment"
+                element={<Recruitment />}
+            />
+            <Route
+                path="/contact-ils/locations"
+                element={<ILSBranches />}
+            />
+            <Route
+                path="/contact-ils/get-a-quote"
+                element={<GetAQuote />}
             />
             <Route
                 path="/news/breakbulk-shipment-of-industrial-machinery"
@@ -306,6 +376,11 @@ export default function AppRoutes() {
                             element={<Notifications />}
                         />
                     </Route>
+
+                    <Route
+                        path="/content"
+                        element={<Content />}
+                    />
 
                     <Route
                         path="/schedules"
