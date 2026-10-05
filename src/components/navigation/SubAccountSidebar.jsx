@@ -1,13 +1,6 @@
 import { NavLink } from 'react-router-dom';
-import { FileText } from 'lucide-react';
 
-const navigationItems = [
-    {
-        label: 'Reports',
-        path: '/subaccount/reports',
-        icon: FileText,
-    },
-];
+const navigationItems = [];
 
 export default function SubAccountSidebar() {
     return (

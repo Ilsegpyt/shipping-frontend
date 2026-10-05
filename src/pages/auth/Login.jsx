@@ -35,7 +35,7 @@ export default function Login() {
             setUser(currentUser);
 
             if (currentUser.tokenType === 'subaccount') {
-                navigate('/subaccount/reports');
+                navigate('/subaccount');
             } else if (currentUser.tokenType === 'customer') {
                 navigate('/customer');
             } else {
