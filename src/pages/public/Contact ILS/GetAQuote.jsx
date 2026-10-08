@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import quoteRequestsService from '../../../services/quoteRequestsService';
 
 const countries = [
     'Egypt',
@@ -26,12 +27,77 @@ export default function GetAQuote() {
     const [shipments, setShipments] = useState('');
     const [submitted, setSubmitted] = useState(false);
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
 
-        // Frontend only for now.
-        // API / database integration will be added later.
-        setSubmitted(true);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+
+        setSubmitted(false);
+
+        const interestType =
+            interests.includes('Import') && interests.includes('Export')
+                ? 3
+                : interests.includes('Import')
+                    ? 1
+                    : interests.includes('Export')
+                        ? 2
+                        : 0;
+
+        const transportModeMap = {
+            Air: 1,
+            Land: 2,
+            Sea: 3,
+        };
+
+        const annualShipmentsMap = {
+            '0-10': 1,
+            '10-100': 2,
+            '100+': 3,
+        };
+
+        const data = {
+            firstName: formData.get('firstName'),
+            lastName: formData.get('lastName'),
+            company: formData.get('company'),
+            country: formData.get('country'),
+            countryCode: formData.get('countryCode'),
+            phone: formData.get('cellPhone'),
+            email: formData.get('email'),
+            message: formData.get('message'),
+
+            interestType,
+
+            transportModes: transport.map(
+                (mode) => transportModeMap[mode]
+            ),
+
+            annualShipments:
+                annualShipmentsMap[shipments] || 0,
+        };
+
+        try {
+            await quoteRequestsService.create(data);
+
+            setSubmitted(true);
+
+            form.reset();
+            setInterests([]);
+            setTransport([]);
+            setShipments('');
+        } catch (error) {
+            console.error(
+                'Failed to submit quote request:',
+                error
+            );
+
+            console.error(
+                'Backend error:',
+                error.response?.data
+            );
+
+            setSubmitted(false);
+        }
     };
 
     const toggleInterest = (item) => {
@@ -87,9 +153,13 @@ export default function GetAQuote() {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
-                                    <label htmlFor="firstName" className={labelClass}>
+                                    <label
+                                        htmlFor="firstName"
+                                        className={labelClass}
+                                    >
                                         First Name
                                     </label>
+
                                     <input
                                         id="firstName"
                                         name="firstName"
@@ -101,9 +171,13 @@ export default function GetAQuote() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="lastName" className={labelClass}>
+                                    <label
+                                        htmlFor="lastName"
+                                        className={labelClass}
+                                    >
                                         Last Name
                                     </label>
+
                                     <input
                                         id="lastName"
                                         name="lastName"
@@ -115,9 +189,13 @@ export default function GetAQuote() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="company" className={labelClass}>
+                                    <label
+                                        htmlFor="company"
+                                        className={labelClass}
+                                    >
                                         Company
                                     </label>
+
                                     <input
                                         id="company"
                                         name="company"
@@ -129,9 +207,13 @@ export default function GetAQuote() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="country" className={labelClass}>
+                                    <label
+                                        htmlFor="country"
+                                        className={labelClass}
+                                    >
                                         Country
                                     </label>
+
                                     <select
                                         id="country"
                                         name="country"
@@ -144,7 +226,10 @@ export default function GetAQuote() {
                                         </option>
 
                                         {countries.map((country) => (
-                                            <option key={country} value={country}>
+                                            <option
+                                                key={country}
+                                                value={country}
+                                            >
                                                 {country}
                                             </option>
                                         ))}
@@ -152,7 +237,10 @@ export default function GetAQuote() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="cellPhone" className={labelClass}>
+                                    <label
+                                        htmlFor="cellPhone"
+                                        className={labelClass}
+                                    >
                                         Cell Phone
                                     </label>
 
@@ -177,9 +265,13 @@ export default function GetAQuote() {
                                 </div>
 
                                 <div>
-                                    <label htmlFor="email" className={labelClass}>
+                                    <label
+                                        htmlFor="email"
+                                        className={labelClass}
+                                    >
                                         Email
                                     </label>
+
                                     <input
                                         id="email"
                                         name="email"
@@ -192,7 +284,10 @@ export default function GetAQuote() {
                             </div>
 
                             <div>
-                                <label htmlFor="message" className={labelClass}>
+                                <label
+                                    htmlFor="message"
+                                    className={labelClass}
+                                >
                                     Message
                                 </label>
 
@@ -208,47 +303,73 @@ export default function GetAQuote() {
                             <div className="grid gap-6 lg:grid-cols-2">
                                 <div>
                                     <div className="flex items-end justify-between gap-4">
-                                        <p className={labelClass}>What are you interested in?</p>
-                                        <span className="text-xs text-slate-400">Select all that apply</span>
+                                        <p className={labelClass}>
+                                            What are you interested in?
+                                        </p>
+
+                                        <span className="text-xs text-slate-400">
+                                            Select all that apply
+                                        </span>
                                     </div>
 
                                     <div className="mt-2 grid grid-cols-3">
-                                        {['Import', 'Export', 'Both'].map((item, index) => {
-                                            const isSelected =
-                                                item === 'Both'
-                                                    ? interests.includes('Import') && interests.includes('Export')
-                                                    : interests.includes(item);
+                                        {['Import', 'Export', 'Both'].map(
+                                            (item, index) => {
+                                                const isSelected =
+                                                    item === 'Both'
+                                                        ? interests.includes(
+                                                            'Import'
+                                                        ) &&
+                                                        interests.includes(
+                                                            'Export'
+                                                        )
+                                                        : interests.includes(
+                                                            item
+                                                        );
 
-                                            return (
-                                                <button
-                                                    key={item}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (item === 'Both') {
-                                                            setInterests(
-                                                                isSelected ? [] : ['Import', 'Export']
-                                                            );
-                                                            return;
-                                                        }
+                                                return (
+                                                    <button
+                                                        key={item}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            if (
+                                                                item === 'Both'
+                                                            ) {
+                                                                setInterests(
+                                                                    isSelected
+                                                                        ? []
+                                                                        : [
+                                                                            'Import',
+                                                                            'Export',
+                                                                        ]
+                                                                );
+                                                                return;
+                                                            }
 
-                                                        toggleInterest(item);
-                                                    }}
-                                                    className={`${optionClass} ${index === 0 ? 'rounded-l-xl' : ''
-                                                        } ${index === 2 ? 'rounded-r-xl' : ''
-                                                        } ${isSelected
-                                                            ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
-                                                            : ''
-                                                        }`}
-                                                >
-                                                    {isSelected && (
-                                                        <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
-                                                            ✓
-                                                        </span>
-                                                    )}
-                                                    {item}
-                                                </button>
-                                            );
-                                        })}
+                                                            toggleInterest(item);
+                                                        }}
+                                                        className={`${optionClass} ${index === 0
+                                                                ? 'rounded-l-xl'
+                                                                : ''
+                                                            } ${index === 2
+                                                                ? 'rounded-r-xl'
+                                                                : ''
+                                                            } ${isSelected
+                                                                ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
+                                                                : ''
+                                                            }`}
+                                                    >
+                                                        {isSelected && (
+                                                            <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
+                                                                ✓
+                                                            </span>
+                                                        )}
+
+                                                        {item}
+                                                    </button>
+                                                );
+                                            }
+                                        )}
                                     </div>
                                 </div>
 
@@ -259,7 +380,8 @@ export default function GetAQuote() {
 
                                     <div className="mt-2 grid grid-cols-3">
                                         {['Air', 'Land', 'Sea'].map((item) => {
-                                            const isSelected = transport.includes(item);
+                                            const isSelected =
+                                                transport.includes(item);
 
                                             return (
                                                 <button
@@ -267,13 +389,26 @@ export default function GetAQuote() {
                                                     type="button"
                                                     onClick={() =>
                                                         setTransport((current) =>
-                                                            current.includes(item)
-                                                                ? current.filter((value) => value !== item)
-                                                                : [...current, item]
+                                                            current.includes(
+                                                                item
+                                                            )
+                                                                ? current.filter(
+                                                                    (value) =>
+                                                                        value !==
+                                                                        item
+                                                                )
+                                                                : [
+                                                                    ...current,
+                                                                    item,
+                                                                ]
                                                         )
                                                     }
-                                                    className={`${optionClass} ${item === 'Air' ? 'rounded-l-xl' : ''
-                                                        } ${item === 'Sea' ? 'rounded-r-xl' : ''
+                                                    className={`${optionClass} ${item === 'Air'
+                                                            ? 'rounded-l-xl'
+                                                            : ''
+                                                        } ${item === 'Sea'
+                                                            ? 'rounded-r-xl'
+                                                            : ''
                                                         } ${isSelected
                                                             ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
                                                             : ''
@@ -284,6 +419,7 @@ export default function GetAQuote() {
                                                             ✓
                                                         </span>
                                                     )}
+
                                                     {item}
                                                 </button>
                                             );
@@ -298,30 +434,40 @@ export default function GetAQuote() {
                                 </p>
 
                                 <div className="mt-2 grid grid-cols-3">
-                                    {['0-10', '10-100', '100+'].map((item, index) => {
-                                        const isSelected = shipments === item;
+                                    {['0-10', '10-100', '100+'].map(
+                                        (item, index) => {
+                                            const isSelected =
+                                                shipments === item;
 
-                                        return (
-                                            <button
-                                                key={item}
-                                                type="button"
-                                                onClick={() => setShipments(item)}
-                                                className={`${optionClass} ${index === 0 ? 'rounded-l-xl' : ''
-                                                    } ${index === 2 ? 'rounded-r-xl' : ''
-                                                    } ${isSelected
-                                                        ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
-                                                        : ''
-                                                    }`}
-                                            >
-                                                {isSelected && (
-                                                    <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
-                                                        ✓
-                                                    </span>
-                                                )}
-                                                {item}
-                                            </button>
-                                        );
-                                    })}
+                                            return (
+                                                <button
+                                                    key={item}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setShipments(item)
+                                                    }
+                                                    className={`${optionClass} ${index === 0
+                                                            ? 'rounded-l-xl'
+                                                            : ''
+                                                        } ${index === 2
+                                                            ? 'rounded-r-xl'
+                                                            : ''
+                                                        } ${isSelected
+                                                            ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
+                                                            : ''
+                                                        }`}
+                                                >
+                                                    {isSelected && (
+                                                        <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
+                                                            ✓
+                                                        </span>
+                                                    )}
+
+                                                    {item}
+                                                </button>
+                                            );
+                                        }
+                                    )}
                                 </div>
                             </div>
 

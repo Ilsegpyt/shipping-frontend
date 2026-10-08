@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import agentApplicationsService from '../../../services/agentApplicationsService';
 
 const countries = [
     'Egypt',
@@ -35,9 +36,40 @@ export default function AgentOpportunity() {
 
     const cities = country ? citiesByCountry[country] ?? ['Other'] : [];
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        setSubmitted(true);
+
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+
+        const data = {
+            firstName: formData.get('firstName'),
+            lastName: formData.get('lastName'),
+            country: formData.get('country'),
+            city: formData.get('city'),
+            address: formData.get('address'),
+            email: formData.get('email'),
+            countryCode: formData.get('countryCode'),
+            phone: formData.get('cellPhone'),
+            mainIndustry: formData.get('mainIndustry'),
+            message: formData.get('message'),
+        };
+
+        try {
+            await agentApplicationsService.create(data);
+
+            setSubmitted(true);
+
+            form.reset();
+            setCountry('');
+        } catch (error) {
+            console.error(
+                'Failed to submit agent application:',
+                error
+            );
+
+            setSubmitted(false);
+        }
     };
 
     return (
@@ -128,6 +160,7 @@ export default function AgentOpportunity() {
                                         className={inputClass}
                                     >
                                         <option value="">Select Country</option>
+
                                         {countries.map((item) => (
                                             <option key={item} value={item}>
                                                 {item}
@@ -148,8 +181,11 @@ export default function AgentOpportunity() {
                                         className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
                                     >
                                         <option value="">
-                                            {country ? 'Select City' : 'Select Country First'}
+                                            {country
+                                                ? 'Select City'
+                                                : 'Select Country First'}
                                         </option>
+
                                         {cities.map((city) => (
                                             <option key={city} value={city}>
                                                 {city}
@@ -230,6 +266,7 @@ export default function AgentOpportunity() {
                                 <label htmlFor="message" className={labelClass}>
                                     Message
                                 </label>
+
                                 <textarea
                                     id="message"
                                     name="message"

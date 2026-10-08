@@ -53,8 +53,15 @@ export default function Login() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50">
-            <div className="w-full max-w-md rounded-xl border border-gray-100 bg-white p-8 shadow-md">
+        <div
+            className="relative flex min-h-screen items-center justify-center bg-slate-950 bg-cover bg-center"
+            style={{
+                backgroundImage: `url(${new URL('../../assets/branding/dashboard-hero.png', import.meta.url).href})`,
+            }}
+        >
+            <div className="absolute inset-0 bg-slate-950/65" />
+
+            <div className="relative z-10 w-full max-w-md rounded-xl border border-white/20 bg-white p-8 shadow-2xl">
                 <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">
                     Login
                 </h2>

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -6,71 +7,287 @@ import {
 } from 'lucide-react';
 
 import IndustryHeroVisual from '../../../components/public/IndustryHeroVisual';
+import contentService from '../../../services/contentService';
 
-const sections = [
-    {
-        title: 'What does ILS offer the consumer, retailers and the fashion industry as a retail logistics provider?',
-        text: [
-            'Our integrated services and technological capabilities help you to be more productive and efficient with agile supply chain solutions that are fully tailored to your requirements and expectations, and those of your customers.',
-        ],
-    },
-    {
-        title: "How can you meet my customers' different needs?",
-        text: [
-            'Our best-in-class supply chain solutions provide a full range of superior services, including order management, lead logistics solutions, and contract logistics solutions, such as fiscal representation, customs support and a wide variety of value-added services. Whatever your requirements, we can tailor the exact solution you need.',
-        ],
-    },
-    {
-        title: 'Can you integrate your technology with mine?',
-        text: [
-            'We can integrate our IT systems with your end-to-end order fulfilment systems providing order, item and SKU level visibility. We also offer integration of your e-commerce platform and the systems of your main freight forwarders to provide your customers with real-time inventory data, order status details and track and trace information. Learn more about ils Connectivity.',
-        ],
-    },
-    {
-        title: 'Consumer goods',
-        text: [
-            'Global sourcing and production with strict on-time deliveries require a global network able to be agile and act fast on the needs of FMCG companies. No matter if it is visibility and optimisation of global air or ocean freight or urgent need of warehouse space and solutions, we are ready to innovate and execute.',
-        ],
-    },
-    {
-        title: 'Sports and leisure',
-        text: [
-            'Winning is everything, and our operations deliver consistent performance all year round. Our value-added services range from sophisticated Lead Logistics and 4PL solutions to order management and flow optimisation. Our contract logistics solutions include quality inspection, price tagging, packaging up to your specific product assemblies, and kitting to provide that extra edge to get your sports and leisure wear over the line first.',
-        ],
-    },
-    {
-        title: 'Consumer electronics',
-        text: [
-            'We know being out of stock can mean out of a sale. Our supply chain is geared to making sure a customer leaves with the product he or she wants. New product launches, reverse logistics and timely deliveries are our stock in trade. Our extensive global network ensures inbound freight capacity is delivered at scheduled times, and the economies of scale offered by our TAPA-A distribution centres minimise the logistics burden on your margins.',
-        ],
-    },
-    {
-        title: 'Home improvement / DIY',
-        text: [
-            'The home improvement and DIY markets are growing in developing markets, and our global network can get your products into homes in the most out-of-the-way places. And we deliver the quality and flexibility retailers want. Our services include packaging or re-packaging, palletising or re-palletising, labelling or re-labelling and kitting. We manage waste, returns, stock levels and co-packing programmes.',
-        ],
-    },
-    {
-        title: 'Fashion',
-        text: [
-            '"In with the new and out with the old" sums up today\'s world of fast fashion. Ever-shorter product life cycles, the lure of global brands, the rise of social media and multiple distribution channels demand a market-responsive and agile supply chain solution for the fashion industry. Our end-to-end order management services combined with effective consolidation of shipments allow on-time delivery without compromising cost. We support coordination of your suppliers stretching from vendor management programs to running efficient and effective distribution centres on your behalf, so your supply chain creates the required competitive advantage.',
-        ],
-    },
-    {
-        title: 'Personal care',
-        text: [
-            'Our green and sustainable principles are embedded in the way we work and our supply chain mirrors your commitment as manufacturers of personal care products to sustainable sourcing, production and packaging.',
-        ],
-    },
-    {
-        title: 'Luxury goods and high fashion',
-        text: [
-            'We combine origin logistics, close to sourcing and act as your white glove agent on an end-to-end basis for luxury goods and supply chains. Combining effective origin logistics with destination logistics allows visibility throughout the supply chain and fast replenishment in major consumption areas.',
-        ],
-    },
-];
+const decodeHtml = (value = '') => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = value;
+    return textarea.value;
+};
+
+const plainText = (value = '') => {
+    const temp = document.createElement('div');
+    temp.innerHTML = decodeHtml(value);
+    return (temp.textContent || temp.innerText || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const renderRichText = (value, className = 'space-y-5 text-base leading-7 text-slate-600') => {
+    if (!value) return null;
+
+    const decoded = decodeHtml(value).trim();
+
+    if (/<[a-z][\s\S]*>/i.test(decoded)) {
+        return (
+            <div
+                className={`${className} [&_a]:text-sky-600 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6`}
+                dangerouslySetInnerHTML={{ __html: decoded }}
+            />
+        );
+    }
+
+    const paragraphs = decoded
+        .split(/\n\s*\n/)
+        .map((paragraph) => paragraph.trim())
+        .filter(Boolean);
+
+    return (
+        <div className={className}>
+            {paragraphs.map((paragraph, index) => {
+                const parts = paragraph.split(/(\*\*[^*]+\*\*)/g);
+
+                return (
+                    <p key={`${index}-${paragraph}`} className={index ? 'mt-5' : ''}>
+                        {parts.map((part, partIndex) => {
+                            const match = part.match(/^\*\*(.+)\*\*$/);
+                            return match ? (
+                                <strong key={partIndex}>{match[1]}</strong>
+                            ) : (
+                                part
+                            );
+                        })}
+                    </p>
+                );
+            })}
+        </div>
+    );
+};
+
+const isBoldParagraph = (node) => {
+    const tag = node.tagName?.toLowerCase();
+    if (tag !== 'p') return false;
+
+    const text = (node.textContent || '').trim();
+    if (!text) return false;
+
+    const elements = Array.from(node.querySelectorAll?.('strong, b') || []);
+    return elements.length > 0 && elements.some(
+        (element) => (element.textContent || '').trim() === text
+    );
+};
+
+const parseRichTextSections = (body) => {
+    const decoded = decodeHtml(body || '').trim();
+    if (!decoded) return [];
+
+    // HTML Rich Text.
+    if (/<[a-z][\s\S]*>/i.test(decoded)) {
+        const doc = new DOMParser().parseFromString(decoded, 'text/html');
+        const blocks = Array.from(doc.body.children);
+        const sections = [];
+        let currentTitle = '';
+        let currentNodes = [];
+
+        const flush = () => {
+            if (currentTitle && currentNodes.length) {
+                sections.push({
+                    title: currentTitle,
+                    body: currentNodes.join(''),
+                });
+            }
+            currentTitle = '';
+            currentNodes = [];
+        };
+
+        blocks.forEach((node) => {
+            const tag = node.tagName.toLowerCase();
+            const text = (node.textContent || '').trim();
+
+            if (/^h[1-6]$/.test(tag) || isBoldParagraph(node)) {
+                flush();
+                currentTitle = text;
+                return;
+            }
+
+            if (currentTitle && text) {
+                currentNodes.push(node.outerHTML);
+            }
+        });
+
+        flush();
+        return sections;
+    }
+
+    // Markdown/plain Rich Text such as **Consumer goods**.
+    const sections = [];
+    let currentTitle = '';
+    let currentLines = [];
+
+    const flush = () => {
+        if (currentTitle && currentLines.some((line) => line.trim())) {
+            sections.push({
+                title: currentTitle,
+                body: currentLines.join('\n').trim(),
+            });
+        }
+        currentTitle = '';
+        currentLines = [];
+    };
+
+    decoded.replace(/\r\n/g, '\n').split('\n').forEach((line) => {
+        const trimmed = line.trim();
+        const heading = trimmed.match(/^\*\*(.+?)\*\*$/);
+
+        if (heading) {
+            flush();
+            currentTitle = heading[1].trim();
+            return;
+        }
+
+        if (currentTitle) currentLines.push(line);
+    });
+
+    flush();
+    return sections;
+};
+
+const getParentId = (item) =>
+    item?.parentId ??
+    item?.parentContentId ??
+    item?.parent?.id ??
+    item?.parentContent?.id ??
+    null;
+
+const parseRetailContent = (item, children = []) => {
+    if (!item) return null;
+
+    const childSections = children
+        .filter((child) => child?.title && child?.body)
+        .map((child) => ({
+            title: child.title.trim(),
+            body: child.body,
+        }));
+
+    const sections = childSections.length
+        ? childSections
+        : parseRichTextSections(item.body);
+
+    const bodyText = plainText(item.body);
+    const paragraphs = bodyText
+        .split(/(?<=[.!?])\s+/)
+        .filter(Boolean);
+
+    return {
+        ...item,
+        title: item.title || 'Retail logistics',
+        heroSubtitle:
+            item.heroSubtitle ||
+            item.subtitle ||
+            '',
+        heroDescription:
+            item.heroDescription ||
+            item.description ||
+            '',
+        sections,
+        expertiseText:
+            item.excerpt ||
+            item.summary ||
+            item.description ||
+            paragraphs.slice(0, 2).join(' '),
+    };
+};
+
+async function getAllContent() {
+    const response = await contentService.getRootContent();
+    const roots = Array.isArray(response.data) ? response.data : [];
+    const allContent = [];
+    const visited = new Set();
+
+    async function collect(items) {
+        for (const item of items) {
+            if (!item?.id || visited.has(item.id)) continue;
+
+            visited.add(item.id);
+            allContent.push(item);
+
+            try {
+                const childrenResponse = await contentService.getChildren(item.id);
+                const children = Array.isArray(childrenResponse.data)
+                    ? childrenResponse.data
+                    : [];
+
+                if (children.length) await collect(children);
+            } catch (error) {
+                console.error(
+                    `Failed to load children for content ${item.id}:`,
+                    error
+                );
+            }
+        }
+    }
+
+    await collect(roots);
+    return allContent;
+}
 
 function RetailLogistics() {
+    const [content, setContent] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadContent = async () => {
+            try {
+                const allContent = await getAllContent();
+
+                const item = allContent.find((entry) => {
+                    const title = entry?.title?.trim().toLowerCase() || '';
+                    return (
+                        title === 'retail logistics' ||
+                        title === 'retail' ||
+                        title.startsWith('retail logistics -')
+                    );
+                });
+
+                if (!item) {
+                    if (isMounted) setContent(null);
+                    return;
+                }
+
+                // Fetch the actual children of the Retail page. getAllContent()
+                // flattens them, so they are not available as item.children.
+                let children = [];
+                try {
+                    const response = await contentService.getChildren(item.id);
+                    children = Array.isArray(response.data) ? response.data : [];
+                } catch (error) {
+                    console.error('Failed to load Retail Logistics sections:', error);
+                }
+
+                // Fallback for APIs that return parentId instead of a children endpoint.
+                if (!children.length) {
+                    children = allContent.filter((entry) => getParentId(entry) === item.id);
+                }
+
+                if (isMounted) {
+                    setContent(parseRetailContent(item, children));
+                }
+            } catch (error) {
+                console.error('Failed to load Retail Logistics content:', error);
+                if (isMounted) setContent(null);
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const sections = content?.sections || [];
+
     return (
         <main className="min-h-screen bg-white text-slate-900">
             {/* Hero */}
@@ -92,22 +309,21 @@ function RetailLogistics() {
                         <div>
                             <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur-md">
                                 <span className="h-2 w-2 rounded-full bg-sky-400" />
-
                                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
                                     Industry
                                 </span>
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                Retail logistics
+                                {content?.title || 'Retail logistics'}
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                Our agile solutions connect e-commerce and physical retail delivering transparency on a global scale
+                                {content?.heroSubtitle}
                             </p>
 
                             <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-                                Order management, multichannel fulfilment, white glove delivery and reverse logistics – we offer many retail shipping, transport and logistics solutions tailored for the retail industry.
+                                {content?.heroDescription}
                             </p>
                         </div>
 
@@ -132,20 +348,16 @@ function RetailLogistics() {
                     <div className="mt-16 space-y-8">
                         {sections.map((section, index) => (
                             <article
-                                key={section.title}
+                                key={`${section.title}-${index}`}
                                 className="grid overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 lg:grid-cols-2"
                             >
                                 <div
-                                    className={`min-h-[320px] bg-gradient-to-br from-sky-100 via-white to-slate-100 p-8 sm:p-12 ${index % 2 ? 'lg:order-2' : ''
-                                        }`}
+                                    className={`min-h-[320px] bg-gradient-to-br from-sky-100 via-white to-slate-100 p-8 sm:p-12 ${index % 2 ? 'lg:order-2' : ''}`}
                                 >
                                     <div className="flex h-full flex-col justify-between">
                                         <div>
                                             <div className="inline-flex rounded-2xl bg-white p-3 text-sky-600 shadow-sm">
-                                                <Boxes
-                                                    size={26}
-                                                    strokeWidth={1.8}
-                                                />
+                                                <Boxes size={26} strokeWidth={1.8} />
                                             </div>
 
                                             <p className="mt-8 text-sm font-semibold uppercase tracking-[0.18em] text-sky-600">
@@ -165,14 +377,9 @@ function RetailLogistics() {
                                 </div>
 
                                 <div
-                                    className={`bg-white p-8 sm:p-12 ${index % 2 ? 'lg:order-1' : ''
-                                        }`}
+                                    className={`bg-white p-8 sm:p-12 ${index % 2 ? 'lg:order-1' : ''}`}
                                 >
-                                    <div className="space-y-5 text-base leading-7 text-slate-600">
-                                        {section.text.map((paragraph) => (
-                                            <p key={paragraph}>{paragraph}</p>
-                                        ))}
-                                    </div>
+                                    {renderRichText(section.body)}
                                 </div>
                             </article>
                         ))}
@@ -188,16 +395,14 @@ function RetailLogistics() {
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-                        Retail logistics services
+                        {content?.title || ''}
                     </h2>
 
-                    <p className="mt-7 text-lg leading-8 text-white/65">
-                        Our agile solutions connect e-commerce and physical retail delivering transparency on a global scale.
-                    </p>
-
-                    <p className="mt-6 text-lg leading-8 text-white/65">
-                        Logistics for the retailing and fashion industries need to be highly flexible as rapid growth and exponential change are the standard, not the exception. Managing logistics in fashion markets requires supply chains that are increasingly reactive with technology that can help teams make decisions on urgent demand. Goods that sell steadily throughout the year need different models of supply chain than seasonal items with short shelf lives.
-                    </p>
+                    {content?.expertiseText && (
+                        <p className="mt-7 text-lg leading-8 text-white/65">
+                            {content.expertiseText}
+                        </p>
+                    )}
 
                     <div className="mt-12 flex flex-wrap gap-4">
                         <Link

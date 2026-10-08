@@ -1,59 +1,320 @@
-const dangerousGoodsClasses = [
-    {
-        number: 'Class 1',
-        title: 'Explosive substances and articles',
+import { useEffect, useState } from 'react';
+import contentService from '../../../services/contentService';
+const decodeHtml = (value) => {
+    if (!value) return '';
+
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = String(value);
+    return textarea.value;
+};
+
+const richTextToHtml = (value) => {
+    if (!value) return '';
+
+    const decoded = decodeHtml(value);
+
+    if (/<[a-z][\s\S]*>/i.test(decoded)) {
+        return decoded;
+    }
+
+    return decoded
+        .split(/\n\s*\n/)
+        .map((block) => {
+            const text = block.trim();
+            if (!text) return '';
+
+            const formatted = text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\n/g, '<br />');
+
+            return `<p>${formatted}</p>`;
+        })
+        .join('');
+};
+
+const plainText = (value) => {
+    if (!value) return '';
+
+    const decoded = decodeHtml(value);
+    const temp = document.createElement('div');
+    temp.innerHTML = decoded;
+
+    return (temp.textContent || temp.innerText || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const extractDangerousGoodsClasses = (body) => {
+    if (!body) return [];
+
+    const decoded = decodeHtml(body);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(decoded, 'text/html');
+
+    const result = [];
+
+    // Rich Text headings + paragraphs/lists.
+    const headings = Array.from(doc.querySelectorAll('h2, h3, h4'));
+    if (headings.length) {
+        headings.forEach((heading) => {
+            const title = heading.textContent?.trim() || '';
+
+            if (!title) return;
+
+            const match = title.match(/^(Class\s+\d+)\s*:?\s*(.*)$/i);
+            if (!match) return;
+
+            let node = heading.nextElementSibling;
+            const parts = [];
+
+            while (node && !/^h[1-6]$/i.test(node.tagName)) {
+                parts.push(node.outerHTML);
+                node = node.nextElementSibling;
+            }
+
+            result.push({
+                number: match[1],
+                title: match[2].trim() || match[1],
+                description: parts.join(' ').trim(),
+            });
+        });
+    }
+
+    if (result.length) {
+        return result;
+    }
+
+    // Rich Text numbered list fallback.
+    const items = Array.from(doc.querySelectorAll('ol li, ul li'))
+        .map((li) => li.innerHTML?.trim())
+        .filter(Boolean);
+
+    if (items.length) {
+        return items.map((html, index) => {
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            const text = (temp.textContent || '').trim();
+            const match = text.match(/^Class\s*(\d+)\s*:?\s*(.*)$/i);
+
+            return {
+                number: match ? `Class ${match[1]}` : `Class ${index + 1}`,
+                title: match ? match[2].trim() : text,
+                description: '',
+            };
+        });
+    }
+
+    // Markdown/plain-text fallback.
+    const lines = decoded
+        .replace(/\r/g, '')
+        .split(/\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+
+    for (let i = 0; i < lines.length; i += 1) {
+        const match = lines[i].match(
+            /^(?:[-*]\s*)?(Class\s*\d+)\s*:?\s*(.*)$/i
+        );
+
+        if (!match) continue;
+
+        const descriptionLines = [];
+        let j = i + 1;
+
+        while (
+            j < lines.length &&
+            !/^(?:[-*]\s*)?Class\s*\d+\s*:?\s*/i.test(lines[j])
+        ) {
+            descriptionLines.push(lines[j]);
+            j += 1;
+        }
+
+        result.push({
+            number: match[1].replace(/\s+/, ' '),
+            title: match[2].trim(),
+            description: descriptionLines.join(' '),
+        });
+
+        i = j - 1;
+    }
+
+    return result;
+};
+
+const getIntroFromBody = (body) => {
+    if (!body) return '';
+
+    const decoded = decodeHtml(body);
+    const doc = new DOMParser().parseFromString(decoded, 'text/html');
+
+    const paragraphs = Array.from(doc.querySelectorAll('p'))
+        .map((p) => p.textContent?.trim())
+        .filter(Boolean);
+
+    if (paragraphs.length) {
+        return paragraphs.slice(0, 2).join(' ');
+    }
+
+    const text = plainText(body);
+    const classIndex = text.search(/Class\s*1\b/i);
+
+    return classIndex > 0 ? text.slice(0, classIndex).trim() : text;
+};
+
+async function findDangerousGoodsContent() {
+    const rootResponse = await contentService.getRootContent();
+    const rootData = rootResponse?.data;
+
+    const roots = Array.isArray(rootData)
+        ? rootData
+        : Array.isArray(rootData?.items)
+            ? rootData.items
+            : Array.isArray(rootData?.data)
+                ? rootData.data
+                : [];
+
+    const visited = new Set();
+
+    const walk = async (items) => {
+        for (const item of items) {
+            if (!item?.id || visited.has(item.id)) continue;
+
+            visited.add(item.id);
+
+            const title = String(item.title || '').trim().toLowerCase();
+
+            if (
+                title === 'classification of dangerous goods labels' ||
+                title === 'dangerous goods labels' ||
+                title === 'dangerous goods'
+            ) {
+                let children = [];
+
+                try {
+                    const response = await contentService.getChildren(item.id);
+                    const data = response?.data;
+
+                    children = Array.isArray(data)
+                        ? data
+                        : Array.isArray(data?.items)
+                            ? data.items
+                            : [];
+                } catch (error) {
+                    console.error(
+                        'Failed to load Dangerous Goods children:',
+                        error
+                    );
+                }
+
+                return {
+                    ...item,
+                    children,
+                };
+            }
+
+            try {
+                const response = await contentService.getChildren(item.id);
+                const data = response?.data;
+
+                const children = Array.isArray(data)
+                    ? data
+                    : Array.isArray(data?.items)
+                        ? data.items
+                        : [];
+
+                const found = await walk(children);
+
+                if (found) return found;
+            } catch (error) {
+                console.error(
+                    `Failed to load content children for ${item.id}:`,
+                    error
+                );
+            }
+        }
+
+        return null;
+    };
+
+    return walk(roots);
+};
+
+const getIntroHtml = (body) => {
+    if (!body) return '';
+
+    const decoded = decodeHtml(body);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(decoded, 'text/html');
+
+    const nodes = Array.from(doc.body.children);
+    const introNodes = [];
+
+    for (const node of nodes) {
+        const tag = node.tagName.toLowerCase();
+
+        // The first Class heading/list marks the beginning of the
+        // classification content. Do not include it in the intro.
+        if (
+            (/^h[1-6]$/.test(tag) &&
+                /^class\s+\d+/i.test(node.textContent?.trim() || '')) ||
+            tag === 'ol' ||
+            tag === 'ul'
+        ) {
+            break;
+        }
+
+        const text = node.textContent?.trim() || '';
+
+        // Stop for plain-text/HTML Class headings too.
+        if (/^class\s+\d+/i.test(text)) {
+            break;
+        }
+
+        if (text) {
+            introNodes.push(node.outerHTML);
+        }
+    }
+
+    // Keep only the actual introductory content.
+    return introNodes.slice(0, 2).join('');
+};
+
+const buildDangerousGoodsModel = (content) => {
+    if (!content) return null;
+
+    const children = Array.isArray(content.children)
+        ? content.children.filter((item) => item?.title)
+        : [];
+
+    // If the CMS page has children, use them as the cards.
+    let classes = children.map((item, index) => ({
+        number: /^class\s+\d+/i.test(item.title)
+            ? item.title.match(/^class\s+\d+/i)[0]
+            : `Class ${index + 1}`,
+        title: /^class\s+\d+/i.test(item.title)
+            ? item.title.replace(/^class\s+\d+\s*:?\s*/i, '').trim()
+            : item.title.trim(),
+        description: item.body || '',
+    }));
+
+    // Otherwise parse the page Rich Text.
+    if (!classes.length) {
+        classes = extractDangerousGoodsClasses(content.body || '');
+    }
+
+    return {
+        ...content,
+        title:
+            content.title?.trim() ||
+            'Classification of Dangerous Goods Labels',
         description:
-            'All goods with a risk of causing an explosion, whether it is a mass explosion, a light fire, a blast wave, etc. Identified by a black icon or number on an orange background.',
-    },
-    {
-        number: 'Class 2',
-        title: 'Gases',
-        description:
-            'Classified into three subdivisions according to whether they are flammable (flame icon on a red background), non-flammable non-toxic (cylinder icon on a green background) or toxic (skull icon on a white background).',
-    },
-    {
-        number: 'Class 3',
-        title: 'Flammable liquids',
-        description:
-            'Materials with a maximum flash point of 60º C.',
-    },
-    {
-        number: 'Class 4',
-        title: 'Flammable solids and other solid explosive substances',
-        description:
-            'Subdivided into solid flammable goods (4.1 white and red striped background), self-reactive substance (4.2 white/red background) and substances that release flammable gases in contact with water (4.3 blue background).',
-    },
-    {
-        number: 'Class 5',
-        title: 'Oxidising substances and organic peroxides',
-        description:
-            'Identified by the yellow background.',
-    },
-    {
-        number: 'Class 6',
-        title: 'Toxic substances or infectious substances',
-        description:
-            'Toxic substances (which can be harmful to health and even fatal) or infectious substances (which contain micro-organisms such as bacteria or viruses). The label has a white background.',
-    },
-    {
-        number: 'Class 7',
-        title: 'Radioactive substances',
-        description:
-            'The label has a white or yellow/white background depending on the level of radioactivity of the goods.',
-    },
-    {
-        number: 'Class 8',
-        title: 'Corrosive substances',
-        description:
-            'Icon with two pipettes on a black and white background with the word “Corrosive”.',
-    },
-    {
-        number: 'Class 9',
-        title: 'Miscellaneous dangerous substances',
-        description:
-            'The label has black and white stripes at the top, with a white background on the bottom.',
-    },
-];
+            content.heroDescription?.trim() ||
+            'Dangerous goods labels must be used in transport to identify the risks of the products being transported.',
+        introHtml: getIntroHtml(content.body || ''),
+        classes,
+    };
+};
 
 function DangerousGoodsCard({ number, title, description }) {
     return (
@@ -66,14 +327,50 @@ function DangerousGoodsCard({ number, title, description }) {
                 {title}
             </h2>
 
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-                {description}
-            </p>
+            <div
+                className="mt-3 text-sm leading-6 text-slate-600 [&_a]:text-sky-600 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                dangerouslySetInnerHTML={{
+                    __html: richTextToHtml(description),
+                }}
+            />
         </article>
     );
 }
 
 export default function DangerousGoodsLabels() {
+    const [content, setContent] = useState(null);
+
+    useEffect(() => {
+        let mounted = true;
+
+        const loadContent = async () => {
+            try {
+                const item = await findDangerousGoodsContent();
+
+                if (mounted) {
+                    setContent(buildDangerousGoodsModel(item));
+                }
+            } catch (error) {
+                console.error(
+                    'Failed to load Dangerous Goods Labels content:',
+                    error
+                );
+
+                if (mounted) {
+                    setContent(null);
+                }
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
+    const dangerousGoodsClasses = content?.classes || [];
+
     return (
         <main className="min-h-screen bg-white">
             <section className="relative overflow-hidden bg-slate-950">
@@ -85,12 +382,11 @@ export default function DangerousGoodsLabels() {
                     </p>
 
                     <h1 className="mt-5 max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                        Classification of Dangerous Goods Labels
+                        {content?.title || 'Classification of Dangerous Goods Labels'}
                     </h1>
 
                     <p className="mt-6 max-w-3xl text-base leading-7 text-slate-300 sm:text-lg">
-                        Dangerous goods labels must be used in transport to
-                        identify the risks of the products being transported.
+                        {content?.description || ''}
                     </p>
                 </div>
             </section>
@@ -101,36 +397,12 @@ export default function DangerousGoodsLabels() {
                         Dangerous Goods
                     </p>
 
-                    <div className="mt-6 space-y-5 text-base leading-8 text-slate-600">
-                        <p>
-                            <strong className="font-semibold text-slate-900">
-                                Dangerous goods
-                            </strong>{' '}
-                            are substances which because of their
-                            characteristics and composition may endanger the
-                            health and safety of persons and the environment.
-                            Compliance with a series of strict requirements for
-                            their storage, handling and transport is compulsory.
-                        </p>
-
-                        <p>
-                            <strong className="font-semibold text-slate-900">
-                                Dangerous goods labels
-                            </strong>{' '}
-                            must be used in transport to identify the risks of
-                            the products being transported. Goods are classified
-                            according to the international regulation{' '}
-                            <a
-                                href="https://www.boe.es/buscar/doc.php?id=BOE-A-2019-9661"
-                                target="_blank"
-                                rel="noreferrer"
-                                className="font-semibold text-sky-600 underline decoration-sky-200 underline-offset-4 transition hover:text-sky-500"
-                            >
-                                ADR 2019 (European Agreement on the Transport of Dangerous Goods by Road)
-                            </a>{' '}
-                            based on their composition and degree of danger.
-                        </p>
-                    </div>
+                    <div
+                        className="mt-6 space-y-5 text-base leading-8 text-slate-600 [&_a]:font-semibold [&_a]:text-sky-600 [&_a]:underline [&_a]:decoration-sky-200 [&_a]:underline-offset-4 [&_a]:transition [&_a]:hover:text-sky-500 [&_strong]:font-semibold [&_strong]:text-slate-900 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+                        dangerouslySetInnerHTML={{
+                            __html: richTextToHtml(content?.introHtml || ''),
+                        }}
+                    />
                 </div>
             </section>
 
@@ -142,7 +414,7 @@ export default function DangerousGoodsLabels() {
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                            Dangerous goods classes
+                            {content?.classificationTitle || 'Dangerous goods classes'}
                         </h2>
                     </div>
 

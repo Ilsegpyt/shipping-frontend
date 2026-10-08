@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+
 import {
     ArrowLeft,
     ArrowUpRight,
@@ -11,53 +13,298 @@ import {
 } from 'lucide-react';
 
 import IndustryHeroVisual from '../../../components/public/IndustryHeroVisual';
+import contentService from '../../../services/contentService';
 
-const sections = [
-    {
-        title: 'Electrification & Mobility Competence Center (EMC2)',
-        icon: BatteryCharging,
-        text: [
-            "ILS’s Electrification and Mobility Competence Center EMC2 Support to create sustainable supply chains using our expertise with future mobility platforms, high energy lithium batteries and dangerous rated automotive goods",
-        ],
-    },
-    {
-        title: '3PL & 4PL',
-        icon: Boxes,
-        text: [
-            "3PL & 4PL offerings Includes physical and digital operational control towers powered with ILS’s IT and TMS systems and tools for full track and traceability of your cargo that can be seamlessly integrated into ERP system.",
-        ],
-    },
-    {
-        title: 'Finished Vehicle Competency Center (VCC)',
-        icon: CarFront,
-        text: [
-            'ILS provides Finished Vehicle transportation solutions for low volume high value production vehicles, test vehicles, exotics, concept, and show vehicles through our Vehicle Competency Center.',
-        ],
-    },
-    {
-        title: 'Automotive afterparts and service operations',
-        icon: Wrench,
-        text: [
-            'A full suite of post part and vehicle manufacturing services including import and export Distribution Centers and dealer services (depending on geography).',
-        ],
-    },
-    {
-        title: 'Inbound',
-        icon: Factory,
-        text: [
-            'Inbound to manufacturing planning, transportation, and optimisation.',
-        ],
-    },
-    {
-        title: 'Warehousing & value added solutions',
-        icon: Warehouse,
-        text: [
-            'ILS has vast capability and experience in warehousing, value added solutions, packaging, vendor managed inventory, JIT, kitting, sequencing and other line side delivery and assembly services.',
-        ],
-    },
+const sectionIcons = [
+    BatteryCharging,
+    Boxes,
+    CarFront,
+    Wrench,
+    Factory,
+    Warehouse,
 ];
 
+const sectionTitles = [
+    'Electrification & Mobility Competence Center (EMC2)',
+    '3PL & 4PL',
+    'Finished Vehicle Competency Center (VCC)',
+    'Automotive afterparts and service operations',
+    'Inbound',
+    'Warehousing & value added solutions',
+];
+
+const normalizeText = (value = '') =>
+    value
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const decodeHtml = (value = '') => {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = value;
+    return textarea.value;
+};
+
+const parseMarkdownLine = (line) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) return null;
+
+    const headingMatch = trimmed.match(/^#{1,6}\s+(.+)$/);
+    if (headingMatch) {
+        return {
+            type: 'heading',
+            text: normalizeText(headingMatch[1].replace(/\*\*/g, '')),
+        };
+    }
+
+    const boldHeadingMatch = trimmed.match(/^\*\*(.+?)\*\*$/);
+    if (boldHeadingMatch) {
+        return {
+            type: 'heading',
+            text: normalizeText(boldHeadingMatch[1]),
+        };
+    }
+
+    return {
+        type: 'paragraph',
+        text: normalizeText(trimmed.replace(/^\*\s+/, '')),
+    };
+};
+
+const getContentBlocks = (body) => {
+    if (!body) return [];
+
+    const decodedBody = decodeHtml(body);
+
+    // CMS can contain either HTML or plain/Markdown text.
+    if (/<\/?[a-z][\s\S]*>/i.test(decodedBody)) {
+        const doc = new DOMParser().parseFromString(decodedBody, 'text/html');
+        const elements = Array.from(
+            doc.body.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li')
+        );
+
+        return elements
+            .map((element) => {
+                const text = normalizeText(element.textContent || '');
+                if (!text) return null;
+
+                return {
+                    type: /^h[1-6]$/i.test(element.tagName) ? 'heading' : 'paragraph',
+                    text,
+                };
+            })
+            .filter(Boolean);
+    }
+
+    return decodedBody
+        .split(/\r?\n/)
+        .map(parseMarkdownLine)
+        .filter(Boolean);
+};
+
+const parseAutomotiveContent = (content) => {
+    const blocks = getContentBlocks(content?.body);
+
+    const result = {
+        title: normalizeText(content?.title || '') || 'Automotive logistics',
+        heroSubtitle: '',
+        serviceHeading: '',
+        serviceIntro: '',
+        capabilitiesHeading: '',
+        sections: [],
+        expertHeading: '',
+        expertParagraphs: [],
+    };
+
+    const findBlockIndex = (text) => {
+        const target = normalizeText(text).toLowerCase();
+
+        return blocks.findIndex(
+            (block) => block.text.toLowerCase() === target
+        );
+    };
+
+    const findBlockContaining = (text) => {
+        const target = normalizeText(text).toLowerCase();
+
+        return blocks.findIndex(
+            (block) => block.text.toLowerCase().includes(target)
+        );
+    };
+
+    const heroSubtitleIndex = findBlockContaining(
+        'Driving the world’s automotive supply chains'
+    );
+
+    if (heroSubtitleIndex >= 0) {
+        result.heroSubtitle = blocks[heroSubtitleIndex].text;
+    }
+
+    const serviceHeadingIndex = findBlockIndex(
+        'Service offerings the way you need them'
+    );
+
+    if (serviceHeadingIndex >= 0) {
+        result.serviceHeading = blocks[serviceHeadingIndex].text;
+
+        const serviceIntro = blocks
+            .slice(serviceHeadingIndex + 1)
+            .find(
+                (block) =>
+                    block.type === 'paragraph' &&
+                    !sectionTitles.some(
+                        (title) =>
+                            title.toLowerCase() === block.text.toLowerCase()
+                    )
+            );
+
+        if (serviceIntro) {
+            result.serviceIntro = serviceIntro.text;
+        }
+    }
+
+    const capabilitiesIndex = findBlockIndex('Automotive logistics solutions');
+
+    if (capabilitiesIndex >= 0) {
+        result.capabilitiesHeading = blocks[capabilitiesIndex].text;
+    }
+
+    sectionTitles.forEach((sectionTitle, index) => {
+        const sectionIndex = findBlockIndex(sectionTitle);
+
+        if (sectionIndex < 0) return;
+
+        const nextSectionIndexes = sectionTitles
+            .map((title) => findBlockIndex(title))
+            .filter((value) => value > sectionIndex);
+
+        const expertIndex = findBlockContaining(
+            'Our experts are the strongest link in your supply chain'
+        );
+
+        const nextIndex =
+            nextSectionIndexes.length > 0
+                ? Math.min(...nextSectionIndexes)
+                : expertIndex > sectionIndex
+                    ? expertIndex
+                    : blocks.length;
+
+        const text = blocks
+            .slice(sectionIndex + 1, nextIndex)
+            .filter((block) => block.type === 'paragraph')
+            .map((block) => block.text)
+            .filter(Boolean);
+
+        const Icon = sectionIcons[index];
+
+        result.sections.push({
+            title: sectionTitle,
+            text,
+            icon: Icon,
+        });
+    });
+
+    const expertIndex = findBlockContaining(
+        'Our experts are the strongest link in your supply chain'
+    );
+
+    if (expertIndex >= 0) {
+        result.expertHeading = blocks[expertIndex].text;
+
+        result.expertParagraphs = blocks
+            .slice(expertIndex + 1)
+            .filter((block) => block.type === 'paragraph')
+            .map((block) => block.text)
+            .filter(Boolean);
+    }
+
+    return result;
+};
+
 function AutomotiveLogistics() {
+    const [content, setContent] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const getAllContent = async () => {
+            const response = await contentService.getRootContent();
+            const roots = Array.isArray(response.data) ? response.data : [];
+
+            const allContent = [];
+            const visited = new Set();
+
+            const collect = async (items) => {
+                for (const item of items) {
+                    if (!item?.id || visited.has(item.id)) continue;
+
+                    visited.add(item.id);
+                    allContent.push(item);
+
+                    try {
+                        const childrenResponse = await contentService.getChildren(
+                            item.id
+                        );
+
+                        const children = Array.isArray(childrenResponse.data)
+                            ? childrenResponse.data
+                            : [];
+
+                        if (children.length) {
+                            await collect(children);
+                        }
+                    } catch (error) {
+                        console.error(
+                            `Failed to load children for content ${item.id}:`,
+                            error
+                        );
+                    }
+                }
+            };
+
+            await collect(roots);
+
+            return allContent;
+        };
+
+        const loadContent = async () => {
+            try {
+                const allContent = await getAllContent();
+
+                const automotiveContent = allContent.find((item) => {
+                    const title = item?.title?.trim().toLowerCase() || '';
+
+                    return (
+                        title === 'automotive logistics' ||
+                        title === 'automotive'
+                    );
+                });
+
+                if (isMounted) {
+                    setContent(automotiveContent || null);
+                }
+            } catch (error) {
+                console.error(
+                    'Failed to load Automotive Logistics content:',
+                    error
+                );
+
+                if (isMounted) {
+                    setContent(null);
+                }
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const pageContent = parseAutomotiveContent(content);
+
     return (
         <main className="min-h-screen bg-white text-slate-900">
             {/* Hero */}
@@ -86,12 +333,14 @@ function AutomotiveLogistics() {
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                Automotive logistics
+                                {pageContent.title}
                             </h1>
 
-                            <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                Driving the world’s automotive supply chains for over 30 years
-                            </p>
+                            {pageContent.heroSubtitle && (
+                                <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
+                                    {pageContent.heroSubtitle}
+                                </p>
+                            )}
                         </div>
 
                         <IndustryHeroVisual industry="automotive" />
@@ -103,16 +352,20 @@ function AutomotiveLogistics() {
             <section className="bg-slate-50 py-24 sm:py-28">
                 <div className="mx-auto max-w-4xl px-6 lg:px-8">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                        Automotive logistics
+                        {pageContent.title}
                     </p>
 
-                    <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                        Service offerings the way you need them
-                    </h2>
+                    {pageContent.serviceHeading && (
+                        <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
+                            {pageContent.serviceHeading}
+                        </h2>
+                    )}
 
-                    <p className="mt-7 text-lg leading-8 text-slate-600">
-                        Bespoke, standardised, stand alone or integrated
-                    </p>
+                    {pageContent.serviceIntro && (
+                        <p className="mt-7 text-lg leading-8 text-slate-600">
+                            {pageContent.serviceIntro}
+                        </p>
+                    )}
                 </div>
             </section>
 
@@ -124,13 +377,15 @@ function AutomotiveLogistics() {
                             Our capabilities
                         </p>
 
-                        <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                            Automotive logistics solutions
-                        </h2>
+                        {pageContent.capabilitiesHeading && (
+                            <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
+                                {pageContent.capabilitiesHeading}
+                            </h2>
+                        )}
                     </div>
 
                     <div className="mt-16 space-y-8">
-                        {sections.map((section, index) => {
+                        {pageContent.sections.map((section, index) => {
                             const Icon = section.icon;
                             const reverse = index % 2 === 1;
 
@@ -173,8 +428,12 @@ function AutomotiveLogistics() {
                                             }`}
                                     >
                                         <div className="space-y-5 text-base leading-7 text-slate-600">
-                                            {section.text.map((paragraph) => (
-                                                <p key={paragraph}>{paragraph}</p>
+                                            {section.text.map((paragraph, paragraphIndex) => (
+                                                <p
+                                                    key={`${section.title}-${paragraphIndex}`}
+                                                >
+                                                    {paragraph}
+                                                </p>
                                             ))}
                                         </div>
                                     </div>
@@ -192,23 +451,21 @@ function AutomotiveLogistics() {
                         Automotive expertise
                     </p>
 
-                    <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-                        Our experts are the strongest link in your supply chain
-                    </h2>
+                    {pageContent.expertHeading && (
+                        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
+                            {pageContent.expertHeading}
+                        </h2>
+                    )}
 
-                    <p className="mt-7 text-lg leading-8 text-white/65">
-                        ILS’s Automotive Subject Matter Experts are critical thinkers
-                        that can be the differentiator you need to keep the
-                        manufacturing process running efficiently and end users’
-                        vehicles on the road.
-                    </p>
-
-                    <p className="mt-6 text-lg leading-8 text-white/65">
-                        Our global team know how the automotive industry gears turn
-                        and use their knowledge and experience to design processes
-                        and flows that match automotive development and production
-                        milestones.
-                    </p>
+                    {pageContent.expertParagraphs.map((paragraph, index) => (
+                        <p
+                            key={`expert-paragraph-${index}`}
+                            className={`${index === 0 ? 'mt-7' : 'mt-6'
+                                } text-lg leading-8 text-white/65`}
+                        >
+                            {paragraph}
+                        </p>
+                    ))}
 
                     <div className="mt-12 flex flex-wrap gap-4">
                         <Link

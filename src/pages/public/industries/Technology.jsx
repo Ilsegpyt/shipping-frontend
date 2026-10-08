@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -6,59 +7,323 @@ import {
 } from 'lucide-react';
 
 import IndustryHeroVisual from '../../../components/public/IndustryHeroVisual';
+import contentService from '../../../services/contentService';
 
-const sections = [
-    {
-        title: 'Computing and enterprise data centres',
-        text: [
-            'Our solutions give original design manufacturers (ODM) and original equipment manufacturers (OEM) control of the entire supply chain, from contract manufacturer to on-site installation at the end customer.',
-            'As equipment manufacturing now takes place in different parts of the world, supply chain management is becoming the core competency, replacing production management.',
-            'OEMs are moving beyond disconnected products and services into original solution orchestrators (OSOs), which dramatically increases the need for end-to-end process design, change management, analytics and project management skill sets within high-tech supply chain organisations.',
-            'Our data processing and storage solutions give you the necessary visibility and reliability to maintain full end-to-end control.',
-        ],
-    },
-    {
-        title: 'Telecommunication and network equipment',
-        text: [
-            'We provide manufacturers of voice and data infrastructure with agile logistics solutions for component and spare part warehousing and finished product distribution, including complete order fulfilment and postponement. We can also operate your after sales service centres.',
-            'Our innovative cross-dock and merge-in-transit solutions are always aligned with your ever changing demands and the stringent quality and safety standards of our TEM and NEP customers.',
-            'With our one-stop-shop solution, we unite the dense DS road freight network and TAPA-A regional distribution centres with strategic third party partnerships to offer niche services like in-night delivery services and white glove deliveries.',
-            'Given the high value and short life cycles of products coming from telecommunication equipment manufacturers (TEM) and network equipment providers (NEP), our supply chain deliverable is to combine or merge the various providers of commercial, off the shelf components to the telecommunications and network equipment industry into a finished product just before delivery to the end customer.',
-        ],
-    },
-    {
-        title: 'Consumer electronics',
-        text: [
-            'Our supply chain solutions are critically important to your reducing product life cycles. Between 50% and 70% of consumers buy an alternative product or leave a store empty handed when their first product choice is out of stock. This shows how important supply chain efficiency is for brand satisfaction and profit maximisation.',
-            'We facilitate new product launches and offer after sales support, while our global network guarantees inbound freight capacity at scheduled lines.',
-            'Our specialised TAPA-A Distribution Centres offer you agility and critical economies of scale, and our distribution network ensures timely delivery, whether to a large retail chain’s DC or to a consumer’s home.',
-            'Additionally, as part of our commitment to the UN Global Compact initiative, we proactively advise you on carbon footprint reduction.',
-        ],
-    },
-    {
-        title: 'Reprographic equipment',
-        text: [
-            'Supply chains in the reprographic industry are consolidating to Remote Data Capture (RDC) and Electronic Data Capture (EDC) as digitalisation has slashed demand for traditional black-and-white and colour printing in developed markets.',
-            'We have a long history serving the printing and copying equipment market and offer you light manufacturing and configuration of finished products, installation services upon delivery, repair/return services and spare part distribution.',
-            'Our variable cost base allows easy up and downscaling so you can adapt your supply chains to match changing market conditions.',
-        ],
-    },
-    {
-        title: 'Service differentiation and excellence in e-commerce',
-        text: [
-            'We integrate our IT platform into your e-commerce platform, offering visibility into inventory, order status and track and trace data - and giving you greater channel mobility, increased personalisation and more delivery models.',
-            'More than 50% of computers are sold online, and emerging opportunities such as m-commerce (mobiles/smartphones) and s-commerce (social media) are growing fast. Meeting logistics requirements plays an important role in increasing retention rates.',
-        ],
-    },
-    {
-        title: 'The back end - Will you tailor storage and picking solutions to meet my needs?',
-        text: [
-            "Yes, whether you need storage in bulk, on shelves, in racks or in temperature-controlled environments, we will tailor a solution to your needs. You can also choose from a wide variety of picking principles, including 'First Expired, First Out' (FEFO), ‘Last In First Out’ (LIFO) and 'First In, First Out' (FIFO).",
-        ],
-    },
-];
+const decodeHtml = (value) => {
+    if (!value) return '';
+
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = value;
+    return textarea.value;
+};
+
+const escapeHtml = (value) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+const markdownToHtml = (value) => {
+    const decoded = decodeHtml(value || '').trim();
+
+    if (!decoded) return '';
+
+    if (/<[a-z][\s\S]*>/i.test(decoded)) {
+        return decoded;
+    }
+
+    return decoded
+        .split(/\n\s*\n/)
+        .map((block) => {
+            const text = block.trim();
+
+            if (!text) return '';
+
+            if (/^\*\*.+\*\*$/.test(text)) {
+                return `<strong>${escapeHtml(text.slice(2, -2).trim())}</strong>`;
+            }
+
+            if (/^[-*]\s+/.test(text)) {
+                const items = text
+                    .split(/\n/)
+                    .map((line) => line.replace(/^[-*]\s+/, '').trim())
+                    .filter(Boolean)
+                    .map((item) => `<li>${escapeHtml(item)}</li>`)
+                    .join('');
+
+                return `<ul>${items}</ul>`;
+            }
+
+            const formatted = escapeHtml(text)
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.+?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br />');
+
+            return `<p>${formatted}</p>`;
+        })
+        .join('');
+};
+
+const getPlainText = (value) => {
+    if (!value) return '';
+
+    const decoded = decodeHtml(value);
+
+    if (/<[a-z][\s\S]*>/i.test(decoded)) {
+        const temp = document.createElement('div');
+        temp.innerHTML = decoded;
+        return (temp.textContent || temp.innerText || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    return decoded
+        .replace(/\*\*/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const richTextMarkup = (value) => ({
+    __html: markdownToHtml(value),
+});
+
+const parseSectionsFromRichText = (body) => {
+    if (!body) return [];
+
+    const decoded = decodeHtml(body);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(decoded, 'text/html');
+    const nodes = Array.from(doc.body.children);
+
+    const result = [];
+    let current = null;
+
+    const pushCurrent = () => {
+        if (!current?.title || !current.body.trim()) return;
+
+        result.push({
+            title: current.title.trim(),
+            body: current.body.trim(),
+        });
+    };
+
+    const isHeadingNode = (node) => {
+        const tag = node.tagName?.toLowerCase();
+        if (/^h[1-6]$/.test(tag)) return true;
+
+        // Rich Text editors commonly store bold headings as <p><strong>...</strong></p>.
+        if (tag !== 'p') return false;
+
+        const meaningful = Array.from(node.childNodes).filter((child) => {
+            return child.nodeType === Node.TEXT_NODE
+                ? child.textContent.trim()
+                : true;
+        });
+
+        if (meaningful.length !== 1) return false;
+
+        const onlyChild = meaningful[0];
+        return (
+            onlyChild.nodeType === Node.ELEMENT_NODE &&
+            ['strong', 'b'].includes(onlyChild.tagName.toLowerCase())
+        );
+    };
+
+    if (nodes.length) {
+        nodes.forEach((node) => {
+            if (isHeadingNode(node)) {
+                pushCurrent();
+                current = {
+                    title: node.textContent?.trim() || '',
+                    body: '',
+                };
+                return;
+            }
+
+            if (current) {
+                current.body += node.outerHTML;
+            }
+        });
+
+        pushCurrent();
+
+        if (result.length) return result;
+    }
+
+    // Markdown / plain Rich Text fallback.
+    const blocks = decoded
+        .split(/\n\s*\n/)
+        .map((block) => block.trim())
+        .filter(Boolean);
+
+    blocks.forEach((block) => {
+        const headingMatch = block.match(/^\*\*(.+?)\*\*$/);
+
+        if (headingMatch) {
+            pushCurrent();
+            current = {
+                title: headingMatch[1].trim(),
+                body: '',
+            };
+            return;
+        }
+
+        if (!current) return;
+        current.body += `${current.body ? '\n\n' : ''}${block}`;
+    });
+
+    pushCurrent();
+    return result;
+};
+
+const getIntroFromRichText = (body) => {
+    if (!body) return { subtitle: '', description: '' };
+
+    const decoded = decodeHtml(body);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(decoded, 'text/html');
+
+    const paragraphs = Array.from(doc.body.children)
+        .filter((node) => ['p', 'div'].includes(node.tagName.toLowerCase()))
+        .filter((node) => {
+            const text = node.textContent?.trim() || '';
+            return text && !/^\*\*.+\*\*$/.test(text);
+        })
+        .map((node) => node.textContent?.trim() || '')
+        .filter(Boolean);
+
+    return {
+        subtitle: paragraphs[0] || '',
+        description: paragraphs[1] || '',
+    };
+};
+
+async function getTechnologyContent() {
+    const rootResponse = await contentService.getRootContent();
+    const roots = Array.isArray(rootResponse.data) ? rootResponse.data : [];
+
+    const visited = new Set();
+
+    const findTechnology = async (items) => {
+        for (const item of items) {
+            if (!item?.id || visited.has(item.id)) continue;
+
+            visited.add(item.id);
+
+            const title = item?.title?.trim().toLowerCase() || '';
+
+            if (
+                title === 'technology' ||
+                title === 'technology logistics' ||
+                title.startsWith('technology -')
+            ) {
+                let children = [];
+
+                try {
+                    const childrenResponse = await contentService.getChildren(item.id);
+                    children = Array.isArray(childrenResponse.data)
+                        ? childrenResponse.data
+                        : [];
+                } catch (error) {
+                    console.error(
+                        `Failed to load Technology children for ${item.id}:`,
+                        error
+                    );
+                }
+
+                return {
+                    ...item,
+                    children,
+                };
+            }
+
+            try {
+                const childrenResponse = await contentService.getChildren(item.id);
+                const children = Array.isArray(childrenResponse.data)
+                    ? childrenResponse.data
+                    : [];
+
+                const found = await findTechnology(children);
+
+                if (found) return found;
+            } catch (error) {
+                console.error(
+                    `Failed to load content children for ${item.id}:`,
+                    error
+                );
+            }
+        }
+
+        return null;
+    };
+
+    return findTechnology(roots);
+}
+
+const buildTechnologyModel = (content) => {
+    if (!content) return null;
+
+    const children = Array.isArray(content.children)
+        ? content.children.filter((item) => item?.title)
+        : [];
+
+    const childSections = children
+        .filter((item) => item.body && !/industry expertise/i.test(item.title))
+        .map((item) => ({
+            title: item.title,
+            body: item.body,
+        }));
+
+    const parsedSections = parseSectionsFromRichText(content.body);
+    const sections = childSections.length ? childSections : parsedSections;
+
+    const intro = getIntroFromRichText(content.body);
+    const expertise = children.find((item) => /industry expertise|expertise/i.test(item.title));
+
+    return {
+        ...content,
+        sections,
+        heroSubtitle: content.heroSubtitle || intro.subtitle,
+        heroDescription: content.heroDescription || intro.description,
+        expertiseTitle: expertise?.title || content.expertiseTitle || '',
+        expertiseBody: expertise?.body || content.expertiseBody || '',
+        capabilitiesTitle: content.capabilitiesTitle || content.title || '',
+    };
+};
 
 function Technology() {
+    const [content, setContent] = useState(null);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadContent = async () => {
+            try {
+                const technology = await getTechnologyContent();
+
+                if (isMounted) {
+                    setContent(buildTechnologyModel(technology));
+                }
+            } catch (error) {
+                console.error('Failed to load Technology content:', error);
+
+                if (isMounted) {
+                    setContent(null);
+                }
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const sections = content?.sections || [];
+
     return (
         <main className="min-h-screen bg-white text-slate-900">
             {/* Hero */}
@@ -87,15 +352,15 @@ function Technology() {
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                Technology
+                                {content?.title || 'Technology'}
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                Integrated logistics solutions for a changing world
+                                {content?.heroSubtitle || ''}
                             </p>
 
                             <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-                                Getting your products to market on time can be the difference between success and failure in an environment where product life cycles can be over in a matter of months.
+                                {content?.heroDescription || ''}
                             </p>
                         </div>
 
@@ -113,7 +378,7 @@ function Technology() {
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                            Technology logistics expertise
+                            {content?.capabilitiesTitle || content?.title || ''}
                         </h2>
                     </div>
 
@@ -157,9 +422,10 @@ function Technology() {
                                         }`}
                                 >
                                     <div className="space-y-5 text-base leading-7 text-slate-600">
-                                        {section.text.map((paragraph) => (
-                                            <p key={paragraph}>{paragraph}</p>
-                                        ))}
+                                        <div
+                                            className="[&_a]:text-sky-600 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+                                            dangerouslySetInnerHTML={richTextMarkup(section.body)}
+                                        />
                                     </div>
                                 </div>
                             </article>
@@ -176,16 +442,15 @@ function Technology() {
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-                        Technology logistics expertise
+                        {content?.expertiseTitle || ''}
                     </h2>
 
-                    <p className="mt-7 text-lg leading-8 text-white/65">
-                        We've been part of the technology revolution for more than 30 years with supply chain solutions that are innovative, flexible and tailor made for the industry. We cover the entire supply chain from multi-tier fulfilment and merge-in-transit to white glove deliveries and after sales services.
-                    </p>
-
-                    <p className="mt-6 text-lg leading-8 text-white/65">
-                        Our proven expertise in this disruptive, fast-moving market enables us to work together with you to build solutions that harness our sector-tuned IT systems and provide you with the e-services and near-real-time visibility you need. What’s more our state-of-the-art IT systems can be fully integrated with your systems.
-                    </p>
+                    {content?.expertiseBody && (
+                        <div
+                            className="mt-7 text-lg leading-8 text-white/65 [&_a]:text-sky-400 [&_a]:underline [&_strong]:font-semibold [&_em]:italic [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+                            dangerouslySetInnerHTML={richTextMarkup(content.expertiseBody)}
+                        />
+                    )}
 
                     <div className="mt-12 flex flex-wrap gap-4">
                         <Link

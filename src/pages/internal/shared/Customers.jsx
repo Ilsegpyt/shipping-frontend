@@ -578,10 +578,10 @@ export default function Customers() {
 
     return (
         <div
-            className="min-h-full bg-slate-50 p-4 sm:p-6"
+            className="min-h-full bg-slate-50 px-4 py-4 sm:px-6"
             onClick={() => setOpenActionsId(null)}
         >
-            <div className="mx-auto max-w-[1600px] space-y-5">
+            <div className="w-full space-y-5">
                 {/* Page Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -900,16 +900,16 @@ export default function Customers() {
                                                         <td className="px-4 py-4">
                                                             <span
                                                                 className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${customer.status?.toLowerCase() ===
-                                                                        'active'
-                                                                        ? 'bg-emerald-50 text-emerald-700'
-                                                                        : 'bg-slate-100 text-slate-600'
+                                                                    'active'
+                                                                    ? 'bg-emerald-50 text-emerald-700'
+                                                                    : 'bg-slate-100 text-slate-600'
                                                                     }`}
                                                             >
                                                                 <span
                                                                     className={`h-1.5 w-1.5 rounded-full ${customer.status?.toLowerCase() ===
-                                                                            'active'
-                                                                            ? 'bg-emerald-500'
-                                                                            : 'bg-slate-400'
+                                                                        'active'
+                                                                        ? 'bg-emerald-500'
+                                                                        : 'bg-slate-400'
                                                                         }`}
                                                                 />
                                                                 {customer.status ||

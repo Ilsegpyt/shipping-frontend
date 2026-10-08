@@ -62,6 +62,13 @@ function Solutions() {
                 <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-500/10 to-transparent" />
 
                 <div className="relative mx-auto max-w-7xl px-6 pb-24 pt-32 lg:px-8 lg:pb-32">
+                    <Link
+                        to="/"
+                        className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/80 transition hover:text-white"
+                    >
+                        ← Back to Home
+                    </Link>
+
                     <div className="max-w-4xl">
                         <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur-md">
                             <span className="h-2 w-2 rounded-full bg-sky-400" />

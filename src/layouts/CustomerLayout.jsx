@@ -1,4 +1,4 @@
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 
 import ilsLogo from '../assets/branding/ils-logo-horizontal.png';
@@ -25,11 +25,13 @@ export default function CustomerLayout() {
             <aside className="fixed inset-y-0 left-0 w-64 bg-slate-900">
                 {/* Logo Area */}
                 <div className="flex h-20 items-center justify-center border-b border-slate-800 px-6">
-                    <img
-                        src={ilsLogo}
-                        alt="International Logistics System"
-                        className="h-12 w-auto object-contain"
-                    />
+                    <Link to="/" className="block">
+                        <img
+                            src={ilsLogo}
+                            alt="International Logistics System"
+                            className="h-12 w-auto object-contain"
+                        />
+                    </Link>
                 </div>
 
                 <CustomerSidebar />

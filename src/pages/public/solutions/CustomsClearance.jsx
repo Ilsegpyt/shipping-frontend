@@ -1,5 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import contentService from '../../../services/contentService';
 import {
     ArrowLeft,
     ArrowUpRight,
@@ -8,10 +9,400 @@ import {
     Globe2,
 } from 'lucide-react';
 
+const getContentTypeName = (type) => {
+    if (typeof type === 'string') {
+        return type;
+    }
+
+    switch (type) {
+        case 1:
+            return 'Category';
+        case 2:
+            return 'Page';
+        case 3:
+            return 'Post';
+        case 4:
+            return 'Link';
+        default:
+            return '';
+    }
+};
+
+function decodeHtml(value = '') {
+    let decoded = value;
+
+    for (let i = 0; i < 3; i += 1) {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = decoded;
+        const next = textarea.value;
+
+        if (next === decoded) {
+            break;
+        }
+
+        decoded = next;
+    }
+
+    return decoded;
+}
+
+function parseCustomsClearanceContent(body = '') {
+    const html = decodeHtml(body)
+        .replace(/```(?:html|text)?/gi, '')
+        .replace(/```/g, '')
+        .trim();
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    const clean = (value = '') =>
+        value
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+    const textOf = (node) => clean(node?.textContent || '');
+
+    const headings = Array.from(
+        doc.body.querySelectorAll('h1,h2,h3,h4')
+    );
+
+    const paragraphs = Array.from(
+        doc.body.querySelectorAll('p')
+    ).filter((node) => textOf(node));
+
+    const findHeading = (patterns) =>
+        headings.find((node) => {
+            const value = textOf(node).toLowerCase();
+
+            return patterns.some((pattern) =>
+                value.includes(pattern)
+            );
+        });
+
+    const titleNode =
+        headings.find(
+            (node) =>
+                textOf(node).toLowerCase() ===
+                'customs clearance'
+        ) || headings[0];
+
+    const expertiseHeadingNode = findHeading([
+        'the expertise you need',
+        'expertise you need',
+    ]);
+
+    const complianceHeadingNode = findHeading([
+        'customs care and compliance',
+    ]);
+
+    const title =
+        textOf(titleNode) || 'Customs Clearance';
+
+    const subtitle =
+        paragraphs.find((node) =>
+            textOf(node)
+                .toLowerCase()
+                .includes(
+                    'our licensed broker services ensure compliance'
+                )
+        )?.textContent?.trim() || '';
+
+    const expertiseHeading =
+        textOf(expertiseHeadingNode) ||
+        'THE EXPERTISE YOU NEED TO ENSURE SUCCESSFUL TRANSPORT AND DELIVERY';
+
+    const complianceHeading =
+        textOf(complianceHeadingNode) ||
+        'CUSTOMS CARE AND COMPLIANCE';
+
+    /*
+     * IMPORTANT:
+     * Do not use doc.body.children here.
+     * RichTextEditor can wrap the CMS content in divs.
+     *
+     * Instead, use the actual DOM order of the heading and paragraphs.
+     * This works whether the paragraphs are direct children or nested
+     * inside editor-generated divs.
+     */
+    const isAfter = (first, second) =>
+        Boolean(
+            first.compareDocumentPosition(second) &
+            Node.DOCUMENT_POSITION_FOLLOWING
+        );
+
+    const getParagraphsBetween = (startHeading, endHeading) => {
+        if (!startHeading) {
+            return [];
+        }
+
+        return paragraphs
+            .filter((paragraph) => {
+                if (!isAfter(startHeading, paragraph)) {
+                    return false;
+                }
+
+                if (
+                    endHeading &&
+                    !isAfter(paragraph, endHeading)
+                ) {
+                    return false;
+                }
+
+                return true;
+            })
+            .map(textOf)
+            .filter(Boolean);
+    };
+
+    let expertiseParagraphs = getParagraphsBetween(
+        expertiseHeadingNode,
+        complianceHeadingNode
+    );
+
+    expertiseParagraphs = expertiseParagraphs.filter(
+        (value) =>
+            value.toLowerCase() !==
+            subtitle.toLowerCase()
+    );
+
+    /*
+     * If the CMS has no heading wrappers, fall back to the paragraph
+     * order from the actual CMS body.
+     */
+    if (!expertiseParagraphs.length) {
+        const allParagraphs = paragraphs
+            .map(textOf)
+            .filter(Boolean);
+
+        expertiseParagraphs = allParagraphs.filter(
+            (value) =>
+                value.toLowerCase() !==
+                subtitle.toLowerCase() &&
+                !value
+                    .toLowerCase()
+                    .includes(
+                        'our licensed broker services ensure compliance'
+                    )
+        );
+
+        const complianceTextIndex =
+            expertiseParagraphs.findIndex((value) =>
+                value
+                    .toLowerCase()
+                    .includes(
+                        'at ils, we understand the importance'
+                    )
+            );
+
+        if (complianceTextIndex >= 0) {
+            expertiseParagraphs =
+                expertiseParagraphs.slice(
+                    0,
+                    complianceTextIndex
+                );
+        }
+    }
+
+    const complianceParagraphs = getParagraphsBetween(
+        complianceHeadingNode,
+        null
+    );
+
+    const complianceIntro =
+        complianceParagraphs.find(
+            (value) =>
+                value
+                    .toLowerCase()
+                    .includes(
+                        'at ils, we understand the importance'
+                    )
+        ) ||
+        complianceParagraphs[0] ||
+        '';
+
+    const complianceServicesIntro =
+        complianceParagraphs.find(
+            (value) =>
+                value
+                    .toLowerCase()
+                    .includes(
+                        'depending on the country'
+                    )
+        ) ||
+        complianceParagraphs[1] ||
+        '';
+
+    let services = Array.from(
+        doc.body.querySelectorAll('li')
+    )
+        .map(textOf)
+        .filter(Boolean);
+
+    if (!services.length) {
+        const knownServices = new Set([
+            'import and export declarations',
+            'temporary importation',
+            'weekly groupage services from alexandria to port said',
+            'customs warehousing',
+            'duty drawback',
+            'national customs rulings',
+        ]);
+
+        services = Array.from(
+            doc.body.querySelectorAll('p,div,span')
+        )
+            .map(textOf)
+            .filter((value) =>
+                knownServices.has(value.toLowerCase())
+            );
+    }
+
+    return {
+        title,
+        subtitle,
+        expertiseHeading,
+        expertiseParagraphs,
+        complianceHeading,
+        complianceIntro,
+        complianceServicesIntro,
+        services,
+    };
+}
+
 function CustomsClearance() {
+    const [content, setContent] = useState(null);
+    const [loading, setLoading] = useState(true);
+
     useEffect(() => {
         window.scrollTo(0, 0);
+
+        const loadContent = async () => {
+            try {
+                const rootResponse = await contentService.getRootContent();
+
+                if (!Array.isArray(rootResponse.data)) {
+                    throw new Error(
+                        'Invalid response from GET /api/content/root.'
+                    );
+                }
+
+                const rootContent = rootResponse.data;
+
+                if (rootContent.length === 0) {
+                    throw new Error(
+                        'GET /api/content/root returned no content.'
+                    );
+                }
+
+                const visited = new Set();
+                const allContent = [];
+
+                const loadTree = async (items) => {
+                    for (const item of items) {
+                        if (!item?.id || visited.has(item.id)) {
+                            continue;
+                        }
+
+                        visited.add(item.id);
+                        allContent.push(item);
+
+                        try {
+                            const childrenResponse =
+                                await contentService.getChildren(item.id);
+
+                            const children = Array.isArray(
+                                childrenResponse.data
+                            )
+                                ? childrenResponse.data
+                                : [];
+
+                            if (children.length > 0) {
+                                await loadTree(children);
+                            }
+                        } catch (childError) {
+                            console.error(
+                                `Failed to load children for content ${item.id}:`,
+                                childError
+                            );
+
+                            throw new Error(
+                                `Failed to load children for "${item.title || item.id}".`
+                            );
+                        }
+                    }
+                };
+
+                await loadTree(rootContent);
+
+                const page = allContent.find(
+                    (item) =>
+                        getContentTypeName(item.type) === 'Page' &&
+                        item?.title?.trim().toLowerCase() ===
+                        'customs clearance'
+                );
+
+                if (!page) {
+                    console.error(
+                        'CMS content loaded, but Customs Clearance was not found.',
+                        allContent.map((item) => ({
+                            id: item.id,
+                            title: item.title,
+                            type: item.type,
+                            typeName: getContentTypeName(item.type),
+                        }))
+                    );
+
+                    throw new Error(
+                        'Customs Clearance page was not found in CMS.'
+                    );
+                }
+
+                const detailsResponse = await contentService.getById(page.id);
+                const details = detailsResponse.data || page;
+
+                setContent({
+                    title: details.title || page.title,
+                    ...parseCustomsClearanceContent(details.body || ''),
+                });
+            } catch (error) {
+                console.error(
+                    'Failed to load Customs Clearance content:',
+                    error
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadContent();
     }, []);
+
+    const cms = content || {};
+    const title = cms.title || 'Customs Clearance';
+    const subtitle =
+        cms.subtitle || 'Our licensed broker services ensure compliance';
+    const expertiseHeading =
+        cms.expertiseHeading ||
+        'THE EXPERTISE YOU NEED TO ENSURE SUCCESSFUL TRANSPORT AND DELIVERY';
+    const expertiseParagraphs = cms.expertiseParagraphs || [];
+    const complianceHeading =
+        cms.complianceHeading || 'CUSTOMS CARE AND COMPLIANCE';
+    const complianceIntro = cms.complianceIntro || '';
+    const complianceServicesIntro = cms.complianceServicesIntro || '';
+    const services = cms.services || [];
+
+    if (loading) {
+        return (
+            <main className="min-h-screen bg-white text-slate-900">
+                <div className="flex min-h-screen items-center justify-center">
+                    <div className="text-sm font-medium text-slate-500">
+                        Loading...
+                    </div>
+                </div>
+            </main>
+        );
+    }
 
     return (
         <main className="min-h-screen bg-white text-slate-900">
@@ -40,11 +431,11 @@ function CustomsClearance() {
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                Customs Clearance
+                                {title}
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                Our licensed broker services ensure compliance
+                                {subtitle}
                             </p>
                         </div>
 
@@ -65,11 +456,11 @@ function CustomsClearance() {
 
                             <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-xl">
                                 <p className="text-sm font-semibold text-white">
-                                    Customs Clearance
+                                    {title}
                                 </p>
 
                                 <p className="mt-1 text-sm text-white/50">
-                                    Licensed customs brokerage and compliance
+                                    {subtitle}
                                 </p>
                             </div>
                         </div>
@@ -81,43 +472,19 @@ function CustomsClearance() {
             <section className="py-24 sm:py-32">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                        Customs Clearance
+                        {title}
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                        THE EXPERTISE YOU NEED TO ENSURE SUCCESSFUL TRANSPORT AND DELIVERY
+                        {expertiseHeading}
                     </h2>
 
                     <div className="mt-8 space-y-6 text-lg leading-8 text-slate-600">
-                        <p>
-                            In a global economy, customs clearance is a complex
-                            and ever changing landscape of rules, regulations,
-                            and paperwork. Let our experts manage your customs
-                            clearance, saving you time and ensuring successful
-                            transport and delivery.
-                        </p>
-
-                        <p>
-                            In most countries with ILS offices, we are licensed
-                            customs brokers. And in other countries we have
-                            arrangements with agents.
-                        </p>
-
-                        <p>
-                            Regardless of the precise local setup, our highly
-                            experienced experts can help you handle all your
-                            customs needs - from import and export declarations,
-                            temporary importation and customs warehousing to
-                            duty drawbacks and national customs rulings.
-                        </p>
-
-                        <p>
-                            Our customs brokers have expertise in local
-                            conditions, regulatory requirements, tariff
-                            updates, and more. With this knowledge, we can
-                            process your custom clearances with accuracy and
-                            efficiency.
-                        </p>
+                        {expertiseParagraphs.map((paragraph, index) => (
+                            <p key={`${index}-${paragraph.slice(0, 20)}`}>
+                                {paragraph}
+                            </p>
+                        ))}
                     </div>
                 </div>
             </section>
@@ -136,38 +503,23 @@ function CustomsClearance() {
                             </p>
 
                             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                                CUSTOMS CARE AND COMPLIANCE
+                                {complianceHeading}
                             </h2>
                         </div>
 
                         <div>
                             <p className="text-lg leading-8 text-slate-600">
-                                At ILS, we understand the importance of properly
-                                handled customs formalities and compliance with
-                                all laws and regulations governing the
-                                importation and exportation of goods. Our
-                                comprehensive local and global customs
-                                compliance programme ensures that your customs
-                                documentation is accurate and compliant.
+                                {complianceIntro}
                             </p>
 
                             <p className="mt-8 text-lg leading-8 text-slate-600">
-                                Depending on the country, we can offer advice,
-                                special customs entries and procedures
-                                including:
+                                {complianceServicesIntro}
                             </p>
 
                             <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                                {[
-                                    'Import and export declarations',
-                                    'Temporary importation',
-                                    'Weekly groupage services from Alexandria to Port Said',
-                                    'Customs warehousing',
-                                    'Duty drawback',
-                                    'National customs rulings',
-                                ].map((item) => (
+                                {services.map((item, index) => (
                                     <div
-                                        key={item}
+                                        key={`${index}-${item}`}
                                         className="flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
                                     >
                                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">

@@ -1,11 +1,157 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import contentService from '../../../services/contentService';
 import { ArrowLeft, ArrowUpRight, Boxes } from 'lucide-react';
 
+
+function decodeHtml(html = '') {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = html;
+    return textarea.value;
+}
+
+function parseProjectTransportContent(content) {
+    const decodedBody = decodeHtml(content?.body || '');
+    const doc = new DOMParser().parseFromString(decodedBody, 'text/html');
+
+    let blocks = Array.from(
+        doc.body?.querySelectorAll('h1, h2, h3, h4, p, li') || []
+    )
+        .map((element) => ({
+            type: element.tagName.toLowerCase(),
+            text: element.textContent?.replace(/\s+/g, ' ').trim() || '',
+        }))
+        .filter((item) => item.text);
+
+    // CMS content may also be stored as plain text instead of HTML.
+    // In that case, preserve every non-empty line instead of losing the body.
+    if (blocks.length === 0 && decodedBody.trim()) {
+        const lines = decodedBody
+            .split(/\\r?\\n/)
+            .map((line) => line.replace(/^\*\*(.*?)\*\*$/, '$1').trim())
+            .filter(Boolean);
+
+        blocks = lines.map((line) => ({
+            type:
+                /^[A-Z0-9][A-Z0-9\s.,'’()&–—-]{8,}$/.test(line)
+                    ? 'h2'
+                    : 'p',
+            text: line,
+        }));
+    }
+
+    const titleParts = (content?.title || '').split(/\s+-\s+/, 2);
+    const title = titleParts[0]?.trim() || 'Project Transport';
+    const subtitle =
+        titleParts[1]?.trim() ||
+        blocks.find((item) => item.type === 'p')?.text ||
+        'When you need to move heavy, oversized or complex cargo, we can help';
+
+    const headings = blocks.filter((item) =>
+        ['h1', 'h2', 'h3', 'h4'].includes(item.type)
+    );
+    const paragraphs = blocks.filter((item) => item.type === 'p');
+    const listItems = blocks.filter((item) => item.type === 'li');
+
+    return {
+        title,
+        subtitle,
+        headings,
+        paragraphs,
+        listItems,
+        allBlocks: blocks,
+    };
+}
+
+async function loadAllContent() {
+    const result = [];
+    const visited = new Set();
+
+    async function visit(parentId = null) {
+        const response = parentId
+            ? await contentService.getChildren(parentId)
+            : await contentService.getRootContent();
+
+        const items = Array.isArray(response?.data)
+            ? response.data
+            : Array.isArray(response?.data?.items)
+                ? response.data.items
+                : [];
+
+        for (const item of items) {
+            if (!item?.id || visited.has(item.id)) continue;
+
+            visited.add(item.id);
+            result.push(item);
+            await visit(item.id);
+        }
+    }
+
+    await visit();
+    return result;
+}
+
 function ProjectTransport() {
+    const [projectTransportContent, setProjectTransportContent] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+
     useEffect(() => {
         window.scrollTo(0, 0);
+
+        let cancelled = false;
+
+        const loadContent = async () => {
+            try {
+                setIsLoading(true);
+
+                const allContent = await loadAllContent();
+                const content = allContent.find((item) => {
+                    const title = item?.title?.trim().toLowerCase() || '';
+                    return (
+                        title === 'project transport' ||
+                        title.startsWith('project transport -') ||
+                        title.includes('projects transport')
+                    );
+                });
+
+                if (!cancelled) {
+                    setProjectTransportContent(content || null);
+                }
+            } catch (error) {
+                console.error('Failed to load Project Transport content:', error);
+
+                if (!cancelled) {
+                    setProjectTransportContent(null);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsLoading(false);
+                }
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
+
+    const parsedContent = parseProjectTransportContent(projectTransportContent);
+    const heroTitle = parsedContent.title;
+    const heroSubtitle = parsedContent.subtitle;
+    const bodyHeadings = parsedContent.headings;
+    const bodyParagraphs = parsedContent.paragraphs;
+    const bodyListItems = parsedContent.listItems;
+
+    const projectHeading =
+        bodyHeadings.find((item) =>
+            item.text.toLowerCase().includes('project logistics')
+        )?.text ||
+        bodyHeadings[0]?.text ||
+        'PROJECT LOGISTICS FOR MAJOR MOVES ANYWHERE IN THE WORLD';
+
+    const projectParagraphs = bodyParagraphs;
 
     return (
         <main className="min-h-screen bg-white text-slate-900">
@@ -34,11 +180,11 @@ function ProjectTransport() {
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                ILS Projects Transport
+                                {heroTitle}
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                When you need to move heavy, oversized or complex cargo, we can help
+                                {heroSubtitle}
                             </p>
                         </div>
 
@@ -59,11 +205,11 @@ function ProjectTransport() {
 
                             <div className="absolute bottom-8 left-8 right-8 rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-xl">
                                 <p className="text-sm font-semibold text-white">
-                                    ILS Projects Transport
+                                    {heroTitle}
                                 </p>
 
                                 <p className="mt-1 text-sm text-white/50">
-                                    Specialized solutions for complex cargo
+                                    {heroSubtitle}
                                 </p>
                             </div>
                         </div>
@@ -75,32 +221,37 @@ function ProjectTransport() {
             <section className="py-24 sm:py-32">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                        Project Transport
+                        {heroTitle}
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                        PROJECT LOGISTICS FOR MAJOR MOVES ANYWHERE IN THE WORLD
+                        {projectHeading}
                     </h2>
 
-                    <p className="mt-8 text-lg leading-8 text-slate-600">
-                        Our project transport services offer reliable and
-                        cost-effective solutions that meet high standards of
-                        safety, service and quality. When you need to move
-                        heavy, oversized or complex cargo, ILS’s Project
-                        Transport is ready to provide specialized,
-                        tailor-made solutions for the most ambitious energy,
-                        industrial and capital infrastructure projects. With a
-                        global force of skilled professionals and decades of
-                        experience in this area, we are ready to serve your
-                        most complex logistics demands and execute any major
-                        move, even to the most remote locations. Our experts
-                        have the necessary knowledge, track record and
-                        resources to create end-to-end transport solutions for
-                        each phase of the entire lifecycle of energy projects –
-                        whether it’s moving wind turbines or solar panels in
-                        the renewable energy sector, or supporting oil and gas
-                        projects from exploration to decommissioning.
-                    </p>
+                    <div className="mt-8 space-y-6 text-lg leading-8 text-slate-600">
+                        {projectParagraphs.map((paragraph, index) => (
+                            <p key={`project-paragraph-${index}`}>
+                                {paragraph.text}
+                            </p>
+                        ))}
+
+                        {bodyListItems.length > 0 && (
+                            <ul className="space-y-3">
+                                {bodyListItems.map((item, index) => (
+                                    <li key={`project-list-${index}`} className="flex gap-3">
+                                        <span className="mt-3 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-600" />
+                                        <span>{item.text}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+
+                        {isLoading && (
+                            <p className="text-base text-slate-400">
+                                Loading content...
+                            </p>
+                        )}
+                    </div>
                 </div>
             </section>
 
@@ -109,11 +260,11 @@ function ProjectTransport() {
                 <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 lg:flex-row lg:items-center lg:px-8">
                     <div>
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                            Project Transport
+                            {heroTitle}
                         </p>
 
                         <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                            Need support with a complex project move?
+                            {`Need support with ${heroTitle.toLowerCase()}?`}
                         </h2>
                     </div>
 

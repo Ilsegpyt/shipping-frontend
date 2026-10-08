@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+
 import { Link } from 'react-router-dom';
+
 import {
     ArrowLeft,
     ArrowUpRight,
@@ -11,67 +13,285 @@ import {
 } from 'lucide-react';
 
 import IndustryHeroVisual from '../../../components/public/IndustryHeroVisual';
+import contentService from '../../../services/contentService';
 
-const sections = [
-    {
-        title: 'Biopharma',
-        icon: HeartPulse,
-        text: [
-            'Our innovative supply chain and transport solutions support your business to get your products where they need to be.',
-            'Our GMP and GDP warehouse and distribution services include FEFO picking, clinical trial management, repacking and display configuration, all controlled by our in-house pharmacists.',
-            'Delivery services eliminate costs and inefficiencies, and include next-day delivery, direct-to-hospital department deliveries, 24/7 standby service and recall management – all available in condition-controlled environments.',
-            'We work with biologicals, pharmaceutical products (prescription drugs, generics, controlled drugs and over-the-counter (OTC) products), vaccines, active pharmaceutical ingredients (APIs) and clinical trial materials.',
-        ],
-    },
-    {
-        title: 'Medical devices and diagnostics',
-        icon: ShieldCheck,
-        text: [
-            'We have been providing tailored supply chain solutions and healthcare logistics services to the medical devices and diagnostics market for more than 20 years.',
-            'Our services include orthopaedic loaner kit management, consignment stock management, preparation of procedure-based trolleys, sterile picking, clean rooms, technical repair and rework centres, 24/7 standby service, in-hospital replenishments, white-glove deliveries and spare parts management.',
-            'Our broad base of medical device customers comprises all classes of devices (I, IIa, IIb, III).',
-        ],
-    },
-    {
-        title: 'Medical products and personal care',
-        icon: Truck,
-        text: [
-            'ILS is experienced in creating lean, flexible supply chain and transport solutions for many different destinations: from pharmacies to retail outlets, as well as direct to patients.',
-            'We operate dedicated and multi-user warehouse operations and manage regional distribution centres with ‘control towers’, some of which manage over 1,000 shipments a day.',
-            'Our services include packaging and repackaging, labelling and kitting, managing waste, returns and stock levels, restacking based on expiration date, and swapping products.',
-        ],
-    },
-    {
-        title: 'Hospitals and care homes',
-        icon: Warehouse,
-        text: [
-            'Our efficient supply chain solutions improve visibility and reduce costs, which helps improve patient care in hospitals, clinics, and nursing homes.',
-            'Our services include direct delivery to hospital wards, sterile goods logistics, drug management, operational procurement, laboratory logistics management of medical goods, disposal of hazardous waste, stock reduction programmes, inventory management, warehousing, external and internal distribution, replenishment at ward level and much more.',
-        ],
-    },
-];
+const iconMap = {
+    biopharma: HeartPulse,
+    'medical devices and diagnostics': ShieldCheck,
+    'medical products and personal care': Truck,
+    'hospitals and care homes': Warehouse,
+};
 
-const faqs = [
-    {
-        question: 'Can you deliver my products to diverse locations?',
-        answer: 'Yes, we can. Our diverse fleet of distribution vehicles provides flexibility and ensures we can handle ambient, refrigerated, frozen and hazardous goods. Read more about our healthcare transport solutions.',
-    },
-    {
-        question: 'Can you meet my environmental concerns without compromising the quality or efficiency of my healthcare logistics delivery?',
-        answer: 'Our services meet global environmental transport objectives, and we adapt modalities to suit changing conditions and circumstances. For example, we can shift from airfreight to sea freight in order to cut carbon emissions and costs.',
-    },
-    {
-        question: 'Does ILS meet my need for dedicated healthcare warehouses?',
-        answer: 'Yes. Our specialised healthcare sites are secure and specially equipped for healthcare products. Certain locations also offer condition-controlled environments.',
-    },
-    {
-        question: 'What healthcare logistics support do you offer?',
-        answer: 'We support your supply chain by acting as 3PL, 3½PL or 4PL as required. Each specific role offers different models for distribution and supply chain collaboration. Our state-of-the-art freight management system sets the standard for healthcare distribution. We base our distribution solutions on your requirements, taking into account the needs of each of your customers. And we handle the entire process from planning through execution and administration.',
-    },
-];
+const normalizeText = (value = '') =>
+    String(value)
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&ndash;/gi, '–')
+        .replace(/&mdash;/gi, '—')
+        .replace(/&lsquo;|&rsquo;/gi, "'")
+        .replace(/&ldquo;|&rdquo;/gi, '"')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .trim();
+
+const stripHtml = (value = '') => {
+    if (!value) return '';
+    const container = document.createElement('div');
+    container.innerHTML = value;
+    return normalizeText(container.textContent || '');
+};
+
+const getPlainText = (value = '') => {
+    if (!value) return '';
+    if (!/<[a-z][\s\S]*>/i.test(value)) return normalizeText(value);
+    return stripHtml(value);
+};
+
+const markdownToHtml = (value = '') => {
+    if (!value) return '';
+    if (/<[a-z][\s\S]*>/i.test(value)) return value;
+
+    const escapeHtml = (text = '') =>
+        String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+    const lines = String(value).replace(/\r\n/g, '\n').split('\n');
+    const output = [];
+    let listItems = [];
+
+    const flushList = () => {
+        if (!listItems.length) return;
+        output.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join('')}</ul>`);
+        listItems = [];
+    };
+
+    const inline = (text) =>
+        escapeHtml(text)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/__(.+?)__/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/_(.+?)_/g, '<em>$1</em>');
+
+    lines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+            flushList();
+            return;
+        }
+
+        const heading = trimmed.match(/^(#{1,5})\s+(.+)$/);
+        if (heading) {
+            flushList();
+            const level = Math.min(5, heading[1].length);
+            output.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+            return;
+        }
+
+        const bullet = trimmed.match(/^[-*]\s+(.+)$/);
+        if (bullet) {
+            listItems.push(inline(bullet[1]));
+            return;
+        }
+
+        flushList();
+        output.push(`<p>${inline(trimmed)}</p>`);
+    });
+
+    flushList();
+    return output.join('');
+};
+
+const parseHealthcareContent = (item) => {
+    const rawBody = item?.body || item?.content || item?.description || '';
+    const html = markdownToHtml(rawBody);
+    const title = item?.title || 'Healthcare logistics';
+
+    const result = {
+        title,
+        heroSubtitle: item?.heroSubtitle || '',
+        heroDescription: item?.heroDescription || '',
+        introLabel: 'Healthcare logistics',
+        introTitle: '',
+        introBodyHtml: '',
+        capabilitiesLabel: 'Our capabilities',
+        capabilitiesTitle: '',
+        sections: [],
+        faqLabel: 'Frequently asked questions',
+        faqTitle: '',
+        faqs: [],
+        ctaLabel: item?.ctaLabel || 'Discuss your requirements',
+        ctaHref: item?.ctaHref || '/#contact',
+    };
+
+    if (!html) return result;
+
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const nodes = Array.from(doc.body.children);
+    const textOf = (node) => getPlainText(node?.innerHTML || node?.textContent || '');
+    const isHeading = (node) => /^H[1-5]$/.test(node?.tagName || '');
+    const isBoldOnlyParagraph = (node) =>
+        node?.tagName === 'P' &&
+        node.querySelector('strong') &&
+        !node.querySelector('em, a, br') &&
+        textOf(node).trim() === node.querySelector('strong')?.textContent?.trim();
+
+    // If the CMS body does not provide explicit hero fields, use the first two paragraphs.
+    const paragraphs = nodes.filter((node) => node.tagName === 'P');
+    if (!result.heroSubtitle) {
+        result.heroSubtitle = paragraphs
+            .map(textOf)
+            .find((text) => /logistics that make the world a better place/i.test(text)) || '';
+    }
+    if (!result.heroDescription) {
+        result.heroDescription = paragraphs
+            .map(textOf)
+            .find((text) => text.length > 80 && !/logistics that make the world a better place/i.test(text)) || '';
+    }
+
+    const introTitleIndex = nodes.findIndex((node) =>
+        /we can help you make a difference/i.test(textOf(node))
+    );
+    const capabilitiesTitleIndex = nodes.findIndex((node) =>
+        /specialist healthcare solutions/i.test(textOf(node))
+    );
+    const faqTitleIndex = nodes.findIndex((node) =>
+        /healthcare logistics, answered/i.test(textOf(node))
+    );
+
+    if (introTitleIndex >= 0) {
+        result.introTitle = textOf(nodes[introTitleIndex]);
+        const end = capabilitiesTitleIndex > introTitleIndex ? capabilitiesTitleIndex : nodes.length;
+        result.introBodyHtml = nodes
+            .slice(introTitleIndex + 1, end)
+            .filter((node) => node.tagName === 'P')
+            .map((node) => node.outerHTML)
+            .join('');
+    }
+
+    if (capabilitiesTitleIndex >= 0) {
+        result.capabilitiesTitle = textOf(nodes[capabilitiesTitleIndex]);
+    }
+
+    const knownSectionTitles = [
+        'biopharma',
+        'medical devices and diagnostics',
+        'medical products and personal care',
+        'hospitals and care homes',
+    ];
+
+    const sectionIndexes = [];
+    nodes.forEach((node, index) => {
+        const text = textOf(node).toLowerCase();
+        if (knownSectionTitles.includes(text) || (isBoldOnlyParagraph(node) && knownSectionTitles.includes(text))) {
+            sectionIndexes.push(index);
+        }
+    });
+
+    result.sections = sectionIndexes.map((startIndex, sectionIndex) => {
+        const headingNode = nodes[startIndex];
+        const titleText = textOf(headingNode);
+        const endIndex = sectionIndexes[sectionIndex + 1] ?? (faqTitleIndex >= 0 ? faqTitleIndex : nodes.length);
+        const bodyNodes = nodes.slice(startIndex + 1, endIndex);
+        const textNodes = bodyNodes.filter((node) => node.tagName === 'P' || node.tagName === 'UL' || node.tagName === 'OL');
+
+        return {
+            title: titleText,
+            icon: iconMap[titleText.toLowerCase()] || Truck,
+            textHtml: textNodes.map((node) => node.outerHTML).join(''),
+        };
+    });
+
+    if (faqTitleIndex >= 0) {
+        result.faqTitle = textOf(nodes[faqTitleIndex]);
+        let current = null;
+
+        nodes.slice(faqTitleIndex + 1).forEach((node) => {
+            const text = textOf(node);
+            if (!text) return;
+
+            const isQuestion = text.endsWith('?') && (node.tagName === 'H2' || node.tagName === 'H3' || node.tagName === 'H4' || node.tagName === 'H5' || node.tagName === 'P' || isBoldOnlyParagraph(node));
+
+            if (isQuestion) {
+                current = { question: text, answerHtml: '' };
+                result.faqs.push(current);
+                return;
+            }
+
+            if (current && (node.tagName === 'P' || node.tagName === 'UL' || node.tagName === 'OL')) {
+                current.answerHtml += node.outerHTML;
+            }
+        });
+    }
+
+    return result;
+};
+
+const collectContent = async () => {
+    const rootResponse = await contentService.getRootContent();
+    const rootItems = rootResponse?.data || [];
+
+    const allItems = [];
+
+    const walk = async (items) => {
+        for (const item of items || []) {
+            allItems.push(item);
+
+            try {
+                const childrenResponse = await contentService.getChildren(item.id);
+                const children = childrenResponse?.data || [];
+                if (children.length) await walk(children);
+            } catch {
+                // Leaf content is expected to return an empty child collection.
+            }
+        }
+    };
+
+    await walk(rootItems);
+    return allItems;
+};
 
 function HealthcareLogistics() {
     const [openFaq, setOpenFaq] = useState(0);
+    const [content, setContent] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const loadContent = async () => {
+            try {
+                const items = await collectContent();
+
+                const healthcare = items.find((item) => {
+                    const title = normalizeText(item?.title).toLowerCase();
+
+                    return (
+                        title === 'healthcare logistics' ||
+                        title === 'healthcare' ||
+                        title.includes('healthcare logistics')
+                    );
+                });
+
+                if (!cancelled) {
+                    setContent(healthcare ? parseHealthcareContent(healthcare) : null);
+                }
+            } catch (error) {
+                console.error('Failed to load Healthcare Logistics content:', error);
+                if (!cancelled) setContent(null);
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const sections = content?.sections || [];
+    const faqs = content?.faqs || [];
 
     return (
         <main className="min-h-screen bg-white text-slate-900">
@@ -99,15 +319,15 @@ function HealthcareLogistics() {
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                Healthcare logistics
+                                {content?.title || 'Healthcare logistics'}
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                Logistics that make the world a better place
+                                {content?.heroSubtitle || ''}
                             </p>
 
                             <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-                                Rising costs from research and development, complex supply chains and stringent regulations are just a few of the challenges you need to overcome when working with healthcare transport and logistics.
+                                {content?.heroDescription || ''}
                             </p>
                         </div>
 
@@ -120,15 +340,15 @@ function HealthcareLogistics() {
             <section className="bg-slate-50 py-24 sm:py-28">
                 <div className="mx-auto max-w-4xl px-6 lg:px-8">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                        Healthcare logistics
+                        {content?.introLabel || 'Healthcare logistics'}
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                        We can help you make a difference
+                        {content?.introTitle || ''}
                     </h2>
 
-                    <p className="mt-7 text-lg leading-8 text-slate-600">
-                        Our services, facilities and transport networks comply with all relevant healthcare quality standards and regulations. Furthermore, our tailor-made, integrated supply chain solutions cover everything from transport to storage as well as cold chain services.
+                    <p className="mt-7 whitespace-pre-line text-lg leading-8 text-slate-600">
+                        <span dangerouslySetInnerHTML={{ __html: content?.introBodyHtml || '' }} />
                     </p>
                 </div>
             </section>
@@ -138,11 +358,11 @@ function HealthcareLogistics() {
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <div className="max-w-3xl">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                            Our capabilities
+                            {content?.capabilitiesLabel || 'Our capabilities'}
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                            Specialist healthcare solutions
+                            {content?.capabilitiesTitle || ''}
                         </h2>
                     </div>
 
@@ -187,9 +407,7 @@ function HealthcareLogistics() {
                                             }`}
                                     >
                                         <div className="space-y-5 text-base leading-7 text-slate-600">
-                                            {section.text.map((paragraph) => (
-                                                <p key={paragraph}>{paragraph}</p>
-                                            ))}
+                                            <div dangerouslySetInnerHTML={{ __html: section.textHtml || '' }} />
                                         </div>
                                     </div>
                                 </article>
@@ -203,11 +421,11 @@ function HealthcareLogistics() {
             <section className="bg-slate-950 py-24 sm:py-32">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-                        Frequently asked questions
+                        {content?.faqLabel || 'Frequently asked questions'}
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-                        Healthcare logistics, answered.
+                        {content?.faqTitle || ''}
                     </h2>
 
                     <div className="mt-12 divide-y divide-white/10 rounded-3xl border border-white/10 bg-white/[0.03] px-6 sm:px-8">
@@ -218,9 +436,7 @@ function HealthcareLogistics() {
                                 <div key={faq.question}>
                                     <button
                                         type="button"
-                                        onClick={() =>
-                                            setOpenFaq(isOpen ? -1 : index)
-                                        }
+                                        onClick={() => setOpenFaq(isOpen ? -1 : index)}
                                         className="flex w-full items-center justify-between gap-6 py-7 text-left"
                                     >
                                         <span className="text-base font-semibold text-white sm:text-lg">
@@ -235,8 +451,8 @@ function HealthcareLogistics() {
                                     </button>
 
                                     {isOpen && (
-                                        <div className="pb-7 pr-8 text-base leading-7 text-white/65">
-                                            {faq.answer}
+                                        <div className="whitespace-pre-line pb-7 pr-8 text-base leading-7 text-white/65">
+                                            <div dangerouslySetInnerHTML={{ __html: faq.answerHtml || '' }} />
                                         </div>
                                     )}
                                 </div>
@@ -253,10 +469,10 @@ function HealthcareLogistics() {
                         </Link>
 
                         <a
-                            href="/#contact"
+                            href={content?.ctaHref || '/#contact'}
                             className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-400"
                         >
-                            Discuss your requirements
+                            {content?.ctaLabel || 'Discuss your requirements'}
                             <ArrowUpRight size={17} />
                         </a>
                     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import recruitmentApplicationsService from '../../../services/recruitmentApplicationsService';
 
 const departments = [
     'Sales',
@@ -17,13 +18,41 @@ const labelClass = 'text-sm font-medium text-slate-700';
 
 export default function Recruitment() {
     const [submitted, setSubmitted] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
 
-    const handleSubmit = (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
 
-        // Frontend only for now.
-        // Backend / database / CV storage will be added later.
-        setSubmitted(true);
+        const form = event.currentTarget;
+        const formData = new FormData(form);
+
+        setErrorMessage('');
+        setSubmitted(false);
+
+        try {
+            await recruitmentApplicationsService.create(formData);
+
+            setSubmitted(true);
+            form.reset();
+        } catch (error) {
+            console.error(
+                'Failed to submit recruitment application:',
+                error
+            );
+
+            console.error(
+                'Backend error:',
+                error.response?.data
+            );
+
+            setErrorMessage(
+                typeof error.response?.data === 'string'
+                    ? error.response.data
+                    : error.response?.data?.message ||
+                    error.response?.data?.error ||
+                    'Failed to submit your application.'
+            );
+        }
     };
 
     return (
@@ -142,6 +171,12 @@ export default function Recruitment() {
                             {submitted && (
                                 <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
                                     Your application has been submitted successfully.
+                                </div>
+                            )}
+
+                            {errorMessage && (
+                                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                                    {errorMessage}
                                 </div>
                             )}
                         </form>

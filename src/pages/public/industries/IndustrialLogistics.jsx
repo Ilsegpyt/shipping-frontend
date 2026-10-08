@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
     ArrowLeft,
@@ -5,58 +6,255 @@ import {
     Boxes,
 } from 'lucide-react';
 
+import contentService from '../../../services/contentService';
 import IndustryHeroVisual from '../../../components/public/IndustryHeroVisual';
 
-const sections = [
-    {
-        title: 'Industrial logistics solutions',
-        text: [
-            'We provide industry-specific solutions to a diverse range of sectors, including food ingredients and raw materials, machinery and components, packaged chemicals, construction, and the wholesale and manufacturing sectors. We operate industrial facilities specially equipped for storing hazardous goods, tyres, food ingredients and odd-sized equipment. Specific services to meet your industrial needs include repackaging, drum filling, hazardous goods labelling and transport management. For a number of our key customers we run in-house operations facilitating production processes for various logistics activities.',
-        ],
-    },
-    {
-        title: 'Food ingredients and raw materials',
-        text: [
-            'Food ingredients can amount to 60% of the total costs for the process industry and raw materials up to 20% of costs for OEMs. The price volatility of these commodities varies depending on conditions. This is why improving supply chain transparency can help you manage this volatility and deliver short-term growth while achieving long-term competitive advantage.',
-            'Our global network ensures timely source flows to your production facilities. We can also manage warehousing and distribution activities so goods arrive in perfect condition with your end customers.',
-            'Our warehousing and cross-dock facilities are equipped to meet relevant requirements and regulations (such as HACCP, AIB, SQAS, ISO, GMP and GDP) and our IT systems easily meet your requirements for track and trace, batch registration and/or expiry-date monitoring right down to individual item level to ensure the quality of your stock.',
-            'All of our processes are optimised to handle the high volumes and peaks in your supply chain.',
-        ],
-    },
-    {
-        title: 'Chemicals',
-        text: [
-            'Transport and logistics for chemicals requires expertise and full understanding of relevant Quality, Health & Safety, and Environment requirements. Our ILS team of chemical logistics experts understands the complex legislative environment in which your chemicals business operates and can deliver the chemical logistics solutions you need.',
-            'ILS chemical transport and logistic solutions are fully flexible and designed to meet your needs for efficiency and safety. We offer safe and secure transport of chemicals using air, sea or road using our extensive network of suppliers. All suppliers are experienced in working with chemical shipments and have the required accreditation, licenses and insurance for chemical transportation.',
-            'In addition to transport, we offer chemical warehousing facilities, product handling and packaging and on-site logistics services. All facilities comply with applicable safety regulations so you can have peace of mind that your chemicals are handled correctly at all times.',
-        ],
-    },
-    {
-        title: 'Machinery and components',
-        text: [
-            'The commoditisation of machines and components leaves manufacturers with ever thinning margins making it increasingly important to focus on product innovation, leading edge technology, cost containment and creation of high barriers to entry, while outsourcing the actual manufacturing and supply chain management.',
-            'We maximise the amount of stock in transit, shifting the focus from warehouse management to supply chain execution. In addition, new concepts surrounding assembly at destination and bonded warehousing have decreased duty and tax exposure on capital intensive goods but have greatly increased the complexity of the supply chain.',
-            'Our industrial solutions offer an entire range of services including assembly/disassembly and special packaging / repackaging, warehousing, machine modifications prior to final delivery, freight management and ‘out of stock’ time-sensitive deliveries throughout the world.',
-            'Furthermore, our network of bonded warehouses will place you close to your customers, allowing you to better control your business.',
-        ],
-    },
-    {
-        title: 'Industrial spare parts logistics',
-        text: [
-            'Fast and reliable spare parts delivery is key to balancing minimum stock levels and avoiding downtime. Our highly efficient warehousing and distribution service allows late cut-off times with time definite, same-day or next-day deliveries to dealers, distributors or even on site.',
-            'We manage numerous regional spare parts distribution centres across the world, and integrate and manage SLAs in the various parts of the spare parts chain.',
-            'Importantly, we help you significantly reduce your spare parts inventory levels by increasing visibility through our company-wide WMS and FMS suite.',
-        ],
-    },
-    {
-        title: 'Warehouse automation',
-        text: [
-            'If you work with substantial volumes, warehouse automation can offer significant benefits for your business. We can guide you through the process of analysing your situation, designing a tailor-made solution and implementing the turn-key system, either in your own dedicated facility or in our multi-user warehouse.',
-        ],
-    },
-];
+const API_BASE_URL = 'http://localhost:5250';
+
+const getImageUrl = (image) => {
+    if (!image) return '';
+    if (image.startsWith('http://') || image.startsWith('https://')) return image;
+    return `${API_BASE_URL}${image}`;
+};
+
+const stripHtml = (html) => {
+    if (!html) return '';
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+};
+
+const escapeHtml = (value) =>
+    String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+const normalizeRichTextHtml = (value) => {
+    if (!value) return '';
+
+    const raw = String(value).trim();
+
+    // Rich Text from the CMS may already be HTML.
+    if (/<[a-z][\s\S]*>/i.test(raw)) {
+        return raw;
+    }
+
+    // Also support Markdown-style Rich Text exported by the CMS.
+    return raw
+        .split(/\n\s*\n/)
+        .map((block) => {
+            const escaped = escapeHtml(block.trim()).replace(
+                /\*\*(.+?)\*\*/g,
+                '<strong>$1</strong>'
+            );
+
+            return `<p>${escaped.replace(/\n/g, '<br />')}</p>`;
+        })
+        .join('');
+};
+
+const getText = (value) => stripHtml(normalizeRichTextHtml(value)).replace(/\s+/g, ' ').trim();
+
+const getExcerpt = (value, maxLength = 260) => {
+    const text = getText(value);
+    if (text.length <= maxLength) return text;
+    return `${text.slice(0, maxLength).trim()}...`;
+};
+
+const isHeadingElement = (element) =>
+    ['H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(element.tagName);
+
+const isBoldOnlyParagraph = (element) => {
+    if (element.tagName !== 'P') return false;
+    const children = Array.from(element.childNodes).filter(
+        (node) => node.nodeType !== Node.TEXT_NODE || node.textContent.trim()
+    );
+    if (children.length !== 1) return false;
+
+    const child = children[0];
+    return (
+        child.nodeType === Node.ELEMENT_NODE &&
+        ['STRONG', 'B'].includes(child.tagName)
+    );
+};
+
+const parseRichTextSections = (body, fallbackTitle = '') => {
+    if (!body) return [];
+
+    const html = normalizeRichTextHtml(body);
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div>${html}</div>`, 'text/html');
+    const root = doc.body.firstElementChild;
+
+    if (!root) return [];
+
+    const blocks = Array.from(root.children);
+    const parsed = [];
+    let current = null;
+
+    const startSection = (title) => {
+        current = {
+            title: title.trim(),
+            html: '',
+        };
+        parsed.push(current);
+    };
+
+    blocks.forEach((element) => {
+        const text = element.textContent?.trim() || '';
+        if (!text) return;
+
+        if (isHeadingElement(element) || isBoldOnlyParagraph(element)) {
+            startSection(text);
+            return;
+        }
+
+        if (!current) {
+            startSection(fallbackTitle || '');
+        }
+
+        current.html += element.outerHTML;
+    });
+
+    return parsed
+        .filter((section) => section.title || section.html)
+        .map((section, index) => ({
+            ...section,
+            title: section.title || (index === 0 ? fallbackTitle : ''),
+        }));
+};
+
+const toSection = (item) => ({
+    title: item?.title?.trim() || '',
+    html: normalizeRichTextHtml(item?.body || item?.content || item?.description || ''),
+});
+
+const getContentTitle = (item) => item?.title?.trim().toLowerCase() || '';
+
+async function getPageContent() {
+    const rootResponse = await contentService.getRootContent();
+    const roots = Array.isArray(rootResponse.data) ? rootResponse.data : [];
+    const visited = new Set();
+
+    const collect = async (items) => {
+        const result = [];
+
+        for (const item of items) {
+            if (!item?.id || visited.has(item.id)) continue;
+
+            visited.add(item.id);
+            result.push(item);
+
+            try {
+                const childrenResponse = await contentService.getChildren(item.id);
+                const children = Array.isArray(childrenResponse.data)
+                    ? childrenResponse.data
+                    : [];
+
+                if (children.length) {
+                    result.push(...(await collect(children)));
+                }
+            } catch (error) {
+                console.error(`Failed to load children for content ${item.id}:`, error);
+            }
+        }
+
+        return result;
+    };
+
+    const allContent = await collect(roots);
+
+    const page = allContent.find((item) => {
+        const title = getContentTitle(item);
+        return (
+            title === 'industrial logistics' ||
+            title === 'industrial logistics - egypt' ||
+            title === 'industrial logistics solutions' ||
+            title.startsWith('industrial logistics -')
+        );
+    });
+
+    if (!page) return null;
+
+    let children = [];
+    try {
+        const childrenResponse = await contentService.getChildren(page.id);
+        children = Array.isArray(childrenResponse.data) ? childrenResponse.data : [];
+    } catch (error) {
+        console.error(`Failed to load Industrial Logistics children for ${page.id}:`, error);
+    }
+
+    const childSections = children
+        .map(toSection)
+        .filter((section) => section.title || section.html);
+
+    const richTextSections = parseRichTextSections(
+        page.body || page.content || page.description,
+        page.title
+    );
+
+    const sections =
+        childSections.length > 0
+            ? childSections
+            : richTextSections;
+
+    const firstSection = sections[0];
+
+    return {
+        ...page,
+        heroSubtitle:
+            page.heroSubtitle ||
+            page.subtitle ||
+            page.hero?.subtitle ||
+            '',
+        heroDescription:
+            page.heroDescription ||
+            page.hero?.description ||
+            page.description ||
+            (firstSection?.html ? getExcerpt(firstSection.html, 320) : ''),
+        sections,
+    };
+};
 
 function IndustrialLogistics() {
+    const [content, setContent] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadContent = async () => {
+            try {
+                const page = await getPageContent();
+
+                if (isMounted) {
+                    setContent(page);
+                }
+            } catch (error) {
+                console.error('Failed to load Industrial Logistics content:', error);
+
+                if (isMounted) {
+                    setContent(null);
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadContent();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const sections = content?.sections || [];
+
     return (
         <main className="min-h-screen bg-white text-slate-900">
             {/* Hero */}
@@ -85,15 +283,15 @@ function IndustrialLogistics() {
                             </div>
 
                             <h1 className="max-w-3xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                Industrial logistics
+                                {content?.title || ''}
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-2xl font-medium leading-tight text-sky-400 sm:text-3xl">
-                                Balancing service and cost
+                                {content?.heroSubtitle || ''}
                             </p>
 
                             <p className="mt-7 max-w-2xl text-base leading-7 text-white/70 sm:text-lg">
-                                Our industrial logistics solutions give you the right balance between quality, cost, flexibility and standardisation. This lets you meet the challenges you face in a dynamic market that is often underpinned by regulatory demands.
+                                {content?.heroDescription || ''}
                             </p>
                         </div>
 
@@ -107,18 +305,18 @@ function IndustrialLogistics() {
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     <div className="max-w-3xl">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                            Our capabilities
+                            {content?.capabilitiesLabel || ''}
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
-                            Industrial logistics
+                            {content?.capabilitiesTitle || content?.title || ''}
                         </h2>
                     </div>
 
                     <div className="mt-16 space-y-8">
                         {sections.map((section, index) => (
                             <article
-                                key={section.title}
+                                key={`${section.title}-${index}`}
                                 className="grid overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 lg:grid-cols-2"
                             >
                                 <div
@@ -135,7 +333,7 @@ function IndustrialLogistics() {
                                             </div>
 
                                             <p className="mt-8 text-sm font-semibold uppercase tracking-[0.18em] text-sky-600">
-                                                Industry solution
+                                                {content?.sectionLabel || ''}
                                             </p>
 
                                             <h3 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
@@ -145,7 +343,7 @@ function IndustrialLogistics() {
 
                                         <div className="mt-10 flex items-center gap-3 text-sm font-medium text-slate-500">
                                             <span className="h-px w-10 bg-sky-400" />
-                                            Tailored supply chain support
+                                            {content?.sectionFooter || ''}
                                         </div>
                                     </div>
                                 </div>
@@ -154,11 +352,12 @@ function IndustrialLogistics() {
                                     className={`bg-white p-8 sm:p-12 ${index % 2 ? 'lg:order-1' : ''
                                         }`}
                                 >
-                                    <div className="space-y-5 text-base leading-7 text-slate-600">
-                                        {section.text.map((paragraph) => (
-                                            <p key={paragraph}>{paragraph}</p>
-                                        ))}
-                                    </div>
+                                    <div
+                                        className="space-y-5 text-base leading-7 text-slate-600 [&_p]:m-0 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_strong]:font-semibold [&_a]:text-sky-600 [&_a]:underline"
+                                        dangerouslySetInnerHTML={{
+                                            __html: section.html,
+                                        }}
+                                    />
                                 </div>
                             </article>
                         ))}
@@ -170,20 +369,26 @@ function IndustrialLogistics() {
             <section className="bg-slate-950 py-24 sm:py-32">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-                        Industry expertise
+                        {content?.expertiseLabel || ''}
                     </p>
 
                     <h2 className="mt-4 text-3xl font-semibold tracking-tight text-white sm:text-5xl">
-                        Industrial logistics
+                        {content?.expertiseTitle || content?.title || ''}
                     </h2>
 
-                    <p className="mt-7 text-lg leading-8 text-white/65">
-                        Our industrial logistics solutions give you the right balance between quality, cost, flexibility and standardisation.
-                    </p>
-
-                    <p className="mt-6 text-lg leading-8 text-white/65">
-                        We provide industry-specific solutions across food ingredients and raw materials, machinery and components, packaged chemicals, construction, wholesale and manufacturing.
-                    </p>
+                    <div
+                        className="mt-7 text-lg leading-8 text-white/65 [&_p]:m-0 [&_p+p]:mt-6 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5"
+                        dangerouslySetInnerHTML={{
+                            __html:
+                                content?.expertiseBody ||
+                                (sections.length
+                                    ? sections
+                                        .slice(0, 2)
+                                        .map((section) => section.html)
+                                        .join('')
+                                    : ''),
+                        }}
+                    />
 
                     <div className="mt-12 flex flex-wrap gap-4">
                         <Link

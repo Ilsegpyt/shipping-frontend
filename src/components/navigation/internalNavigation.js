@@ -4,6 +4,11 @@ import {
     Building2,
     UserRoundCog,
     FileText,
+    MapPin,
+    BriefcaseBusiness,
+    FileCheck,
+    UserPlus,
+    Phone,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -38,12 +43,38 @@ export const getInternalNavigation = (user) => [
                 permission: "customers.view",
                 icon: Building2,
             },
+
             ...(user?.roleName === "Super Admin"
                 ? [
                     {
                         label: "Content Management",
                         path: "/content",
                         icon: FileText,
+                    },
+                    {
+                        label: "Locations",
+                        path: "/locations",
+                        icon: MapPin,
+                    },
+                    {
+                        label: "Agents Opportunities",
+                        path: "/agent-opportunities",
+                        icon: BriefcaseBusiness,
+                    },
+                    {
+                        label: "Quotations",
+                        path: "/quotations",
+                        icon: FileCheck,
+                    },
+                    {
+                        label: "Recruitments Requests",
+                        path: "/recruitments",
+                        icon: UserPlus,
+                    },
+                    {
+                        label: "Contact Us",
+                        path: "/contact-inquiries",
+                        icon: Phone,
                     },
                 ]
                 : []),

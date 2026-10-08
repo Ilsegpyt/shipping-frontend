@@ -1,124 +1,441 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
+
+import contentService from '../../../services/contentService';
+
+const getTypeName = (type) => {
+    if (typeof type === 'string') return type;
+
+    switch (type) {
+        case 1:
+            return 'Category';
+        case 2:
+            return 'Page';
+        case 3:
+            return 'Post';
+        case 4:
+            return 'Link';
+        default:
+            return '';
+    }
+};
+
+const getPurposeAndStrategyPage = async () => {
+    const rootResponse = await contentService.getRootContent();
+    const roots = Array.isArray(rootResponse.data) ? rootResponse.data : [];
+
+    const aboutIls = roots.find(
+        (item) =>
+            item?.title?.trim().toLowerCase() === 'about ils' &&
+            getTypeName(item.type) === 'Category'
+    );
+
+    if (!aboutIls?.id) {
+        throw new Error('About ILS category was not found in CMS.');
+    }
+
+    const childrenResponse = await contentService.getChildren(aboutIls.id);
+    const children = Array.isArray(childrenResponse.data)
+        ? childrenResponse.data
+        : [];
+
+    const pageSummary = children.find(
+        (item) =>
+            item?.title?.trim().toLowerCase() === 'purpose and strategy' &&
+            getTypeName(item.type) === 'Page'
+    );
+
+    if (!pageSummary?.id) {
+        throw new Error(
+            'Purpose and Strategy page was not found under About ILS in CMS.'
+        );
+    }
+
+    const pageResponse = await contentService.getById(pageSummary.id);
+
+    if (!pageResponse?.data) {
+        throw new Error(
+            'Purpose and Strategy page details could not be loaded from CMS.'
+        );
+    }
+
+    return {
+        page: pageResponse.data,
+        parent: aboutIls,
+    };
+};
+
+const parseCmsBody = (body) => {
+    if (!body) {
+        return {
+            intro: '',
+            sections: [],
+        };
+    }
+
+    const parser = new DOMParser();
+    const document = parser.parseFromString(body, 'text/html');
+    const elements = Array.from(document.body.children);
+
+    const headingTags = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
+    const isHeading = (element) =>
+        headingTags.includes(element?.tagName?.toLowerCase());
+
+    const getHtml = (element) => element?.innerHTML?.trim() || '';
+    const getText = (element) =>
+        element?.textContent?.replace(/\s+/g, ' ').trim() || '';
+
+    const firstHeadingIndex = elements.findIndex(isHeading);
+
+    const introElements =
+        firstHeadingIndex === -1
+            ? elements
+            : elements.slice(0, firstHeadingIndex);
+
+    const intro = introElements
+        .filter((element) => element.tagName.toLowerCase() === 'p')
+        .map(getHtml)
+        .filter(Boolean)
+        .join('');
+
+    const sections = [];
+
+    for (let index = 0; index < elements.length; index += 1) {
+        const element = elements[index];
+
+        if (!isHeading(element)) {
+            continue;
+        }
+
+        const label = getText(element);
+        let cursor = index + 1;
+        let subtitle = '';
+
+        /*
+         * The original design has:
+         * label -> subtitle -> paragraphs.
+         *
+         * Read the next paragraph/heading from CMS as the subtitle.
+         * Nothing is hardcoded.
+         */
+        while (cursor < elements.length && !getText(elements[cursor])) {
+            cursor += 1;
+        }
+
+        if (cursor < elements.length && !isHeading(elements[cursor])) {
+            const candidate = elements[cursor];
+
+            if (candidate.tagName.toLowerCase() === 'p') {
+                subtitle = getHtml(candidate);
+                cursor += 1;
+            }
+        }
+
+        const content = [];
+
+        for (; cursor < elements.length; cursor += 1) {
+            const nextElement = elements[cursor];
+
+            if (isHeading(nextElement)) {
+                break;
+            }
+
+            content.push(nextElement.outerHTML);
+        }
+
+        sections.push({
+            label,
+            subtitle,
+            content: content.join(''),
+        });
+    }
+
+    /*
+     * If the CMS editor stored section labels as paragraphs instead of
+     * semantic headings, support the common pattern:
+     *
+     * paragraph(label)
+     * paragraph(subtitle)
+     * paragraph(content...)
+     *
+     * without putting any actual page text in the React code.
+     */
+    if (sections.length === 0) {
+        const paragraphs = elements.filter(
+            (element) => element.tagName.toLowerCase() === 'p'
+        );
+
+        if (paragraphs.length > 1) {
+            const firstParagraph = paragraphs[0];
+
+            const remaining = paragraphs.slice(1);
+
+            const section = {
+                label: getText(remaining[0]),
+                subtitle: remaining[1] ? getHtml(remaining[1]) : '',
+                content: remaining
+                    .slice(2)
+                    .map((element) => element.outerHTML)
+                    .join(''),
+            };
+
+            sections.push(section);
+
+            return {
+                intro: getHtml(firstParagraph),
+                sections,
+            };
+        }
+    }
+
+    return {
+        intro,
+        sections,
+    };
+};
 
 export default function PurposeAndStrategy() {
+    const [page, setPage] = useState(null);
+    const [parentTitle, setParentTitle] = useState('');
+    const [content, setContent] = useState({
+        intro: '',
+        sections: [],
+    });
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadPage = async () => {
+            try {
+                setLoading(true);
+                setError('');
+
+                const result = await getPurposeAndStrategyPage();
+
+                if (!isMounted) return;
+
+                setPage(result.page);
+                setParentTitle(result.parent?.title || '');
+                setContent(parseCmsBody(result.page.body));
+            } catch (loadError) {
+                console.error(
+                    'Failed to load Purpose and Strategy from CMS:',
+                    loadError
+                );
+
+                if (isMounted) {
+                    setError(
+                        loadError?.message ||
+                        'Unable to load Purpose and Strategy from CMS.'
+                    );
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        loadPage();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    if (loading) {
+        return (
+            <main className="min-h-screen bg-slate-50">
+                <section className="bg-slate-950 px-6 py-20 sm:px-10 lg:px-16">
+                    <div className="mx-auto max-w-6xl">
+                        <div className="h-4 w-24 animate-pulse rounded bg-sky-400/30" />
+                        <div className="mt-5 h-12 w-96 max-w-full animate-pulse rounded bg-white/10" />
+                        <div className="mt-6 h-7 w-[30rem] max-w-full animate-pulse rounded bg-white/10" />
+                    </div>
+                </section>
+
+                <section className="px-6 py-14 sm:px-10 lg:px-16">
+                    <div className="mx-auto max-w-5xl">
+                        <div className="h-40 animate-pulse rounded-3xl bg-white shadow-sm" />
+                    </div>
+
+                    <div className="mx-auto mt-10 max-w-5xl">
+                        <div className="h-72 animate-pulse rounded bg-white/70" />
+                    </div>
+                </section>
+            </main>
+        );
+    }
+
+    if (error || !page) {
+        return (
+            <main className="min-h-screen bg-slate-50">
+                <section className="bg-slate-950 px-6 py-20 sm:px-10 lg:px-16">
+                    <div className="mx-auto max-w-6xl">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+                            {parentTitle}
+                        </p>
+
+                        <h1 className="mt-4 text-4xl font-bold tracking-tight text-white sm:text-5xl">
+                            {page?.title || 'Purpose and Strategy'}
+                        </h1>
+                    </div>
+                </section>
+
+                <section className="px-6 py-16 sm:px-10 lg:px-16">
+                    <div className="mx-auto max-w-5xl rounded-3xl border border-red-200 bg-white p-8 shadow-sm">
+                        <p className="text-red-600">
+                            {error ||
+                                'Purpose and Strategy content was not found.'}
+                        </p>
+                    </div>
+                </section>
+            </main>
+        );
+    }
+
     return (
         <main className="min-h-screen bg-slate-50">
-            {/* Hero */}
+            <style>{`
+                .purpose-content {
+                    color: #475569;
+                }
+
+                .purpose-content p {
+                    margin-top: 1.5rem;
+                    font-size: 1rem;
+                    line-height: 2rem;
+                    color: #475569;
+                }
+
+                .purpose-content p:first-child {
+                    margin-top: 0;
+                }
+
+                .purpose-content ul,
+                .purpose-content ol {
+                    margin-top: 1.5rem;
+                    padding-left: 1.5rem;
+                }
+
+                .purpose-content li {
+                    margin-top: 0.75rem;
+                    padding-left: 0.25rem;
+                    line-height: 1.75rem;
+                }
+
+                .purpose-content ul {
+                    list-style: disc;
+                }
+
+                .purpose-content ol {
+                    list-style: decimal;
+                }
+
+                .purpose-content strong {
+                    color: #0f172a;
+                    font-weight: 600;
+                }
+
+                .purpose-content a {
+                    color: #0284c7;
+                    text-decoration: underline;
+                    text-underline-offset: 2px;
+                }
+
+                .purpose-content img {
+                    display: block;
+                    max-width: 100%;
+                    height: auto;
+                    margin: 1.5rem 0;
+                    border-radius: 1rem;
+                }
+
+                @media (min-width: 640px) {
+                    .purpose-content p {
+                        font-size: 1.125rem;
+                    }
+                }
+            `}</style>
+
+            {/* Hero — same design as the original page */}
             <section className="bg-slate-950 px-6 py-20 sm:px-10 lg:px-16">
                 <div className="mx-auto max-w-6xl">
                     <p className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-                        About ILS
+                        {parentTitle}
                     </p>
 
                     <h1 className="max-w-4xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                        Purpose and Strategy
+                        {page.title}
                     </h1>
 
-                    <p className="mt-6 max-w-3xl text-xl font-medium leading-8 text-slate-300">
-                        Keeping supply chains flowing in a world of change
-                    </p>
+                    {content.sections[0]?.subtitle && (
+                        <div
+                            className="mt-6 max-w-3xl text-xl font-medium leading-8 text-slate-300"
+                            dangerouslySetInnerHTML={{
+                                __html: content.sections[0].subtitle,
+                            }}
+                        />
+                    )}
                 </div>
             </section>
 
-            {/* Introduction */}
-            <section className="px-6 py-14 sm:px-10 lg:px-16">
-                <div className="mx-auto max-w-5xl">
-                    <article className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10 lg:p-12">
-                        <div className="space-y-6 text-base leading-8 text-slate-600 sm:text-lg">
-                            <p>
-                                At ILS – Global Transport and Logistics, we provide and manage supply chain solutions for thousands of companies every day – from the small family run business to the large global corporation. Our reach is global, yet our presence is local and close to our customers. All employees in more than 80 countries work passionately to deliver great customer experiences and high-quality services. We believe world trade drives world prosperity, but seamless trade is not a given.
-                            </p>
+            {/* Introduction — same card design */}
+            {content.intro && (
+                <section className="px-6 py-14 sm:px-10 lg:px-16">
+                    <div className="mx-auto max-w-5xl">
+                        <article className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10 lg:p-12">
+                            <div
+                                className="purpose-content"
+                                dangerouslySetInnerHTML={{
+                                    __html: content.intro,
+                                }}
+                            />
+                        </article>
+                    </div>
+                </section>
+            )}
+
+            {/* Purpose / Vision / Mission sections from CMS */}
+            {content.sections.length > 0 &&
+                content.sections.map((section, index) => (
+                    <section
+                        key={`${section.label}-${index}`}
+                        className={
+                            index % 2 === 0
+                                ? 'bg-white px-6 py-16 sm:px-10 lg:px-16'
+                                : 'bg-slate-50 px-6 py-16 sm:px-10 lg:px-16'
+                        }
+                    >
+                        <div className="mx-auto max-w-5xl">
+                            <div>
+                                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                                    {section.label}
+                                </p>
+
+                                {index !== 0 && section.subtitle && (
+                                    <div
+                                        className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl"
+                                        dangerouslySetInnerHTML={{
+                                            __html: section.subtitle,
+                                        }}
+                                    />
+                                )}
+
+                                <div className="mt-5 h-1 w-16 rounded-full bg-sky-500" />
+                            </div>
+
+                            <div
+                                className="purpose-content mt-8"
+                                dangerouslySetInnerHTML={{
+                                    __html: section.content,
+                                }}
+                            />
                         </div>
-                    </article>
-                </div>
-            </section>
-
-            {/* Purpose */}
-            <section className="bg-white px-6 py-16 sm:px-10 lg:px-16">
-                <div className="mx-auto max-w-5xl">
-                    <SectionHeading title="Our purpose" subtitle="Keeping supply chains flowing in a world of change" />
-
-                    <div className="mt-8 space-y-6 text-base leading-8 text-slate-600 sm:text-lg">
-                        <p>
-                            We acknowledge our role as part of the critical infrastructure driving world trade and as a key enabler for the sustainable growth of all our stakeholders, including customers, shareholders and societies at large.
-                        </p>
-
-                        <p>
-                            We conduct our business with integrity, respecting different cultures and the dignity and rights of individuals. We believe in contributing our fair share to the societies and local communities in which we operate while reducing the environmental footprint from our operations.
-                        </p>
-
-                        <p>
-                            We take advantage of technology and digitalization. Our workflows are highly digitalized and our IT systems are integrated with both customers and suppliers. In a world of change, this enables us to continuously optimize our customers’ supply chains and supports efficient workflows for our employees.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Vision */}
-            <section className="bg-slate-50 px-6 py-16 sm:px-10 lg:px-16">
-                <div className="mx-auto max-w-5xl">
-                    <SectionHeading title="Our vision" subtitle="Sustainable growth" />
-
-                    <div className="mt-8 space-y-6 text-base leading-8 text-slate-600 sm:text-lg">
-                        <p>
-                            We help our customers grow by keeping their supply chains flowing. We create efficient solutions for all businesses with focus on reliability, environmental impact and cost – regardless of industry and size.
-                        </p>
-
-                        <p>
-                            We provide equal growth opportunities for all employees. People drive the success of our company, so the more we provide healthy and safe workplaces – as well as strong growth opportunities – the greater is our chance of achieving our ambitious growth targets.
-                        </p>
-
-                        <p>
-                            We help societies grow. We conduct our business with integrity, respecting different cultures and the dignity and rights of individuals in all countries. We grow shareholder value. We want to continue to be a leading global supplier, fulfilling the customer needs for transport and logistics services. We target extensive growth - organic and through acquisitions - and aim to be among the most profitable in our industry.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            {/* Mission */}
-            <section className="bg-white px-6 py-16 sm:px-10 lg:px-16">
-                <div className="mx-auto max-w-5xl">
-                    <SectionHeading title="Our mission" subtitle="Operational excellence" />
-
-                    <div className="mt-8 space-y-6 text-base leading-8 text-slate-600 sm:text-lg">
-                        <p>
-                            World trade drives world prosperity, but seamless trade is not a given.
-                        </p>
-
-                        <p>
-                            Through our persistent focus on transparency, productivity and scalability, we create more efficient global trade flows for all business.
-                        </p>
-
-                        <p>
-                            We design our infrastructure – physical and digital – to support high service levels and efficient workflows.
-                        </p>
-
-                        <p>
-                            Operational excellence goes hand in hand with sustainability. A well-planned supply chain is also a greener supply chain.
-                        </p>
-
-                        <p>
-                            We are forwarders. People who get things done. We take ownership and show initiative. We always seek to find the better and rational solutions to the challenges we face.
-                        </p>
-                    </div>
-                </div>
-            </section>
+                    </section>
+                ))}
         </main>
-    );
-}
-
-function SectionHeading({ title, subtitle }) {
-    return (
-        <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                {title}
-            </p>
-
-            <h2 className="mt-3 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                {subtitle}
-            </h2>
-
-            <div className="mt-5 h-1 w-16 rounded-full bg-sky-500" />
-        </div>
     );
 }

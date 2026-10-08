@@ -1,11 +1,405 @@
 import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import contentService from '../../../services/contentService';
 import { Anchor, ArrowUpRight, Check, Ship } from 'lucide-react';
 
+const getItems = (response) => {
+    const data = response?.data ?? response;
+
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.data)) return data.data;
+
+    return [];
+};
+
+const cleanText = (value) => {
+    if (value === null || value === undefined) return '';
+
+    if (typeof value === 'string' || typeof value === 'number') {
+        return String(value).replace(/\s+/g, ' ').trim();
+    }
+
+    if (value instanceof Element) {
+        return (value.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    return String(value).replace(/\s+/g, ' ').trim();
+};
+
+const isList = (element) =>
+    element?.tagName === 'UL' || element?.tagName === 'OL';
+
+const isStrongParagraph = (element) => {
+    if (!element || element.tagName !== 'P') return false;
+
+    const children = Array.from(element.children);
+
+    return (
+        children.length > 0 &&
+        children.every((child) =>
+            ['STRONG', 'B'].includes(child.tagName)
+        )
+    );
+};
+
+const isSectionHeading = (element) =>
+    ['H2', 'H3', 'H4'].includes(element?.tagName) ||
+    isStrongParagraph(element);
+
+const parseCmsBody = (body, pageTitle) => {
+    if (!body) {
+        return {
+            heroSubtitle: '',
+            heroDescription: '',
+            introTitle: '',
+            introText: '',
+            localKnowledge: null,
+            services: null,
+            compliance: null,
+            carriers: null,
+            ctaText: '',
+        };
+    }
+
+    const doc = new DOMParser().parseFromString(body, 'text/html');
+    const elements = Array.from(doc.body.children);
+
+    const text = (element) =>
+        element?.textContent?.replace(/\s+/g, ' ').trim() || '';
+
+    const isList = (element) =>
+        element?.tagName === 'UL' || element?.tagName === 'OL';
+
+    const isStrongParagraph = (element) => {
+        if (!element || element.tagName !== 'P') return false;
+
+        const children = Array.from(element.children);
+
+        return (
+            children.length > 0 &&
+            children.every((child) =>
+                ['STRONG', 'B'].includes(child.tagName)
+            )
+        );
+    };
+
+    const isHeading = (element) =>
+        ['H1', 'H2', 'H3', 'H4'].includes(element?.tagName) ||
+        isStrongParagraph(element);
+
+    const normalizedPageTitle =
+        String(pageTitle || '').trim().toLowerCase();
+
+    // Ignore the page title if it is also stored inside Body.
+    const bodyElements = elements.filter(
+        (element) =>
+            !(
+                isHeading(element) &&
+                text(element).toLowerCase() === normalizedPageTitle
+            )
+    );
+
+    /*
+     * Actual CMS order for Sea Freight:
+     *
+     * Sea Freight
+     * When cost matters...
+     * 5555...
+     * ILS's SEA FREIGHT SERVICES...
+     * intro paragraph
+     * LOCAL KNOWLEDGE...
+     * paragraph
+     * OUR SEA FREIGHT SERVICES INCLUDE:
+     * list
+     * SEA FREIGHT COMPLIANCE
+     * paragraph
+     * A NETWORK...
+     * paragraph
+     * final contact paragraph
+     *
+     * So do NOT infer hero content from all <p> elements blindly.
+     */
+
+    const headings = bodyElements
+        .map((element, index) => ({
+            element,
+            index,
+            title: text(element),
+        }))
+        .filter(({ element }) => isHeading(element));
+
+    const firstHeadingIndex = headings[0]?.index ?? bodyElements.length;
+
+    const beforeFirstHeading = bodyElements.slice(0, firstHeadingIndex);
+
+    const heroParagraphs = beforeFirstHeading.filter(
+        (element) => element.tagName === 'P'
+    );
+
+    const heroSubtitle = text(heroParagraphs[0]);
+    const heroDescription = text(heroParagraphs[1]);
+
+    const introHeading = headings[0];
+
+    const introStart = introHeading
+        ? introHeading.index + 1
+        : firstHeadingIndex;
+
+    const introEnd = headings[1]?.index ?? bodyElements.length;
+
+    const introContent = bodyElements.slice(introStart, introEnd);
+
+    const introParagraph = introContent.find(
+        (element) => element.tagName === 'P'
+    );
+
+    const introTitle = introHeading?.title || pageTitle;
+    const introText = introParagraph?.innerHTML || '';
+
+    const sectionHeadings = headings.slice(1);
+
+    const parseSection = (headingInfo, sectionIndex) => {
+        const next = sectionHeadings[sectionIndex + 1];
+
+        const endIndex = next
+            ? next.index
+            : bodyElements.length;
+
+        const content = bodyElements.slice(
+            headingInfo.index + 1,
+            endIndex
+        );
+
+        const paragraphs = content
+            .filter(
+                (element) =>
+                    element.tagName === 'P' &&
+                    !isStrongParagraph(element)
+            )
+            .map((element) => element.innerHTML)
+            .filter(Boolean);
+
+        const lists = content
+            .filter(isList)
+            .flatMap((list) =>
+                Array.from(
+                    list.querySelectorAll(':scope > li')
+                ).map((li) => li.innerHTML)
+            );
+
+        const isServicesSection =
+            headingInfo.title
+                .toLowerCase()
+                .includes('sea freight services') ||
+            headingInfo.title
+                .toLowerCase()
+                .includes('our services');
+
+        return {
+            title: headingInfo.title,
+            text: isServicesSection ? [] : paragraphs,
+            list: isServicesSection
+                ? (
+                    lists.length > 0
+                        ? lists
+                        : paragraphs
+                )
+                : lists,
+        };
+    };
+
+    const sections = sectionHeadings.map(parseSection);
+
+    // Always preserve the services list from the CMS. The editor may save
+    // the section title as a plain paragraph, so the list must not depend
+    // on the heading being detected as H2/H3/strong.
+    const allCmsLists = bodyElements
+        .filter(isList)
+        .flatMap((list) =>
+            Array.from(
+                list.querySelectorAll(':scope > li')
+            ).map((li) => li.innerHTML)
+        );
+
+    const servicesHeadingElement = bodyElements.find((element) => {
+        const title = text(element).toLowerCase();
+
+        return (
+            title.includes('sea freight services include') ||
+            title.includes('our services')
+        );
+    });
+
+    const servicesFallback = servicesHeadingElement
+        ? {
+            title: text(servicesHeadingElement),
+            text: [],
+            list: allCmsLists,
+        }
+        : null;
+
+    const findSection = (...keywords) =>
+        sections.find((section) => {
+            const title = section.title.toLowerCase();
+
+            return keywords.some((keyword) =>
+                title.includes(keyword)
+            );
+        }) || null;
+
+    const carriers = findSection(
+        'network of trusted',
+        'trusted sea freight',
+        'carrier'
+    );
+
+    /*
+     * The last paragraph can be a CTA/contact sentence and should not
+     * be swallowed into the carriers section.
+     */
+    let ctaText = '';
+
+    if (carriers?.text?.length > 1) {
+        ctaText = carriers.text.at(-1);
+        carriers.text = carriers.text.slice(0, -1);
+    }
+
+    return {
+        heroSubtitle,
+        heroDescription,
+        introTitle,
+        introText,
+        localKnowledge: findSection(
+            'local knowledge',
+            'local conditions'
+        ),
+        services:
+            findSection(
+                'services',
+                'sea freight services include'
+            ) || servicesFallback,
+        compliance: findSection('compliance'),
+        carriers,
+        ctaText,
+    };
+};
+
 function SeaFreight() {
+    const [page, setPage] = useState(null);
+    const [parent, setParent] = useState(null);
+    const [body, setBody] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
     useEffect(() => {
         window.scrollTo(0, 0);
+
+        const loadPage = async () => {
+            try {
+                setLoading(true);
+                setError('');
+
+                const rootResponse =
+                    await contentService.getRootContent();
+                const roots = getItems(rootResponse);
+
+                let summary = roots.find(
+                    (item) =>
+                        item?.title?.trim().toLowerCase() ===
+                        'sea freight'
+                );
+
+                let parentItem = null;
+
+                if (!summary) {
+                    for (const root of roots) {
+                        const childrenResponse =
+                            await contentService.getChildren(root.id);
+
+                        const children = getItems(childrenResponse);
+
+                        const match = children.find(
+                            (item) =>
+                                item?.title?.trim().toLowerCase() ===
+                                'sea freight'
+                        );
+
+                        if (match) {
+                            summary = match;
+                            parentItem = root;
+                            break;
+                        }
+                    }
+                }
+
+                if (!summary) {
+                    throw new Error(
+                        'Sea Freight page was not found in the CMS.'
+                    );
+                }
+
+                const pageResponse =
+                    await contentService.getById(summary.id);
+
+                const fullPage =
+                    pageResponse?.data ?? pageResponse;
+
+                setPage(fullPage);
+                setParent(parentItem);
+                setBody(
+                    parseCmsBody(
+                        fullPage?.body,
+                        fullPage?.title || 'Sea Freight'
+                    )
+                );
+            } catch (err) {
+                console.error(
+                    'Failed to load Sea Freight content:',
+                    err
+                );
+
+                setError(
+                    err?.message ||
+                    'Failed to load Sea Freight content.'
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadPage();
     }, []);
+
+    const cms = useMemo(
+        () =>
+            body || {
+                heroSubtitle: '',
+                heroDescription: '',
+                introTitle: '',
+                introText: '',
+                localKnowledge: null,
+                services: null,
+                compliance: null,
+                carriers: null,
+            },
+        [body]
+    );
+
+    if (loading) {
+        return <main className="min-h-screen bg-white" />;
+    }
+
+    if (error) {
+        return (
+            <main className="flex min-h-screen items-center justify-center bg-white px-6">
+                <p className="text-red-600">{error}</p>
+            </main>
+        );
+    }
+
+    const pageTitle = page?.title || 'Sea Freight';
+    const parentTitle = parent?.title || 'Solutions';
 
     return (
         <main className="min-h-screen bg-white text-slate-900">
@@ -20,7 +414,7 @@ function SeaFreight() {
                         to="/solutions"
                         className="mb-12 inline-flex items-center gap-2 text-sm font-medium text-white/60 transition hover:text-white"
                     >
-                        ← Back to Solutions
+                        ← Back to {parentTitle}
                     </Link>
 
                     <div className="grid items-center gap-16 lg:grid-cols-[1.05fr_0.95fr]">
@@ -29,16 +423,16 @@ function SeaFreight() {
                                 <span className="h-2 w-2 rounded-full bg-sky-400" />
 
                                 <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/85">
-                                    Sea Freight
+                                    {pageTitle}
                                 </span>
                             </div>
 
                             <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-                                SEA FREIGHT
+                                {pageTitle.toUpperCase()}
                             </h1>
 
                             <p className="mt-7 max-w-3xl text-xl leading-8 text-white/70 sm:text-2xl">
-                                When cost matters and time is not an issue
+                                {cms.heroSubtitle}
                             </p>
                         </div>
 
@@ -59,11 +453,11 @@ function SeaFreight() {
 
                             <div className="absolute bottom-8 left-8">
                                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-400">
-                                    Global Sea Freight
+                                    Global {pageTitle}
                                 </p>
 
                                 <p className="mt-2 max-w-xs text-sm leading-6 text-white/50">
-                                    Reliable capacity and flexible solutions across major ports worldwide.
+                                    {cms.heroDescription}
                                 </p>
                             </div>
                         </div>
@@ -82,25 +476,17 @@ function SeaFreight() {
                             </div>
 
                             <p className="mt-7 text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                                Sea Freight
+                                {pageTitle}
                             </p>
 
                             <h2 className="mt-4 text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-4xl">
-                                ILS's SEA FREIGHT SERVICES SUPPORT YOUR NEEDS FOR OPTIMIZED, SECURE AND FLEXIBLE SOLUTIONS
+                                ILS's {pageTitle.toUpperCase()} SERVICES SUPPORT YOUR NEEDS FOR OPTIMIZED, SECURE AND FLEXIBLE SOLUTIONS
                             </h2>
                         </div>
 
                         <div className="text-base leading-8 text-slate-600 sm:text-lg">
                             <p>
-                                With the enormous volumes of freight that we
-                                ship and the multitude of carriers we work with,
-                                we can offer you frequent departures and the
-                                capacity you need – to and from every major port
-                                in the world. Whether your needs are complex or
-                                straightforward and whatever your goods, we can
-                                help you with you with end-to-end solutions
-                                across transport modes whether it be by sea,
-                                air, road, or rail.
+                                {cms.introText}
                             </p>
                         </div>
 
@@ -114,22 +500,15 @@ function SeaFreight() {
                     <div className="max-w-3xl">
 
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                            Local knowledge of local conditions
+                            {cms.localKnowledge?.title || 'Local knowledge of local conditions'}
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                            LOCAL KNOWLEDGE OF LOCAL CONDITIONS
+                            {cms.localKnowledge?.title || 'Local knowledge of local conditions'}
                         </h2>
 
                         <p className="mt-6 text-base leading-8 text-slate-600 sm:text-lg">
-                            In every major port, we have experienced employees
-                            with detailed knowledge of local and international
-                            export and import compliance. Our staff can assist
-                            you in understanding each country’s requirements,
-                            as well as local pickup and last mile delivery. And
-                            if you need logistics support or warehouse
-                            management for your supply chain, we can handle
-                            that too.
+                            {cms.localKnowledge?.text?.[0] || ''}
                         </p>
 
                     </div>
@@ -142,35 +521,35 @@ function SeaFreight() {
 
                     <div className="max-w-3xl">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                            Our services
+                            {cms.services?.title || 'Our services'}
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                            OUR SEA FREIGHT SERVICES INCLUDE:
+                            {cms.services?.title ||
+                                `OUR ${pageTitle.toUpperCase()} SERVICES INCLUDE:`}
                         </h2>
                     </div>
 
                     <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                        {[
-                            'Full container load',
-                            'Less than container load',
-                            'Non-containerized load',
-                            "Buyer's consolidation services",
-                            'Break bulk',
-                        ].map((service) => (
-                            <div
-                                key={service}
-                                className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                            >
-                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
-                                    <Check size={19} />
-                                </span>
+                        {(cms.services?.list || []).map(
+                            (service, index) => (
+                                <div
+                                    key={`${service}-${index}`}
+                                    className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                                >
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600">
+                                        <Check size={19} />
+                                    </span>
 
-                                <span className="text-sm font-semibold text-slate-800">
-                                    {service}
-                                </span>
-                            </div>
-                        ))}
+                                    <span
+                                        className="text-sm font-semibold text-slate-800"
+                                        dangerouslySetInnerHTML={{
+                                            __html: service,
+                                        }}
+                                    />
+                                </div>
+                            )
+                        )}
                     </div>
 
                 </div>
@@ -186,22 +565,11 @@ function SeaFreight() {
                         </p>
 
                         <h2 className="mt-4 text-3xl font-semibold tracking-tight sm:text-4xl">
-                            SEA FREIGHT COMPLIANCE
+                            {pageTitle.toUpperCase()} COMPLIANCE
                         </h2>
 
                         <p className="mt-6 text-base leading-8 text-slate-300 sm:text-lg">
-                            Moving cargo from A to B across the world's seas
-                            can be challenging. Transport documents,
-                            regulations, country-specific compliance, local
-                            requirements and customs clearance are just some
-                            of the steps to be considered before your cargo can
-                            be dispatched to its final destination. Proper
-                            export documentation and import licenses and
-                            requirements are becoming increasingly important
-                            factors when transporting cargo. With years of
-                            experience in cargo shipment, our staff can support
-                            you in delivering your sea freight in full
-                            compliance with all requirements.
+                            {cms.compliance?.text?.[0] || ''}
                         </p>
                     </div>
 
@@ -220,19 +588,17 @@ function SeaFreight() {
                             </p>
 
                             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                                A NETWORK OF TRUSTED SEA FREIGHT CARRIERS
+                                A NETWORK OF TRUSTED {pageTitle.toUpperCase()} CARRIERS
                             </h2>
                         </div>
 
-                        <p className="text-base leading-8 text-slate-600 sm:text-lg">
-                            When you need the price advantage of sea freight,
-                            our agreements with all the major global and
-                            regional sea freight carriers will mean we can get
-                            you the best competitive combination of routing,
-                            carrier, price and departure and arrival times to
-                            suit your needs. You get the flexibility to ship
-                            your cargo when it suits you best.
-                        </p>
+                        <div
+                            className="text-base leading-8 text-slate-600 sm:text-lg"
+                            dangerouslySetInnerHTML={{
+                                __html:
+                                    cms.carriers?.text?.[0] || '',
+                            }}
+                        />
 
                     </div>
                 </div>
@@ -244,11 +610,11 @@ function SeaFreight() {
 
                     <div>
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/70">
-                            Sea Freight
+                            {pageTitle}
                         </p>
 
                         <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-                            Need a reliable sea freight solution?
+                            {pageTitle} — Get the right solution for your cargo
                         </h2>
                     </div>
 
