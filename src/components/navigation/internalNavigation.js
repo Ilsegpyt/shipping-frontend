@@ -9,6 +9,7 @@ import {
     FileCheck,
     UserPlus,
     Phone,
+    ShieldCheck,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -42,6 +43,14 @@ export const getInternalNavigation = (user) => [
                 path: "/customers",
                 permission: "customers.view",
                 icon: Building2,
+            },
+
+            // Roles
+            {
+                label: "Roles",
+                path: "/roles",
+                permission: "identity.roles.manage",
+                icon: ShieldCheck,
             },
 
             ...(user?.roleName === "Super Admin"

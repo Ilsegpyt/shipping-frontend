@@ -57,6 +57,7 @@ import ResetPassword from '../pages/auth/ResetPassword';
 import Dashboard from '../pages/internal/shared/Dashboard';
 import Profile from '../pages/internal/shared/Profile';
 import Users from '../pages/internal/super-admin/Users';
+import Roles from '../pages/internal/super-admin/Roles';
 import AccountManagerAssignments from '../pages/internal/super-admin/AccountManagerAssignments';
 import Customers from '../pages/internal/shared/Customers';
 import Content from '../pages/internal/super-admin/Content';
@@ -102,6 +103,14 @@ function PortalGuard({ allowedTokenType, children }) {
             return children;
         }
 
+        // Impersonation uses the Customer Portal.
+        if (
+            allowedTokenType === 'customer' &&
+            tokenType === 'impersonation'
+        ) {
+            return children;
+        }
+
         if (tokenType === 'internal') {
             return <Navigate to="/dashboard" replace />;
         }
@@ -110,7 +119,7 @@ function PortalGuard({ allowedTokenType, children }) {
             return <Navigate to="/customer" replace />;
         }
 
-        if (tokenType === 'sub_account') {
+        if (tokenType === 'subaccount') {
             return <Navigate to="/subaccount" replace />;
         }
 
@@ -349,6 +358,20 @@ export default function AppRoutes() {
                     </Route>
 
                     <Route
+                        path="/roles"
+                        element={
+                            <ProtectedRoute
+                                requiredPermission="identity.roles.manage"
+                            />
+                        }
+                    >
+                        <Route
+                            index
+                            element={<Roles />}
+                        />
+                    </Route>
+
+                    <Route
                         path="/account-manager-assignments"
                         element={
                             <ProtectedRoute
@@ -445,7 +468,7 @@ export default function AppRoutes() {
 
                 <Route
                     element={
-                        <PortalGuard allowedTokenType="sub_account">
+                        <PortalGuard allowedTokenType="subaccount">
                             <SubAccountLayout />
                         </PortalGuard>
                     }

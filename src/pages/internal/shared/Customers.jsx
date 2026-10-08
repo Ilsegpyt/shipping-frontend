@@ -1339,14 +1339,6 @@ export default function Customers() {
                                             </div>
                                         ))}
 
-                                        <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 sm:col-span-2">
-                                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                                                Customer ID
-                                            </p>
-                                            <p className="mt-1.5 break-all text-sm font-semibold text-slate-900">
-                                                {selectedCustomer.id || '-'}
-                                            </p>
-                                        </div>
                                     </div>
                                 ) : (
                                     <div className="py-10 text-center text-sm text-slate-500">

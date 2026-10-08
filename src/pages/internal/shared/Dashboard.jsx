@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react';
 
-import {
-    Users,
-} from 'lucide-react';
+import { Users } from 'lucide-react';
 
 import { useAuth } from '../../../auth/AuthContext';
 import dashboardHero from '../../../assets/branding/dashboard-hero.png';
 
-import {
-    getCustomers,
-    getAccountManagerWorkload,
-} from '../../../services/customersService';
+import { getCustomers } from '../../../services/customersService';
 
 export default function Dashboard() {
     const { user } = useAuth();
@@ -18,35 +13,24 @@ export default function Dashboard() {
     const [totalCustomers, setTotalCustomers] = useState(0);
     const [loadingCustomers, setLoadingCustomers] = useState(true);
 
-    const [accountManagerWorkload, setAccountManagerWorkload] = useState([]);
-    const [loadingAccountManagerWorkload, setLoadingAccountManagerWorkload] =
-        useState(true);
-
     useEffect(() => {
         const loadDashboardData = async () => {
             try {
                 setLoadingCustomers(true);
-                setLoadingAccountManagerWorkload(true);
 
-                const [
-                    customersResult,
-                    workloadResult,
-                ] = await Promise.all([
-                    getCustomers(1, 1, 'notDeleted'),
-                    getAccountManagerWorkload(),
-                ]);
+                const customersResult = await getCustomers(
+                    1,
+                    1,
+                    'notDeleted'
+                );
 
                 setTotalCustomers(customersResult.totalCount ?? 0);
-
-                setAccountManagerWorkload(workloadResult.items ?? []);
             } catch (error) {
                 console.error('Failed to load dashboard data:', error);
 
                 setTotalCustomers(0);
-                setAccountManagerWorkload([]);
             } finally {
                 setLoadingCustomers(false);
-                setLoadingAccountManagerWorkload(false);
             }
         };
 
@@ -104,63 +88,6 @@ export default function Dashboard() {
                     <p className="mt-1 text-xs text-slate-400">
                         Active customer accounts
                     </p>
-                </div>
-            </section>
-
-            {/* Main Operations */}
-            <section>
-                {/* Account Manager Workload */}
-                <div className="self-start rounded-lg border border-slate-200 bg-white p-4 shadow-none">
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
-                                <Users size={18} />
-                            </div>
-
-                            <h2 className="text-base font-semibold text-slate-900">
-                                Account Manager Workload
-                            </h2>
-                        </div>
-
-                        <p className="mt-1.5 text-sm text-slate-500">
-                            Assigned customers by account manager.
-                        </p>
-                    </div>
-
-                    <div className="mt-4 max-h-52 overflow-y-auto rounded-md border border-slate-200 pr-1">
-                        {loadingAccountManagerWorkload ? (
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
-                                Loading workload...
-                            </div>
-                        ) : accountManagerWorkload.length === 0 ? (
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 text-center text-sm text-slate-400">
-                                No account manager workload data available.
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-slate-200">
-                                {accountManagerWorkload.map((manager) => (
-                                    <div
-                                        key={manager.accountManagerId}
-                                        className="flex items-center justify-between gap-4 px-3 py-2.5"
-                                    >
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium text-slate-900">
-                                                {manager.accountManagerName}
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-slate-400">
-                                                {manager.assignedCustomers} assigned
-                                                customer
-                                                {manager.assignedCustomers === 1
-                                                    ? ''
-                                                    : 's'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
                 </div>
             </section>
         </div>

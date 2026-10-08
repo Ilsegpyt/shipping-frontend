@@ -118,6 +118,14 @@ export default function Login() {
                     >
                         {loading ? 'Signing in...' : 'Sign in'}
                     </button>
+
+                    <button
+                        type="button"
+                        onClick={() => navigate('/')}
+                        className="mt-4 w-full text-sm font-medium text-gray-500 transition hover:text-blue-600"
+                    >
+                        ← Back to Home
+                    </button>
                 </form>
             </div>
         </div>

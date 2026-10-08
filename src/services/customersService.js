@@ -107,11 +107,3 @@ export const suspendCustomer = async (customerId) => {
 
     return response.data;
 };
-
-export const getAccountManagerWorkload = async () => {
-    const response = await api.get(
-        '/api/identity/account-manager-workload'
-    );
-
-    return response.data;
-};

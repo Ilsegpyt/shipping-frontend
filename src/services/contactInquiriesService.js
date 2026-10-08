@@ -22,6 +22,15 @@ const contactInquiriesService = {
 
         return response.data;
     },
+
+    create: async (data) => {
+        const response = await api.post(
+            '/api/website/contact-inquiries',
+            data
+        );
+
+        return response.data;
+    },
 };
 
 export default contactInquiriesService;
