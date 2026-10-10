@@ -40,3 +40,17 @@ export async function updateEmail(profileId, email) {
         email,
     });
 }
+
+export async function activateAccount(
+    userId,
+    activationToken,
+    newPassword
+) {
+    const response = await api.post('/api/auth/activate', {
+        userId,
+        activationToken,
+        newPassword,
+    });
+
+    return response.data;
+}

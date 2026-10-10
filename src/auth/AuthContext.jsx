@@ -5,6 +5,60 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
+const MAX_AUTH_RETRIES = 3;
+const DEFAULT_RETRY_AFTER_MS = 60_000;
+
+const wait = (ms) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+function getRetryDelay(error, attempt) {
+    const status = error.response?.status;
+
+    if (status === 429) {
+        const retryAfter = error.response?.headers?.['retry-after'];
+
+        if (retryAfter) {
+            const seconds = Number(retryAfter);
+
+            if (Number.isFinite(seconds) && seconds >= 0) {
+                return seconds * 1000;
+            }
+
+            const retryDate = Date.parse(retryAfter);
+
+            if (!Number.isNaN(retryDate)) {
+                return Math.max(0, retryDate - Date.now());
+            }
+        }
+
+        return DEFAULT_RETRY_AFTER_MS;
+    }
+
+    return Math.min(3000 * 2 ** (attempt - 1), 8000);
+}
+
+function isTemporaryError(error) {
+    const status = error.response?.status;
+
+    return (
+        status === 429 ||
+        !error.response ||
+        status >= 500
+    );
+}
+
+function clearSession() {
+    [
+        'accessToken',
+        'refreshToken',
+        'accessTokenExpiresAtUtc',
+        'impersonationAuditLogId',
+        'originalAccessToken',
+        'originalRefreshToken',
+        'originalAccessTokenExpiresAtUtc',
+    ].forEach((key) => localStorage.removeItem(key));
+}
+
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -12,6 +66,8 @@ export function AuthProvider({ children }) {
     const [impersonation, setImpersonation] = useState(null);
 
     useEffect(() => {
+        let active = true;
+
         async function loadUser() {
             const accessToken = localStorage.getItem('accessToken');
 
@@ -20,53 +76,65 @@ export function AuthProvider({ children }) {
                 return;
             }
 
-            try {
-                const currentUser = await getMe();
-                setUser(currentUser);
-                setAuthUnavailable(false);
+            for (let attempt = 0; attempt <= MAX_AUTH_RETRIES; attempt++) {
+                try {
+                    const currentUser = await getMe();
 
-                const impersonationAuditLogId =
-                    localStorage.getItem('impersonationAuditLogId');
+                    if (!active) return;
 
-                if (impersonationAuditLogId) {
-                    setImpersonation({
-                        auditLogId: impersonationAuditLogId,
-                    });
-                }
-            } catch (error) {
-                console.error('Failed to load current user:', error);
+                    setUser(currentUser);
+                    setAuthUnavailable(false);
 
-                const status = error.response?.status;
+                    const auditLogId = localStorage.getItem(
+                        'impersonationAuditLogId'
+                    );
 
-                // Temporary failures must not clear the session.
-                if (
-                    status === 429 ||
-                    !error.response ||
-                    status >= 500
-                ) {
-                    setAuthUnavailable(true);
+                    setImpersonation(
+                        auditLogId ? { auditLogId } : null
+                    );
+
+                    setLoading(false);
+                    return;
+                } catch (error) {
+                    if (!active) return;
+
+                    console.error('Failed to load current user:', error);
+
+                    if (isTemporaryError(error)) {
+                        setAuthUnavailable(true);
+                        setLoading(false);
+
+                        if (attempt < MAX_AUTH_RETRIES) {
+                            const delay = getRetryDelay(error, attempt + 1);
+
+                            await wait(delay);
+
+                            if (!active) return;
+
+                            continue;
+                        }
+
+                        return;
+                    }
+
+                    if (error.response?.status === 401) {
+                        clearSession();
+                        setUser(null);
+                        setImpersonation(null);
+                        setAuthUnavailable(false);
+                    }
+
+                    setLoading(false);
                     return;
                 }
-
-                if (status === 401) {
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    localStorage.removeItem('accessTokenExpiresAtUtc');
-                    localStorage.removeItem('impersonationAuditLogId');
-                    localStorage.removeItem('originalAccessToken');
-                    localStorage.removeItem('originalRefreshToken');
-                    localStorage.removeItem('originalAccessTokenExpiresAtUtc');
-
-                    setUser(null);
-                    setImpersonation(null);
-                    setAuthUnavailable(false);
-                }
-            } finally {
-                setLoading(false);
             }
         }
 
         loadUser();
+
+        return () => {
+            active = false;
+        };
     }, []);
 
     const startImpersonation = async (response) => {
@@ -147,14 +215,15 @@ export function AuthProvider({ children }) {
 
             try {
                 const currentUser = await getMe();
+
                 setUser(currentUser);
                 setAuthUnavailable(false);
             } catch (error) {
-                console.error(error);
+                console.error('Failed to reload user after impersonation:', error);
 
-                if (error.response?.status === 429) {
+                if (isTemporaryError(error)) {
                     setAuthUnavailable(true);
-                } else {
+                } else if (error.response?.status === 401) {
                     setUser(null);
                 }
             }
@@ -164,13 +233,7 @@ export function AuthProvider({ children }) {
     };
 
     const logout = () => {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('accessTokenExpiresAtUtc');
-        localStorage.removeItem('impersonationAuditLogId');
-        localStorage.removeItem('originalAccessToken');
-        localStorage.removeItem('originalRefreshToken');
-        localStorage.removeItem('originalAccessTokenExpiresAtUtc');
+        clearSession();
 
         setUser(null);
         setImpersonation(null);

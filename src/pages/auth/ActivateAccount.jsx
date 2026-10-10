@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { activateAccount } from '../../services/authService';
+import { activateAccount } from '../../auth/authService';
 
 export default function ActivateAccount() {
     const [searchParams] = useSearchParams();
