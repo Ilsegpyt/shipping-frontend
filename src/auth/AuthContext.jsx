@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState } from 'react';
 import { getMe } from './authService';
 import api from '../services/api';
@@ -7,6 +8,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [authUnavailable, setAuthUnavailable] = useState(false);
     const [impersonation, setImpersonation] = useState(null);
 
     useEffect(() => {
@@ -21,6 +23,7 @@ export function AuthProvider({ children }) {
             try {
                 const currentUser = await getMe();
                 setUser(currentUser);
+                setAuthUnavailable(false);
 
                 const impersonationAuditLogId =
                     localStorage.getItem('impersonationAuditLogId');
@@ -31,18 +34,33 @@ export function AuthProvider({ children }) {
                     });
                 }
             } catch (error) {
-                console.error(error);
+                console.error('Failed to load current user:', error);
 
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('accessTokenExpiresAtUtc');
-                localStorage.removeItem('impersonationAuditLogId');
-                localStorage.removeItem('originalAccessToken');
-                localStorage.removeItem('originalRefreshToken');
-                localStorage.removeItem('originalAccessTokenExpiresAtUtc');
+                const status = error.response?.status;
 
-                setUser(null);
-                setImpersonation(null);
+                // Temporary failures must not clear the session.
+                if (
+                    status === 429 ||
+                    !error.response ||
+                    status >= 500
+                ) {
+                    setAuthUnavailable(true);
+                    return;
+                }
+
+                if (status === 401) {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    localStorage.removeItem('accessTokenExpiresAtUtc');
+                    localStorage.removeItem('impersonationAuditLogId');
+                    localStorage.removeItem('originalAccessToken');
+                    localStorage.removeItem('originalRefreshToken');
+                    localStorage.removeItem('originalAccessTokenExpiresAtUtc');
+
+                    setUser(null);
+                    setImpersonation(null);
+                    setAuthUnavailable(false);
+                }
             } finally {
                 setLoading(false);
             }
@@ -79,6 +97,7 @@ export function AuthProvider({ children }) {
         const currentUser = await getMe();
 
         setUser(currentUser);
+        setAuthUnavailable(false);
         setImpersonation({
             auditLogId: response.auditLogId,
         });
@@ -129,9 +148,15 @@ export function AuthProvider({ children }) {
             try {
                 const currentUser = await getMe();
                 setUser(currentUser);
+                setAuthUnavailable(false);
             } catch (error) {
                 console.error(error);
-                setUser(null);
+
+                if (error.response?.status === 429) {
+                    setAuthUnavailable(true);
+                } else {
+                    setUser(null);
+                }
             }
 
             setImpersonation(null);
@@ -149,6 +174,7 @@ export function AuthProvider({ children }) {
 
         setUser(null);
         setImpersonation(null);
+        setAuthUnavailable(false);
     };
 
     return (
@@ -157,6 +183,7 @@ export function AuthProvider({ children }) {
                 user,
                 setUser,
                 loading,
+                authUnavailable,
                 logout,
                 impersonation,
                 startImpersonation,

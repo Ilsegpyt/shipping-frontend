@@ -1,3 +1,4 @@
+
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import LoadingScreen from '../components/common/LoadingScreen';
@@ -51,15 +52,59 @@ function getPortalHome(tokenType) {
 }
 
 export default function ProtectedRoute({ requiredPermission }) {
-    const { user, loading } = useAuth();
+    const {
+        user,
+        loading,
+        authUnavailable,
+    } = useAuth();
+
     const location = useLocation();
+
+    const hasAccessToken = Boolean(
+        localStorage.getItem('accessToken')
+    );
 
     if (loading) {
         return <LoadingScreen />;
     }
 
+    // Do not redirect to login when user verification fails temporarily.
+    if (authUnavailable && hasAccessToken) {
+        return (
+            <div
+                role="alert"
+                style={{
+                    padding: '24px',
+                    textAlign: 'center',
+                }}
+            >
+                <p>
+                    Unable to verify your session right now.
+                    Please try again in a moment.
+                </p>
+
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    style={{
+                        padding: '10px 16px',
+                        cursor: 'pointer',
+                    }}
+                >
+                    Try again
+                </button>
+            </div>
+        );
+    }
+
     if (!user) {
-        return <Navigate to="/login" replace />;
+        return (
+            <Navigate
+                to="/login"
+                replace
+                state={{ from: location }}
+            />
+        );
     }
 
     if (
