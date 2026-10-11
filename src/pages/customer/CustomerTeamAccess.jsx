@@ -11,6 +11,7 @@ import {
     Pencil,
     UserPlus,
     UserMinus,
+    ShieldCheck,
 } from 'lucide-react';
 
 import {
@@ -21,6 +22,10 @@ import {
     deactivateSubAccount,
     updateSubAccountProfile,
     updateSubAccountEmail,
+    addSubAccountScope,
+    removeSubAccountScope,
+    setSubAccountFullScope,
+    setSubAccountCustomScope,
 } from '../../services/subAccountsService';
 
 const scopeCategories = [
@@ -85,6 +90,22 @@ export default function CustomerTeamAccess() {
 
     const [scopes, setScopes] = useState([]);
 
+    // Scope management for an already-created team member.
+    // The add form is independent from the current-scope list.
+    const [memberForScopes, setMemberForScopes] = useState(null);
+    const [scopeManagementForm, setScopeManagementForm] = useState({
+        category: '1',
+        service: '1',
+        type: '1',
+    });
+    const [scopeManagementError, setScopeManagementError] = useState('');
+    const [scopeManagementSuccess, setScopeManagementSuccess] = useState('');
+    const [scopeManagementLoading, setScopeManagementLoading] = useState(false);
+    const [showScopeAddForm, setShowScopeAddForm] = useState(false);
+    const [scopeManagementMode, setScopeManagementMode] = useState('custom');
+    const [pendingScopeAdds, setPendingScopeAdds] = useState([]);
+    const [pendingScopeRemovals, setPendingScopeRemovals] = useState([]);
+
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -127,6 +148,7 @@ export default function CustomerTeamAccess() {
 
             setSubAccounts(items);
             setSelectedIds([]);
+            return items;
         } catch (err) {
             console.error('Failed to load sub accounts:', err);
 
@@ -448,6 +470,217 @@ export default function CustomerTeamAccess() {
             );
         } finally {
             setCreating(false);
+        }
+    };
+
+    const openScopeManagement = (member) => {
+        setOpenMenuId(null);
+        setMemberForScopes(member);
+        setScopeManagementError('');
+        setScopeManagementSuccess('');
+        setScopeManagementForm({ category: '', service: '', type: '' });
+        setShowScopeAddForm(false);
+        setScopeManagementMode(isMemberFullScope(member) ? 'full' : 'custom');
+        setPendingScopeAdds([]);
+        setPendingScopeRemovals([]);
+    };
+
+    const closeScopeManagement = () => {
+        if (scopeManagementLoading) return;
+        setMemberForScopes(null);
+        setScopeManagementError('');
+        setScopeManagementSuccess('');
+        setPendingScopeAdds([]);
+        setPendingScopeRemovals([]);
+        setShowScopeAddForm(false);
+    };
+
+    const getApiErrorMessage = (err, fallback) =>
+        err?.response?.data?.message ??
+        err?.response?.data?.detail ??
+        err?.response?.data?.title ??
+        (typeof err?.response?.data === 'string' ? err.response.data : null) ??
+        fallback;
+
+    // Current API response has ScopeDescriptions (strings). Removal requires the
+    // original numeric Category/Service/Type tuple, so use structured scopes when
+    // the API supplies them and never guess values by parsing display text.
+    const getStructuredMemberScopes = (member) => {
+        if (Array.isArray(member?.scopes)) return member.scopes;
+        if (Array.isArray(member?.Scopes)) return member.Scopes;
+        if (Array.isArray(member?.scopeItems)) return member.scopeItems;
+        if (Array.isArray(member?.scopeDetails)) return member.scopeDetails;
+        return [];
+    };
+
+    // The API may serialize enums as numbers or names depending on JSON configuration.
+    // Normalize both forms so the Remove action remains available for real custom scopes.
+    const normalizeScopeEnum = (value, names) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (trimmed !== '' && Number.isFinite(Number(trimmed))) return Number(trimmed);
+            const match = Object.entries(names).find(([, name]) => name.toLowerCase() === trimmed.toLowerCase());
+            if (match) return Number(match[0]);
+        }
+        return Number.NaN;
+    };
+
+    const getScopeTuple = (scope) => ({
+        category: normalizeScopeEnum(scope?.category ?? scope?.Category, {
+            1: 'Sea', 2: 'Air', 3: 'Domestic', 4: 'Financial',
+        }),
+        service: normalizeScopeEnum(scope?.service ?? scope?.Service, {
+            0: 'None', 1: 'Freight', 2: 'CustomsClearance', 3: 'Transportation', 4: 'Both',
+        }),
+        type: normalizeScopeEnum(scope?.type ?? scope?.Type, {
+            0: 'None', 1: 'All', 2: 'Import', 3: 'Export',
+        }),
+    });
+
+    const getScopeKey = (scope) => {
+        const tuple = getScopeTuple(scope);
+        if (!Number.isFinite(tuple.category) || !Number.isFinite(tuple.service) || !Number.isFinite(tuple.type)) return '';
+        return `${tuple.category}:${tuple.service}:${tuple.type}`;
+    };
+
+    const isMemberFullScope = (member) => {
+        const scopeType = member?.scopeType ?? member?.ScopeType;
+        if (String(scopeType ?? '').toLowerCase() === 'full') return true;
+
+        const descriptions = member?.scopeDescriptions ?? member?.ScopeDescriptions;
+        return Array.isArray(descriptions) && descriptions.some((description) =>
+            String(description).toLowerCase().includes('all categories - all services - all types')
+        );
+    };
+
+    const getMemberScopeDescriptions = (member) => {
+        if (Array.isArray(member?.scopeDescriptions)) return member.scopeDescriptions;
+        if (Array.isArray(member?.ScopeDescriptions)) return member.ScopeDescriptions;
+
+        const structuredScopes = getStructuredMemberScopes(member);
+        return structuredScopes.map((scope) =>
+            scope?.description ??
+            scope?.Description ??
+            `${getCategoryLabel(Number(scope?.category ?? scope?.Category))} · ${getServiceLabel(Number(scope?.service ?? scope?.Service))} · ${getShipmentTypeLabel(Number(scope?.type ?? scope?.Type))}`
+        );
+    };
+
+    const handleScopeManagementCategoryChange = (event) => {
+        const category = event.target.value;
+        setScopeManagementForm({
+            category,
+            service: category === '1' || category === '2' ? '1' : category === '4' ? '0' : '',
+            type: category === '4' ? '0' : '',
+        });
+    };
+
+    const handleAddMemberScope = (event) => {
+        event.preventDefault();
+        const { category, service, type } = scopeManagementForm;
+        if (category === '' || service === '' || type === '') {
+            setScopeManagementError('Please complete the scope selection.');
+            return;
+        }
+
+        const newScope = {
+            category: Number(category),
+            service: Number(service),
+            type: Number(type),
+        };
+        const newKey = getScopeKey(newScope);
+        const existingStructuredScopes = getStructuredMemberScopes(memberForScopes);
+        const alreadyExists = existingStructuredScopes.some((scope) => {
+            const key = getScopeKey(scope);
+            return key === newKey && !pendingScopeRemovals.includes(key);
+        }) || pendingScopeAdds.some((scope) => getScopeKey(scope) === newKey);
+
+        if (alreadyExists) {
+            setScopeManagementError('This scope already exists for this member.');
+            return;
+        }
+
+        setPendingScopeAdds((previous) => [...previous, newScope]);
+        setScopeManagementForm({ category: '', service: '', type: '' });
+        setScopeManagementError('');
+        setScopeManagementSuccess('Scope added to pending changes. Click Save to apply it.');
+    };
+
+    const handleRemoveMemberScope = (scope) => {
+        const key = getScopeKey(scope);
+        if (!key) {
+            setScopeManagementError('The API must return Category, Service, and Type for each scope before it can be removed safely.');
+            return;
+        }
+
+        if (pendingScopeAdds.some((item) => getScopeKey(item) === key)) {
+            setPendingScopeAdds((previous) => previous.filter((item) => getScopeKey(item) !== key));
+        } else {
+            setPendingScopeRemovals((previous) => previous.includes(key) ? previous : [...previous, key]);
+        }
+        setScopeManagementError('');
+        setScopeManagementSuccess('Scope change staged. Click Save to apply it.');
+    };
+
+    const handleSetMemberFullScope = () => {
+        setScopeManagementMode('full');
+        setShowScopeAddForm(false);
+        setScopeManagementError('');
+        setScopeManagementSuccess('Full Scope selected. Click Save to apply this change.');
+    };
+
+    const handleSetMemberCustomScope = () => {
+        setScopeManagementMode('custom');
+        setScopeManagementForm({ category: '', service: '', type: '' });
+        setShowScopeAddForm(true);
+        setScopeManagementError('');
+        setScopeManagementSuccess('Custom Scope selected. Add or remove scopes as needed, then click Save.');
+    };
+
+    const handleSaveScopeManagement = async () => {
+        const memberId = getMemberId(memberForScopes);
+        if (!memberId) {
+            setScopeManagementError('Unable to identify this team member.');
+            return;
+        }
+
+        try {
+            setScopeManagementLoading(true);
+            setScopeManagementError('');
+            setScopeManagementSuccess('');
+
+            if (scopeManagementMode === 'full') {
+                await setSubAccountFullScope(memberId);
+            } else {
+                await setSubAccountCustomScope(memberId);
+                const existingScopesByKey = new Map(
+                    getStructuredMemberScopes(memberForScopes).map((scope) => [getScopeKey(scope), scope])
+                );
+                for (const key of pendingScopeRemovals) {
+                    if (existingScopesByKey.has(key)) {
+                        const tuple = getScopeTuple(existingScopesByKey.get(key));
+                        await removeSubAccountScope(memberId, tuple);
+                    }
+                }
+                for (const scope of pendingScopeAdds) {
+                    await addSubAccountScope(memberId, scope);
+                }
+            }
+
+            const refreshedItems = await loadSubAccounts();
+            const refreshedMember = Array.isArray(refreshedItems)
+                ? refreshedItems.find((item) => String(getMemberId(item)) === String(memberId))
+                : null;
+            if (refreshedMember) setMemberForScopes(refreshedMember);
+            setPendingScopeAdds([]);
+            setPendingScopeRemovals([]);
+            setShowScopeAddForm(false);
+            setScopeManagementSuccess('Scope changes saved successfully.');
+        } catch (err) {
+            console.error('Failed to save subaccount scope changes:', err);
+            setScopeManagementError(getApiErrorMessage(err, 'Unable to save scope changes. Some changes may have been applied; please refresh and review the current scopes.'));
+        } finally {
+            setScopeManagementLoading(false);
         }
     };
 
@@ -943,6 +1176,15 @@ export default function CustomerTeamAccess() {
 
                                                                     <button
                                                                         type="button"
+                                                                        onClick={() => openScopeManagement(member)}
+                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
+                                                                    >
+                                                                        <ShieldCheck className="h-4 w-4 text-indigo-600" />
+                                                                        Manage Scopes
+                                                                    </button>
+
+                                                                    <button
+                                                                        type="button"
                                                                         onClick={() =>
                                                                             openEditModal(
                                                                                 member
@@ -981,6 +1223,232 @@ export default function CustomerTeamAccess() {
                     )}
                 </div>
             </div>
+
+            {/* Scope Management Modal - existing scopes, add, and remove are independent */}
+            {memberForScopes && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/50 px-4 py-6">
+                    <div className="my-auto w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                            <div>
+                                <h2 className="text-xl font-semibold text-gray-900">Manage Scopes</h2>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Manage access for {getMemberName(memberForScopes)}.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeScopeManagement}
+                                disabled={scopeManagementLoading}
+                                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                                aria-label="Close scope management"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-5 px-6 py-6">
+                            <div className="rounded-xl border border-gray-200 p-4">
+                                <h3 className="text-sm font-semibold text-gray-900">Access mode</h3>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Choose an access mode, make any scope changes, then press Save. Nothing is applied until you save.
+                                </p>
+                                <div className="mt-4 flex flex-wrap gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={handleSetMemberFullScope}
+                                        disabled={scopeManagementLoading}
+                                        className={`rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 ${scopeManagementMode === 'full' ? 'bg-slate-900 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                    >
+                                        {scopeManagementLoading ? 'Saving...' : 'Set Full Scope'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSetMemberCustomScope}
+                                        disabled={scopeManagementLoading}
+                                        className={`rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 ${scopeManagementMode === 'custom' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                    >
+                                        {scopeManagementLoading ? 'Saving...' : 'Set Custom Scope'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3 rounded-xl border border-gray-200 p-4">
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-900">Current scopes</h3>
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        These are the scopes returned by the API for this member.
+                                    </p>
+                                </div>
+
+                                {(() => {
+                                    const structuredScopes = getStructuredMemberScopes(memberForScopes);
+                                    const descriptions = getMemberScopeDescriptions(memberForScopes);
+                                    const existingRows = descriptions.map((description, index) => ({
+                                        description,
+                                        scope: structuredScopes[index],
+                                        pending: false,
+                                    }));
+                                    const addedRows = pendingScopeAdds.map((scope) => ({
+                                        description: `${getCategoryLabel(getScopeTuple(scope).category)} · ${getServiceLabel(getScopeTuple(scope).service)} · ${getShipmentTypeLabel(getScopeTuple(scope).type)}`,
+                                        scope,
+                                        pending: true,
+                                    }));
+                                    const rows = [...existingRows, ...addedRows];
+                                    return rows.length === 0 ? (
+                                        <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                            No custom scopes are currently configured.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {rows.map(({ description, scope: structuredScope, pending }, index) => {
+                                                const tuple = structuredScope ? getScopeTuple(structuredScope) : null;
+                                                const canRemove = Boolean(tuple) &&
+                                                    Number.isFinite(tuple.category) &&
+                                                    Number.isFinite(tuple.service) &&
+                                                    Number.isFinite(tuple.type) &&
+                                                    scopeManagementMode !== 'full';
+
+                                                return (
+                                                    <div
+                                                        key={`${getScopeKey(structuredScope || {}) || String(description)}-${index}`}
+                                                        className="flex flex-col gap-3 rounded-lg border border-gray-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                                    >
+                                                        <span className={`text-sm ${pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                                                            {String(description)}
+                                                            {pending && <span className="ml-2 text-xs font-medium text-indigo-600">(unsaved)</span>}
+                                                            {pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) && <span className="ml-2 text-xs font-medium text-red-600">(will be removed)</span>}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const key = getScopeKey(structuredScope || {});
+                                                                if (pendingScopeRemovals.includes(key)) {
+                                                                    setPendingScopeRemovals((previous) => previous.filter((item) => item !== key));
+                                                                    setScopeManagementSuccess('Scope removal cancelled. Click Save to apply remaining changes.');
+                                                                } else {
+                                                                    handleRemoveMemberScope(structuredScope);
+                                                                }
+                                                            }}
+                                                            disabled={scopeManagementLoading || !canRemove}
+                                                            title={!canRemove ? 'The API must return Category, Service, and Type to remove this scope safely.' : 'Remove this scope'}
+                                                            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                        >
+                                                            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                                                            {pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) ? 'Undo Remove' : pending ? 'Remove' : 'Remove'}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()}
+
+                                {getMemberScopeDescriptions(memberForScopes).length > 0 &&
+                                    getStructuredMemberScopes(memberForScopes).length === 0 &&
+                                    scopeManagementMode === 'custom' && (
+                                        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
+                                            The current GET response only contains ScopeDescriptions (text). The backend must also return each scope's numeric Category, Service, and Type for the Remove buttons to work safely.
+                                        </p>
+                                    )}
+                            </div>
+
+                            {showScopeAddForm && (
+                                <form onSubmit={handleAddMemberScope} className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/30 p-4">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-900">Add scope</h3>
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            Choose a new scope. This form is separate from the current scopes list.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                                        <div>
+                                            <label htmlFor="manage-scope-category" className="mb-2 block text-xs font-medium text-gray-600">Category</label>
+                                            <select
+                                                id="manage-scope-category"
+                                                value={scopeManagementForm.category}
+                                                onChange={handleScopeManagementCategoryChange}
+                                                disabled={scopeManagementLoading}
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm"
+                                            >
+                                                <option value="">Select category</option>
+                                                {scopeCategories.map((item) => (
+                                                    <option key={item.value} value={item.value}>{item.label}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="manage-scope-service" className="mb-2 block text-xs font-medium text-gray-600">Service</label>
+                                            <select
+                                                id="manage-scope-service"
+                                                value={scopeManagementForm.service}
+                                                onChange={(event) => setScopeManagementForm((previous) => ({ ...previous, service: event.target.value }))}
+                                                disabled={scopeManagementLoading || !scopeManagementForm.category || scopeManagementForm.category === '4'}
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm disabled:bg-gray-100"
+                                            >
+                                                <option value="">Select service</option>
+                                                {(scopeManagementForm.category === '1' || scopeManagementForm.category === '2') && <option value="1">Freight</option>}
+                                                {scopeManagementForm.category === '3' && domesticServices.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                                                {scopeManagementForm.category === '4' && <option value="0">None</option>}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label htmlFor="manage-scope-type" className="mb-2 block text-xs font-medium text-gray-600">Shipment type</label>
+                                            <select
+                                                id="manage-scope-type"
+                                                value={scopeManagementForm.type}
+                                                onChange={(event) => setScopeManagementForm((previous) => ({ ...previous, type: event.target.value }))}
+                                                disabled={scopeManagementLoading || !scopeManagementForm.category || scopeManagementForm.category === '4'}
+                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm disabled:bg-gray-100"
+                                            >
+                                                <option value="">Select shipment type</option>
+                                                {shipmentTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                                                {scopeManagementForm.category === '4' && <option value="0">None</option>}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={scopeManagementLoading}
+                                        className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                                    >
+                                        {scopeManagementLoading ? 'Saving...' : 'Add Scope'}
+                                    </button>
+                                </form>
+                            )}
+
+                            {scopeManagementError && (
+                                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    {scopeManagementError}
+                                </div>
+                            )}
+                            {scopeManagementSuccess && (
+                                <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                                    {scopeManagementSuccess}
+                                </div>
+                            )}
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={handleSaveScopeManagement}
+                                    disabled={scopeManagementLoading}
+                                    className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                                >
+                                    {scopeManagementLoading ? 'Saving...' : 'Save'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={closeScopeManagement}
+                                    disabled={scopeManagementLoading}
+                                    className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Confirmation Modal */}
             {memberToDelete && (

@@ -70,6 +70,7 @@ import ContactInquiries from '../pages/internal/super-admin/ContactInquiries';
 // Customer pages
 import CustomerDashboard from '../pages/customer/CustomerDashboard';
 import CustomerTeamAccess from '../pages/customer/CustomerTeamAccess';
+import CustomerProfile from '../pages/customer/CustomerProfile';
 
 // Sub Account pages
 import SubAccountDashboard from '../pages/sub-account/SubAccountDashboard';
@@ -462,6 +463,11 @@ export default function AppRoutes() {
                             element={<CustomerTeamAccess />}
                         />
                     </Route>
+
+                    <Route
+                        path="/customer/profile"
+                        element={<CustomerProfile />}
+                    />
                 </Route>
 
                 {/* Sub Account Portal */}
