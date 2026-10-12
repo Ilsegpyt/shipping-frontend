@@ -74,6 +74,7 @@ import CustomerProfile from '../pages/customer/CustomerProfile';
 
 // Sub Account pages
 import SubAccountDashboard from '../pages/sub-account/SubAccountDashboard';
+import SubAccountProfile from '../pages/sub-account/SubAccountProfile';
 
 function PortalGuard({ allowedTokenType, children }) {
     const token = localStorage.getItem('accessToken');
@@ -488,6 +489,11 @@ export default function AppRoutes() {
                             element={<SubAccountDashboard />}
                         />
                     </Route>
+
+                    <Route
+                        path="/subaccount/profile"
+                        element={<SubAccountProfile />}
+                    />
                 </Route>
             </Route>
 
