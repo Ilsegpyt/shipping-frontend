@@ -11,6 +11,8 @@ const departments = [
     'Other',
 ];
 
+const MAX_CV_SIZE = 5 * 1024 * 1024; // 5 MB
+
 const inputClass =
     'mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
 
@@ -19,21 +21,47 @@ const labelClass = 'text-sm font-medium text-slate-700';
 export default function Recruitment() {
     const [submitted, setSubmitted] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [cvError, setCvError] = useState('');
+
+    const handleCvChange = (event) => {
+        const file = event.target.files?.[0];
+
+        setCvError('');
+        setErrorMessage('');
+        setSubmitted(false);
+
+        if (file && file.size > MAX_CV_SIZE) {
+            setCvError('CV file size must not exceed 5 MB.');
+            event.target.value = '';
+        }
+    };
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
         const form = event.currentTarget;
-        const formData = new FormData(form);
+        const cvInput = form.elements.namedItem('cv');
+        const cvFile = cvInput?.files?.[0];
 
         setErrorMessage('');
         setSubmitted(false);
+
+        if (cvFile && cvFile.size > MAX_CV_SIZE) {
+            setCvError('CV file size must not exceed 5 MB.');
+            cvInput.focus();
+            return;
+        }
+
+        setCvError('');
+
+        const formData = new FormData(form);
 
         try {
             await recruitmentApplicationsService.create(formData);
 
             setSubmitted(true);
             form.reset();
+            setCvError('');
         } catch (error) {
             console.error(
                 'Failed to submit recruitment application:',
@@ -137,8 +165,21 @@ export default function Recruitment() {
                                     type="file"
                                     accept=".pdf,application/pdf"
                                     required
+                                    onChange={handleCvChange}
+                                    aria-invalid={Boolean(cvError)}
+                                    aria-describedby={cvError ? 'cv-error' : undefined}
                                     className="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white text-sm text-slate-700 file:mr-4 file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
                                 />
+
+                                {cvError && (
+                                    <p
+                                        id="cv-error"
+                                        role="alert"
+                                        className="mt-2 text-sm text-red-600"
+                                    >
+                                        {cvError}
+                                    </p>
+                                )}
                             </div>
 
                             <div>
@@ -157,7 +198,7 @@ export default function Recruitment() {
 
                             <div className="flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-slate-500">
-                                    Please upload your CV in PDF format.
+                                    Please upload your CV in PDF format (maximum 5 MB).
                                 </p>
 
                                 <button
