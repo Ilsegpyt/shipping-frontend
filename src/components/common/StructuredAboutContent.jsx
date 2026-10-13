@@ -441,89 +441,208 @@ useEffect(() => {
 );
   };
   const isSolutions = styleVariant === "solutions";
-  return <main className="min-h-screen bg-white text-slate-900">
-    <section className={`relative overflow-hidden ${isSolutions ? "bg-slate-950" : "bg-slate-950"} px-6 pb-16 pt-32 sm:px-8 lg:px-12`}><div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" /><div className="relative mx-auto max-w-7xl">{isSolutions && <a href="/solutions" className="mb-10 inline-flex items-center gap-2 text-sm font-medium text-white/70 transition hover:text-white">← Back to Solutions</a>}<p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">{data.introLabel || parentTitle}</p><h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">{data.introTitle || page?.title || "About ILS"}</h1>{renderRich(data.introText, "mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg")}</div></section>
-    <section className="px-6 py-12 sm:px-8 sm:py-16 lg:px-12"><div className="mx-auto max-w-7xl space-y-6">{data.pageOrder.map((item, index) => {
-      const section = item.type === "section" ? data.sections.find((entry) => entry.id === item.id) : null;
-      const global = item.type === "highlight" ? data.highlights.find((entry) => entry.id === item.id) : item.type === "closing" ? data.closings.find((entry) => entry.id === item.id) : null;
-      if (item.type === "section" && !section || item.type !== "section" && !global) return null;
-      if (item.type === "highlight") return <section key={item.id} className="rounded-2xl border-y border-slate-200 bg-slate-950 px-8 py-8 sm:px-10 lg:px-12"><div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-base leading-8 text-slate-200 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">{renderRich(global.text, "")}</div></section>;
-      if (item.type === "closing") return <section key={item.id} className="rounded-2xl px-6 py-6 sm:px-8 text-base leading-8 text-slate-600 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">{renderRich(global.text, "")}</section>;
-      return <article key={section.id} className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10 ${isSolutions ? "transition-shadow hover:shadow-md" : ""}`}>{section.label && <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">{section.label}</p>}{section.title && <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">{section.title}</h2>}{section.subtitle && <p className="mt-3 text-lg leading-7 text-slate-600">{section.subtitle}</p>}{(section.contentBlocks || []).map((block) => <div key={block.id} className={block.type === "highlight" ? "my-4 rounded-xl border-l-4 border-sky-400 bg-white p-4 text-sm leading-7 text-slate-700 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2" : block.type === "closing" ? "my-4 text-sm leading-7 text-slate-600 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2" : "text-slate-600"}>{renderRich(block.text, "text-base leading-8")}</div>)}</article>;
-    })}{!data.pageOrder.length && <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">No content is available for this page in the CMS.</p>}</div></section>
-    <style>{`.about-rich p{margin:.8rem 0}.about-rich ul,.about-rich ol{margin:1rem 0;padding-left:1.5rem}.about-rich ul{list-style:disc}.about-rich ol{list-style:decimal}.about-rich li{margin:.45rem 0}.about-rich img{max-width:100%;height:auto;border-radius:1rem;margin:1rem 0}.about-rich .about-certificate-gallery{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1.25rem;margin:1.5rem 0}.about-rich .about-certificate-card{display:flex;min-width:0;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;border-radius:1rem;background:#fff;padding:.75rem;box-shadow:0 8px 24px rgb(15 23 42 / .07);transition:transform .2s ease,box-shadow .2s ease}.about-rich .about-certificate-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgb(15 23 42 / .12)}.about-rich img.about-certificate-image{display:block;width:100%;height:230px;object-fit:contain;background:#f8fafc;border-radius:.65rem;margin:0;padding:.5rem}.about-rich .about-certificate-caption{padding:.75rem .25rem .25rem;text-align:center;font-size:.875rem;font-weight:600;color:#334155}@media(min-width:640px){.about-rich .about-certificate-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:1024px){.about-rich .about-certificate-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}.about-rich strong{font-weight:600}.about-rich a{color:#0284c7;text-decoration:underline}`}</style>
-    
-{certificateViewer && (
-  <div
-    className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/95 p-3 backdrop-blur-sm sm:p-6"
-    onClick={() => setCertificateViewer(null)}
-    role="dialog"
-    aria-modal="true"
-    aria-label="Certificate image viewer"
-  >
-    <button
-      type="button"
-      onClick={() => setCertificateViewer(null)}
-      className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20"
-      aria-label="Close image viewer"
-    >
-      ×
-    </button>
+  return (
+    <main className="min-h-screen bg-white text-slate-900">
+      <section
+        className={`relative overflow-hidden ${isSolutions ? "bg-slate-950" : "bg-slate-950"} px-6 pb-16 pt-32 sm:px-8 lg:px-12`}
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
+        <div className="relative mx-auto max-w-7xl">
+          <a
+            href="/"
+            className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-white/70 transition hover:text-white"
+          >
+            ← Back to Home
+          </a>
+          {isSolutions && (
+            <a
+              href="/solutions"
+              className="mb-10 inline-flex items-center gap-2 text-sm font-medium text-white/70 transition hover:text-white"
+            >
+              ← Back to Solutions
+            </a>
+          )}
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+            {data.introLabel || parentTitle}
+          </p>
+          <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            {data.introTitle || page?.title || "About ILS"}
+          </h1>
+          {renderRich(
+            data.introText,
+            "mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg",
+          )}
+        </div>
+      </section>
+      <section className="px-6 py-12 sm:px-8 sm:py-16 lg:px-12">
+        <div className="mx-auto max-w-7xl space-y-6">
+          {data.pageOrder.map((item, index) => {
+            const section =
+              item.type === "section"
+                ? data.sections.find((entry) => entry.id === item.id)
+                : null;
+            const global =
+              item.type === "highlight"
+                ? data.highlights.find((entry) => entry.id === item.id)
+                : item.type === "closing"
+                  ? data.closings.find((entry) => entry.id === item.id)
+                  : null;
+            if (
+              (item.type === "section" && !section) ||
+              (item.type !== "section" && !global)
+            )
+              return null;
+            if (item.type === "highlight")
+              return (
+                <section
+                  key={item.id}
+                  className="rounded-2xl border-y border-slate-200 bg-slate-950 px-8 py-8 sm:px-10 lg:px-12"
+                >
+                  <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-base leading-8 text-slate-200 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
+                    {renderRich(global.text, "")}
+                  </div>
+                </section>
+              );
+            if (item.type === "closing")
+              return (
+                <section
+                  key={item.id}
+                  className="rounded-2xl px-6 py-6 sm:px-8 text-base leading-8 text-slate-600 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                >
+                  {renderRich(global.text, "")}
+                </section>
+              );
+            return (
+              <article
+                key={section.id}
+                className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10 ${isSolutions ? "transition-shadow hover:shadow-md" : ""}`}
+              >
+                {section.label && (
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
+                    {section.label}
+                  </p>
+                )}
+                {section.title && (
+                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">
+                    {section.title}
+                  </h2>
+                )}
+                {section.subtitle && (
+                  <p className="mt-3 text-lg leading-7 text-slate-600">
+                    {section.subtitle}
+                  </p>
+                )}
+                {(section.contentBlocks || []).map((block) => (
+                  <div
+                    key={block.id}
+                    className={
+                      block.type === "highlight"
+                        ? "my-4 rounded-xl border-l-4 border-sky-400 bg-white p-4 text-sm leading-7 text-slate-700 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                        : block.type === "closing"
+                          ? "my-4 text-sm leading-7 text-slate-600 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                          : "text-slate-600"
+                    }
+                  >
+                    {renderRich(block.text, "text-base leading-8")}
+                  </div>
+                ))}
+              </article>
+            );
+          })}
+          {!data.pageOrder.length && (
+            <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+              No content is available for this page in the CMS.
+            </p>
+          )}
+        </div>
+      </section>
 
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        setCertificateViewer((current) => ({
-          ...current,
-          index:
-            (current.index - 1 + current.images.length) %
-            current.images.length,
-        }));
-      }}
-      className="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20 sm:left-6 sm:h-14 sm:w-14"
-      aria-label="Previous certificate"
-    >
-      ‹
-    </button>
+      {/* Back to Home - consistent footer navigation */}
+      <section className="border-t border-slate-200 bg-slate-50 px-6 py-8 sm:px-8 lg:px-12">
+        <div className="mx-auto flex max-w-7xl justify-center">
+          <a
+            href="/"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-500 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+          >
+            <span aria-hidden="true">←</span>
+            Back to Home
+          </a>
+        </div>
+      </section>
 
-    <div
-      className="flex max-h-[90vh] w-full max-w-6xl flex-col items-center"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <img
-        src={certificateViewer.images[certificateViewer.index].src}
-        alt={certificateViewer.images[certificateViewer.index].alt}
-        className="max-h-[78vh] max-w-full rounded-lg object-contain"
-      />
+      <style>{`.about-rich p{margin:.8rem 0}.about-rich ul,.about-rich ol{margin:1rem 0;padding-left:1.5rem}.about-rich ul{list-style:disc}.about-rich ol{list-style:decimal}.about-rich li{margin:.45rem 0}.about-rich img{max-width:100%;height:auto;border-radius:1rem;margin:1rem 0}.about-rich .about-certificate-gallery{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1.25rem;margin:1.5rem 0}.about-rich .about-certificate-card{display:flex;min-width:0;flex-direction:column;overflow:hidden;border:1px solid #e2e8f0;border-radius:1rem;background:#fff;padding:.75rem;box-shadow:0 8px 24px rgb(15 23 42 / .07);transition:transform .2s ease,box-shadow .2s ease}.about-rich .about-certificate-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgb(15 23 42 / .12)}.about-rich img.about-certificate-image{display:block;width:100%;height:230px;object-fit:contain;background:#f8fafc;border-radius:.65rem;margin:0;padding:.5rem}.about-rich .about-certificate-caption{padding:.75rem .25rem .25rem;text-align:center;font-size:.875rem;font-weight:600;color:#334155}@media(min-width:640px){.about-rich .about-certificate-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(min-width:1024px){.about-rich .about-certificate-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}.about-rich strong{font-weight:600}.about-rich a{color:#0284c7;text-decoration:underline}`}</style>
 
-      {certificateViewer.images[certificateViewer.index].caption && (
-        <p className="mt-4 text-center text-sm font-medium text-white sm:text-base">
-          {certificateViewer.images[certificateViewer.index].caption}
-        </p>
+      {certificateViewer && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/95 p-3 backdrop-blur-sm sm:p-6"
+          onClick={() => setCertificateViewer(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Certificate image viewer"
+        >
+          <button
+            type="button"
+            onClick={() => setCertificateViewer(null)}
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20"
+            aria-label="Close image viewer"
+          >
+            ×
+          </button>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setCertificateViewer((current) => ({
+                ...current,
+                index:
+                  (current.index - 1 + current.images.length) %
+                  current.images.length,
+              }));
+            }}
+            className="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20 sm:left-6 sm:h-14 sm:w-14"
+            aria-label="Previous certificate"
+          >
+            ‹
+          </button>
+
+          <div
+            className="flex max-h-[90vh] w-full max-w-6xl flex-col items-center"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={certificateViewer.images[certificateViewer.index].src}
+              alt={certificateViewer.images[certificateViewer.index].alt}
+              className="max-h-[78vh] max-w-full rounded-lg object-contain"
+            />
+
+            {certificateViewer.images[certificateViewer.index].caption && (
+              <p className="mt-4 text-center text-sm font-medium text-white sm:text-base">
+                {certificateViewer.images[certificateViewer.index].caption}
+              </p>
+            )}
+
+            <p className="mt-2 text-sm text-slate-300">
+              {certificateViewer.index + 1} / {certificateViewer.images.length}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              setCertificateViewer((current) => ({
+                ...current,
+                index: (current.index + 1) % current.images.length,
+              }));
+            }}
+            className="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20 sm:right-6 sm:h-14 sm:w-14"
+            aria-label="Next certificate"
+          >
+            ›
+          </button>
+        </div>
       )}
-
-      <p className="mt-2 text-sm text-slate-300">
-        {certificateViewer.index + 1} / {certificateViewer.images.length}
-      </p>
-    </div>
-
-    <button
-      type="button"
-      onClick={(event) => {
-        event.stopPropagation();
-        setCertificateViewer((current) => ({
-          ...current,
-          index: (current.index + 1) % current.images.length,
-        }));
-      }}
-      className="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20 sm:right-6 sm:h-14 sm:w-14"
-      aria-label="Next certificate"
-    >
-      ›
-    </button>
-  </div>
-)}
-
-  </main>;
+    </main>
+  );
 }
