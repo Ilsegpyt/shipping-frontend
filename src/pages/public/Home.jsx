@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import WebsiteNavbar from "../../components/website/WebsiteNavbar";
-import WebsiteFooter from "../../components/website/WebsiteFooter";
 import { Link, useLocation } from "react-router-dom";
 
 import contentService from "../../services/contentService";
@@ -481,48 +479,48 @@ function Home() {
 
         {/* Navbar */}
 
-        <WebsiteNavbar />
-
         {/* Hero Content */}
 
-        <div className="relative z-10 flex min-h-screen w-full items-center px-6 pb-20 pt-32 lg:px-16">
-          <div className="max-w-3xl">
-            <div className="mb-6 inline-flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-4 py-2 backdrop-blur-md">
-              <span className="h-2 w-2 rounded-full bg-sky-400" />
+        <div className="relative z-10 flex min-h-[100svh] w-full items-center px-4 pb-16 pt-32 sm:px-6 sm:pb-20 sm:pt-36 lg:min-h-screen lg:px-16 lg:pt-32">
+          <div className="mx-auto w-full max-w-7xl">
+            <div className="max-w-3xl">
+              <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md sm:mb-6 sm:gap-3 sm:px-4">
+                <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" />
 
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-white/90">
-                International Logistics Solutions
-              </span>
-            </div>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 sm:text-xs sm:tracking-[0.2em]">
+                  International Logistics Solutions
+                </span>
+              </div>
 
-            <h1 className="max-w-4xl text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
-              You grow your business.
-              <span className="block text-sky-400">
-                We'll take care of the logistics.
-              </span>
-            </h1>
+              <h1 className="max-w-4xl text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+                You grow your business.
+                <span className="mt-1 block text-sky-400 sm:mt-0">
+                  We'll take care of the logistics.
+                </span>
+              </h1>
 
-            <p className="mt-7 max-w-2xl text-base leading-7 text-white/75 sm:text-lg">
-              As the world of commerce is changing, it's time to change your
-              business with it. Move your logistics service from offline to
-              online. With ILS, shipment, tracking and managing your shipments
-              is easy
-            </p>
+              <p className="mt-5 max-w-2xl text-sm leading-6 text-white/80 sm:mt-7 sm:text-base sm:leading-7 lg:text-lg">
+                As the world of commerce is changing, it's time to change your
+                business with it. Move your logistics service from offline to
+                online. With ILS, shipment, tracking and managing your shipments
+                is easy
+              </p>
 
-            <div className="mt-9 flex flex-wrap gap-4">
-              <a
-                href="#solutions"
-                className="rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/20 transition hover:bg-sky-400"
-              >
-                Explore Solutions
-              </a>
+              <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-4">
+                <a
+                  href="#solutions"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-sky-500 px-6 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-sky-950/20 transition hover:bg-sky-400 sm:w-auto"
+                >
+                  Explore Solutions
+                </a>
 
-              <a
-                href="#contact"
-                className="rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15"
-              >
-                Talk to ILS
-              </a>
+                <a
+                  href="#contact"
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-center text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15 sm:w-auto"
+                >
+                  Talk to ILS
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -530,24 +528,24 @@ function Home() {
 
       {/* ==================== Industries ==================== */}
 
-      <section id="industries" className="bg-slate-50 py-24 sm:py-28">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <section id="industries" className="bg-slate-50 py-16 sm:py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
               Industries
             </p>
 
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
               Logistics expertise built around your industry.
             </h2>
 
-            <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
               Industry-focused logistics solutions designed to support your
               operations, supply chain and business goals.
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:mt-14 lg:grid-cols-3">
             <IndustryCard
               icon={<HeartPulse size={24} strokeWidth={1.8} />}
               title={
@@ -611,19 +609,19 @@ function Home() {
 
       {/* ==================== Solutions ==================== */}
 
-      <section id="solutions" className="bg-white py-24 sm:py-28">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+      <section id="solutions" className="bg-white py-16 sm:py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col justify-between gap-5 sm:gap-6 lg:flex-row lg:items-end">
             <div className="max-w-2xl">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
                 ILS Solutions
               </p>
 
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
                 End-to-end logistics solutions.
               </h2>
 
-              <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
                 Flexible logistics solutions designed to move your cargo
                 efficiently across every stage of the supply chain.
               </p>
@@ -638,14 +636,14 @@ function Home() {
                   behavior: "smooth",
                 });
               }}
-              className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600"
+              className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600 sm:px-5"
             >
               Discuss your requirements
               <ArrowUpRight size={17} />
             </a>
           </div>
 
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:mt-14 lg:grid-cols-4">
             <SolutionCard
               image={seaFreight}
               title={seaFreightContent?.title || "Sea Freight"}
@@ -702,39 +700,39 @@ function Home() {
 
       {/* ==================== Partners ==================== */}
 
-      <section className="overflow-hidden bg-slate-50 py-24 sm:py-28">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <section className="overflow-hidden bg-slate-50 py-16 sm:py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
               ILS Partners
             </p>
 
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
               Connected to a global network.
             </h2>
 
-            <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
               Strong partnerships help us deliver reliable logistics solutions
               across global markets.
             </p>
           </div>
 
-          <div className="relative mt-16 overflow-hidden">
+          <div className="relative mt-10 overflow-hidden sm:mt-12 lg:mt-16">
             <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-slate-50 to-transparent sm:w-40" />
 
             <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-slate-50 to-transparent sm:w-40" />
 
-            <div className="flex w-max animate-[partners-scroll_45s_linear_infinite]">
+            <div className="partners-track flex w-max animate-[partners-scroll_45s_linear_infinite]">
               <div className="flex items-center gap-6 px-3">
                 {partners.map((partner, index) => (
                   <div
                     key={`partner-${index}`}
-                    className="flex h-24 w-40 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 shadow-sm"
+                    className="flex h-20 w-32 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:h-24 sm:w-40 sm:rounded-2xl sm:px-6"
                   >
                     <img
                       src={partner}
                       alt={`ILS Partner ${index + 1}`}
-                      className="max-h-12 max-w-full object-contain"
+                      className="max-h-10 max-w-full object-contain sm:max-h-12"
                     />
                   </div>
                 ))}
@@ -744,12 +742,12 @@ function Home() {
                 {partners.map((partner, index) => (
                   <div
                     key={`partner-copy-${index}`}
-                    className="flex h-24 w-40 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 shadow-sm"
+                    className="flex h-20 w-32 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:h-24 sm:w-40 sm:rounded-2xl sm:px-6"
                   >
                     <img
                       src={partner}
                       alt=""
-                      className="max-h-12 max-w-full object-contain"
+                      className="max-h-10 max-w-full object-contain sm:max-h-12"
                     />
                   </div>
                 ))}
@@ -757,67 +755,43 @@ function Home() {
             </div>
           </div>
         </div>
-
         <style>
           {`
+    @keyframes partners-scroll {
+      from {
+        transform: translateX(0);
+      }
 
+      to {
+        transform: translateX(-50%);
+      }
+    }
 
-
-                        @keyframes partners-scroll {
-
-
-
-                            from {
-
-
-
-                                transform: translateX(0);
-
-
-
-                            }
-
-
-
-
-
-
-
-                            to {
-
-
-
-                                transform: translateX(-50%);
-
-
-
-                            }
-
-
-
-                        }
-
-
-
-                    `}
+    @media (prefers-reduced-motion: reduce) {
+      .partners-track {
+        animation: none !important;
+        transform: none !important;
+      }
+    }
+  `}
         </style>
       </section>
 
       {/* ==================== News ==================== */}
 
-      <section id="news" className="bg-white py-24 sm:py-28">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <section id="news" className="bg-white py-16 sm:py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div className="max-w-2xl">
               <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
                 Media Room
               </p>
 
-              <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
                 Latest from ILS.
               </h2>
 
-              <p className="mt-5 text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
                 Discover the latest news, industry insights and milestones from
                 ILS Egypt.
               </p>
@@ -825,25 +799,26 @@ function Home() {
 
             <a
               href="/news"
-              className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600"
+              className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600 sm:px-5"
             >
               View All News
               <ArrowUpRight size={17} />
             </a>
           </div>
 
-          <div className="mt-14 grid gap-6 lg:grid-cols-3">
+          <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:mt-14 lg:grid-cols-3">
             {newsItems.map((news) => (
               <Link
                 key={news.id}
                 to={news.to}
-                className="group overflow-hidden rounded-3xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60"
+                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-3xl"
               >
                 <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
                   <img
                     src={news.image}
                     alt={news.title}
-                    className="h-full w-full object-cover transition duration-700 group-hover:scale-105"
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
 
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
@@ -855,7 +830,7 @@ function Home() {
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="flex flex-1 flex-col p-4 sm:p-5 lg:p-6">
                   <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                     <span>{news.date}</span>
                   </div>
@@ -884,9 +859,9 @@ function Home() {
 
       {/* ==================== Why ILS ==================== */}
 
-      <section id="about" className="bg-slate-950 py-24 sm:py-28">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid gap-14 lg:grid-cols-2 lg:items-center">
+      <section id="about" className="bg-slate-950 py-16 sm:py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid gap-10 sm:gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
             {/* Left */}
 
             <div>
@@ -894,11 +869,11 @@ function Home() {
                 Why ILS
               </p>
 
-              <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">
                 WHY ILS SHOULD BE YOUR TRANSPORT AND LOGISTICS COMPANY OF CHOICE
               </h2>
 
-              <p className="mt-6 max-w-xl text-base leading-7 text-slate-300 sm:text-lg">
+              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300 sm:mt-6 sm:text-base sm:leading-8 lg:text-lg">
                 As a global freight forwarder, ILS provides and manages supply
                 chain solutions for thousands of companies every day. Whether
                 you are a small family-run business or large global corporation
@@ -915,7 +890,7 @@ function Home() {
 
             {/* Right */}
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
               <WhyCard
                 number="01"
                 title="Global Network"
@@ -946,9 +921,9 @@ function Home() {
 
       {/* ==================== Contact ==================== */}
 
-      <section id="contact" className="bg-slate-50 py-24 sm:py-28">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-20">
+      <section id="contact" className="bg-slate-50 py-16 sm:py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-start gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16 xl:gap-20">
             {/* Left */}
 
             <div>
@@ -956,11 +931,11 @@ function Home() {
                 Contact ILS
               </p>
 
-              <h2 className="mt-4 max-w-xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
                 Let’s move your business forward.
               </h2>
 
-              <p className="mt-6 max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
+              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-600 sm:mt-6 sm:text-base sm:leading-8 lg:text-lg">
                 Tell us what you need and our team will get back to you to
                 discuss the right logistics solution for your business.
               </p>
@@ -979,7 +954,7 @@ function Home() {
 
             {/* Right */}
 
-            <div className="rounded-3xl border border-slate-200 bg-white p-7 shadow-sm sm:p-9">
+            <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8 xl:p-9">
               <form onSubmit={handleContactSubmit} className="space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
@@ -992,7 +967,7 @@ function Home() {
                       name="fullName"
                       placeholder="Your name"
                       required
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
 
@@ -1006,7 +981,7 @@ function Home() {
                       name="company"
                       placeholder="Company name"
                       required
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
                 </div>
@@ -1022,7 +997,7 @@ function Home() {
                       name="email"
                       placeholder="you@company.com"
                       required
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
 
@@ -1036,7 +1011,7 @@ function Home() {
                       name="phone"
                       placeholder="+20"
                       required
-                      className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
                 </div>
@@ -1049,7 +1024,7 @@ function Home() {
                   <select
                     name="service"
                     required
-                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     defaultValue=""
                   >
                     <option value="" disabled>
@@ -1114,75 +1089,78 @@ function Home() {
       </section>
 
       {/* ==================== Footer ==================== */}
-      <WebsiteFooter />
     </main>
   );
 }
 
-function IndustryCard({
-  icon,
-
-  title,
-
-  description,
-
-  to,
-}) {
+function IndustryCard({ icon, title, description, to }) {
   return (
     <Link
       to={to}
-      className="group relative block overflow-hidden rounded-3xl border border-slate-200 bg-white p-7 transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60"
+      className="group relative flex h-full min-h-[220px] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:min-h-[240px] sm:rounded-3xl sm:p-7"
     >
-      <div className="flex items-start justify-between">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
+      {/* Subtle hover accent */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-sky-500 transition-transform duration-300 group-hover:scale-x-100" />
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors duration-300 group-hover:bg-sky-500 group-hover:text-white sm:h-12 sm:w-12 sm:rounded-2xl">
           {icon}
         </div>
 
         <ArrowUpRight
           size={20}
-          className="text-slate-300 transition duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-sky-500"
+          aria-hidden="true"
+          className="mt-1 shrink-0 text-slate-300 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-sky-500"
         />
       </div>
 
-      <h3 className="mt-7 text-xl font-semibold text-slate-900">{title}</h3>
+      <h3 className="mt-6 text-lg font-semibold leading-snug text-slate-900 transition-colors duration-300 group-hover:text-sky-700 sm:mt-7 sm:text-xl">
+        {title}
+      </h3>
 
-      <p className="mt-4 text-sm leading-6 text-slate-600">{description}</p>
+      <p className="mt-3 flex-1 text-sm leading-6 text-slate-600 sm:mt-4">
+        {description}
+      </p>
+
+      <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-sky-600 sm:mt-6">
+        <span>Explore industry</span>
+        <span className="transition-transform duration-300 group-hover:translate-x-1">
+          <ArrowUpRight size={16} aria-hidden="true" />
+        </span>
+      </div>
     </Link>
   );
 }
 
-function SolutionCard({
-  image,
-
-  title,
-
-  to,
-}) {
+function SolutionCard({ image, title, to }) {
   return (
     <Link
       to={to}
-      className="group relative block aspect-[4/5] overflow-hidden rounded-3xl bg-slate-900"
+      className="group relative block aspect-[4/3] overflow-hidden rounded-2xl bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:aspect-[3/4] sm:rounded-3xl lg:aspect-[4/5]"
     >
       <img
         src={image}
         alt={title}
-        className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-105"
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
       />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent transition-colors duration-300 group-hover:from-slate-950/95" />
 
-      <div className="absolute inset-x-0 bottom-0 p-6">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-white/60">
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65 sm:text-xs sm:tracking-[0.18em]">
               Solution
             </p>
 
-            <h3 className="mt-2 text-xl font-semibold text-white">{title}</h3>
+            <h3 className="mt-2 break-words text-lg font-semibold leading-snug text-white sm:text-xl">
+              {title}
+            </h3>
           </div>
 
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-md transition group-hover:bg-sky-500">
-            <ArrowUpRight size={19} />
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors duration-300 group-hover:border-sky-500 group-hover:bg-sky-500 sm:h-10 sm:w-10">
+            <ArrowUpRight size={19} aria-hidden="true" />
           </span>
         </div>
       </div>
@@ -1190,41 +1168,51 @@ function SolutionCard({
   );
 }
 
-function WhyCard({
-  number,
-
-  title,
-
-  description,
-}) {
+function WhyCard({ number, title, description }) {
   return (
-    <article className="group rounded-3xl border border-white/10 bg-white/[0.04] p-6 transition duration-300 hover:border-sky-400/30 hover:bg-white/[0.07]">
-      <span className="text-xs font-semibold tracking-[0.2em] text-sky-400">
-        {number}
-      </span>
+    <article className="group relative flex h-full min-h-[190px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/30 hover:bg-white/[0.07] hover:shadow-xl hover:shadow-black/10 focus-within:border-sky-400/40 sm:min-h-[210px] sm:rounded-3xl sm:p-6">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold tracking-[0.2em] text-sky-400">
+          {number}
+        </span>
 
-      <h3 className="mt-6 text-xl font-semibold text-white">{title}</h3>
+        <span
+          aria-hidden="true"
+          className="h-px w-10 bg-sky-400/30 transition-all duration-300 group-hover:w-16 group-hover:bg-sky-400/70"
+        />
+      </div>
 
-      <p className="mt-3 text-sm leading-6 text-slate-400">{description}</p>
+      <h3 className="mt-5 text-lg font-semibold leading-snug text-white transition-colors duration-300 group-hover:text-sky-300 sm:mt-6 sm:text-xl">
+        {title}
+      </h3>
+
+      <p className="mt-3 flex-1 text-sm leading-6 text-slate-400">
+        {description}
+      </p>
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-gradient-to-r from-sky-400/70 to-transparent transition-transform duration-300 group-hover:scale-x-100"
+      />
     </article>
   );
 }
 
-function ContactInfo({
-  label,
-
-  value,
-}) {
+function ContactInfo({ label, value }) {
   return (
-    <div className="flex items-start gap-4">
-      <div className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-sky-500" />
+    <div className="group flex min-w-0 items-start gap-3 sm:gap-4">
+      <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 transition-colors duration-300 group-hover:bg-sky-100">
+        <span className="h-2 w-2 rounded-full bg-sky-500" />
+      </div>
 
-      <div>
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-400">
           {label}
         </p>
 
-        <p className="mt-1 text-base font-medium text-slate-900">{value}</p>
+        <p className="mt-1 break-words text-sm font-medium leading-6 text-slate-900 sm:text-base sm:leading-7">
+          {value}
+        </p>
       </div>
     </div>
   );

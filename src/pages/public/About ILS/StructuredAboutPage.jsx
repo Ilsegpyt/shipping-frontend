@@ -1,8 +1,7 @@
 
 import { useEffect, useState } from "react";
 import contentService from "../../../services/contentService";
-import WebsiteNavbar from "../../../components/website/WebsiteNavbar";
-import WebsiteFooter from "../../../components/website/WebsiteFooter";
+
 import { StructuredAboutRenderer } from "../../../components/common/StructuredAboutContent";
 
 const getTypeName = (type) =>
@@ -48,6 +47,7 @@ async function findPageInCategory(category, pageTitle, visited = new Set()) {
 export default function StructuredAboutPage({
   pageTitle,
   parentCategoryTitle = "About ILS",
+  styleVariant = "about",
 }) {
   const [page, setPage] = useState(null);
   const [parentTitle, setParentTitle] = useState(parentCategoryTitle);
@@ -69,12 +69,12 @@ export default function StructuredAboutPage({
         const category = roots.find(
           (item) =>
             getTypeName(item.type) === "Category" &&
-            normalizeTitle(item.title) === normalizeTitle(parentCategoryTitle)
+            normalizeTitle(item.title) === normalizeTitle(parentCategoryTitle),
         );
 
         if (!category?.id) {
           throw new Error(
-            `Category "${parentCategoryTitle}" was not found in CMS.`
+            `Category "${parentCategoryTitle}" was not found in CMS.`,
           );
         }
 
@@ -82,7 +82,7 @@ export default function StructuredAboutPage({
 
         if (!summary?.id) {
           throw new Error(
-            `Page "${pageTitle}" was not found under "${parentCategoryTitle}".`
+            `Page "${pageTitle}" was not found under "${parentCategoryTitle}".`,
           );
         }
 
@@ -111,7 +111,6 @@ export default function StructuredAboutPage({
 
   return (
     <>
-      <WebsiteNavbar />
       {loading ? (
         <main className="min-h-screen bg-slate-50" />
       ) : error ? (
@@ -119,9 +118,12 @@ export default function StructuredAboutPage({
           <p className="text-center text-red-600">{error}</p>
         </main>
       ) : (
-        <StructuredAboutRenderer page={page} parentTitle={parentTitle} />
+        <StructuredAboutRenderer
+          page={page}
+          parentTitle={parentTitle}
+          styleVariant={styleVariant}
+        />
       )}
-      <WebsiteFooter />
     </>
   );
 }

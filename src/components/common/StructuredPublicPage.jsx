@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import contentService from "../../services/contentService";
-import WebsiteNavbar from "../website/WebsiteNavbar";
-import WebsiteFooter from "../website/WebsiteFooter";
+
 import { StructuredAboutRenderer } from "./StructuredAboutContent";
 
 const getTypeName = (type) => typeof type === "string" ? type : ({ 1: "Category", 2: "Page", 3: "Post", 4: "Link" }[type] || "");
@@ -32,5 +31,21 @@ export default function StructuredAboutPage({ pageTitle, parentCategoryTitle = "
     };
     load(); return () => { active = false; };
   }, [pageTitle, parentCategoryTitle]);
-  return <><WebsiteNavbar />{loading ? <main className="min-h-screen bg-slate-50" /> : error ? <main className="flex min-h-[60vh] items-center justify-center px-6"><p className="text-red-600">{error}</p></main> : <StructuredAboutRenderer page={page} parentTitle={parentTitle} styleVariant={styleVariant} />}<WebsiteFooter /></>;
+return (
+  <>
+    {loading ? (
+      <main className="min-h-screen bg-slate-50" />
+    ) : error ? (
+      <main className="flex min-h-[60vh] items-center justify-center px-6">
+        <p className="text-red-600">{error}</p>
+      </main>
+    ) : (
+      <StructuredAboutRenderer
+        page={page}
+        parentTitle={parentTitle}
+        styleVariant={styleVariant}
+      />
+    )}
+  </>
+);
 }

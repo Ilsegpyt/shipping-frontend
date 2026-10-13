@@ -613,16 +613,20 @@ body:
 };
 
     try {
-
       setSavingContent(true);
 
       const response = editingContentId
-
         ? await contentService.update(editingContentId, payload)
-
         : await contentService.create(payload);
 
-      console.log("Content saved:", response.data);
+      //console.log("Content saved:", response.data);
+
+      console.log("Saved response:", response.data);
+      console.log("Submitted body:", payload.body);
+      console.log(
+        "Returned body:",
+        response.data?.body ?? response.data?.data?.body,
+      );
 
       setShowAddForm(false);
 
@@ -632,10 +636,9 @@ body:
       setIsStructuredAboutPage(false);
       setAboutPageForm(createEmptyAboutPage());
 
-setPhilosophyForm(createEmptyPhilosophyContent());
+      setPhilosophyForm(createEmptyPhilosophyContent());
 
       setForm({
-
         parentId: "",
 
         title: "",
@@ -651,7 +654,6 @@ setPhilosophyForm(createEmptyPhilosophyContent());
         category: "",
 
         publishedAt: "",
-
       });
 
       const rootResponse = await contentService.getRootContent();
@@ -661,31 +663,20 @@ setPhilosophyForm(createEmptyPhilosophyContent());
       setChildren({});
 
       setExpandedId(null);
-
     } catch (err) {
-
       console.error(
-
         "Failed to save content:",
 
         err,
-
       );
 
       setSaveError(
-
         err.response?.data?.message ||
-
           err.response?.data?.error ||
-
           "Failed to save content.",
-
       );
-
     } finally {
-
       setSavingContent(false);
-
     }
 
   };
