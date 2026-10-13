@@ -1,9 +1,11 @@
-import StructuredAboutPage from "./StructuredAboutPage";
+import StructuredPublicPage from "../../../components/common/StructuredPublicPage";
 
-// Philosophy now uses the same CMS loader and public renderer as other About ILS pages.
-// Its visual treatment is selected through a renderer variant; saved CMS content remains unchanged.
 export default function Philosophy() {
   return (
-    <StructuredAboutPage pageTitle="ILS Philosophy" styleVariant="philosophy" />
+    <StructuredPublicPage
+      parentCategoryTitle="About ILS"
+      pageTitle="ILS Philosophy"
+      styleVariant="philosophy"
+    />
   );
 }

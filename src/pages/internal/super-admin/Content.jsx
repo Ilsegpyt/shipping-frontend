@@ -156,6 +156,97 @@ function parsePhilosophyBody(body = "") {
     };
 }
 
+function philosophyToAboutPage(content) {
+  const cards = (content.cards || []).map((card) => {
+    const normalized = normalizeCard(card, 0);
+
+    return {
+      id: normalized.id,
+      label: "",
+      title: normalized.title,
+      subtitle: "",
+      contentBlocks: normalized.contentBlocks,
+    };
+  });
+
+  const highlights = normalizeGlobalItems(
+    content.globalHighlights,
+    content.highlight,
+    "global-highlight",
+  );
+
+  const closings = normalizeGlobalItems(
+    content.globalClosings,
+    content.closing,
+    "global-closing",
+  );
+
+  return {
+    schema: "ils-about-page-v1",
+    introLabel: content.introLabel || "",
+    introTitle: content.introTitle || "",
+    introText: content.introText || "",
+    sections: cards,
+    highlights,
+    closings,
+    pageOrder: (content.pageOrder || []).map((item) => ({
+      type:
+        item.type === "card"
+          ? "section"
+          : item.type === "globalHighlight"
+            ? "highlight"
+            : item.type === "globalClosing"
+              ? "closing"
+              : item.type,
+      id: item.id,
+    })),
+    legacyHtml: content.legacyHtml || "",
+  };
+}
+
+function aboutPageToPhilosophy(data, previous = {}) {
+  const cards = (data.sections || []).map((section) => {
+    const blocks = (section.contentBlocks || []).map((block) => ({
+      id: block.id,
+      type: block.type,
+      text: block.text || "",
+    }));
+
+    return normalizeCard(
+      {
+        id: section.id,
+        title: section.title || "",
+        contentBlocks: blocks,
+      },
+      0,
+    );
+  });
+
+  return {
+    ...createEmptyPhilosophyContent(),
+    ...previous,
+    schema: PHILOSOPHY_SCHEMA,
+    introLabel: data.introLabel || "",
+    introTitle: data.introTitle || "",
+    introText: data.introText || "",
+    cards,
+    globalHighlights: data.highlights || [],
+    globalClosings: data.closings || [],
+    pageOrder: (data.pageOrder || []).map((item) => ({
+      type:
+        item.type === "section"
+          ? "card"
+          : item.type === "highlight"
+            ? "globalHighlight"
+            : item.type === "closing"
+              ? "globalClosing"
+              : item.type,
+      id: item.id,
+    })),
+    legacyHtml: previous.legacyHtml || data.legacyHtml || "",
+  };
+}
+
 function serializePhilosophyContent(content) {
     return PHILOSOPHY_MARKER + JSON.stringify({
         ...content,
@@ -423,27 +514,22 @@ if (
 
   (
 
-    isPhilosophyPage
-
-      ? ![
-
-          philosophyForm.introLabel,
-
-          philosophyForm.introTitle,
-
-          philosophyForm.introText,
-
-          ...philosophyForm.cards.flatMap((card) => [
-            card.title,
-            card.text,
-            ...(card.contentBlocks || []).map((item) => item.text),
-          ]),
-
-        ].some((value) => String(value || "").trim())
-
-      : isStructuredAboutPage
-        ? ![aboutPageForm.introLabel, aboutPageForm.introTitle, aboutPageForm.introText, ...(aboutPageForm.sections || []).flatMap((section) => [section.title, section.subtitle, ...(section.contentBlocks || []).map((block) => block.text)]), ...(aboutPageForm.highlights || []).map((item) => item.text), ...(aboutPageForm.closings || []).map((item) => item.text)].some((value) => String(value || "").trim())
-        : !(form.body || "").trim()
+    
+isPhilosophyPage || isStructuredAboutPage
+    ? ![
+        aboutPageForm.introLabel,
+        aboutPageForm.introTitle,
+        aboutPageForm.introText,
+        ...(aboutPageForm.sections || []).flatMap((section) => [
+            section.label,
+            section.title,
+            section.subtitle,
+            ...(section.contentBlocks || []).map((block) => block.text),
+        ]),
+        ...(aboutPageForm.highlights || []).map((item) => item.text),
+        ...(aboutPageForm.closings || []).map((item) => item.text),
+    ].some((value) => String(value || "").trim())
+    : !(form.body || "").trim()
 
   )
 
@@ -495,14 +581,18 @@ const payload = {
 
   type: form.type,
 
-  body:
+
+body:
     form.type === "Page" || form.type === "Post"
-      ? isPhilosophyPage
-        ? serializePhilosophyContent({ ...philosophyForm, legacyHtml: philosophyForm.legacyHtml || "" })
-        : isStructuredAboutPage
-          ? serializeAboutPage(aboutPageForm)
-          : form.body || null
-      : null,
+        ? isPhilosophyPage
+            ? serializePhilosophyContent(
+                aboutPageToPhilosophy(aboutPageForm, philosophyForm)
+              )
+            : isStructuredAboutPage
+                ? serializeAboutPage(aboutPageForm)
+                : form.body || null
+        : null,
+
 
   featuredImage:
 
@@ -723,6 +813,7 @@ const isStructuredAbout =
   type === "Page" &&
   [
     "purpose and strategy",
+    "ILS Philosophy",
     "ils values",
     "certificates",
     "road transportation",
@@ -773,19 +864,23 @@ setForm({
 
 });
 
+
+const parsedPhilosophy = isPhilosophy
+  ? parsePhilosophyBody(content.body || "")
+  : createEmptyPhilosophyContent();
+
 setIsPhilosophyPage(isPhilosophy);
 setIsStructuredAboutPage(isStructuredAbout);
-setAboutPageForm(isStructuredAbout ? parseAboutPage(content.body || "") : createEmptyAboutPage());
 
-setPhilosophyForm(
-
-    isPhilosophy
-
-        ? parsePhilosophyBody(content.body || "")
-
-        : createEmptyPhilosophyContent()
-
+setAboutPageForm(
+  isPhilosophy
+    ? philosophyToAboutPage(parsedPhilosophy)
+    : isStructuredAbout
+      ? parseAboutPage(content.body || "")
+      : createEmptyAboutPage(),
 );
+
+setPhilosophyForm(parsedPhilosophy);
 
 setEditingContentId(contentId);
 
@@ -920,39 +1015,26 @@ setShowAddForm(true);
   };
 
   return (
-
     <div className="space-y-6">
-
       {/* Header */}
 
       <div className="flex items-center justify-between">
-
         <div>
-
           <h1 className="text-2xl font-bold text-slate-900">
-
             Content Management
-
           </h1>
 
           <p className="mt-1 text-sm text-slate-500">
-
             Manage website content and pages.
-
           </p>
-
         </div>
 
         <button
-
           type="button"
-
           onClick={() => {
-
             setEditingContentId(null);
 
             setForm({
-
               parentId: "",
 
               title: "",
@@ -968,133 +1050,85 @@ setShowAddForm(true);
               category: "",
 
               publishedAt: "",
-
             });
 
             setShowAddForm(true);
 
             setSaveError("");
-
           }}
-
           className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
-
         >
-
           + Add Content
-
         </button>
-
       </div>
 
       {/* Add Content Form */}
 
       {showAddForm && (
-
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-
           {/* Form Header */}
 
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-
             <div>
-
               <h2 className="text-base font-semibold text-slate-900">
-
                 {editingContentId ? "Edit Content" : "Add Content"}
-
               </h2>
 
               <p className="mt-1 text-xs text-slate-500">
-
                 {editingContentId
-
                   ? "Edit website content."
-
                   : "Create a new website content item."}
-
               </p>
-
             </div>
 
             <button
-
               type="button"
-
               onClick={() => {
-
                 setShowAddForm(false);
 
                 setEditingContentId(null);
 
                 setSaveError("");
-
               }}
-
               className="text-sm text-slate-400 hover:text-slate-700"
-
             >
-
               ✕
-
             </button>
-
           </div>
 
           {/* Form Fields */}
 
           <div className="grid gap-5 p-5 md:grid-cols-2">
-
             {/* Title */}
 
             <div>
-
               <label className="mb-2 block text-sm font-medium text-slate-700">
-
                 Title
-
               </label>
 
               <input
-
                 type="text"
-
                 name="title"
-
                 value={form.title}
-
                 onChange={handleFormChange}
-
                 placeholder="Enter title"
-
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
               />
-
             </div>
 
             {/* Type */}
 
             <div>
-
               <label className="mb-2 block text-sm font-medium text-slate-700">
-
                 Type
-
               </label>
 
               <select
-
                 name="type"
-
                 value={form.type}
-
                 onChange={handleTypeChange}
-
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
               >
-
                 <option value="Category">Category</option>
 
                 <option value="Page">Page</option>
@@ -1102,584 +1136,247 @@ setShowAddForm(true);
                 <option value="Post">Post</option>
 
                 <option value="Link">Link</option>
-
               </select>
-
             </div>
 
             {/* Parent Content */}
 
             <div>
-
               <label className="mb-2 block text-sm font-medium text-slate-700">
-
                 Parent Content
-
               </label>
 
               <select
-
                 name="parentId"
-
                 value={form.parentId}
-
                 onChange={handleFormChange}
-
                 className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
               >
-
                 <option value="">No Parent (Root Content)</option>
 
                 {contents.map((content) => (
-
                   <option key={content.id} value={content.id}>
-
                     {content.title}
-
                   </option>
-
                 ))}
-
               </select>
-
             </div>
 
             {/* Page / Post Body */}
 
-{(form.type === "Page" || form.type === "Post") && (
-
-    <div className="md:col-span-2 space-y-5">
-
-        {isPhilosophyPage ? (
-
-            <div className="space-y-6 rounded-2xl border border-sky-200 bg-sky-50/50 p-5">
-
-                <div>
-
-                    <h3 className="text-lg font-semibold text-slate-900">
-
-                        ILS Philosophy — Page Content
-
-                    </h3>
-
-                    <p className="mt-1 text-sm text-slate-600">
-
-                        Each field controls a specific section of the
-
-                        existing Philosophy page design.
-
-                    </p>
-
-                </div>
-
-                <div>
-
+            {(form.type === "Page" || form.type === "Post") && (
+              <div className="md:col-span-2 space-y-5">
+                {isPhilosophyPage || isStructuredAboutPage ? (
+                  <StructuredAboutEditor
+                    value={aboutPageForm}
+                    onChange={handleAboutPageChange}
+                    pageTitle={form.title || "About ILS Page"}
+                  />
+                ) : (
+                  <>
                     <label className="mb-2 block text-sm font-medium text-slate-700">
-
-                        Intro Label
-
-                    </label>
-
-                    <input
-
-                        value={philosophyForm.introLabel}
-
-                        onChange={(e) =>
-
-                            handlePhilosophyChange(
-
-                                "introLabel",
-
-                                e.target.value
-
-                            )
-
-                        }
-
-                        placeholder="Small label above the section title"
-
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
-
-                    />
-
-                </div>
-
-                <div>
-
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-
-                        Intro Title
-
-                    </label>
-
-                    <input
-
-                        value={philosophyForm.introTitle}
-
-                        onChange={(e) =>
-
-                            handlePhilosophyChange(
-
-                                "introTitle",
-
-                                e.target.value
-
-                            )
-
-                        }
-
-                        placeholder="Main title inside the white content card"
-
-                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm"
-
-                    />
-
-                </div>
-
-                <div>
-
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-
-                        Intro Text
-
+                      Body
                     </label>
 
                     <RichTextEditor
-
-                        value={philosophyForm.introText}
-
-                        onChange={(value) =>
-
-                            handlePhilosophyChange("introText", value)
-
-                        }
-
-                    />
-
-                </div>
-
-                <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
-                            <h4 className="text-base font-semibold text-slate-900">Page Content Order</h4>
-                            <p className="mt-1 text-sm text-slate-500">Add cards and page-level highlight/closing sections here, then move them up or down to control the public page order.</p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                            <button type="button" onClick={() => {
-                                const id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-                                const card = { id, title: "", text: "", contentBlocks: [{ id: `${id}-text-1`, type: "text", text: "" }] };
-                                handlePhilosophyChange("cards", [...(philosophyForm.cards || []), card]);
-                                handlePhilosophyChange("pageOrder", [...(philosophyForm.pageOrder || []), { type: "card", id }]);
-                            }} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white hover:bg-slate-800">+ Add Card</button>
-                            <button type="button" onClick={() => {
-                                const id = `global-highlight-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-                                handlePhilosophyChange("globalHighlights", [...(philosophyForm.globalHighlights || []), { id, text: "" }]);
-                                handlePhilosophyChange("pageOrder", [...(philosophyForm.pageOrder || []), { type: "globalHighlight", id }]);
-                            }} className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100">+ Page Highlight</button>
-                            <button type="button" onClick={() => {
-                                const id = `global-closing-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-                                handlePhilosophyChange("globalClosings", [...(philosophyForm.globalClosings || []), { id, text: "" }]);
-                                handlePhilosophyChange("pageOrder", [...(philosophyForm.pageOrder || []), { type: "globalClosing", id }]);
-                            }} className="rounded-lg border border-sky-300 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800 hover:bg-sky-100">+ Page Closing</button>
-                        </div>
-                    </div>
-                    {!(philosophyForm.pageOrder || []).length && <p className="rounded-lg border border-dashed border-slate-300 p-5 text-sm text-slate-500">No sections yet. Add a Card, Page Highlight, or Page Closing.</p>}
-                    {(philosophyForm.pageOrder || []).map((section, orderIndex) => {
-                        const moveSection = (direction) => {
-                            const next = [...philosophyForm.pageOrder]; const target = orderIndex + direction;
-                            if (target < 0 || target >= next.length) return;
-                            [next[orderIndex], next[target]] = [next[target], next[orderIndex]];
-                            handlePhilosophyChange("pageOrder", next);
-                        };
-                        const removeSection = () => {
-                            handlePhilosophyChange("pageOrder", philosophyForm.pageOrder.filter((_, i) => i !== orderIndex));
-                            if (section.type === "card") handlePhilosophyChange("cards", philosophyForm.cards.filter((item) => item.id !== section.id));
-                            if (section.type === "globalHighlight") handlePhilosophyChange("globalHighlights", philosophyForm.globalHighlights.filter((item) => item.id !== section.id));
-                            if (section.type === "globalClosing") handlePhilosophyChange("globalClosings", philosophyForm.globalClosings.filter((item) => item.id !== section.id));
-                        };
-                        const sectionCard = section.type === "card" ? philosophyForm.cards.find((item) => item.id === section.id) : null;
-                        const globalItem = section.type === "globalHighlight" ? philosophyForm.globalHighlights.find((item) => item.id === section.id) : section.type === "globalClosing" ? philosophyForm.globalClosings.find((item) => item.id === section.id) : null;
-                        const updateCard = (updates) => handlePhilosophyChange("cards", philosophyForm.cards.map((item) => item.id === section.id ? { ...item, ...updates } : item));
-                        const updateGlobal = (value) => handlePhilosophyChange(section.type === "globalHighlight" ? "globalHighlights" : "globalClosings", (section.type === "globalHighlight" ? philosophyForm.globalHighlights : philosophyForm.globalClosings).map((item) => item.id === section.id ? { ...item, text: value } : item));
-                        const label = section.type === "card" ? `Card: ${sectionCard?.title || `Card ${philosophyForm.cards.findIndex((item) => item.id === section.id) + 1}`}` : section.type === "globalHighlight" ? "Page-level Highlight Text" : "Page-level Closing Text";
-                        if (section.type === "card" && !sectionCard) return null;
-                        if (section.type !== "card" && !globalItem) return null;
-                        return <div key={`${section.type}-${section.id}`} className={`rounded-xl border p-4 ${section.type === "globalHighlight" ? "border-amber-200 bg-amber-50/40" : section.type === "globalClosing" ? "border-sky-200 bg-sky-50/40" : "border-slate-200 bg-slate-50/70"}`}>
-                            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                                <div><span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Section {orderIndex + 1}</span><h5 className="mt-1 text-sm font-semibold text-slate-900">{label}</h5></div>
-                                <div className="flex items-center gap-1">
-                                    <button type="button" disabled={orderIndex === 0} onClick={() => moveSection(-1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button>
-                                    <button type="button" disabled={orderIndex === philosophyForm.pageOrder.length - 1} onClick={() => moveSection(1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button>
-                                    <button type="button" onClick={removeSection} className="rounded px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50">Remove Section</button>
-                                </div>
-                            </div>
-                            {section.type === "card" ? <div className="space-y-4">
-                                <div><label className="mb-1.5 block text-sm font-medium text-slate-700">Card Title</label><input value={sectionCard.title || ""} onChange={(event) => updateCard({ title: event.target.value })} placeholder="Enter card title" className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100" /></div>
-                                <ContentBlockEditor blocks={Array.isArray(sectionCard.contentBlocks) && sectionCard.contentBlocks.length ? sectionCard.contentBlocks : [{ id: `${sectionCard.id}-text-1`, type: "text", text: sectionCard.text || "" }]} onChange={(contentBlocks) => updateCard({ contentBlocks, text: contentBlocks.find((block) => block.type === "text")?.text || "", highlights: contentBlocks.filter((block) => block.type === "highlight").map((block) => ({ id: block.id, text: block.text || "" })), closings: contentBlocks.filter((block) => block.type === "closing").map((block) => ({ id: block.id, text: block.text || "" })) })} />
-                            </div> : <RichTextEditor value={globalItem.text || ""} onChange={updateGlobal} />}
-                        </div>;
-                    })}
-                </div>
-
-            </div>
-
-        ) : isStructuredAboutPage ? (
-            <StructuredAboutEditor value={aboutPageForm} onChange={handleAboutPageChange} pageTitle={form.title || "About ILS Page"} />
-        ) : (
-
-            <>
-
-                <label className="mb-2 block text-sm font-medium text-slate-700">
-
-                    Body
-
-                </label>
-
-                <RichTextEditor
-
-                    value={form.body}
-
-                    onChange={(value) =>
-
+                      value={form.body}
+                      onChange={(value) =>
                         setForm((prev) => ({
-
-                            ...prev,
-
-                            body: value,
-
+                          ...prev,
+                          body: value,
                         }))
-
-                    }
-
-                />
-
-            </>
-
-        )}
-
-    </div>
-
-)}
+                      }
+                    />
+                  </>
+                )}
+              </div>
+            )}
 
             {/* Post Metadata */}
 
             {form.type === "Post" && (
-
               <>
-
                 <div>
-
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-
                     Category
-
                   </label>
 
                   <input
-
                     type="text"
-
                     name="category"
-
                     value={form.category}
-
                     onChange={handleFormChange}
-
                     placeholder="e.g. Company News"
-
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
                   />
-
                 </div>
 
                 <div>
-
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-
                     Published Date
-
                   </label>
 
                   <input
-
                     type="date"
-
                     name="publishedAt"
-
                     value={form.publishedAt}
-
                     onChange={handleFormChange}
-
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
                   />
-
                 </div>
-
               </>
-
             )}
 
             {/* Post Featured Image */}
 
             {form.type === "Post" && (
-
               <div>
-
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-
                   Featured Image
-
                 </label>
 
                 <input
-
                   type="file"
-
                   accept="image/*"
-
                   onChange={handleFeaturedImageChange}
-
                   disabled={uploadingImage}
-
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
                 />
 
                 {uploadingImage && (
-
                   <p className="mt-2 text-xs text-slate-500">
-
                     Uploading image...
-
                   </p>
-
                 )}
 
                 {form.featuredImage && (
-
                   <div className="relative mt-3 w-fit">
-
                     <img
-
                       src={
-
                         form.featuredImage?.startsWith("http")
-
                           ? form.featuredImage
-
                           : `http://localhost:5250${form.featuredImage}`
-
                       }
-
                       alt="Featured preview"
-
                       className="h-32 w-48 rounded-lg border border-slate-200 object-cover"
-
                     />
 
                     <button
-
                       type="button"
-
                       onClick={() =>
-
                         setForm((prev) => ({
-
                           ...prev,
 
                           featuredImage: "",
-
                         }))
-
                       }
-
                       className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow hover:bg-red-600"
-
                     >
-
                       ×
-
                     </button>
-
                   </div>
-
                 )}
-
               </div>
-
             )}
 
             {/* Link URL */}
 
             {form.type === "Link" && (
-
               <div>
-
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-
                   Link URL
-
                 </label>
 
                 <input
-
                   type="url"
-
                   name="linkUrl"
-
                   value={form.linkUrl}
-
                   onChange={handleFormChange}
-
                   placeholder="https\\://example.com"
-
                   className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-
                 />
-
               </div>
-
             )}
-
           </div>
 
           {/* Save Error */}
 
           {saveError && (
-
             <div className="mx-5 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-
               {saveError}
-
             </div>
-
           )}
 
           {/* Form Actions */}
 
           <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
-
             <button
-
               type="button"
-
               onClick={() => {
-
                 setShowAddForm(false);
 
                 setEditingContentId(null);
 
                 setSaveError("");
-
               }}
-
               disabled={savingContent}
-
               className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-
             >
-
               Cancel
-
             </button>
 
             <button
-
               type="button"
-
               onClick={handleSaveContent}
-
               disabled={savingContent}
-
               className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-
             >
-
               {savingContent
-
                 ? "Saving..."
-
                 : editingContentId
-
                   ? "Update Content"
-
                   : "Save Content"}
-
             </button>
-
           </div>
-
         </div>
-
       )}
 
       {deleteConfirm.open && (
-
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 px-4">
-
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-
             <div className="border-b border-red-100 px-6 py-5">
-
               <div className="flex items-center gap-3">
-
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
-
                   <span className="text-lg font-bold">!</span>
-
                 </div>
 
                 <div>
-
                   <h3 className="text-lg font-semibold text-slate-900">
-
                     Delete Content
-
                   </h3>
 
                   <p className="mt-1 text-sm text-slate-500">
-
                     This action cannot be undone.
-
                   </p>
-
                 </div>
-
               </div>
-
             </div>
 
             <div className="px-6 py-5">
-
               <p className="text-sm leading-6 text-slate-600">
-
                 Are you sure you want to delete{" "}
-
                 <span className="font-semibold text-slate-900">
-
                   {deleteConfirm.title || "this content"}
-
                 </span>
-
                 ?
-
               </p>
-
             </div>
 
             <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
-
               <button
-
                 type="button"
-
                 onClick={() =>
-
                   setDeleteConfirm({
-
                     open: false,
 
                     contentId: null,
@@ -1687,317 +1384,184 @@ setShowAddForm(true);
                     parentId: null,
 
                     title: "",
-
                   })
-
                 }
-
                 className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
-
               >
-
                 Cancel
-
               </button>
 
               <button
-
                 type="button"
-
                 onClick={confirmDeleteContent}
-
                 className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
-
               >
-
                 Delete
-
               </button>
-
             </div>
-
           </div>
-
         </div>
-
       )}
 
       {/* Delete Error */}
 
       {deleteError && (
-
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-
           {deleteError}
-
         </div>
-
       )}
 
       {/* Content List */}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-
         <div className="border-b border-slate-200 px-5 py-4">
-
           <h2 className="text-sm font-semibold text-slate-900">
-
             Website Content
-
           </h2>
-
         </div>
 
         {loading && (
-
           <div className="px-5 py-8 text-center text-sm text-slate-500">
-
             Loading content...
-
           </div>
-
         )}
 
         {!loading && error && (
-
           <div className="px-5 py-8 text-center text-sm text-red-600">
-
             {error}
-
           </div>
-
         )}
 
         {!loading && !error && contents.length === 0 && (
-
           <div className="px-5 py-8 text-center text-sm text-slate-500">
-
             No content found.
-
           </div>
-
         )}
 
         {!loading && !error && contents.length > 0 && (
-
           <div className="divide-y divide-slate-100">
-
             {contents.map((content) => {
-
               const isExpanded = expandedId === content.id;
 
               const contentChildren = children[content.id] || [];
 
               return (
-
                 <div key={content.id}>
-
                   <div className="flex items-center justify-between px-5 py-4">
-
                     <button
-
                       type="button"
-
                       onClick={() => handleExpand(content.id)}
-
                       className="flex items-center gap-3 text-left"
-
                     >
-
                       <span className="text-slate-400">
-
                         {isExpanded ? "▼" : "▶"}
-
                       </span>
 
                       <div>
-
                         <div className="flex items-center gap-2">
-
                           <span className="font-semibold text-slate-900">
-
                             {content.title}
-
                           </span>
 
                           <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-medium text-sky-600">
-
                             {content.type}
-
                           </span>
-
                         </div>
 
                         <p className="mt-1 text-xs text-slate-400">
-
                           Root Content
-
                         </p>
-
                       </div>
-
                     </button>
 
                     <div className="flex gap-2">
-
                       <button
-
                         type="button"
-
                         onClick={() => handleEditContent(content.id)}
-
                         className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-
                       >
-
                         Edit
-
                       </button>
 
                       <button
-
                         type="button"
-
                         onClick={() => handleDeleteContent(content.id)}
-
                         className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-
                       >
-
                         Delete
-
                       </button>
-
                     </div>
-
                   </div>
 
                   {isExpanded && (
-
                     <div className="border-t border-slate-100 bg-slate-50 px-5 py-4">
-
                       {loadingChildren === content.id && (
-
                         <div className="py-3 text-sm text-slate-500">
-
                           Loading children...
-
                         </div>
-
                       )}
 
                       {loadingChildren !== content.id &&
-
                         contentChildren.length === 0 && (
-
                           <div className="py-3 text-sm text-slate-500">
-
                             No children found.
-
                           </div>
-
                         )}
 
                       {loadingChildren !== content.id &&
-
                         contentChildren.length > 0 && (
-
                           <div className="ml-8 space-y-2 border-l border-slate-200 pl-4">
-
                             {contentChildren.map((child) => (
-
                               <div
-
                                 key={child.id}
-
                                 className="flex items-center justify-between rounded-lg bg-white px-4 py-3"
-
                               >
-
                                 <div className="flex items-center gap-2">
-
                                   <span className="text-sm font-medium text-slate-700">
-
                                     {child.title}
-
                                   </span>
 
                                   <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">
-
                                     {child.type}
-
                                   </span>
-
                                 </div>
 
                                 <div className="flex gap-2">
-
                                   <button
-
                                     type="button"
-
                                     onClick={() => handleEditContent(child.id)}
-
                                     className="text-xs font-medium text-sky-600 hover:text-sky-700"
-
                                   >
-
                                     Edit
-
                                   </button>
 
                                   <button
-
                                     type="button"
-
                                     onClick={() =>
-
                                       handleDeleteContent(
-
                                         child.id,
 
                                         content.id,
-
                                       )
-
                                     }
-
                                     className="text-xs font-medium text-red-500 hover:text-red-600"
-
                                   >
-
                                     Delete
-
                                   </button>
-
                                 </div>
-
                               </div>
-
                             ))}
-
                           </div>
-
                         )}
-
                     </div>
-
                   )}
-
                 </div>
-
               );
-
             })}
-
           </div>
-
         )}
-
       </div>
-
     </div>
-
   );
 
 }

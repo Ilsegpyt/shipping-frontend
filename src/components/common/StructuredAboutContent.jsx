@@ -156,8 +156,130 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
   </div>;
 }
 
+const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
+
+function parsePublicPageContent(body = "") {
+  if (typeof body === "string" && body.startsWith(PHILOSOPHY_MARKER)) {
+    try {
+      const parsed = JSON.parse(body.slice(PHILOSOPHY_MARKER.length));
+
+      if (
+        parsed?.schema === "ils-philosophy-v2" ||
+        parsed?.schema === "ils-philosophy-v1"
+      ) {
+        const cards = (parsed.cards || []).map((card, index) => {
+          let blocks = Array.isArray(card.contentBlocks)
+            ? card.contentBlocks
+            : [];
+
+          if (!blocks.length) {
+            blocks = [
+              {
+                id: `text-${index}`,
+                type: "text",
+                text: card.text || "",
+              },
+              ...(card.highlights || []).map((item, i) => ({
+                id: item.id || `highlight-${index}-${i}`,
+                type: "highlight",
+                text: typeof item === "string" ? item : item.text || "",
+              })),
+              ...(card.closings || []).map((item, i) => ({
+                id: item.id || `closing-${index}-${i}`,
+                type: "closing",
+                text: typeof item === "string" ? item : item.text || "",
+              })),
+            ];
+          }
+
+          return {
+            id: card.id || `card-${index}`,
+            label: "",
+            title: card.title || "",
+            subtitle: "",
+            contentBlocks: blocks.map((block, blockIndex) => ({
+              id: block.id || `block-${index}-${blockIndex}`,
+              type: ["text", "highlight", "closing"].includes(block.type)
+                ? block.type
+                : "text",
+              text: block.text || "",
+            })),
+          };
+        });
+
+        const highlights = Array.isArray(parsed.globalHighlights)
+          ? parsed.globalHighlights.map((item, index) => ({
+              id: item.id || `highlight-${index}`,
+              text: typeof item === "string" ? item : item.text || "",
+            }))
+          : [];
+
+        const closings = Array.isArray(parsed.globalClosings)
+          ? parsed.globalClosings.map((item, index) => ({
+              id: item.id || `closing-${index}`,
+              text: typeof item === "string" ? item : item.text || "",
+            }))
+          : [];
+
+        const order = (parsed.pageOrder || []).map((item) => ({
+          type:
+            item.type === "card"
+              ? "section"
+              : item.type === "globalHighlight"
+                ? "highlight"
+                : item.type === "globalClosing"
+                  ? "closing"
+                  : item.type,
+          id: item.id,
+        }));
+
+        const available = new Set([
+          ...cards.map((item) => `section:${item.id}`),
+          ...highlights.map((item) => `highlight:${item.id}`),
+          ...closings.map((item) => `closing:${item.id}`),
+        ]);
+
+        const validOrder = order.filter((item) =>
+          available.has(`${item.type}:${item.id}`),
+        );
+
+        return {
+          schema: "ils-about-page-v1",
+          introLabel: parsed.introLabel || "",
+          introTitle: parsed.introTitle || "",
+          introText: parsed.introText || "",
+          sections: cards,
+          highlights,
+          closings,
+          pageOrder: validOrder.length
+            ? validOrder
+            : [
+                ...cards.map((item) => ({
+                  type: "section",
+                  id: item.id,
+                })),
+                ...highlights.map((item) => ({
+                  type: "highlight",
+                  id: item.id,
+                })),
+                ...closings.map((item) => ({
+                  type: "closing",
+                  id: item.id,
+                })),
+              ],
+          legacyHtml: "",
+        };
+      }
+    } catch (error) {
+      console.error("Failed to parse Philosophy content:", error);
+    }
+  }
+
+  return parseAboutPage(body);
+}
+
 export function StructuredAboutRenderer({ page, parentTitle = "About ILS", styleVariant = "about" }) {
-  const data = parseAboutPage(page?.body || "");
+ const data = parsePublicPageContent(page?.body || "");
   const apiBase = "http://localhost:5250";
   const isCertificatesPage = (page?.title || "").trim().toLowerCase() === "certificates";
 
