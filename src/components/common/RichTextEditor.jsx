@@ -470,10 +470,13 @@ export default function RichTextEditor({ value, onChange }) {
         .focus()
         .setImage({
           src: `http://localhost:5250${imageUrl}`,
-          imageAlign: "left",
-          imageWidth: "auto",
+          alt: file.name || "",
+          imageAlign: "center",
+          imageWidth: "400px",
+          imageHeight: "300px",
           imageMaxHeight: "",
           imageSpacing: "0px",
+          imageLayout: "above",
         })
         .run();
 
@@ -688,6 +691,7 @@ export default function RichTextEditor({ value, onChange }) {
             </button> */}
 
             {/* Image alignment */}
+
             <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
               Alignment
               <select
@@ -697,9 +701,20 @@ export default function RichTextEditor({ value, onChange }) {
                   updateImageOption("imageAlign", e.target.value)
                 }
               >
-                <option value="left">Left</option>
-                <option value="center">Center</option>
-                <option value="right">Right</option>
+                {imageAttributes.imageLayout === "left" ||
+                imageAttributes.imageLayout === "right" ? (
+                  <>
+                    <option value="top">Top</option>
+                    <option value="center">Center</option>
+                    <option value="bottom">Bottom</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </>
+                )}
               </select>
             </label>
 
@@ -758,7 +773,6 @@ export default function RichTextEditor({ value, onChange }) {
                 <option value="above">Image above text</option>
                 <option value="left">Image left, text beside it</option>
                 <option value="right">Image right, text beside it</option>
-                <option value="below">Image below text</option>
               </select>
             </label>
 

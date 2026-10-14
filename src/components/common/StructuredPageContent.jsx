@@ -229,7 +229,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
           </h1>
           {data.introText && (
             <div
-              className="structured-rich mt-6 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg"
+              className="structured-rich mt-6 max-w-3xl text-base leading-8 text-slate-100 sm:text-lg"
               dangerouslySetInnerHTML={{ __html: data.introText }}
             />
           )}
@@ -330,9 +330,22 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
   }
 }
 
-    .structured-rich strong{color:text-sky-800;font-weight:600}
-    .structured-rich a{
-    color:text-sky-400;text-decoration:underline}`}</style>
+    
+.structured-rich strong {
+  color: inherit;
+  font-weight: 700;
+}
+
+.structured-rich a {
+  color: #0284c7;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.structured-rich a:hover {
+  color: #0369a1;
+}
+`}</style>
     </main>
   );
 }

@@ -416,35 +416,109 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
 
     const preparedHtml = prepareCertificateHtml(html);
 
-    const normalizedHtml = (() => {
-      if (isCertificatesPage || typeof DOMParser === "undefined") {
-        return preparedHtml;
-      }
+    
+const normalizedHtml = (() => {
+  if (isCertificatesPage || typeof DOMParser === "undefined") {
+    return preparedHtml;
+  }
 
-      const doc = new DOMParser().parseFromString(preparedHtml, "text/html");
+  const doc = new DOMParser().parseFromString(preparedHtml, "text/html");
 
-      doc
-        .querySelectorAll("img:not(.about-certificate-image)")
-        .forEach((image) => {
-          const width = image.getAttribute("data-image-width");
-          const height = image.getAttribute("data-image-height");
+  // Wrap each side-by-side image and its following text block once.
+  const images = Array.from(
+    doc.querySelectorAll(
+      'img[data-image-layout="left"]:not(.about-certificate-image), img[data-image-layout="right"]:not(.about-certificate-image)',
+    ),
+  );
 
-          if (width && width !== "auto") {
-            image.style.width = width;
-          } else {
-            image.style.width = "100%";
-          }
+  images.forEach((image) => {
+    let imageBlock = image;
 
-          image.style.height = "auto";
-          image.style.maxWidth = "100%";
-          image.style.minWidth = "0";
-          image.style.boxSizing = "border-box";
-          image.style.objectFit = "fill";
-          image.style.borderRadius = "12px";
-        });
+    if (image.parentElement?.tagName === "P") {
+      imageBlock = image.parentElement;
+    }
 
-      return doc.body.innerHTML;
-    })();
+    const textBlock = imageBlock.nextElementSibling;
+
+    if (
+      !imageBlock.parentNode ||
+      !textBlock ||
+      textBlock.querySelector("img")
+    ) {
+      return;
+    }
+
+    const layout = image.getAttribute("data-image-layout") || "left";
+    const alignment = image.getAttribute("data-image-align") || "center";
+
+    const wrapper = doc.createElement("div");
+    const imageColumn = doc.createElement("div");
+    const textColumn = doc.createElement("div");
+
+    wrapper.className = "about-image-layout";
+    wrapper.setAttribute("data-image-layout", layout);
+    wrapper.setAttribute("data-image-align", alignment);
+
+    imageColumn.className = "about-image-layout__image";
+    textColumn.className = "about-image-layout__text";
+
+    imageBlock.parentNode.insertBefore(wrapper, imageBlock);
+    wrapper.appendChild(imageColumn);
+    wrapper.appendChild(textColumn);
+
+    imageColumn.appendChild(imageBlock);
+    textColumn.appendChild(textBlock);
+  });
+
+  // Preserve CMS image dimensions and horizontal alignment.
+  doc.querySelectorAll("img:not(.about-certificate-image)").forEach((image) => {
+    const width = image.getAttribute("data-image-width");
+    const height = image.getAttribute("data-image-height");
+
+    const widthPx = Number.parseFloat(width);
+    const heightPx = Number.parseFloat(height);
+
+    const hasCustomWidth =
+      width && width !== "auto" && Number.isFinite(widthPx) && widthPx > 0;
+
+    const hasCustomHeight =
+      height && height !== "auto" && Number.isFinite(heightPx) && heightPx > 0;
+
+    image.style.width = hasCustomWidth ? `min(${widthPx}px, 100%)` : "100%";
+
+    image.style.height = "auto";
+
+    if (hasCustomWidth && hasCustomHeight) {
+      image.style.aspectRatio = `${widthPx} / ${heightPx}`;
+    } else {
+      image.style.removeProperty("aspect-ratio");
+    }
+
+    image.style.maxWidth = "100%";
+    image.style.minWidth = "0";
+    image.style.boxSizing = "border-box";
+    image.style.objectFit = "fill";
+    image.style.borderRadius = "12px";
+    image.style.float = "none";
+
+    const alignment = image.getAttribute("data-image-align") || "left";
+    const layout = image.getAttribute("data-image-layout") || "above";
+
+    if (layout === "left" || layout === "right") {
+      image.style.margin = "0";
+    } else {
+      image.style.marginTop = "1rem";
+      image.style.marginBottom = "1rem";
+      image.style.marginLeft =
+        alignment === "center" || alignment === "right" ? "auto" : "0";
+      image.style.marginRight =
+        alignment === "center" || alignment === "left" ? "auto" : "0";
+    }
+  });
+
+  return doc.body.innerHTML;
+})();
+
 
     return (
       <div
@@ -510,7 +584,7 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
 
           {renderRich(
             data.introText,
-            "mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg",
+            "mt-5 max-w-3xl text-base leading-8 text-slate-100 sm:text-lg",
           )}
         </div>
       </section>
@@ -615,12 +689,30 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
       </section>
 
       <style>{`
-  .about-rich {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    color: #475569;
-    line-height: 1.8;
-  }
+  
+.about-rich {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: inherit;
+  line-height: 1.8;
+}
+
+.about-rich strong {
+  color: inherit;
+  font-weight: 700;
+}
+
+.about-rich a {
+  color: #0369a1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.about-rich a:hover {
+  color: #075985;
+}
+
 
   /* Paragraphs */
   .about-rich p {
@@ -653,9 +745,8 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
 /* Responsive CMS images — regular images only */
 .about-rich img:not(.about-certificate-image) {
   display: block;
-  width: auto;
   max-width: 100% !important;
-  height: auto !important;
+  height: auto;
   border-radius: 12px;
   box-sizing: border-box;
 }
@@ -818,6 +909,103 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
   .about-rich a:hover {
     color: #0369a1;
   }
+    
+
+.about-rich .about-image-layout {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+  margin: 1rem 0;
+  box-sizing: border-box;
+}
+
+.about-rich .about-image-layout[data-image-layout="right"] {
+  flex-direction: row-reverse;
+}
+
+.about-rich .about-image-layout__image {
+  flex: 0 1 40%;
+  width: 40%;
+  min-width: 0;
+  max-width: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-rich .about-image-layout__image > p {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.about-rich .about-image-layout__image img {
+  display: block;
+  float: none !important;
+  margin: 0 !important;
+  width: min(var(--cms-image-width, 100%), 100%);
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.about-rich .about-image-layout__text {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.about-rich .about-image-layout__text > :first-child {
+  margin-top: 0;
+}
+
+.about-rich .about-image-layout__text > :last-child {
+  margin-bottom: 0;
+}
+
+@media (min-width: 640px) and (max-width: 900px) {
+  .about-rich .about-image-layout {
+    gap: 16px;
+  }
+
+  .about-rich .about-image-layout__image {
+    flex-basis: 42%;
+    width: 42%;
+    max-width: 42%;
+  }
+}
+
+@media (max-width: 639px) {
+  .about-rich .about-image-layout {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .about-rich .about-image-layout__image {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .about-rich .about-image-layout__image img {
+    width: min(var(--cms-image-width, 100%), 100%);
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 auto !important;
+  }
+
+  .about-rich .about-image-layout__text {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+}
+
+
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
@@ -828,7 +1016,9 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
     .about-rich .about-certificate-card:hover {
       transform: none;
     }
+      
   }
+    
 `}</style>
 
       {certificateViewer && (
