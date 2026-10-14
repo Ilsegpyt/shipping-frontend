@@ -681,11 +681,23 @@ export default function Content() {
     }
 
     if (form.type === "Page") {
-      const hasSection = Array.isArray(aboutPageForm.sections)
-        && aboutPageForm.sections.length > 0;
+      const sections = Array.isArray(aboutPageForm.sections)
+        ? aboutPageForm.sections
+        : [];
 
-      if (!hasSection) {
+      if (sections.length === 0) {
         setSaveError("Add at least one Section to the page.");
+        return;
+      }
+
+      const sectionWithoutTitle = sections.findIndex(
+        (section) => !String(section?.title || "").trim(),
+      );
+
+      if (sectionWithoutTitle !== -1) {
+        setSaveError(
+          `Section Title is required for Section ${sectionWithoutTitle + 1}.`,
+        );
         return;
       }
     }

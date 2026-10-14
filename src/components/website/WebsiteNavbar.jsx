@@ -88,7 +88,7 @@ const getContentTypeName = (type) =>
     : ({ 1: "Category", 2: "Page", 3: "Post", 4: "Link" }[type] || "");
 
 const normalizeNavTitle = (value = "") =>
-  value.trim().toLowerCase().replace(/^ils\\s+/, "").replace(/&/g, "and").replace(/\\s+/g, " ");
+  value.trim().toLowerCase().replace(/^ils\s+/, "").replace(/&/g, "and").replace(/\s+/g, " ");
 
 const getNavGroupLabel = (categoryTitle) => {
   const normalized = normalizeNavTitle(categoryTitle);
@@ -276,14 +276,29 @@ export default function WebsiteNavbar() {
             nextGroups.push(group);
           }
 
+          // CMS pages must take precedence over legacy hard-coded links:
+          // the static links can point to old routes instead of /cms/{id}.
+          const dynamicByLabel = new Map();
+          for (const link of links) {
+            const key = normalizeNavTitle(link.label);
+            if (key && !dynamicByLabel.has(key)) {
+              dynamicByLabel.set(key, link);
+            }
+          }
+
+          const dynamicLabels = new Set(dynamicByLabel.keys());
+          group.links = group.links.filter(
+            (link) => !dynamicLabels.has(normalizeNavTitle(link.label)),
+          );
+
           const existingLabels = new Set(
             group.links.map((link) => normalizeNavTitle(link.label)),
           );
 
-          for (const link of links) {
-            if (!existingLabels.has(normalizeNavTitle(link.label))) {
+          for (const [key, link] of dynamicByLabel) {
+            if (!existingLabels.has(key)) {
               group.links.push(link);
-              existingLabels.add(normalizeNavTitle(link.label));
+              existingLabels.add(key);
             }
           }
         }

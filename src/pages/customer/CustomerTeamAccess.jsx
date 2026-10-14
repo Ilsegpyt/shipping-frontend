@@ -1343,13 +1343,7 @@ export default function CustomerTeamAccess() {
                                     );
                                 })()}
 
-                                {getMemberScopeDescriptions(memberForScopes).length > 0 &&
-                                    getStructuredMemberScopes(memberForScopes).length === 0 &&
-                                    scopeManagementMode === 'custom' && (
-                                        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-800">
-                                            The current GET response only contains ScopeDescriptions (text). The backend must also return each scope's numeric Category, Service, and Type for the Remove buttons to work safely.
-                                        </p>
-                                    )}
+
                             </div>
 
                             {showScopeAddForm && (
@@ -1431,8 +1425,20 @@ export default function CustomerTeamAccess() {
                                 <button
                                     type="button"
                                     onClick={handleSaveScopeManagement}
-                                    disabled={scopeManagementLoading}
-                                    className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                                    disabled={
+                                        scopeManagementLoading ||
+                                        (
+                                            scopeManagementMode === 'custom' &&
+                                            pendingScopeAdds.length === 0 &&
+                                            pendingScopeRemovals.length === 0
+                                        )
+                                    }
+                                    className={`rounded-lg px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${scopeManagementMode === 'custom' &&
+                                            pendingScopeAdds.length === 0 &&
+                                            pendingScopeRemovals.length === 0
+                                            ? 'cursor-not-allowed bg-indigo-300 text-white'
+                                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                        }`}
                                 >
                                     {scopeManagementLoading ? 'Saving...' : 'Save'}
                                 </button>

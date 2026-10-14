@@ -466,8 +466,14 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       const imageCopy = image.cloneNode(true);
       imageCopy.removeAttribute("width");
       imageCopy.removeAttribute("height");
+      // Remove CMS inline styles that can force certificate images to crop.
+      imageCopy.removeAttribute("style");
       imageCopy.setAttribute("loading", "lazy");
       imageCopy.setAttribute("class", "about-certificate-image");
+      imageCopy.setAttribute(
+        "style",
+        "display:block;width:100%;height:auto;max-width:100%;max-height:520px;object-fit:contain;object-position:center;background:#f8fafc;box-sizing:border-box;",
+      );
       card.appendChild(imageCopy);
 
       if (caption) {
@@ -840,14 +846,17 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
   .about-rich img.about-certificate-image {
     display: block;
-    width: 100%;
-    height: 230px;
-    max-height: none;
-    object-fit: contain;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 520px !important;
+    object-fit: contain !important;
+    object-position: center !important;
     background: #f8fafc;
     border-radius: 0.65rem;
     margin: 0;
     padding: 0.5rem;
+    box-sizing: border-box;
   }
 
   .about-rich .about-certificate-caption {
