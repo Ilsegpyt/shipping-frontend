@@ -99,7 +99,8 @@ export function serializeAboutPage(data) {
     id: section.id || makeId("section"), title: section.title || "", label: section.label || "", subtitle: section.subtitle || "",
     contentBlocks: normalizeBlocks(section.contentBlocks, section.content || ""),
   }));
-  const clean = { ...createEmptyAboutPage(), ...data, schema: ABOUT_PAGE_SCHEMA, sections,
+  const clean = {
+    ...createEmptyAboutPage(), ...data, schema: ABOUT_PAGE_SCHEMA, sections,
     highlights: (data.highlights || []).map((item) => ({ id: item.id || makeId("highlight"), text: item.text || "" })),
     closings: (data.closings || []).map((item) => ({ id: item.id || makeId("closing"), text: item.text || "" })),
   };
@@ -135,9 +136,7 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
     <header><h3 className="text-lg font-semibold text-slate-900">{pageTitle} — Structured Content</h3><p className="mt-1 text-sm text-slate-600">Edit the page using the same ordered rich-content model as Philosophy. Add, remove, and reorder any section.</p></header>
     <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <h4 className="font-semibold text-slate-900">Page Intro</h4>
-      <label className="block text-sm font-medium text-slate-700">Intro Label<input className={field} value={data.introLabel || ""} onChange={(e) => update({ introLabel: e.target.value })} /></label>
-      <label className="block text-sm font-medium text-slate-700">Intro Title<input className={field} value={data.introTitle || ""} onChange={(e) => update({ introTitle: e.target.value })} /></label>
-      <div><label className="mb-2 block text-sm font-medium text-slate-700">Intro Text</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
+      <div><label className="mb-2 block text-sm font-medium text-slate-700">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
     </section>
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900">Page Content Order</h4><p className="mt-1 text-sm text-slate-500">The public page follows this exact order.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => add("section")} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">+ Add Section</button><button type="button" onClick={() => add("highlight")} className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-800">+ Page Highlight</button><button type="button" onClick={() => add("closing")} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">+ Page Closing</button></div></div>
@@ -149,7 +148,7 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
         const blocks = section?.contentBlocks || [];
         return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-sky-200 bg-white" : item.type === "closing" ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50/70"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-slate-500">Section {index + 1}</span><h5 className="font-semibold text-slate-900">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-red-600">Remove</button></div></div>
-          {section ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-slate-700">Section Label<input className={field} value={section.label || ""} onChange={(e) => updateSection(item.id, { label: e.target.value })} /></label><label className="block text-sm font-medium text-slate-700">Section Title<input className={field} value={section.title || ""} onChange={(e) => updateSection(item.id, { title: e.target.value })} /></label></div><label className="block text-sm font-medium text-slate-700">Subtitle<input className={field} value={section.subtitle || ""} onChange={(e) => updateSection(item.id, { subtitle: e.target.value })} /></label><ContentBlockEditor blocks={blocks.length ? blocks : [{ id: `${section.id}-text`, type: "text", text: "" }]} onChange={(contentBlocks) => updateSection(item.id, { contentBlocks })} /></div> : <RichTextEditor value={global.text || ""} onChange={(text) => update({ [item.type === "highlight" ? "highlights" : "closings"]: (item.type === "highlight" ? data.highlights : data.closings).map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />}
+          {section ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-slate-700">Section Label<input className={field} value={section.label || ""} onChange={(e) => updateSection(item.id, { label: e.target.value })} /></label><label className="block text-sm font-medium text-slate-700">Section Title <span className="text-red-600">*</span><input required aria-required="true" className={field} value={section.title || ""} onChange={(e) => updateSection(item.id, { title: e.target.value })} /></label></div><label className="block text-sm font-medium text-slate-700">Subtitle<input className={field} value={section.subtitle || ""} onChange={(e) => updateSection(item.id, { subtitle: e.target.value })} /></label><ContentBlockEditor blocks={blocks.length ? blocks : [{ id: `${section.id}-text`, type: "text", text: "" }]} onChange={(contentBlocks) => updateSection(item.id, { contentBlocks })} /></div> : <RichTextEditor value={global.text || ""} onChange={(text) => update({ [item.type === "highlight" ? "highlights" : "closings"]: (item.type === "highlight" ? data.highlights : data.closings).map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />}
         </article>;
       })}
     </section>
@@ -209,16 +208,16 @@ function parsePublicPageContent(body = "") {
 
         const highlights = Array.isArray(parsed.globalHighlights)
           ? parsed.globalHighlights.map((item, index) => ({
-              id: item.id || `highlight-${index}`,
-              text: typeof item === "string" ? item : item.text || "",
-            }))
+            id: item.id || `highlight-${index}`,
+            text: typeof item === "string" ? item : item.text || "",
+          }))
           : [];
 
         const closings = Array.isArray(parsed.globalClosings)
           ? parsed.globalClosings.map((item, index) => ({
-              id: item.id || `closing-${index}`,
-              text: typeof item === "string" ? item : item.text || "",
-            }))
+            id: item.id || `closing-${index}`,
+            text: typeof item === "string" ? item : item.text || "",
+          }))
           : [];
 
         const order = (parsed.pageOrder || []).map((item) => ({
@@ -254,19 +253,19 @@ function parsePublicPageContent(body = "") {
           pageOrder: validOrder.length
             ? validOrder
             : [
-                ...cards.map((item) => ({
-                  type: "section",
-                  id: item.id,
-                })),
-                ...highlights.map((item) => ({
-                  type: "highlight",
-                  id: item.id,
-                })),
-                ...closings.map((item) => ({
-                  type: "closing",
-                  id: item.id,
-                })),
-              ],
+              ...cards.map((item) => ({
+                type: "section",
+                id: item.id,
+              })),
+              ...highlights.map((item) => ({
+                type: "highlight",
+                id: item.id,
+              })),
+              ...closings.map((item) => ({
+                type: "closing",
+                id: item.id,
+              })),
+            ],
           legacyHtml: "",
         };
       }
@@ -278,8 +277,96 @@ function parsePublicPageContent(body = "") {
   return parseAboutPage(body);
 }
 
-export function StructuredAboutRenderer({ page, parentTitle = "About ILS", styleVariant = "about" }) {
-  const data = parsePublicPageContent(page?.body || "");
+function pageContentOrderToPublicData(pageContentOrder, pageIntroText = "") {
+  let parsed;
+  try {
+    parsed = typeof pageContentOrder === "string"
+      ? JSON.parse(pageContentOrder)
+      : pageContentOrder;
+  } catch {
+    return null;
+  }
+
+  if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.items)) {
+    return null;
+  }
+
+  const data = {
+    ...createEmptyAboutPage(),
+    introLabel: "",
+    introTitle: "",
+    introText: pageIntroText || "",
+    sections: [],
+    highlights: [],
+    closings: [],
+    pageOrder: [],
+    legacyHtml: "",
+  };
+
+  for (const item of parsed.items) {
+    if (!item || !Array.isArray(item.items)) continue;
+
+    if (item.type === "Section") {
+      const section = {
+        id: item.id || `section-${data.sections.length + 1}`,
+        label: typeof item.label === "string" ? item.label : "",
+        title: typeof item.title === "string" ? item.title : "",
+        subtitle: typeof item.subtitle === "string" ? item.subtitle : "",
+        contentBlocks: item.items
+          .filter((child) =>
+            child && ["CardText", "HighlightText", "ClosingText"].includes(child.type)
+          )
+          .map((child, index) => ({
+            id: child.id || `block-${data.sections.length + 1}-${index + 1}`,
+            type: child.type === "HighlightText"
+              ? "highlight"
+              : child.type === "ClosingText"
+                ? "closing"
+                : "text",
+            text: typeof child.text === "string" ? child.text : "",
+          })),
+      };
+      data.sections.push(section);
+      data.pageOrder.push({ type: "section", id: section.id });
+      continue;
+    }
+
+    if (item.type === "PageHighlights") {
+      for (const child of item.items) {
+        if (!child || child.type !== "HighlightText") continue;
+        const highlight = {
+          id: child.id || `highlight-${data.highlights.length + 1}`,
+          text: typeof child.text === "string" ? child.text : "",
+        };
+        data.highlights.push(highlight);
+        data.pageOrder.push({ type: "highlight", id: highlight.id });
+      }
+      continue;
+    }
+
+    if (item.type === "PageClosings") {
+      for (const child of item.items) {
+        if (!child || child.type !== "ClosingText") continue;
+        const closing = {
+          id: child.id || `closing-${data.closings.length + 1}`,
+          text: typeof child.text === "string" ? child.text : "",
+        };
+        data.closings.push(closing);
+        data.pageOrder.push({ type: "closing", id: closing.id });
+      }
+    }
+  }
+
+  return data;
+}
+
+export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
+  const orderedData = pageContentOrderToPublicData(
+    page?.pageContentOrder,
+    page?.pageIntroText || "",
+  );
+  // Legacy Body fallback preserves Pages that have not yet been migrated.
+  const data = orderedData || parsePublicPageContent(page?.body || "");
   const apiBase = "http://localhost:5250";
   const isCertificatesPage =
     (page?.title || "").trim().toLowerCase() === "certificates";
@@ -298,9 +385,9 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
         setCertificateViewer((current) =>
           current
             ? {
-                ...current,
-                index: (current.index + 1) % current.images.length,
-              }
+              ...current,
+              index: (current.index + 1) % current.images.length,
+            }
             : null,
         );
       }
@@ -309,11 +396,11 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
         setCertificateViewer((current) =>
           current
             ? {
-                ...current,
-                index:
-                  (current.index - 1 + current.images.length) %
-                  current.images.length,
-              }
+              ...current,
+              index:
+                (current.index - 1 + current.images.length) %
+                current.images.length,
+            }
             : null,
         );
       }
@@ -500,12 +587,8 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
             ← Back to Home
           </a> */}
 
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-            {data.introLabel || parentTitle}
-          </p>
-
-          <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            {data.introTitle || page?.title || "About ILS"}
+          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            {page?.title || "About ILS"}
           </h1>
 
           {renderRich(

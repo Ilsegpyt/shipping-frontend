@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 const api = axios.create({
-    //baseURL: 'http://localhost:5250',
-    baseURL: 'http://localhost:8080',
+    baseURL: 'http://localhost:5250',
+    //  baseURL: 'http://localhost:8080',
 
 });
 
@@ -26,8 +26,8 @@ const refreshAccessToken = async () => {
     }
 
     const response = await axios.post(
-        // 'http://localhost:5250/api/auth/refresh',
-        'http://localhost:8080/api/auth/refresh',
+        'http://localhost:5250/api/auth/refresh',
+        //'http://localhost:8080/api/auth/refresh',
         {
             refreshToken,
         }

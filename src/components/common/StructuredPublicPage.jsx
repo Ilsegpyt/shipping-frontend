@@ -31,21 +31,21 @@ export default function StructuredAboutPage({ pageTitle, parentCategoryTitle = "
     };
     load(); return () => { active = false; };
   }, [pageTitle, parentCategoryTitle]);
-return (
-  <>
-    {loading ? (
-      <main className="min-h-screen bg-slate-50" />
-    ) : error ? (
-      <main className="flex min-h-[60vh] items-center justify-center px-6">
-        <p className="text-red-600">{error}</p>
-      </main>
-    ) : (
-      <StructuredAboutRenderer
-        page={page}
-        parentTitle={parentTitle}
-        styleVariant={styleVariant}
-      />
-    )}
-  </>
-);
+  return (
+    <>
+      {loading ? (
+        <main className="min-h-screen bg-slate-50" />
+      ) : error ? (
+        <main className="flex min-h-[60vh] items-center justify-center px-6">
+          <p className="text-red-600">{error}</p>
+        </main>
+      ) : (
+        <StructuredAboutRenderer
+          page={page}
+          parentTitle={parentTitle}
+          styleVariant={styleVariant}
+        />
+      )}
+    </>
+  );
 }

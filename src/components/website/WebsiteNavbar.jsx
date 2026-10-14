@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ilsLogo from "../../assets/branding/ils-logo-horizontal.png";
+import contentService from "../../services/contentService";
 
 const navGroups = [
   {
@@ -81,6 +82,65 @@ const navGroups = [
   },
 ];
 
+const getContentTypeName = (type) =>
+  typeof type === "string"
+    ? type
+    : ({ 1: "Category", 2: "Page", 3: "Post", 4: "Link" }[type] || "");
+
+const normalizeNavTitle = (value = "") =>
+  value.trim().toLowerCase().replace(/^ils\\s+/, "").replace(/&/g, "and").replace(/\\s+/g, " ");
+
+const getNavGroupLabel = (categoryTitle) => {
+  const normalized = normalizeNavTitle(categoryTitle);
+  const aliases = {
+    "solutions": "ILS Solutions",
+    "industries": "ILS Industries",
+    "media room": "Media Room",
+    "about ils": "About ILS",
+    "resources": "Resources",
+    "join ils": "Join ILS",
+    "contact ils": "Contact ILS",
+  };
+  return aliases[normalized] || categoryTitle;
+};
+
+async function getDynamicPageLinks(rootCategory) {
+  const links = [];
+  const visited = new Set();
+
+  async function walk(category, categoryTrail = []) {
+    if (!category?.id || visited.has(String(category.id))) return;
+    visited.add(String(category.id));
+
+    let response;
+    try {
+      response = await contentService.getChildren(category.id);
+    } catch (error) {
+      console.error("Failed to load navigation children:", error);
+      return;
+    }
+
+    const children = Array.isArray(response?.data) ? response.data : [];
+    for (const child of children) {
+      const type = getContentTypeName(child.type);
+      if (type === "Category") {
+        await walk(child, [...categoryTrail, child.title].filter(Boolean));
+      } else if (type === "Page" && child.id && child.title) {
+        const prefix = categoryTrail.length
+          ? `${categoryTrail.join(" / ")} / `
+          : "";
+        links.push({
+          label: `${prefix}${child.title}`,
+          to: `/cms/${child.id}`,
+        });
+      }
+    }
+  }
+
+  await walk(rootCategory);
+  return links;
+}
+
 function getClientPortalPath() {
   const token = localStorage.getItem("accessToken");
 
@@ -141,9 +201,8 @@ function NavDropdown({ label, links }) {
       >
         {label}
         <span
-          className={`text-[10px] text-white/60 transition-transform duration-200 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className={`text-[10px] text-white/60 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            }`}
         >
           ⌄
         </span>
@@ -174,6 +233,7 @@ export default function WebsiteNavbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMobileGroup, setExpandedMobileGroup] = useState(null);
+  const [displayNavGroups, setDisplayNavGroups] = useState(navGroups);
   const location = useLocation();
 
   useEffect(() => {
@@ -187,6 +247,56 @@ export default function WebsiteNavbar() {
     return () => {
       window.removeEventListener("scroll", handleScroll);
     };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadCmsNavigation() {
+      try {
+        const response = await contentService.getRootContent();
+        const roots = Array.isArray(response?.data) ? response.data : [];
+        const categoryRoots = roots.filter(
+          (item) => getContentTypeName(item.type) === "Category" && item.id,
+        );
+
+        const nextGroups = navGroups.map((group) => ({ ...group, links: [...group.links] }));
+
+        for (const root of categoryRoots) {
+          const links = await getDynamicPageLinks(root);
+          if (!links.length) continue;
+
+          const groupLabel = getNavGroupLabel(root.title || "");
+          let group = nextGroups.find(
+            (item) => normalizeNavTitle(item.label) === normalizeNavTitle(groupLabel),
+          );
+
+          if (!group) {
+            group = { label: groupLabel, links: [] };
+            nextGroups.push(group);
+          }
+
+          const existingLabels = new Set(
+            group.links.map((link) => normalizeNavTitle(link.label)),
+          );
+
+          for (const link of links) {
+            if (!existingLabels.has(normalizeNavTitle(link.label))) {
+              group.links.push(link);
+              existingLabels.add(normalizeNavTitle(link.label));
+            }
+          }
+        }
+
+        if (active) setDisplayNavGroups(nextGroups);
+      } catch (error) {
+        console.error("Failed to load CMS navigation:", error);
+        if (active) setDisplayNavGroups(navGroups);
+      }
+    }
+
+    loadCmsNavigation();
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
@@ -209,11 +319,10 @@ export default function WebsiteNavbar() {
     <header className="fixed inset-x-0 top-0 z-50">
       <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
         <div
-          className={`mt-3 flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-3 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-5 ${
-            isScrolled
-              ? "border-white/10 bg-slate-950/95 shadow-slate-950/20"
-              : "border-white/15 bg-slate-950/70"
-          }`}
+          className={`mt-3 flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-3 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-5 ${isScrolled
+            ? "border-white/10 bg-slate-950/95 shadow-slate-950/20"
+            : "border-white/15 bg-slate-950/70"
+            }`}
         >
           <Link
             to="/"
@@ -229,7 +338,7 @@ export default function WebsiteNavbar() {
             aria-label="Main navigation"
             className="hidden items-center gap-1 lg:flex"
           >
-            {navGroups.map((group) => (
+            {displayNavGroups.map((group) => (
               <NavDropdown
                 key={group.label}
                 label={group.label}
@@ -305,7 +414,7 @@ export default function WebsiteNavbar() {
               Home
             </Link>
 
-            {navGroups.map((group) => {
+            {displayNavGroups.map((group) => {
               const isExpanded = expandedMobileGroup === group.label;
               const panelId = `mobile-group-${group.label
                 .toLowerCase()
@@ -322,9 +431,8 @@ export default function WebsiteNavbar() {
                   >
                     <span>{group.label}</span>
                     <span
-                      className={`text-xs transition-transform ${
-                        isExpanded ? "rotate-180" : ""
-                      }`}
+                      className={`text-xs transition-transform ${isExpanded ? "rotate-180" : ""
+                        }`}
                       aria-hidden="true"
                     >
                       ⌄

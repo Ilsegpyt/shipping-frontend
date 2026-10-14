@@ -8,6 +8,7 @@ import SubAccountLayout from "../layouts/SubAccountLayout";
 
 // Public pages
 import Home from "../pages/public/Home";
+import CmsPublicPage from "../pages/public/CmsPublicPage";
 import Philosophy from "../pages/public/About ILS/Philosophy";
 import PurposeAndStrategy from "../pages/public/About ILS/PurposeAndStrategy";
 import Values from "../pages/public/About ILS/Values";
@@ -127,6 +128,7 @@ export default function AppRoutes() {
       {/* Public Routes */}
       <Route element={<WebsiteLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/cms/:contentId" element={<CmsPublicPage />} />
         <Route path="/about-ils/philosophy" element={<Philosophy />} />
         <Route
           path="/about-ils/purpose-and-strategy"
