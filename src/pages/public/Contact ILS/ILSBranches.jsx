@@ -55,12 +55,12 @@ export default function ILSBranches() {
 
                 <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
                     {/* Back to Home */}
-                    <a
+                    {/* <a
                         href="/"
                         className="absolute left-6 top-8 inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:left-8"
                     >
                         ← Back to Home
-                    </a>
+                    </a> */}
 
                     <div className="text-center">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">

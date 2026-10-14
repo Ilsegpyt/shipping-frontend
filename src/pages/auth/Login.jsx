@@ -30,7 +30,6 @@ export default function Login() {
 
             const currentUser = await getMe();
 
-            console.log('LOGIN USER:', currentUser);
 
             setUser(currentUser);
 
