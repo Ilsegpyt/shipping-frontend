@@ -619,15 +619,6 @@ body:
         ? await contentService.update(editingContentId, payload)
         : await contentService.create(payload);
 
-      //console.log("Content saved:", response.data);
-
-      console.log("Saved response:", response.data);
-      console.log("Submitted body:", payload.body);
-      console.log(
-        "Returned body:",
-        response.data?.body ?? response.data?.data?.body,
-      );
-
       setShowAddForm(false);
 
       setEditingContentId(null);

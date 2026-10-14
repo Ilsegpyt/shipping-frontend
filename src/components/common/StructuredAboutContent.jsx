@@ -493,12 +493,12 @@ export function StructuredAboutRenderer({ page, parentTitle = "About ILS", style
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
 
         <div className="relative mx-auto max-w-7xl">
-          <a
+          {/* <a
             href="/"
             className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/70 transition hover:text-white"
           >
             ← Back to Home
-          </a>
+          </a> */}
 
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
             {data.introLabel || parentTitle}

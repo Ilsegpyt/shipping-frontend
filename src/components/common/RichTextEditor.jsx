@@ -78,10 +78,6 @@ function ResizableImage({ editor, node, updateAttributes, selected, getPos }) {
         if (drag.direction === "height" || drag.direction === "both") {
           attributes.imageHeight = `${Math.round(current.height)}px`;
         }
-
-        // updateAttributes(attributes);
-
-        console.log("Saving image dimensions:", attributes);
         updateAttributes(attributes);
       }
 

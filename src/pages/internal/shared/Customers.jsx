@@ -72,8 +72,6 @@ export default function Customers() {
 
     const isAccountManager = user?.roleName === 'Account Manager';
 
-    console.log('Role name:', user?.roleName);
-    console.log('Is Account Manager:', isAccountManager);
 
     const [customers, setCustomers] = useState([]);
     const [pageNumber, setPageNumber] = useState(1);
@@ -120,42 +118,27 @@ export default function Customers() {
     });
 
     const loadCustomers = async (page = pageNumber) => {
-        try {
-            console.log('loadCustomers started');
+      try {
+        setLoading(true);
+        setError("");
 
-            setLoading(true);
-            setError('');
+        const result = await getCustomers(page, PAGE_SIZE, recordStatus);
 
-            console.log('Before getCustomers');
-
-            const result = await getCustomers(
-                page,
-                PAGE_SIZE,
-                recordStatus
-            );
-
-            console.log('After getCustomers');
-            console.log('Customers result:', result);
-
-            setCustomers(result.items ?? []);
-            setSelectedCustomerIds([]);
-            setPageNumber(result.pageNumber ?? page);
-            setTotalPages(result.totalPages ?? 1);
-            setTotalCount(result.totalCount ?? 0);
-        } catch (err) {
-            console.error('loadCustomers error:', err);
-            setError('Failed to load customers.');
-        } finally {
-            setLoading(false);
-        }
+        setCustomers(result.items ?? []);
+        setSelectedCustomerIds([]);
+        setPageNumber(result.pageNumber ?? page);
+        setTotalPages(result.totalPages ?? 1);
+        setTotalCount(result.totalCount ?? 0);
+      } catch (err) {
+        console.error("loadCustomers error:", err);
+        setError("Failed to load customers.");
+      } finally {
+        setLoading(false);
+      }
     };
 
     useEffect(() => {
-        console.log('Customers mounted');
-        console.log('Current user:', user);
-        console.log('Before loadCustomers');
-
-        loadCustomers(1);
+      loadCustomers(1);
     }, [recordStatus]);
 
     const handleRecordStatusChange = (event) => {

@@ -233,12 +233,12 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
               dangerouslySetInnerHTML={{ __html: data.introText }}
             />
           )}
-          <a
+          {/* <a
             href="/"
             className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-sky-400 hover:text-sky-300"
           >
             ← Back to Home
-          </a>
+          </a> */}
         </div>
       </section>
       <section className="px-6 py-12 sm:px-8 sm:py-16 lg:px-12">
