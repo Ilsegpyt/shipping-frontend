@@ -613,7 +613,7 @@ const normalizedHtml = (() => {
                   key={item.id}
                   className="rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
                 >
-                  <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-base leading-8 text-sky-400 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
+                  <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-xl leading-8 text-sky-400 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
                     {renderRich(global.text, "")}
                   </div>
                 </section>
@@ -623,7 +623,7 @@ const normalizedHtml = (() => {
               return (
                 <section
                   key={item.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-base leading-8 text-slate-600 sm:p-8 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-xl leading-8 text-slate-600 sm:p-8 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
                 >
                   {renderRich(global.text, "")}
                 </section>
@@ -634,17 +634,17 @@ const normalizedHtml = (() => {
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-8 lg:p-10"
               >
                 {section.label && (
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
+                  <p className="text-base font-semibold uppercase tracking-[0.2em] text-sky-600">
                     {section.label}
                   </p>
                 )}
                 {section.title && (
-                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">
+                  <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
                     {section.title}
                   </h2>
                 )}
                 {section.subtitle && (
-                  <p className="mt-3 text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
+                  <p className="mt-3 text-xl leading-7 text-slate-600 sm:text-2xl sm:leading-8">
                     {section.subtitle}
                   </p>
                 )}
@@ -656,16 +656,16 @@ const normalizedHtml = (() => {
                         block.type === "highlight"
                           ? "rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
                           : block.type === "closing"
-                            ? "rounded-2xl border border-slate-200 bg-slate-50 p-6 text-base leading-8 text-slate-600 sm:p-8 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                            ? "rounded-2xl border border-slate-200 bg-slate-50 p-6 text-xl leading-8 text-slate-600 sm:p-8 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
                             : "text-slate-600"
                       }
                     >
                       {block.type === "highlight" ? (
-                        <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-base leading-8 text-sky-400 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
+                        <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-xl leading-8 text-sky-400 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
                           {renderRich(block.text, "")}
                         </div>
                       ) : (
-                        renderRich(block.text, "text-base leading-8")
+                        renderRich(block.text, "text-xl leading-8")
                       )}
                     </div>
                   ))}
@@ -721,7 +721,9 @@ const normalizedHtml = (() => {
 
 
   /* Paragraphs */
-  .about-rich p {
+  .about-rich h1 { font-size: 3rem; line-height: 1.2; }
+
+.about-rich p {
     margin: 0.8rem 0;
   }
 
