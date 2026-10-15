@@ -235,13 +235,7 @@ export default function CustomsDutiesCalculator() {
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(14,165,233,0.18),transparent_38%)]" />
 
                 <div className="relative mx-auto max-w-7xl px-6 pb-14 pt-8 lg:px-8">
-                    {/* <Link
-                        to="/"
-                        className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-xs font-medium text-white/80 backdrop-blur-md transition hover:border-sky-400/40 hover:bg-white/15 hover:text-white"
-                    >
-                        <span aria-hidden="true">←</span>
-                        Back to Home
-                    </Link> */}
+                    
 
                     <div className="mx-auto mt-12 max-w-3xl text-center">
                         <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-300 backdrop-blur-md">
@@ -253,7 +247,7 @@ export default function CustomsDutiesCalculator() {
                             Customs Duties Calculator
                         </h1>
 
-                        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-sky-400 sm:text-base">
                             Estimate import taxes, VAT &amp; duties for shipments to Egypt.
                         </p>
                     </div>

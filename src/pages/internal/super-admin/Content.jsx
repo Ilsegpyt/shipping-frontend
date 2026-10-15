@@ -739,16 +739,32 @@ export default function Content() {
 
     }
 
+    const pageContentOrder =
+      form.type === "Page" ? aboutPageToPageContentOrder(aboutPageForm) : null;
+
     const payload = {
       parentId: form.parentId || null,
       title: form.title,
       type: form.type,
-      body: form.type === "Post" ? form.body || null : null,
-      pageIntroText: form.type === "Page" ? aboutPageForm.introText || null : null,
-      pageContentOrder: form.type === "Page" ? aboutPageToPageContentOrder(aboutPageForm) : null,
+
+      body:
+        form.type === "Post"
+          ? form.body || null
+          : form.type === "Page"
+            ? aboutPageForm.introText?.trim() || pageContentOrder
+            : null,
+
+      pageIntroText:
+        form.type === "Page" ? aboutPageForm.introText || null : null,
+
+      pageContentOrder,
+
       featuredImage: form.type === "Post" ? form.featuredImage || null : null,
+
       linkUrl: form.type === "Link" ? form.linkUrl || null : null,
+
       category: form.type === "Post" ? form.category.trim() || null : null,
+
       publishedAt: form.type === "Post" ? form.publishedAt || null : null,
     };
 

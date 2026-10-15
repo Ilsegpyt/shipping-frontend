@@ -100,9 +100,18 @@ export function serializeAboutPage(data) {
     contentBlocks: normalizeBlocks(section.contentBlocks, section.content || ""),
   }));
   const clean = {
-    ...createEmptyAboutPage(), ...data, schema: ABOUT_PAGE_SCHEMA, sections,
-    highlights: (data.highlights || []).map((item) => ({ id: item.id || makeId("highlight"), text: item.text || "" })),
-    closings: (data.closings || []).map((item) => ({ id: item.id || makeId("closing"), text: item.text || "" })),
+    ...createEmptyAboutPage(),
+    ...data,
+    schema: ABOUT_PAGE_SCHEMA,
+    sections,
+    highlights: (data.highlights || []).map((item) => ({
+      id: item.id || makeId("highlight"),
+      text: item.text || "",
+    })),
+    closings: (data.closings || []).map((item) => ({
+      id: item.id || makeId("closing"),
+      text: item.text || "",
+    })),
   };
   clean.pageOrder = validOrder(clean);
   return ABOUT_PAGE_MARKER + JSON.stringify(clean);
@@ -132,19 +141,74 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
     });
   };
   const field = "mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100";
-  return <div className="space-y-6 rounded-2xl border border-sky-200 bg-sky-50/30 p-4 sm:p-5">
-    <header><h3 className="text-lg font-semibold text-slate-900">{pageTitle} — Structured Content</h3><p className="mt-1 text-sm text-slate-600">Edit the page using the same ordered rich-content model as Philosophy. Add, remove, and reorder any section.</p></header>
+  return (
+    <div className="space-y-6 rounded-2xl border border-sky-200 bg-sky-50/30 p-4 sm:p-5">
+      <header>
+        <h3 className="text-lg font-semibold text-slate-900">
+          {pageTitle} — Structured Content
+        </h3>
+        <p className="mt-1 text-sm text-slate-600">
+          Edit the page using the same ordered rich-content model as Philosophy.
+          Add, remove, and reorder any section.
+        </p>
+      </header>
     <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <h4 className="font-semibold text-slate-900">Page Intro</h4>
       <div><label className="mb-2 block text-sm font-medium text-slate-700">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
     </section>
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900">Page Content Order</h4><p className="mt-1 text-sm text-slate-500">The public page follows this exact order.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => add("section")} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">+ Add Section</button><button type="button" onClick={() => add("highlight")} className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-800">+ Page Highlight</button><button type="button" onClick={() => add("closing")} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">+ Page Closing</button></div></div>
-      {!data.pageOrder.length && <p className="rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">No content yet. Add a section, highlight, or closing.</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="font-semibold text-slate-900">Page Content Order</h4>
+            <p className="mt-1 text-sm text-slate-500">
+              The public page follows this exact order.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => add("section")}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+            >
+              + Add Section
+            </button>
+            <button
+              type="button"
+              onClick={() => add("highlight")}
+              className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-800"
+            >
+              + Page Highlight
+            </button>
+            <button
+              type="button"
+              onClick={() => add("closing")}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+            >
+              + Page Closing
+            </button>
+          </div>
+        </div>
+        {!data.pageOrder.length && (
+          <p className="rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+            No content yet. Add a section, highlight, or closing.
+          </p>
+        )}
       {data.pageOrder.map((item, index) => {
-        const section = item.type === "section" ? data.sections.find((entry) => entry.id === item.id) : null;
-        const global = item.type === "highlight" ? data.highlights.find((entry) => entry.id === item.id) : item.type === "closing" ? data.closings.find((entry) => entry.id === item.id) : null;
-        if (item.type === "section" && !section || item.type !== "section" && !global) return null;
+          const section =
+            item.type === "section"
+              ? data.sections.find((entry) => entry.id === item.id)
+              : null;
+          const global =
+            item.type === "highlight"
+              ? data.highlights.find((entry) => entry.id === item.id)
+              : item.type === "closing"
+                ? data.closings.find((entry) => entry.id === item.id)
+                : null;
+          if (
+            (item.type === "section" && !section) ||
+            (item.type !== "section" && !global)
+          )
+            return null;
         const blocks = section?.contentBlocks || [];
         return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-sky-200 bg-white" : item.type === "closing" ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50/70"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-slate-500">Section {index + 1}</span><h5 className="font-semibold text-slate-900">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-red-600">Remove</button></div></div>
@@ -152,7 +216,7 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
         </article>;
       })}
     </section>
-  </div>;
+  </div>)
 }
 
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
@@ -660,12 +724,11 @@ const normalizedHtml = (() => {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
 
         <div className="relative mx-auto max-w-7xl">
-          {/* <a
-            href="/"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/70 transition hover:text-white"
-          >
-            ← Back to Home
-          </a> */}
+          {data.introLabel && (
+  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+    {data.introLabel}
+  </p>
+)}
 
           <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
             {page?.title || "About ILS"}
@@ -673,7 +736,7 @@ const normalizedHtml = (() => {
 
           {renderRich(
             data.introText,
-            "mt-5 max-w-3xl text-base leading-8 text-slate-100 sm:text-lg",
+            "intro-rich mt-5 max-w-3xl text-base leading-8 #00bcff sm:text-lg",
           )}
         </div>
       </section>
@@ -784,7 +847,24 @@ const normalizedHtml = (() => {
       </section>
 
       <style>{`
-  
+  /* Intro text only */
+.about-rich.intro-rich,
+.about-rich.intro-rich p,
+.about-rich.intro-rich span,
+.about-rich.intro-rich strong,
+.about-rich.intro-rich em,
+.about-rich.intro-rich h1,
+.about-rich.intro-rich h2,
+.about-rich.intro-rich h3,
+.about-rich.intro-rich h4,
+.about-rich.intro-rich h5,
+.about-rich.intro-rich h6 {
+  color: #00bcff !important;
+}
+  .intro-rich,
+.intro-rich * {
+  color: #00bcff !important;
+}
 .about-rich {
   min-width: 0;
   overflow-wrap: anywhere;
