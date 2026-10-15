@@ -1,4 +1,4 @@
-import  { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import contentService from "../../../services/contentService";
 
@@ -12,148 +12,148 @@ const PHILOSOPHY_SCHEMA = "ils-philosophy-v2";
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
 
 const createEmptyCard = (id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`) => ({
-    id,
-    title: "",
-    text: "",
-    highlights: [],
-    closings: [],
+  id,
+  title: "",
+  text: "",
+  highlights: [],
+  closings: [],
 });
 
 function createEmptyPhilosophyContent() {
-    return {
-        schema: PHILOSOPHY_SCHEMA,
-        introLabel: "",
-        introTitle: "",
-        introText: "",
-        cards: [],
-        pageOrder: [],
-        // Page-level highlight and closing content remains independent from cards.
-        globalHighlights: [],
-        globalClosings: [],
-        highlight: "",
-        closing: "",
-        legacyHtml: "",
-    };
+  return {
+    schema: PHILOSOPHY_SCHEMA,
+    introLabel: "",
+    introTitle: "",
+    introText: "",
+    cards: [],
+    pageOrder: [],
+    // Page-level highlight and closing content remains independent from cards.
+    globalHighlights: [],
+    globalClosings: [],
+    highlight: "",
+    closing: "",
+    legacyHtml: "",
+  };
 }
 
 function normalizeCard(card, index) {
-    let blocks = Array.isArray(card?.contentBlocks) ? card.contentBlocks : null;
-    if (!blocks) {
-        blocks = [];
-        if (card?.text) blocks.push({ id: `card-text-${index + 1}`, type: "text", text: card.text });
-        const highlights = Array.isArray(card?.highlights) ? card.highlights : (card?.highlight ? [card.highlight] : []);
-        highlights.forEach((item, itemIndex) => blocks.push({
-            id: item?.id || `highlight-${index + 1}-${itemIndex + 1}`,
-            type: "highlight",
-            text: typeof item === "string" ? item : (item?.text || ""),
-        }));
-        const closings = Array.isArray(card?.closings) ? card.closings : (card?.closing ? [card.closing] : []);
-        closings.forEach((item, itemIndex) => blocks.push({
-            id: item?.id || `closing-${index + 1}-${itemIndex + 1}`,
-            type: "closing",
-            text: typeof item === "string" ? item : (item?.text || ""),
-        }));
-    }
-    if (!blocks.some((block) => block?.type === "text")) {
-        blocks = [{ id: `card-text-${index + 1}`, type: "text", text: card?.text || "" }, ...blocks];
-    }
-    return {
-        id: card?.id || `card-${index + 1}`,
-        title: card?.title || "",
-        contentBlocks: blocks.map((block, blockIndex) => ({
-            id: block?.id || `block-${index + 1}-${blockIndex + 1}`,
-            type: ["text", "highlight", "closing"].includes(block?.type) ? block.type : "text",
-            text: block?.text || "",
-        })),
-        // Derived compatibility fields for old consumers/data.
-        text: blocks.find((block) => block?.type === "text")?.text || "",
-        highlights: blocks.filter((block) => block?.type === "highlight").map((block) => ({ id: block.id, text: block.text || "" })),
-        closings: blocks.filter((block) => block?.type === "closing").map((block) => ({ id: block.id, text: block.text || "" })),
-    };
+  let blocks = Array.isArray(card?.contentBlocks) ? card.contentBlocks : null;
+  if (!blocks) {
+    blocks = [];
+    if (card?.text) blocks.push({ id: `card-text-${index + 1}`, type: "text", text: card.text });
+    const highlights = Array.isArray(card?.highlights) ? card.highlights : (card?.highlight ? [card.highlight] : []);
+    highlights.forEach((item, itemIndex) => blocks.push({
+      id: item?.id || `highlight-${index + 1}-${itemIndex + 1}`,
+      type: "highlight",
+      text: typeof item === "string" ? item : (item?.text || ""),
+    }));
+    const closings = Array.isArray(card?.closings) ? card.closings : (card?.closing ? [card.closing] : []);
+    closings.forEach((item, itemIndex) => blocks.push({
+      id: item?.id || `closing-${index + 1}-${itemIndex + 1}`,
+      type: "closing",
+      text: typeof item === "string" ? item : (item?.text || ""),
+    }));
+  }
+  if (!blocks.some((block) => block?.type === "text")) {
+    blocks = [{ id: `card-text-${index + 1}`, type: "text", text: card?.text || "" }, ...blocks];
+  }
+  return {
+    id: card?.id || `card-${index + 1}`,
+    title: card?.title || "",
+    contentBlocks: blocks.map((block, blockIndex) => ({
+      id: block?.id || `block-${index + 1}-${blockIndex + 1}`,
+      type: ["text", "highlight", "closing"].includes(block?.type) ? block.type : "text",
+      text: block?.text || "",
+    })),
+    // Derived compatibility fields for old consumers/data.
+    text: blocks.find((block) => block?.type === "text")?.text || "",
+    highlights: blocks.filter((block) => block?.type === "highlight").map((block) => ({ id: block.id, text: block.text || "" })),
+    closings: blocks.filter((block) => block?.type === "closing").map((block) => ({ id: block.id, text: block.text || "" })),
+  };
 }
 
 function normalizeGlobalItems(items, fallback, prefix) {
-    if (Array.isArray(items)) return items.map((item, index) => typeof item === "string"
-        ? { id: `${prefix}-${index + 1}`, text: item }
-        : { id: item?.id || `${prefix}-${index + 1}`, text: item?.text || "" });
-    return fallback ? [{ id: `${prefix}-legacy`, text: fallback }] : [];
+  if (Array.isArray(items)) return items.map((item, index) => typeof item === "string"
+    ? { id: `${prefix}-${index + 1}`, text: item }
+    : { id: item?.id || `${prefix}-${index + 1}`, text: item?.text || "" });
+  return fallback ? [{ id: `${prefix}-legacy`, text: fallback }] : [];
 }
 
 function parsePhilosophyBody(body = "") {
-    if (typeof body !== "string") body = "";
+  if (typeof body !== "string") body = "";
 
-    if (body.startsWith(PHILOSOPHY_MARKER)) {
-        try {
-            const parsed = JSON.parse(body.slice(PHILOSOPHY_MARKER.length));
-            if (["ils-philosophy-v1", "ils-philosophy-v2"].includes(parsed.schema)) {
-                let cards = Array.isArray(parsed.cards)
-                    ? parsed.cards.map(normalizeCard)
-                    : [];
-                const globalHighlights = normalizeGlobalItems(parsed.globalHighlights, parsed.highlight, "global-highlight");
-                const globalClosings = normalizeGlobalItems(parsed.globalClosings, parsed.closing, "global-closing");
-                const validOrder = Array.isArray(parsed.pageOrder) ? parsed.pageOrder.filter((item) => {
-                    if (item?.type === "card") return cards.some((card) => card.id === item.id);
-                    if (item?.type === "globalHighlight") return globalHighlights.some((entry) => entry.id === item.id);
-                    if (item?.type === "globalClosing") return globalClosings.some((entry) => entry.id === item.id);
-                    return false;
-                }) : [];
-                const pageOrder = validOrder.length ? validOrder : [
-                    ...cards.map((card) => ({ type: "card", id: card.id })),
-                    ...globalHighlights.map((item) => ({ type: "globalHighlight", id: item.id })),
-                    ...globalClosings.map((item) => ({ type: "globalClosing", id: item.id })),
-                ];
+  if (body.startsWith(PHILOSOPHY_MARKER)) {
+    try {
+      const parsed = JSON.parse(body.slice(PHILOSOPHY_MARKER.length));
+      if (["ils-philosophy-v1", "ils-philosophy-v2"].includes(parsed.schema)) {
+        let cards = Array.isArray(parsed.cards)
+          ? parsed.cards.map(normalizeCard)
+          : [];
+        const globalHighlights = normalizeGlobalItems(parsed.globalHighlights, parsed.highlight, "global-highlight");
+        const globalClosings = normalizeGlobalItems(parsed.globalClosings, parsed.closing, "global-closing");
+        const validOrder = Array.isArray(parsed.pageOrder) ? parsed.pageOrder.filter((item) => {
+          if (item?.type === "card") return cards.some((card) => card.id === item.id);
+          if (item?.type === "globalHighlight") return globalHighlights.some((entry) => entry.id === item.id);
+          if (item?.type === "globalClosing") return globalClosings.some((entry) => entry.id === item.id);
+          return false;
+        }) : [];
+        const pageOrder = validOrder.length ? validOrder : [
+          ...cards.map((card) => ({ type: "card", id: card.id })),
+          ...globalHighlights.map((item) => ({ type: "globalHighlight", id: item.id })),
+          ...globalClosings.map((item) => ({ type: "globalClosing", id: item.id })),
+        ];
 
-                return {
-                    ...createEmptyPhilosophyContent(),
-                    ...parsed,
-                    schema: PHILOSOPHY_SCHEMA,
-                    cards,
-                    pageOrder,
-                    globalHighlights,
-                    globalClosings,
-                    highlight: parsed.highlight || "",
-                    closing: parsed.closing || "",
-                    legacyHtml: parsed.legacyHtml || "",
-                };
-            }
-        } catch (error) {
-            console.error("Failed to parse Philosophy content:", error);
-        }
+        return {
+          ...createEmptyPhilosophyContent(),
+          ...parsed,
+          schema: PHILOSOPHY_SCHEMA,
+          cards,
+          pageOrder,
+          globalHighlights,
+          globalClosings,
+          highlight: parsed.highlight || "",
+          closing: parsed.closing || "",
+          legacyHtml: parsed.legacyHtml || "",
+        };
+      }
+    } catch (error) {
+      console.error("Failed to parse Philosophy content:", error);
     }
+  }
 
-    // Preserve legacy HTML and make its existing content editable where possible.
-    const document = new DOMParser().parseFromString(body, "text/html");
-    const elements = Array.from(document.body.children);
-    const paragraphs = elements.filter((element) => element.tagName.toLowerCase() === "p");
-    const listElement = elements.find((element) => ["ul", "ol"].includes(element.tagName.toLowerCase()));
-    const strongParagraph = paragraphs.find((paragraph) => paragraph.querySelector("strong"));
-    const closingParagraphs = paragraphs.filter((paragraph) =>
-        paragraph !== paragraphs[0] && paragraph !== paragraphs[1] && paragraph !== paragraphs[2] && paragraph !== strongParagraph
-    );
-    const cardItems = listElement
-        ? Array.from(listElement.querySelectorAll(":scope > li")).map((item, index) => normalizeCard({
-            id: `legacy-card-${index + 1}`,
-            title: "",
-            text: item.innerHTML.trim(),
-        }, index))
-        : [];
+  // Preserve legacy HTML and make its existing content editable where possible.
+  const document = new DOMParser().parseFromString(body, "text/html");
+  const elements = Array.from(document.body.children);
+  const paragraphs = elements.filter((element) => element.tagName.toLowerCase() === "p");
+  const listElement = elements.find((element) => ["ul", "ol"].includes(element.tagName.toLowerCase()));
+  const strongParagraph = paragraphs.find((paragraph) => paragraph.querySelector("strong"));
+  const closingParagraphs = paragraphs.filter((paragraph) =>
+    paragraph !== paragraphs[0] && paragraph !== paragraphs[1] && paragraph !== paragraphs[2] && paragraph !== strongParagraph
+  );
+  const cardItems = listElement
+    ? Array.from(listElement.querySelectorAll(":scope > li")).map((item, index) => normalizeCard({
+      id: `legacy-card-${index + 1}`,
+      title: "",
+      text: item.innerHTML.trim(),
+    }, index))
+    : [];
 
-    if (strongParagraph || closingParagraphs.length) {
-        if (!cardItems.length) cardItems.push(createEmptyCard("legacy-content-card"));
-        if (strongParagraph) cardItems[cardItems.length - 1].highlights.push({ id: "legacy-highlight", text: strongParagraph.innerHTML.trim() });
-        const finalClosing = closingParagraphs[closingParagraphs.length - 1];
-        if (finalClosing) cardItems[cardItems.length - 1].closings.push({ id: "legacy-closing", text: finalClosing.innerHTML.trim() });
-    }
+  if (strongParagraph || closingParagraphs.length) {
+    if (!cardItems.length) cardItems.push(createEmptyCard("legacy-content-card"));
+    if (strongParagraph) cardItems[cardItems.length - 1].highlights.push({ id: "legacy-highlight", text: strongParagraph.innerHTML.trim() });
+    const finalClosing = closingParagraphs[closingParagraphs.length - 1];
+    if (finalClosing) cardItems[cardItems.length - 1].closings.push({ id: "legacy-closing", text: finalClosing.innerHTML.trim() });
+  }
 
-    return {
-        ...createEmptyPhilosophyContent(),
-        introLabel: paragraphs[0]?.textContent?.trim() || "",
-        introTitle: paragraphs[1]?.textContent?.trim() || "",
-        introText: paragraphs[2]?.innerHTML?.trim() || "",
-        cards: cardItems,
-        pageOrder: cardItems.map((card) => ({ type: "card", id: card.id })),
-        legacyHtml: body,
-    };
+  return {
+    ...createEmptyPhilosophyContent(),
+    introLabel: paragraphs[0]?.textContent?.trim() || "",
+    introTitle: paragraphs[1]?.textContent?.trim() || "",
+    introText: paragraphs[2]?.innerHTML?.trim() || "",
+    cards: cardItems,
+    pageOrder: cardItems.map((card) => ({ type: "card", id: card.id })),
+    legacyHtml: body,
+  };
 }
 
 function philosophyToAboutPage(content) {
@@ -248,16 +248,190 @@ function aboutPageToPhilosophy(data, previous = {}) {
 }
 
 function serializePhilosophyContent(content) {
-    return PHILOSOPHY_MARKER + JSON.stringify({
-        ...content,
-        schema: PHILOSOPHY_SCHEMA,
-        globalHighlights: normalizeGlobalItems(content.globalHighlights, content.highlight, "global-highlight"),
-        globalClosings: normalizeGlobalItems(content.globalClosings, content.closing, "global-closing"),
-        pageOrder: Array.isArray(content.pageOrder) ? content.pageOrder : [],
-        highlight: "",
-        closing: "",
-        cards: (content.cards || []).map((card, index) => normalizeCard(card, index)),
+  return PHILOSOPHY_MARKER + JSON.stringify({
+    ...content,
+    schema: PHILOSOPHY_SCHEMA,
+    globalHighlights: normalizeGlobalItems(content.globalHighlights, content.highlight, "global-highlight"),
+    globalClosings: normalizeGlobalItems(content.globalClosings, content.closing, "global-closing"),
+    pageOrder: Array.isArray(content.pageOrder) ? content.pageOrder : [],
+    highlight: "",
+    closing: "",
+    cards: (content.cards || []).map((card, index) => normalizeCard(card, index)),
+  });
+}
+
+function pageContentOrderToAboutPage(pageContentOrder, pageIntroText = "") {
+  let parsed;
+
+  try {
+    parsed = typeof pageContentOrder === "string"
+      ? JSON.parse(pageContentOrder)
+      : pageContentOrder;
+  } catch {
+    return null;
+  }
+
+  if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.items)) {
+    return null;
+  }
+
+  const sections = [];
+  const highlights = [];
+  const closings = [];
+  const pageOrder = [];
+
+  for (const item of parsed.items) {
+    if (!item || !Array.isArray(item.items)) continue;
+
+    if (item.type === "Section") {
+      const section = {
+        id: item.id || `section-${sections.length + 1}`,
+        label: typeof item.label === "string" ? item.label : "",
+        title: typeof item.title === "string" ? item.title : "",
+        subtitle: typeof item.subtitle === "string" ? item.subtitle : "",
+        contentBlocks: item.items.map((child, index) => ({
+          id: child.id || `block-${sections.length + 1}-${index + 1}`,
+          type: child.type === "HighlightText"
+            ? "highlight"
+            : child.type === "ClosingText"
+              ? "closing"
+              : "text",
+          text: child.text || "",
+        })),
+      };
+
+      sections.push(section);
+      pageOrder.push({ type: "section", id: section.id });
+    } else if (item.type === "PageHighlights") {
+      for (const child of item.items) {
+        const entry = { id: child.id || `highlight-${highlights.length + 1}`, text: child.text || "" };
+        highlights.push(entry);
+        pageOrder.push({ type: "highlight", id: entry.id });
+      }
+    } else if (item.type === "PageClosings") {
+      for (const child of item.items) {
+        const entry = { id: child.id || `closing-${closings.length + 1}`, text: child.text || "" };
+        closings.push(entry);
+        pageOrder.push({ type: "closing", id: entry.id });
+      }
+    }
+  }
+
+  return {
+    ...createEmptyAboutPage(),
+    introText: pageIntroText || "",
+    sections,
+    highlights,
+    closings,
+    pageOrder,
+  };
+}
+
+function aboutPageToPageContentOrder(data) {
+  const sections = Array.isArray(data.sections) ? data.sections : [];
+  const highlights = Array.isArray(data.highlights) ? data.highlights : [];
+  const closings = Array.isArray(data.closings) ? data.closings : [];
+  const items = [];
+  const usedSections = new Set();
+  const usedHighlights = new Set();
+  const usedClosings = new Set();
+
+  const addSection = (section) => {
+    if (!section || usedSections.has(section.id)) return;
+    usedSections.add(section.id);
+
+    const sectionItems = (section.contentBlocks || []).map((block, index) => ({
+      id: block.id || `text-${section.id}-${index + 1}`,
+      type: block.type === "highlight"
+        ? "HighlightText"
+        : block.type === "closing"
+          ? "ClosingText"
+          : "CardText",
+      text: block.text || "",
+    }));
+
+    if (!sectionItems.length) {
+      sectionItems.push({ id: `text-${section.id}`, type: "CardText", text: "" });
+    }
+
+    items.push({
+      id: section.id || `section-${items.length + 1}`,
+      type: "Section",
+      label: section.label || "",
+      title: section.title || "",
+      subtitle: section.subtitle || "",
+      items: sectionItems,
     });
+  };
+
+  const addHighlight = (entry) => {
+    if (!entry || usedHighlights.has(entry.id)) return;
+    usedHighlights.add(entry.id);
+    items.push({
+      id: `page-highlights-${entry.id}`,
+      type: "PageHighlights",
+      items: [{ id: entry.id || `highlight-${items.length + 1}`, type: "HighlightText", text: entry.text || "" }],
+    });
+  };
+
+  const addClosing = (entry) => {
+    if (!entry || usedClosings.has(entry.id)) return;
+    usedClosings.add(entry.id);
+    items.push({
+      id: `page-closings-${entry.id}`,
+      type: "PageClosings",
+      items: [{ id: entry.id || `closing-${items.length + 1}`, type: "ClosingText", text: entry.text || "" }],
+    });
+  };
+
+  const order = Array.isArray(data.pageOrder) ? data.pageOrder : [];
+  for (const orderedItem of order) {
+    if (orderedItem.type === "section") addSection(sections.find((item) => item.id === orderedItem.id));
+    if (orderedItem.type === "highlight") addHighlight(highlights.find((item) => item.id === orderedItem.id));
+    if (orderedItem.type === "closing") addClosing(closings.find((item) => item.id === orderedItem.id));
+  }
+
+  sections.forEach(addSection);
+  highlights.forEach(addHighlight);
+  closings.forEach(addClosing);
+
+  if (!items.some((item) => item.type === "Section")) {
+    items.unshift({
+      id: `section-${Date.now()}`,
+      type: "Section",
+      items: [{ id: `text-${Date.now()}`, type: "CardText", text: "" }],
+    });
+  }
+
+  return JSON.stringify({ version: 1, items });
+}
+
+function legacyPageBodyToAboutPage(body = "") {
+  if (typeof body !== "string" || !body.trim()) {
+    return createEmptyAboutPage();
+  }
+
+  if (body.startsWith(PHILOSOPHY_MARKER)) {
+    return philosophyToAboutPage(parsePhilosophyBody(body));
+  }
+
+  if (body.startsWith("<!--ILS_ABOUT_PAGE_V1-->")) {
+    return parseAboutPage(body);
+  }
+
+  const sectionId = `legacy-section-${Date.now()}`;
+  return {
+    ...createEmptyAboutPage(),
+    sections: [{
+      id: sectionId,
+      label: "",
+      title: "",
+      subtitle: "",
+      contentBlocks: [{ id: `legacy-text-${Date.now()}`, type: "text", text: body }],
+    }],
+    pageOrder: [{ type: "section", id: sectionId }],
+    legacyHtml: body,
+  };
 }
 
 export default function Content() {
@@ -322,11 +496,11 @@ export default function Content() {
 
     createEmptyPhilosophyContent()
 
-);
+  );
 
-const [isPhilosophyPage, setIsPhilosophyPage] = useState(false);
-const [isStructuredAboutPage, setIsStructuredAboutPage] = useState(false);
-const [aboutPageForm, setAboutPageForm] = useState(createEmptyAboutPage());
+  const [isPhilosophyPage, setIsPhilosophyPage] = useState(false);
+  const [isStructuredAboutPage, setIsStructuredAboutPage] = useState(false);
+  const [aboutPageForm, setAboutPageForm] = useState(createEmptyAboutPage());
 
   useEffect(() => {
 
@@ -420,38 +594,36 @@ const [aboutPageForm, setAboutPageForm] = useState(createEmptyAboutPage());
 
   };
 
-const handleAboutPageChange = (value) => setAboutPageForm(value);
+  const handleAboutPageChange = (value) => setAboutPageForm(value);
 
-const handlePhilosophyChange = (field, value) => {
+  const handlePhilosophyChange = (field, value) => {
 
     setPhilosophyForm((prev) => ({
 
-        ...prev,
+      ...prev,
 
-        [field]: value,
+      [field]: value,
 
     }));
 
-};
+  };
 
   const handleTypeChange = (e) => {
 
     const type = e.target.value;
 
     setForm((prev) => ({
-
       ...prev,
-
       type,
-
       body: "",
-
       featuredImage: "",
-
       linkUrl: "",
-
     }));
 
+    setIsPhilosophyPage(false);
+    setIsStructuredAboutPage(type === "Page");
+    setAboutPageForm(createEmptyAboutPage());
+    setPhilosophyForm(createEmptyPhilosophyContent());
     setSaveError("");
 
   };
@@ -508,38 +680,32 @@ const handlePhilosophyChange = (field, value) => {
 
     }
 
-if (
+    if (form.type === "Page") {
+      const sections = Array.isArray(aboutPageForm.sections)
+        ? aboutPageForm.sections
+        : [];
 
-  (form.type === "Page" || form.type === "Post") &&
+      if (sections.length === 0) {
+        setSaveError("Add at least one Section to the page.");
+        return;
+      }
 
-  (
+      const sectionWithoutTitle = sections.findIndex(
+        (section) => !String(section?.title || "").trim(),
+      );
 
-    
-isPhilosophyPage || isStructuredAboutPage
-    ? ![
-        aboutPageForm.introLabel,
-        aboutPageForm.introTitle,
-        aboutPageForm.introText,
-        ...(aboutPageForm.sections || []).flatMap((section) => [
-            section.label,
-            section.title,
-            section.subtitle,
-            ...(section.contentBlocks || []).map((block) => block.text),
-        ]),
-        ...(aboutPageForm.highlights || []).map((item) => item.text),
-        ...(aboutPageForm.closings || []).map((item) => item.text),
-    ].some((value) => String(value || "").trim())
-    : !(form.body || "").trim()
+      if (sectionWithoutTitle !== -1) {
+        setSaveError(
+          `Section Title is required for Section ${sectionWithoutTitle + 1}.`,
+        );
+        return;
+      }
+    }
 
-  )
-
-) {
-
-  setSaveError("Body is required.");
-
-  return;
-
-}
+    if (form.type === "Post" && !(form.body || "").trim()) {
+      setSaveError("Body is required for Post content.");
+      return;
+    }
 
     if (form.type === "Post" && !form.featuredImage) {
 
@@ -573,44 +739,18 @@ isPhilosophyPage || isStructuredAboutPage
 
     }
 
-const payload = {
-
-  parentId: form.parentId || null,
-
-  title: form.title,
-
-  type: form.type,
-
-
-body:
-    form.type === "Page" || form.type === "Post"
-        ? isPhilosophyPage
-            ? serializePhilosophyContent(
-                aboutPageToPhilosophy(aboutPageForm, philosophyForm)
-              )
-            : isStructuredAboutPage
-                ? serializeAboutPage(aboutPageForm)
-                : form.body || null
-        : null,
-
-
-  featuredImage:
-
-    form.type === "Post" ? form.featuredImage || null : null,
-
-  linkUrl:
-
-    form.type === "Link" ? form.linkUrl || null : null,
-
-  category:
-
-    form.type === "Post" ? form.category.trim() || null : null,
-
-  publishedAt:
-
-    form.type === "Post" ? form.publishedAt || null : null,
-
-};
+    const payload = {
+      parentId: form.parentId || null,
+      title: form.title,
+      type: form.type,
+      body: form.type === "Post" ? form.body || null : null,
+      pageIntroText: form.type === "Page" ? aboutPageForm.introText || null : null,
+      pageContentOrder: form.type === "Page" ? aboutPageToPageContentOrder(aboutPageForm) : null,
+      featuredImage: form.type === "Post" ? form.featuredImage || null : null,
+      linkUrl: form.type === "Link" ? form.linkUrl || null : null,
+      category: form.type === "Post" ? form.category.trim() || null : null,
+      publishedAt: form.type === "Post" ? form.publishedAt || null : null,
+    };
 
     try {
       setSavingContent(true);
@@ -663,8 +803,8 @@ body:
 
       setSaveError(
         err.response?.data?.message ||
-          err.response?.data?.error ||
-          "Failed to save content.",
+        err.response?.data?.error ||
+        "Failed to save content.",
       );
     } finally {
       setSavingContent(false);
@@ -780,93 +920,38 @@ body:
 
       }
 
-const type = getTypeName(content.type);
+      const type = getTypeName(content.type);
 
-const normalizedTitle = (content.title || "")
-  .trim()
-  .toLowerCase()
-  .replace(/&/g, "and")
-  .replace(/\s+/g, " ");
+      const parsedOrder = type === "Page"
+        ? pageContentOrderToAboutPage(content.pageContentOrder, content.pageIntroText || "")
+        : null;
 
-const isPhilosophy =
-  type === "Page" && normalizedTitle === "ils philosophy";
+      const parsedLegacy = type === "Page"
+        ? legacyPageBodyToAboutPage(content.body || "")
+        : createEmptyAboutPage();
 
-const isStructuredAbout =
-  type === "Page" &&
-  [
-    "purpose and strategy",
-    "ILS Philosophy",
-    "ils values",
-    "certificates",
-    "road transportation",
-    "air freight",
-    "sea freight",
-    "customs clearance",
-    "ils projects transport",
-    "warehousing and distribution",
-    "cargo insurance",
-    "consolidations",
-    "incoterms",
-    "dangerous goods labels",
-    "container types",
-    "automotive logistics",
-    "technology",
-    "healthcare logistics",
-    "energy",
-    "industrial logistics",
-    "retail logistics",
-  ].includes(normalizedTitle);
+      const pageData = parsedOrder || parsedLegacy;
 
-    
+      setForm({
+        parentId: content.parentId || "",
+        title: content.title || "",
+        type,
+        // Body is only used by Posts. Pages use PageIntroText + PageContentOrder.
+        body: type === "Post" ? content.body || "" : "",
+        featuredImage: content.featuredImage || "",
+        linkUrl: content.linkUrl || "",
+        category: content.category ?? "",
+        publishedAt: content.publishedAt ? String(content.publishedAt).slice(0, 10) : "",
+      });
 
+      setIsPhilosophyPage(false);
+      setIsStructuredAboutPage(type === "Page");
+      setAboutPageForm(pageData);
+      setPhilosophyForm(createEmptyPhilosophyContent());
 
+      setEditingContentId(contentId);
 
-
-setForm({
-
-    parentId: content.parentId || "",
-
-    title: content.title || "",
-
-    type,
-
-    body: content.body || "",
-
-    featuredImage: content.featuredImage || "",
-
-    linkUrl: content.linkUrl || "",
-
-    category: content.category ?? "",
-
-    publishedAt: content.publishedAt
-
-        ? String(content.publishedAt).slice(0, 10)
-
-        : "",
-
-});
-
-
-const parsedPhilosophy = isPhilosophy
-  ? parsePhilosophyBody(content.body || "")
-  : createEmptyPhilosophyContent();
-
-setIsPhilosophyPage(isPhilosophy);
-setIsStructuredAboutPage(isStructuredAbout);
-
-setAboutPageForm(
-  isPhilosophy
-    ? philosophyToAboutPage(parsedPhilosophy)
-    : isStructuredAbout
-      ? parseAboutPage(content.body || "")
-      : createEmptyAboutPage(),
-);
-
-setPhilosophyForm(parsedPhilosophy);
-
-setEditingContentId(contentId);
-
-setShowAddForm(true);
+      setShowAddForm(true);
 
     } catch (err) {
 
@@ -876,9 +961,9 @@ setShowAddForm(true);
 
         err.response?.data?.message ||
 
-          err.response?.data?.error ||
+        err.response?.data?.error ||
 
-          "Failed to load content.",
+        "Failed to load content.",
 
       );
 
@@ -1148,25 +1233,21 @@ setShowAddForm(true);
 
             {(form.type === "Page" || form.type === "Post") && (
               <div className="md:col-span-2 space-y-5">
-                {isPhilosophyPage || isStructuredAboutPage ? (
+                {form.type === "Page" ? (
                   <StructuredAboutEditor
                     value={aboutPageForm}
                     onChange={handleAboutPageChange}
-                    pageTitle={form.title || "About ILS Page"}
+                    pageTitle={form.title || "Page"}
                   />
                 ) : (
                   <>
                     <label className="mb-2 block text-sm font-medium text-slate-700">
                       Body
                     </label>
-
                     <RichTextEditor
                       value={form.body}
                       onChange={(value) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          body: value,
-                        }))
+                        setForm((prev) => ({ ...prev, body: value }))
                       }
                     />
                   </>

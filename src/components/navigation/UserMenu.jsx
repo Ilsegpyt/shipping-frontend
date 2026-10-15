@@ -10,7 +10,14 @@ export default function UserMenu() {
 
     const handleProfileClick = () => {
         setOpen(false);
-        navigate('/profile');
+        const profilePath =
+            user?.tokenType === 'customer'
+                ? '/customer/profile'
+                : user?.tokenType === 'subaccount'
+                    ? '/subaccount/profile'
+                    : '/profile';
+
+        navigate(profilePath);
     };
 
     return (
@@ -31,9 +38,7 @@ export default function UserMenu() {
                 </div>
 
                 <ChevronDown
-                    className={`h-4 w-4 text-gray-500 transition-transform ${
-                        open ? 'rotate-180' : ''
-                    }`}
+                    className={`h-4 w-4 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`}
                 />
             </button>
 

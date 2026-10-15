@@ -13,6 +13,17 @@ const countries = [
     'Other',
 ];
 
+const countryCodes = {
+    Egypt: '+20',
+    'Saudi Arabia': '+966',
+    'United Arab Emirates': '+971',
+    Qatar: '+974',
+    Kuwait: '+965',
+    Bahrain: '+973',
+    Oman: '+968',
+    Jordan: '+962',
+};
+
 const citiesByCountry = {
     Egypt: ['Cairo', 'Alexandria', 'Giza', 'Port Said', 'Other'],
     'Saudi Arabia': ['Jeddah', 'Riyadh', 'Dammam', 'Other'],
@@ -32,7 +43,10 @@ const labelClass = 'text-sm font-medium text-slate-700';
 
 export default function AgentOpportunity() {
     const [country, setCountry] = useState('');
+    const [countryCode, setCountryCode] = useState('+20');
     const [submitted, setSubmitted] = useState(false);
+    const [phoneError, setPhoneError] = useState('');
+    const [submissionError, setSubmissionError] = useState('');
 
     const cities = country ? citiesByCountry[country] ?? ['Other'] : [];
 
@@ -40,6 +54,7 @@ export default function AgentOpportunity() {
         event.preventDefault();
 
         const form = event.currentTarget;
+        setSubmissionError('');
         const formData = new FormData(form);
 
         const data = {
@@ -62,6 +77,7 @@ export default function AgentOpportunity() {
 
             form.reset();
             setCountry('');
+            setCountryCode('+20');
         } catch (error) {
             console.error(
                 'Failed to submit agent application:',
@@ -69,6 +85,10 @@ export default function AgentOpportunity() {
             );
 
             setSubmitted(false);
+            setSubmissionError(
+                error?.response?.data?.message ||
+                'Your request could not be submitted. Please check your information and try again.'
+            );
         }
     };
 
@@ -155,7 +175,11 @@ export default function AgentOpportunity() {
                                         id="country"
                                         name="country"
                                         value={country}
-                                        onChange={(event) => setCountry(event.target.value)}
+                                        onChange={(event) => {
+                                            const selectedCountry = event.target.value;
+                                            setCountry(selectedCountry);
+                                            setCountryCode(countryCodes[selectedCountry] ?? '+20');
+                                        }}
                                         required
                                         className={inputClass}
                                     >
@@ -231,7 +255,9 @@ export default function AgentOpportunity() {
                                         <input
                                             name="countryCode"
                                             type="text"
-                                            placeholder="+20"
+                                            value={countryCode}
+                                            onChange={(event) => setCountryCode(event.target.value)}
+                                            autoComplete="tel-country-code"
                                             aria-label="Country code"
                                             className="w-24 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                                         />
@@ -241,10 +267,20 @@ export default function AgentOpportunity() {
                                             name="cellPhone"
                                             type="tel"
                                             placeholder="Cell Phone"
+                                            autoComplete="tel-national"
                                             required
+                                            aria-invalid={Boolean(phoneError)}
+                                            aria-describedby={phoneError ? 'cellPhone-error' : undefined}
+                                            onInvalid={() => setPhoneError('Please enter your cell phone number.')}
+                                            onChange={() => setPhoneError('')}
                                             className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                                         />
                                     </div>
+                                    {phoneError && (
+                                        <p id="cellPhone-error" role="alert" className="mt-2 text-sm text-red-600">
+                                            {phoneError}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>
@@ -289,6 +325,12 @@ export default function AgentOpportunity() {
                                     Submit
                                 </button>
                             </div>
+
+                            {submissionError && (
+                                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                                    {submissionError}
+                                </div>
+                            )}
 
                             {submitted && (
                                 <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">

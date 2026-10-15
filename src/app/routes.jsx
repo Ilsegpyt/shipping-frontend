@@ -8,6 +8,7 @@ import SubAccountLayout from "../layouts/SubAccountLayout";
 
 // Public pages
 import Home from "../pages/public/Home";
+import CmsPublicPage from "../pages/public/CmsPublicPage";
 import Philosophy from "../pages/public/About ILS/Philosophy";
 import PurposeAndStrategy from "../pages/public/About ILS/PurposeAndStrategy";
 import Values from "../pages/public/About ILS/Values";
@@ -70,9 +71,11 @@ import ContactInquiries from "../pages/internal/super-admin/ContactInquiries";
 // Customer pages
 import CustomerDashboard from "../pages/customer/CustomerDashboard";
 import CustomerTeamAccess from "../pages/customer/CustomerTeamAccess";
+import CustomerProfile from "../pages/customer/CustomerProfile";
 
 // Sub Account pages
 import SubAccountDashboard from "../pages/sub-account/SubAccountDashboard";
+import SubAccountProfile from "../pages/sub-account/SubAccountProfile";
 
 function PortalGuard({ allowedTokenType, children }) {
   const token = localStorage.getItem("accessToken");
@@ -89,9 +92,7 @@ function PortalGuard({ allowedTokenType, children }) {
     }
 
     const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-
     const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-
     const tokenType = JSON.parse(atob(padded)).token_type;
 
     if (tokenType === allowedTokenType) {
@@ -125,115 +126,79 @@ export default function AppRoutes() {
   return (
     <Routes>
       {/* Public Routes */}
-    <Route element={<WebsiteLayout />}>
+      <Route element={<WebsiteLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/cms/:contentId" element={<CmsPublicPage />} />
+        <Route path="/about-ils/philosophy" element={<Philosophy />} />
+        <Route
+          path="/about-ils/purpose-and-strategy"
+          element={<PurposeAndStrategy />}
+        />
+        <Route path="/about-ils/values" element={<Values />} />
+        <Route path="/about-ils/certificates" element={<Certificates />} />
+        <Route path="/news" element={<News />} />
+        <Route path="/resources/incoterms" element={<Incoterms />} />
+        <Route
+          path="/resources/dangerous-goods-labels"
+          element={<DangerousGoodsLabels />}
+        />
+        <Route path="/resources/cbm-calculator" element={<CbmCalculator />} />
+        <Route path="/resources/container-types" element={<ContainerTypes />} />
+        <Route path="/resources/nafeza-platform" element={<NafezaPlatform />} />
+        <Route
+          path="/resources/customs-duties-calculator"
+          element={<CustomsDutiesCalculator />}
+        />
+        <Route
+          path="/join-ils/agent-opportunity"
+          element={<AgentOpportunity />}
+        />
+        <Route path="/join-ils/recruitment" element={<Recruitment />} />
+        <Route path="/contact-ils/locations" element={<ILSBranches />} />
+        <Route path="/contact-ils/get-a-quote" element={<GetAQuote />} />
+        <Route path="/news/:slug" element={<NewsDetails />} />
 
-      <Route path="/" element={<Home />} />
+        {/* Industry Pages */}
+        <Route path="/industries/healthcare" element={<HealthcareLogistics />} />
+        <Route path="/industries/automotive" element={<AutomotiveLogistics />} />
+        <Route path="/industries/energy" element={<Energy />} />
+        <Route path="/industries/retail" element={<RetailLogistics />} />
+        <Route path="/industries/industrial" element={<IndustrialLogistics />} />
+        <Route path="/industries/technology" element={<Technology />} />
 
-      <Route path="/about-ils/philosophy" element={<Philosophy />} />
+        {/* Solutions */}
+        <Route path="/solutions" element={<Solutions />} />
+        <Route path="/solutions/air-freight" element={<AirFreight />} />
+        <Route path="/solutions/sea-freight" element={<SeaFreight />} />
+        <Route
+          path="/solutions/road-transportation"
+          element={<RoadTransportation />}
+        />
+        <Route
+          path="/solutions/customs-clearance"
+          element={<CustomsClearance />}
+        />
+        <Route
+          path="/solutions/project-transport"
+          element={<ProjectTransport />}
+        />
+        <Route
+          path="/solutions/warehousing-distribution"
+          element={<WarehousingDistribution />}
+        />
+        <Route path="/solutions/consolidations" element={<Consolidations />} />
+        <Route path="/solutions/cargo-insurance" element={<CargoInsurance />} />
+      </Route>
 
-      <Route
-        path="/about-ils/purpose-and-strategy"
-        element={<PurposeAndStrategy />}
-      />
-
-      <Route path="/about-ils/values" element={<Values />} />
-
-      <Route path="/about-ils/certificates" element={<Certificates />} />
-
-      <Route path="/news" element={<News />} />
-
-      <Route path="/resources/incoterms" element={<Incoterms />} />
-
-      <Route
-        path="/resources/dangerous-goods-labels"
-        element={<DangerousGoodsLabels />}
-      />
-
-      <Route path="/resources/cbm-calculator" element={<CbmCalculator />} />
-
-      <Route path="/resources/container-types" element={<ContainerTypes />} />
-
-      <Route path="/resources/nafeza-platform" element={<NafezaPlatform />} />
-
-      <Route
-        path="/resources/customs-duties-calculator"
-        element={<CustomsDutiesCalculator />}
-      />
-
-      <Route
-        path="/join-ils/agent-opportunity"
-        element={<AgentOpportunity />}
-      />
-
-      <Route path="/join-ils/recruitment" element={<Recruitment />} />
-
-      <Route path="/contact-ils/locations" element={<ILSBranches />} />
-
-      <Route path="/contact-ils/get-a-quote" element={<GetAQuote />} />
-
-      <Route path="/news/:slug" element={<NewsDetails />} />
-
-      {/* Industry Pages */}
-
-      <Route path="/industries/healthcare" element={<HealthcareLogistics />} />
-
-      <Route path="/industries/automotive" element={<AutomotiveLogistics />} />
-
-      <Route path="/industries/energy" element={<Energy />} />
-
-      <Route path="/industries/retail" element={<RetailLogistics />} />
-
-      <Route path="/industries/industrial" element={<IndustrialLogistics />} />
-
-      <Route path="/industries/technology" element={<Technology />} />
-
-      {/* Solutions */}
-
-      <Route path="/solutions" element={<Solutions />} />
-
-      <Route path="/solutions/air-freight" element={<AirFreight />} />
-
-      <Route path="/solutions/sea-freight" element={<SeaFreight />} />
-
-      <Route
-        path="/solutions/road-transportation"
-        element={<RoadTransportation />}
-      />
-
-      <Route
-        path="/solutions/customs-clearance"
-        element={<CustomsClearance />}
-      />
-
-      <Route
-        path="/solutions/project-transport"
-        element={<ProjectTransport />}
-      />
-
-      <Route
-        path="/solutions/warehousing-distribution"
-        element={<WarehousingDistribution />}
-      />
-
-      <Route path="/solutions/consolidations" element={<Consolidations />} />
-
-      <Route path="/solutions/cargo-insurance" element={<CargoInsurance />} />
-    </Route>
       {/* Auth Routes */}
-
       <Route path="/login" element={<Login />} />
-
       <Route path="/forgot-password" element={<ForgotPassword />} />
-
       <Route path="/activate-account" element={<ActivateAccount />} />
-
       <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected Routes */}
-
       <Route element={<ProtectedRoute />}>
         {/* Internal Portal */}
-
         <Route
           element={
             <PortalGuard allowedTokenType="internal">
@@ -242,58 +207,40 @@ export default function AppRoutes() {
           }
         >
           <Route path="/dashboard" element={<Dashboard />} />
-
           <Route path="/profile" element={<Profile />} />
-
           <Route
             path="/users"
-            element={
-              <ProtectedRoute requiredPermission="identity.users.view" />
-            }
+            element={<ProtectedRoute requiredPermission="identity.users.view" />}
           >
             <Route index element={<Users />} />
           </Route>
-
           <Route
             path="/roles"
-            element={
-              <ProtectedRoute requiredPermission="identity.roles.manage" />
-            }
+            element={<ProtectedRoute requiredPermission="identity.roles.manage" />}
           >
             <Route index element={<Roles />} />
           </Route>
-
           <Route
             path="/account-manager-assignments"
-            element={
-              <ProtectedRoute requiredPermission="identity.users.view" />
-            }
+            element={<ProtectedRoute requiredPermission="identity.users.view" />}
           >
             <Route index element={<AccountManagerAssignments />} />
           </Route>
-
           <Route
             path="/customers"
             element={<ProtectedRoute requiredPermission="customers.view" />}
           >
             <Route index element={<Customers />} />
           </Route>
-
           <Route path="/content" element={<Content />} />
-
           <Route path="/locations" element={<Locations />} />
-
           <Route path="/agent-opportunities" element={<AgentOpportunities />} />
-
           <Route path="/quotations" element={<Quotations />} />
-
           <Route path="/recruitments" element={<RecruitmentRequests />} />
-
           <Route path="/contact-inquiries" element={<ContactInquiries />} />
         </Route>
 
         {/* Customer Portal */}
-
         <Route
           element={
             <PortalGuard allowedTokenType="customer">
@@ -307,14 +254,13 @@ export default function AppRoutes() {
           >
             <Route index element={<CustomerDashboard />} />
           </Route>
-
           <Route path="/customer/team-access" element={<ProtectedRoute />}>
             <Route index element={<CustomerTeamAccess />} />
           </Route>
+          <Route path="/customer/profile" element={<CustomerProfile />} />
         </Route>
 
         {/* Sub Account Portal */}
-
         <Route
           element={
             <PortalGuard allowedTokenType="subaccount">
@@ -325,11 +271,11 @@ export default function AppRoutes() {
           <Route path="/subaccount" element={<ProtectedRoute />}>
             <Route index element={<SubAccountDashboard />} />
           </Route>
+          <Route path="/subaccount/profile" element={<SubAccountProfile />} />
         </Route>
       </Route>
 
       {/* Fallback */}
-
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

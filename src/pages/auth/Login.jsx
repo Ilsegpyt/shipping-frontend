@@ -40,13 +40,23 @@ export default function Login() {
             } else {
                 navigate('/dashboard');
             }
+
         } catch (err) {
             console.error(err);
 
-            setError(
-                'Login failed. Please check your email or password.'
-            );
-        } finally {
+            if (err.response?.status === 429) {
+                setError(
+                    err.response.data?.message ||
+                    'You have exceeded the allowed number of requests. Please try again later.'
+                );
+            } else {
+                setError(
+                    'Login failed. Please check your email or password.'
+                );
+            }
+        }
+
+        finally {
             setLoading(false);
         }
     };

@@ -6,6 +6,35 @@ import api from '../../../services/api';
 export default function Profile() {
     const { user, setUser } = useAuth();
 
+    const roleValues = [
+        user?.roleName,
+        user?.role,
+        ...(Array.isArray(user?.roles)
+            ? user.roles.map((role) =>
+                typeof role === 'string' ? role : role?.name
+            )
+            : []),
+    ];
+
+    const normalizedRoles = roleValues
+        .filter(Boolean)
+        .map((role) =>
+            String(role)
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim()
+        );
+
+    const isSuperAdmin = normalizedRoles.some((role) =>
+        role.includes('super admin')
+    );
+
+    const isAccountManager =
+        !isSuperAdmin &&
+        normalizedRoles.some((role) => role.includes('account manager'));
+
+    const canEditProfile = !isAccountManager;
+
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(user?.name || '');
     const [phone, setPhone] = useState(user?.phone || '');
@@ -239,7 +268,7 @@ export default function Profile() {
                         </p>
                     </div>
 
-                    {!isEditing && (
+                    {!isEditing && canEditProfile && (
                         <button
                             type="button"
                             onClick={handleEdit}
@@ -268,7 +297,7 @@ export default function Profile() {
                             Name
                         </label>
 
-                        {isEditing ? (
+                        {isEditing && canEditProfile ? (
                             <input
                                 type="text"
                                 value={name}
@@ -276,6 +305,14 @@ export default function Profile() {
                                     setName(event.target.value)
                                 }
                                 className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                        ) : isAccountManager ? (
+                            <input
+                                type="text"
+                                value={user?.name || ''}
+                                readOnly
+                                disabled
+                                className="mt-2 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
                             />
                         ) : (
                             <p className="mt-1 text-sm font-medium text-gray-900">
@@ -289,7 +326,7 @@ export default function Profile() {
                             Email
                         </label>
 
-                        {isEditing ? (
+                        {isEditing && canEditProfile ? (
                             <input
                                 type="email"
                                 value={email}
@@ -297,6 +334,14 @@ export default function Profile() {
                                     setEmail(event.target.value)
                                 }
                                 className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                        ) : isAccountManager ? (
+                            <input
+                                type="email"
+                                value={user?.email || ''}
+                                readOnly
+                                disabled
+                                className="mt-2 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
                             />
                         ) : (
                             <p className="mt-1 text-sm font-medium text-gray-900">
@@ -310,7 +355,7 @@ export default function Profile() {
                             Phone
                         </label>
 
-                        {isEditing ? (
+                        {isEditing && canEditProfile ? (
                             <input
                                 type="text"
                                 value={phone}
@@ -318,6 +363,14 @@ export default function Profile() {
                                     setPhone(event.target.value)
                                 }
                                 className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                            />
+                        ) : isAccountManager ? (
+                            <input
+                                type="text"
+                                value={user?.phone || ''}
+                                readOnly
+                                disabled
+                                className="mt-2 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
                             />
                         ) : (
                             <p className="mt-1 text-sm font-medium text-gray-900">
@@ -361,7 +414,7 @@ export default function Profile() {
                     </div>
                 </div>
 
-                {isEditing && (
+                {isEditing && canEditProfile && (
                     <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5">
                         <button
                             type="button"

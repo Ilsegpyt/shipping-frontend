@@ -2,6 +2,8 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: 'http://localhost:5250',
+    //  baseURL: 'http://localhost:8080',
+
 });
 
 let isRefreshing = false;
@@ -25,6 +27,7 @@ const refreshAccessToken = async () => {
 
     const response = await axios.post(
         'http://localhost:5250/api/auth/refresh',
+        //'http://localhost:8080/api/auth/refresh',
         {
             refreshToken,
         }
@@ -59,11 +62,22 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+
 api.interceptors.response.use(
     (response) => response,
 
     async (error) => {
+        // Handle Rate Limiting (429 Too Many Requests)
+        if (error.response?.status === 429) {
+            error.message =
+                error.response.data?.message ||
+                'You have exceeded the allowed number of requests. Please try again later.';
+
+            return Promise.reject(error);
+        }
+
         const originalRequest = error.config;
+
 
         if (
             error.response?.status !== 401 ||
