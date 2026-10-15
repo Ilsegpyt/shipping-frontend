@@ -654,13 +654,19 @@ const normalizedHtml = (() => {
                       key={block.id}
                       className={
                         block.type === "highlight"
-                          ? "my-4 rounded-xl border-l-4 border-sky-400 bg-white p-4 text-sm leading-7 text-slate-700 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                          ? "rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
                           : block.type === "closing"
-                            ? "my-4 text-sm leading-7 text-slate-600 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                            ? "rounded-2xl border border-slate-200 bg-slate-50 p-6 text-base leading-8 text-slate-600 sm:p-8 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
                             : "text-slate-600"
                       }
                     >
-                      {renderRich(block.text, "text-base leading-8")}
+                      {block.type === "highlight" ? (
+                        <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-base leading-8 text-sky-400 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
+                          {renderRich(block.text, "")}
+                        </div>
+                      ) : (
+                        renderRich(block.text, "text-base leading-8")
+                      )}
                     </div>
                   ))}
                 </div>
