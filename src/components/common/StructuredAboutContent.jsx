@@ -100,9 +100,18 @@ export function serializeAboutPage(data) {
     contentBlocks: normalizeBlocks(section.contentBlocks, section.content || ""),
   }));
   const clean = {
-    ...createEmptyAboutPage(), ...data, schema: ABOUT_PAGE_SCHEMA, sections,
-    highlights: (data.highlights || []).map((item) => ({ id: item.id || makeId("highlight"), text: item.text || "" })),
-    closings: (data.closings || []).map((item) => ({ id: item.id || makeId("closing"), text: item.text || "" })),
+    ...createEmptyAboutPage(),
+    ...data,
+    schema: ABOUT_PAGE_SCHEMA,
+    sections,
+    highlights: (data.highlights || []).map((item) => ({
+      id: item.id || makeId("highlight"),
+      text: item.text || "",
+    })),
+    closings: (data.closings || []).map((item) => ({
+      id: item.id || makeId("closing"),
+      text: item.text || "",
+    })),
   };
   clean.pageOrder = validOrder(clean);
   return ABOUT_PAGE_MARKER + JSON.stringify(clean);
@@ -132,19 +141,74 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
     });
   };
   const field = "mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100";
-  return <div className="space-y-6 rounded-2xl border border-sky-200 bg-sky-50/30 p-4 sm:p-5">
-    <header><h3 className="text-lg font-semibold text-slate-900">{pageTitle} — Structured Content</h3><p className="mt-1 text-sm text-slate-600">Edit the page using the same ordered rich-content model as Philosophy. Add, remove, and reorder any section.</p></header>
+  return (
+    <div className="space-y-6 rounded-2xl border border-sky-200 bg-sky-50/30 p-4 sm:p-5">
+      <header>
+        <h3 className="text-lg font-semibold text-slate-900">
+          {pageTitle} — Structured Content
+        </h3>
+        <p className="mt-1 text-sm text-slate-600">
+          Edit the page using the same ordered rich-content model as Philosophy.
+          Add, remove, and reorder any section.
+        </p>
+      </header>
     <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
       <h4 className="font-semibold text-slate-900">Page Intro</h4>
       <div><label className="mb-2 block text-sm font-medium text-slate-700">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
     </section>
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="font-semibold text-slate-900">Page Content Order</h4><p className="mt-1 text-sm text-slate-500">The public page follows this exact order.</p></div><div className="flex flex-wrap gap-2"><button type="button" onClick={() => add("section")} className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white">+ Add Section</button><button type="button" onClick={() => add("highlight")} className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-800">+ Page Highlight</button><button type="button" onClick={() => add("closing")} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700">+ Page Closing</button></div></div>
-      {!data.pageOrder.length && <p className="rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">No content yet. Add a section, highlight, or closing.</p>}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h4 className="font-semibold text-slate-900">Page Content Order</h4>
+            <p className="mt-1 text-sm text-slate-500">
+              The public page follows this exact order.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => add("section")}
+              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+            >
+              + Add Section
+            </button>
+            <button
+              type="button"
+              onClick={() => add("highlight")}
+              className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-800"
+            >
+              + Page Highlight
+            </button>
+            <button
+              type="button"
+              onClick={() => add("closing")}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+            >
+              + Page Closing
+            </button>
+          </div>
+        </div>
+        {!data.pageOrder.length && (
+          <p className="rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+            No content yet. Add a section, highlight, or closing.
+          </p>
+        )}
       {data.pageOrder.map((item, index) => {
-        const section = item.type === "section" ? data.sections.find((entry) => entry.id === item.id) : null;
-        const global = item.type === "highlight" ? data.highlights.find((entry) => entry.id === item.id) : item.type === "closing" ? data.closings.find((entry) => entry.id === item.id) : null;
-        if (item.type === "section" && !section || item.type !== "section" && !global) return null;
+          const section =
+            item.type === "section"
+              ? data.sections.find((entry) => entry.id === item.id)
+              : null;
+          const global =
+            item.type === "highlight"
+              ? data.highlights.find((entry) => entry.id === item.id)
+              : item.type === "closing"
+                ? data.closings.find((entry) => entry.id === item.id)
+                : null;
+          if (
+            (item.type === "section" && !section) ||
+            (item.type !== "section" && !global)
+          )
+            return null;
         const blocks = section?.contentBlocks || [];
         return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-sky-200 bg-white" : item.type === "closing" ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50/70"}`}>
           <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-slate-500">Section {index + 1}</span><h5 className="font-semibold text-slate-900">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-red-600">Remove</button></div></div>
@@ -152,7 +216,7 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
         </article>;
       })}
     </section>
-  </div>;
+  </div>)
 }
 
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
@@ -509,35 +573,109 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
     const preparedHtml = prepareCertificateHtml(html);
 
-    const normalizedHtml = (() => {
-      if (isCertificatesPage || typeof DOMParser === "undefined") {
-        return preparedHtml;
-      }
+    
+const normalizedHtml = (() => {
+  if (isCertificatesPage || typeof DOMParser === "undefined") {
+    return preparedHtml;
+  }
 
-      const doc = new DOMParser().parseFromString(preparedHtml, "text/html");
+  const doc = new DOMParser().parseFromString(preparedHtml, "text/html");
 
-      doc
-        .querySelectorAll("img:not(.about-certificate-image)")
-        .forEach((image) => {
-          const width = image.getAttribute("data-image-width");
-          const height = image.getAttribute("data-image-height");
+  // Wrap each side-by-side image and its following text block once.
+  const images = Array.from(
+    doc.querySelectorAll(
+      'img[data-image-layout="left"]:not(.about-certificate-image), img[data-image-layout="right"]:not(.about-certificate-image)',
+    ),
+  );
 
-          if (width && width !== "auto") {
-            image.style.width = width;
-          } else {
-            image.style.width = "100%";
-          }
+  images.forEach((image) => {
+    let imageBlock = image;
 
-          image.style.height = "auto";
-          image.style.maxWidth = "100%";
-          image.style.minWidth = "0";
-          image.style.boxSizing = "border-box";
-          image.style.objectFit = "fill";
-          image.style.borderRadius = "12px";
-        });
+    if (image.parentElement?.tagName === "P") {
+      imageBlock = image.parentElement;
+    }
 
-      return doc.body.innerHTML;
-    })();
+    const textBlock = imageBlock.nextElementSibling;
+
+    if (
+      !imageBlock.parentNode ||
+      !textBlock ||
+      textBlock.querySelector("img")
+    ) {
+      return;
+    }
+
+    const layout = image.getAttribute("data-image-layout") || "left";
+    const alignment = image.getAttribute("data-image-align") || "center";
+
+    const wrapper = doc.createElement("div");
+    const imageColumn = doc.createElement("div");
+    const textColumn = doc.createElement("div");
+
+    wrapper.className = "about-image-layout";
+    wrapper.setAttribute("data-image-layout", layout);
+    wrapper.setAttribute("data-image-align", alignment);
+
+    imageColumn.className = "about-image-layout__image";
+    textColumn.className = "about-image-layout__text";
+
+    imageBlock.parentNode.insertBefore(wrapper, imageBlock);
+    wrapper.appendChild(imageColumn);
+    wrapper.appendChild(textColumn);
+
+    imageColumn.appendChild(imageBlock);
+    textColumn.appendChild(textBlock);
+  });
+
+  // Preserve CMS image dimensions and horizontal alignment.
+  doc.querySelectorAll("img:not(.about-certificate-image)").forEach((image) => {
+    const width = image.getAttribute("data-image-width");
+    const height = image.getAttribute("data-image-height");
+
+    const widthPx = Number.parseFloat(width);
+    const heightPx = Number.parseFloat(height);
+
+    const hasCustomWidth =
+      width && width !== "auto" && Number.isFinite(widthPx) && widthPx > 0;
+
+    const hasCustomHeight =
+      height && height !== "auto" && Number.isFinite(heightPx) && heightPx > 0;
+
+    image.style.width = hasCustomWidth ? `min(${widthPx}px, 100%)` : "100%";
+
+    image.style.height = "auto";
+
+    if (hasCustomWidth && hasCustomHeight) {
+      image.style.aspectRatio = `${widthPx} / ${heightPx}`;
+    } else {
+      image.style.removeProperty("aspect-ratio");
+    }
+
+    image.style.maxWidth = "100%";
+    image.style.minWidth = "0";
+    image.style.boxSizing = "border-box";
+    image.style.objectFit = "fill";
+    image.style.borderRadius = "12px";
+    image.style.float = "none";
+
+    const alignment = image.getAttribute("data-image-align") || "left";
+    const layout = image.getAttribute("data-image-layout") || "above";
+
+    if (layout === "left" || layout === "right") {
+      image.style.margin = "0";
+    } else {
+      image.style.marginTop = "1rem";
+      image.style.marginBottom = "1rem";
+      image.style.marginLeft =
+        alignment === "center" || alignment === "right" ? "auto" : "0";
+      image.style.marginRight =
+        alignment === "center" || alignment === "left" ? "auto" : "0";
+    }
+  });
+
+  return doc.body.innerHTML;
+})();
+
 
     return (
       <div
@@ -586,12 +724,11 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
 
         <div className="relative mx-auto max-w-7xl">
-          {/* <a
-            href="/"
-            className="mb-8 inline-flex items-center gap-2 text-sm font-medium text-white/70 transition hover:text-white"
-          >
-            ← Back to Home
-          </a> */}
+          {data.introLabel && (
+  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+    {data.introLabel}
+  </p>
+)}
 
           <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
             {page?.title || "About ILS"}
@@ -599,7 +736,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
           {renderRich(
             data.introText,
-            "mt-5 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg",
+            "intro-rich mt-5 max-w-3xl text-base leading-8 #00bcff sm:text-lg",
           )}
         </div>
       </section>
@@ -628,7 +765,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                   key={item.id}
                   className="rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
                 >
-                  <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-base leading-8 text-sky-400 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
+                  <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-xl leading-8 text-sky-400 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
                     {renderRich(global.text, "")}
                   </div>
                 </section>
@@ -638,7 +775,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
               return (
                 <section
                   key={item.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-base leading-8 text-slate-600 sm:p-8 sm:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-xl leading-8 text-slate-600 sm:p-8 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
                 >
                   {renderRich(global.text, "")}
                 </section>
@@ -649,17 +786,17 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                 className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-8 lg:p-10"
               >
                 {section.label && (
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
+                  <p className="text-base font-semibold uppercase tracking-[0.2em] text-sky-600">
                     {section.label}
                   </p>
                 )}
                 {section.title && (
-                  <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl lg:text-4xl">
+                  <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
                     {section.title}
                   </h2>
                 )}
                 {section.subtitle && (
-                  <p className="mt-3 text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
+                  <p className="mt-3 text-xl leading-7 text-slate-600 sm:text-2xl sm:leading-8">
                     {section.subtitle}
                   </p>
                 )}
@@ -669,13 +806,19 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                       key={block.id}
                       className={
                         block.type === "highlight"
-                          ? "my-4 rounded-xl border-l-4 border-sky-400 bg-white p-4 text-sm leading-7 text-slate-700 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                          ? "rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
                           : block.type === "closing"
-                            ? "my-4 text-sm leading-7 text-slate-600 [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
+                            ? "rounded-2xl border border-slate-200 bg-slate-50 p-6 text-xl leading-8 text-slate-600 sm:p-8 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
                             : "text-slate-600"
                       }
                     >
-                      {renderRich(block.text, "text-base leading-8")}
+                      {block.type === "highlight" ? (
+                        <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-xl leading-8 text-sky-400 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
+                          {renderRich(block.text, "")}
+                        </div>
+                      ) : (
+                        renderRich(block.text, "text-xl leading-8")
+                      )}
                     </div>
                   ))}
                 </div>
@@ -704,15 +847,52 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       </section>
 
       <style>{`
-  .about-rich {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    color: #475569;
-    line-height: 1.8;
-  }
+  /* Intro text only */
+.about-rich.intro-rich,
+.about-rich.intro-rich p,
+.about-rich.intro-rich span,
+.about-rich.intro-rich strong,
+.about-rich.intro-rich em,
+.about-rich.intro-rich h1,
+.about-rich.intro-rich h2,
+.about-rich.intro-rich h3,
+.about-rich.intro-rich h4,
+.about-rich.intro-rich h5,
+.about-rich.intro-rich h6 {
+  color: #00bcff !important;
+}
+  .intro-rich,
+.intro-rich * {
+  color: #00bcff !important;
+}
+.about-rich {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: inherit;
+  line-height: 1.8;
+}
+
+.about-rich strong {
+  color: inherit;
+  font-weight: 700;
+}
+
+.about-rich a {
+  color: #0369a1;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.about-rich a:hover {
+  color: #075985;
+}
+
 
   /* Paragraphs */
-  .about-rich p {
+  .about-rich h1 { font-size: 3rem; line-height: 1.2; }
+
+.about-rich p {
     margin: 0.8rem 0;
   }
 
@@ -742,9 +922,8 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 /* Responsive CMS images — regular images only */
 .about-rich img:not(.about-certificate-image) {
   display: block;
-  width: auto;
   max-width: 100% !important;
-  height: auto !important;
+  height: auto;
   border-radius: 12px;
   box-sizing: border-box;
 }
@@ -910,6 +1089,103 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
   .about-rich a:hover {
     color: #0369a1;
   }
+    
+
+.about-rich .about-image-layout {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 24px;
+  width: 100%;
+  min-width: 0;
+  margin: 1rem 0;
+  box-sizing: border-box;
+}
+
+.about-rich .about-image-layout[data-image-layout="right"] {
+  flex-direction: row-reverse;
+}
+
+.about-rich .about-image-layout__image {
+  flex: 0 1 40%;
+  width: 40%;
+  min-width: 0;
+  max-width: 40%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.about-rich .about-image-layout__image > p {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+.about-rich .about-image-layout__image img {
+  display: block;
+  float: none !important;
+  margin: 0 !important;
+  width: min(var(--cms-image-width, 100%), 100%);
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+.about-rich .about-image-layout__text {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.about-rich .about-image-layout__text > :first-child {
+  margin-top: 0;
+}
+
+.about-rich .about-image-layout__text > :last-child {
+  margin-bottom: 0;
+}
+
+@media (min-width: 640px) and (max-width: 900px) {
+  .about-rich .about-image-layout {
+    gap: 16px;
+  }
+
+  .about-rich .about-image-layout__image {
+    flex-basis: 42%;
+    width: 42%;
+    max-width: 42%;
+  }
+}
+
+@media (max-width: 639px) {
+  .about-rich .about-image-layout {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+
+  .about-rich .about-image-layout__image {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .about-rich .about-image-layout__image img {
+    width: min(var(--cms-image-width, 100%), 100%);
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 auto !important;
+  }
+
+  .about-rich .about-image-layout__text {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+}
+
+
 
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
@@ -920,7 +1196,9 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     .about-rich .about-certificate-card:hover {
       transform: none;
     }
+      
   }
+    
 `}</style>
 
       {certificateViewer && (

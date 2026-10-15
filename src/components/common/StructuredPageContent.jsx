@@ -229,7 +229,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
           </h1>
           {data.introText && (
             <div
-              className="structured-rich mt-6 max-w-3xl text-base leading-8 text-slate-300 sm:text-lg"
+              className="structured-rich mt-6 max-w-3xl text-base leading-8 text-slate-100 sm:text-lg"
               dangerouslySetInnerHTML={{ __html: data.introText }}
             />
           )}
@@ -255,23 +255,23 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
             >
               <div className="p-6 sm:p-8 lg:p-10">
                 {section.label && (
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
+                  <p className="text-base font-semibold uppercase tracking-[0.2em] text-sky-600">
                     {section.label}
                   </p>
                 )}
                 {section.title && (
-                  <h2 className="mt-3 text-2xl font-semibold tracking-tight text-sky-800 sm:text-3xl">
+                  <h2 className="mt-2 text-3xl font-semibold tracking-tight text-sky-800 sm:text-5xl">
                     {section.title}
                   </h2>
                 )}
                 {section.subtitle && (
-                  <p className="mt-3 text-lg leading-7 text-sky-800">
+                  <p className="mt-3 text-2xl leading-7 text-sky-800">
                     {section.subtitle}
                   </p>
                 )}
                 {section.content && (
                   <div
-                    className="structured-rich mt-5 text-base leading-8 text-sky-800"
+                    className="structured-rich mt-5 text-xl leading-8 text-sky-800"
                     dangerouslySetInnerHTML={{ __html: section.content }}
                   />
                 )}
@@ -280,7 +280,9 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
           ))}
         </div>
       </section>
-      <style>{`.structured-rich p{margin:.8rem 0}
+      <style>{`.structured-rich h1 { font-size: 3rem; line-height: 1.2; }
+
+.structured-rich p{margin:.8rem 0}
     .structured-rich ul,
     .structured-rich ol{
     margin:1rem 0;padding-left:1.5rem
@@ -330,9 +332,22 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
   }
 }
 
-    .structured-rich strong{color:text-sky-800;font-weight:600}
-    .structured-rich a{
-    color:text-sky-400;text-decoration:underline}`}</style>
+    
+.structured-rich strong {
+  color: inherit;
+  font-weight: 700;
+}
+
+.structured-rich a {
+  color: #0284c7;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.structured-rich a:hover {
+  color: #0369a1;
+}
+`}</style>
     </main>
   );
 }

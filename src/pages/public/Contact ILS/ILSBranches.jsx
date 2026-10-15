@@ -71,7 +71,7 @@ export default function ILSBranches() {
                             ILS Branches
                         </h1>
 
-                        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-sky-400 sm:text-lg">
                             Find our offices and contact the team at your nearest ILS branch.
                         </p>
                     </div>

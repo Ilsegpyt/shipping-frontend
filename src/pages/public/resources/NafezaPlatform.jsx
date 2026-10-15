@@ -17,7 +17,7 @@ export default function NafezaPlatform() {
                         Nafeza Platform
                     </h1>
 
-                    <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+                    <p className="mx-auto mt-4 max-w-2xl text-sky-400">
                         Nafeza is Egypt's Unified Registration System for
                         electronic customs and foreign trade procedures.
                     </p>

@@ -101,7 +101,7 @@ export default function Recruitment() {
                             Recruitment
                         </h1>
 
-                        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                        <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-lg">
                             Welcome to our team. Explore opportunities and take the next
                             step in your career with ILS.
                         </p>

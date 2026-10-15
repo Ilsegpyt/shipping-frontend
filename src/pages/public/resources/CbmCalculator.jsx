@@ -153,7 +153,7 @@ export default function CbmCalculator() {
                             CBM Calculator
                         </h1>
 
-                        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
+                        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-sky-400 sm:text-base">
                             Calculate cargo volume, gross weight and volumetric
                             weight for your shipment.
                         </p>
