@@ -1,9 +1,12 @@
+
 import axios from 'axios';
 
-const api = axios.create({
-    baseURL: 'http://localhost:5250',
-    //  baseURL: 'http://localhost:8080',
+const API_BASE_URL = (
+    import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5250'
+).replace(/\/+$/, '');
 
+const api = axios.create({
+    baseURL: API_BASE_URL,
 });
 
 let isRefreshing = false;
@@ -26,11 +29,8 @@ const refreshAccessToken = async () => {
     }
 
     const response = await axios.post(
-        'http://localhost:5250/api/auth/refresh',
-        //'http://localhost:8080/api/auth/refresh',
-        {
-            refreshToken,
-        }
+        `${API_BASE_URL}/api/auth/refresh`,
+        { refreshToken }
     );
 
     const {
@@ -62,12 +62,11 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-
 api.interceptors.response.use(
     (response) => response,
 
     async (error) => {
-        // Handle Rate Limiting (429 Too Many Requests)
+        // Handle rate limiting.
         if (error.response?.status === 429) {
             error.message =
                 error.response.data?.message ||
@@ -78,11 +77,11 @@ api.interceptors.response.use(
 
         const originalRequest = error.config;
 
-
         if (
             error.response?.status !== 401 ||
-            originalRequest?._retry ||
-            originalRequest?.url?.includes('/api/auth/refresh')
+            !originalRequest ||
+            originalRequest._retry ||
+            originalRequest.url?.includes('/api/auth/refresh')
         ) {
             return Promise.reject(error);
         }
