@@ -1,6 +1,7 @@
 import RichTextEditor from "./RichTextEditor";
 import ContentBlockEditor from "./ContentBlockEditor";
 import { useEffect, useState } from "react";
+import { cleanHtmlImages } from "../../utils/mediaUrl";
 
 export const ABOUT_PAGE_MARKER = "<!--ILS_ABOUT_PAGE_V1-->";
 export const ABOUT_PAGE_SCHEMA = "ils-about-page-v1";
@@ -152,11 +153,11 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
           Add, remove, and reorder any section.
         </p>
       </header>
-    <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-      <h4 className="font-semibold text-slate-900">Page Intro</h4>
-      <div><label className="mb-2 block text-sm font-medium text-slate-700">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
-    </section>
-    <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+        <h4 className="font-semibold text-slate-900">Page Intro</h4>
+        <div><label className="mb-2 block text-sm font-medium text-slate-700">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
+      </section>
+      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h4 className="font-semibold text-slate-900">Page Content Order</h4>
@@ -193,7 +194,7 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
             No content yet. Add a section, highlight, or closing.
           </p>
         )}
-      {data.pageOrder.map((item, index) => {
+        {data.pageOrder.map((item, index) => {
           const section =
             item.type === "section"
               ? data.sections.find((entry) => entry.id === item.id)
@@ -209,14 +210,14 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
             (item.type !== "section" && !global)
           )
             return null;
-        const blocks = section?.contentBlocks || [];
-        return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-sky-200 bg-white" : item.type === "closing" ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50/70"}`}>
-          <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-slate-500">Section {index + 1}</span><h5 className="font-semibold text-slate-900">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-red-600">Remove</button></div></div>
-          {section ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-slate-700">Section Label<input className={field} value={section.label || ""} onChange={(e) => updateSection(item.id, { label: e.target.value })} /></label><label className="block text-sm font-medium text-slate-700">Section Title <span className="text-red-600">*</span><input required aria-required="true" className={field} value={section.title || ""} onChange={(e) => updateSection(item.id, { title: e.target.value })} /></label></div><label className="block text-sm font-medium text-slate-700">Subtitle<input className={field} value={section.subtitle || ""} onChange={(e) => updateSection(item.id, { subtitle: e.target.value })} /></label><ContentBlockEditor blocks={blocks.length ? blocks : [{ id: `${section.id}-text`, type: "text", text: "" }]} onChange={(contentBlocks) => updateSection(item.id, { contentBlocks })} /></div> : <RichTextEditor value={global.text || ""} onChange={(text) => update({ [item.type === "highlight" ? "highlights" : "closings"]: (item.type === "highlight" ? data.highlights : data.closings).map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />}
-        </article>;
-      })}
-    </section>
-  </div>)
+          const blocks = section?.contentBlocks || [];
+          return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-sky-200 bg-white" : item.type === "closing" ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50/70"}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-slate-500">Section {index + 1}</span><h5 className="font-semibold text-slate-900">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-red-600">Remove</button></div></div>
+            {section ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-slate-700">Section Label<input className={field} value={section.label || ""} onChange={(e) => updateSection(item.id, { label: e.target.value })} /></label><label className="block text-sm font-medium text-slate-700">Section Title <span className="text-red-600">*</span><input required aria-required="true" className={field} value={section.title || ""} onChange={(e) => updateSection(item.id, { title: e.target.value })} /></label></div><label className="block text-sm font-medium text-slate-700">Subtitle<input className={field} value={section.subtitle || ""} onChange={(e) => updateSection(item.id, { subtitle: e.target.value })} /></label><ContentBlockEditor blocks={blocks.length ? blocks : [{ id: `${section.id}-text`, type: "text", text: "" }]} onChange={(contentBlocks) => updateSection(item.id, { contentBlocks })} /></div> : <RichTextEditor value={global.text || ""} onChange={(text) => update({ [item.type === "highlight" ? "highlights" : "closings"]: (item.type === "highlight" ? data.highlights : data.closings).map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />}
+          </article>;
+        })}
+      </section>
+    </div>)
 }
 
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
@@ -431,7 +432,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
   );
   // Legacy Body fallback preserves Pages that have not yet been migrated.
   const data = orderedData || parsePublicPageContent(page?.body || "");
-  const apiBase = "http://localhost:5250";
+  const apiBase = "";
   const isCertificatesPage =
     (page?.title || "").trim().toLowerCase() === "certificates";
 
@@ -477,8 +478,9 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     };
   }, [certificateViewer]);
 
-  const resolveImages = (html = "") =>
-    html.replace(/(src=["'])(\/(?!\/)[^"']+)/gi, `$1${apiBase}$2`);
+  const resolveImages = (html = "") => cleanHtmlImages(html, apiBase);
+
+
   const prepareCertificateHtml = (html = "") => {
     if (!isCertificatesPage || !html || typeof DOMParser === "undefined")
       return html;
@@ -571,110 +573,111 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
   const renderRich = (html, className = "") => {
     if (!html) return null;
 
-    const preparedHtml = prepareCertificateHtml(html);
+    const cleanedHtml = resolveImages(html);
+    const preparedHtml = prepareCertificateHtml(cleanedHtml);
 
-    
-const normalizedHtml = (() => {
-  if (isCertificatesPage || typeof DOMParser === "undefined") {
-    return preparedHtml;
-  }
 
-  const doc = new DOMParser().parseFromString(preparedHtml, "text/html");
+    const normalizedHtml = (() => {
+      if (isCertificatesPage || typeof DOMParser === "undefined") {
+        return preparedHtml;
+      }
 
-  // Wrap each side-by-side image and its following text block once.
-  const images = Array.from(
-    doc.querySelectorAll(
-      'img[data-image-layout="left"]:not(.about-certificate-image), img[data-image-layout="right"]:not(.about-certificate-image)',
-    ),
-  );
+      const doc = new DOMParser().parseFromString(preparedHtml, "text/html");
 
-  images.forEach((image) => {
-    let imageBlock = image;
+      // Wrap each side-by-side image and its following text block once.
+      const images = Array.from(
+        doc.querySelectorAll(
+          'img[data-image-layout="left"]:not(.about-certificate-image), img[data-image-layout="right"]:not(.about-certificate-image)',
+        ),
+      );
 
-    if (image.parentElement?.tagName === "P") {
-      imageBlock = image.parentElement;
-    }
+      images.forEach((image) => {
+        let imageBlock = image;
 
-    const textBlock = imageBlock.nextElementSibling;
+        if (image.parentElement?.tagName === "P") {
+          imageBlock = image.parentElement;
+        }
 
-    if (
-      !imageBlock.parentNode ||
-      !textBlock ||
-      textBlock.querySelector("img")
-    ) {
-      return;
-    }
+        const textBlock = imageBlock.nextElementSibling;
 
-    const layout = image.getAttribute("data-image-layout") || "left";
-    const alignment = image.getAttribute("data-image-align") || "center";
+        if (
+          !imageBlock.parentNode ||
+          !textBlock ||
+          textBlock.querySelector("img")
+        ) {
+          return;
+        }
 
-    const wrapper = doc.createElement("div");
-    const imageColumn = doc.createElement("div");
-    const textColumn = doc.createElement("div");
+        const layout = image.getAttribute("data-image-layout") || "left";
+        const alignment = image.getAttribute("data-image-align") || "center";
 
-    wrapper.className = "about-image-layout";
-    wrapper.setAttribute("data-image-layout", layout);
-    wrapper.setAttribute("data-image-align", alignment);
+        const wrapper = doc.createElement("div");
+        const imageColumn = doc.createElement("div");
+        const textColumn = doc.createElement("div");
 
-    imageColumn.className = "about-image-layout__image";
-    textColumn.className = "about-image-layout__text";
+        wrapper.className = "about-image-layout";
+        wrapper.setAttribute("data-image-layout", layout);
+        wrapper.setAttribute("data-image-align", alignment);
 
-    imageBlock.parentNode.insertBefore(wrapper, imageBlock);
-    wrapper.appendChild(imageColumn);
-    wrapper.appendChild(textColumn);
+        imageColumn.className = "about-image-layout__image";
+        textColumn.className = "about-image-layout__text";
 
-    imageColumn.appendChild(imageBlock);
-    textColumn.appendChild(textBlock);
-  });
+        imageBlock.parentNode.insertBefore(wrapper, imageBlock);
+        wrapper.appendChild(imageColumn);
+        wrapper.appendChild(textColumn);
 
-  // Preserve CMS image dimensions and horizontal alignment.
-  doc.querySelectorAll("img:not(.about-certificate-image)").forEach((image) => {
-    const width = image.getAttribute("data-image-width");
-    const height = image.getAttribute("data-image-height");
+        imageColumn.appendChild(imageBlock);
+        textColumn.appendChild(textBlock);
+      });
 
-    const widthPx = Number.parseFloat(width);
-    const heightPx = Number.parseFloat(height);
+      // Preserve CMS image dimensions and horizontal alignment.
+      doc.querySelectorAll("img:not(.about-certificate-image)").forEach((image) => {
+        const width = image.getAttribute("data-image-width");
+        const height = image.getAttribute("data-image-height");
 
-    const hasCustomWidth =
-      width && width !== "auto" && Number.isFinite(widthPx) && widthPx > 0;
+        const widthPx = Number.parseFloat(width);
+        const heightPx = Number.parseFloat(height);
 
-    const hasCustomHeight =
-      height && height !== "auto" && Number.isFinite(heightPx) && heightPx > 0;
+        const hasCustomWidth =
+          width && width !== "auto" && Number.isFinite(widthPx) && widthPx > 0;
 
-    image.style.width = hasCustomWidth ? `min(${widthPx}px, 100%)` : "100%";
+        const hasCustomHeight =
+          height && height !== "auto" && Number.isFinite(heightPx) && heightPx > 0;
 
-    image.style.height = "auto";
+        image.style.width = hasCustomWidth ? `min(${widthPx}px, 100%)` : "100%";
 
-    if (hasCustomWidth && hasCustomHeight) {
-      image.style.aspectRatio = `${widthPx} / ${heightPx}`;
-    } else {
-      image.style.removeProperty("aspect-ratio");
-    }
+        image.style.height = "auto";
 
-    image.style.maxWidth = "100%";
-    image.style.minWidth = "0";
-    image.style.boxSizing = "border-box";
-    image.style.objectFit = "fill";
-    image.style.borderRadius = "12px";
-    image.style.float = "none";
+        if (hasCustomWidth && hasCustomHeight) {
+          image.style.aspectRatio = `${widthPx} / ${heightPx}`;
+        } else {
+          image.style.removeProperty("aspect-ratio");
+        }
 
-    const alignment = image.getAttribute("data-image-align") || "left";
-    const layout = image.getAttribute("data-image-layout") || "above";
+        image.style.maxWidth = "100%";
+        image.style.minWidth = "0";
+        image.style.boxSizing = "border-box";
+        image.style.objectFit = "fill";
+        image.style.borderRadius = "12px";
+        image.style.float = "none";
 
-    if (layout === "left" || layout === "right") {
-      image.style.margin = "0";
-    } else {
-      image.style.marginTop = "1rem";
-      image.style.marginBottom = "1rem";
-      image.style.marginLeft =
-        alignment === "center" || alignment === "right" ? "auto" : "0";
-      image.style.marginRight =
-        alignment === "center" || alignment === "left" ? "auto" : "0";
-    }
-  });
+        const alignment = image.getAttribute("data-image-align") || "left";
+        const layout = image.getAttribute("data-image-layout") || "above";
 
-  return doc.body.innerHTML;
-})();
+        if (layout === "left" || layout === "right") {
+          image.style.margin = "0";
+        } else {
+          image.style.marginTop = "1rem";
+          image.style.marginBottom = "1rem";
+          image.style.marginLeft =
+            alignment === "center" || alignment === "right" ? "auto" : "0";
+          image.style.marginRight =
+            alignment === "center" || alignment === "left" ? "auto" : "0";
+        }
+      });
+
+      return doc.body.innerHTML;
+    })();
 
 
     return (
@@ -725,10 +728,10 @@ const normalizedHtml = (() => {
 
         <div className="relative mx-auto max-w-7xl">
           {data.introLabel && (
-  <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-    {data.introLabel}
-  </p>
-)}
+            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+              {data.introLabel}
+            </p>
+          )}
 
           <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
             {page?.title || "About ILS"}

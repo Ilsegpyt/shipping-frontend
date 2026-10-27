@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import contentService from "../../services/contentService";
 import contactInquiriesService from "../../services/contactInquiriesService";
+import { cleanImageUrl } from "../../utils/mediaUrl";
 
 import {
   HeartPulse,
@@ -82,17 +83,10 @@ const getClientPortalPath = () => {
   }
 };
 
-const API_BASE_URL = "http://localhost:5250";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-const getImageUrl = (image) => {
-  if (!image) return "";
+const getImageUrl = (image) => cleanImageUrl(image, API_BASE_URL);
 
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    return image;
-  }
-
-  return `${API_BASE_URL}${image}`;
-};
 
 const getContentTypeName = (type) => {
   if (typeof type === "string") return type;
@@ -453,8 +447,8 @@ function Home() {
         typeof error.response?.data === "string"
           ? error.response.data
           : error.response?.data?.message ||
-              error.response?.data?.error ||
-              "Failed to send your inquiry.",
+          error.response?.data?.error ||
+          "Failed to send your inquiry.",
       );
     }
   };

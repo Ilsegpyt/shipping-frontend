@@ -1,24 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Link, useSearchParams } from "react-router-dom";
 
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 
 import contentService from "../../../services/contentService";
+import { cleanImageUrl } from "../../../utils/mediaUrl";
 
-const API_BASE_URL = "http://localhost:5250";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
-const getImageUrl = (image) => {
-  if (!image) {
-    return "";
-  }
-
-  if (image.startsWith("http://") || image.startsWith("https://")) {
-    return image;
-  }
-
-  return `${API_BASE_URL}${image}`;
-};
+const getImageUrl = (image) => cleanImageUrl(image, API_BASE_URL);
 
 const stripHtml = (html) => {
   if (!html) {
@@ -89,14 +80,16 @@ const formatDate = (date) => {
     .replace(/ /g, "-");
 };
 
+let cachedPosts = null;
+
 export default function News() {
   const [searchParams] = useSearchParams();
 
   const selectedCategory = searchParams.get("category")?.trim() || "";
 
-  const [newsItems, setNewsItems] = useState([]);
+  const [allPosts, setAllPosts] = useState(cachedPosts || []);
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedPosts);
 
   const [error, setError] = useState("");
 
@@ -109,7 +102,9 @@ export default function News() {
 
     const loadNews = async () => {
       try {
-        setLoading(true);
+        if (!cachedPosts) {
+          setLoading(true);
+        }
 
         setError("");
 
@@ -130,40 +125,36 @@ export default function News() {
         const allContent = [];
 
         const loadTree = async (items) => {
-          for (const item of items) {
-            if (!item?.id || visited.has(item.id)) {
-              continue;
-            }
-
-            visited.add(item.id);
-
-            allContent.push(item);
-
-            try {
-              const childrenResponse = await contentService.getChildren(
-                item.id,
-              );
-
-              const children = Array.isArray(childrenResponse.data)
-                ? childrenResponse.data
-                : [];
-
-              if (children.length > 0) {
-                await loadTree(children);
+          await Promise.all(
+            items.map(async (item) => {
+              if (!item?.id || visited.has(item.id)) {
+                return;
               }
-            } catch (childError) {
-              console.error(
-                `Failed to load children for content ${item.id}:`,
 
-                childError,
-              );
+              visited.add(item.id);
 
-              throw new Error(
-                `Failed to load children for "${item.title || item.id}". ` +
-                  `Please check GET /api/content/${item.id}/children.`,
-              );
-            }
-          }
+              allContent.push(item);
+
+              try {
+                const childrenResponse = await contentService.getChildren(
+                  item.id,
+                );
+
+                const children = Array.isArray(childrenResponse.data)
+                  ? childrenResponse.data
+                  : [];
+
+                if (children.length > 0) {
+                  await loadTree(children);
+                }
+              } catch (childError) {
+                console.error(
+                  `Failed to load children for content ${item.id}:`,
+                  childError,
+                );
+              }
+            }),
+          );
         };
 
         await loadTree(rootContent);
@@ -171,18 +162,6 @@ export default function News() {
         const posts = allContent
 
           .filter((item) => getContentTypeName(item.type) === "Post")
-
-          .filter((item) => {
-            if (!selectedCategory) {
-              return true;
-            }
-
-            const category = (item.category || "").trim().toLowerCase();
-
-            const selected = selectedCategory.trim().toLowerCase();
-
-            return category === selected;
-          })
 
           .sort((a, b) => {
             if (!a.publishedAt && !b.publishedAt) return 0;
@@ -204,6 +183,8 @@ export default function News() {
 
             category: item.category || "ILS News",
 
+            rawCategory: (item.category || "").trim().toLowerCase(),
+
             date: formatDate(item.publishedAt),
 
             title: item.title,
@@ -213,13 +194,15 @@ export default function News() {
             to: `/news/${item.id}`,
           }));
 
+        cachedPosts = posts;
+
         if (isMounted) {
-          setNewsItems(posts);
+          setAllPosts(posts);
         }
       } catch (err) {
         console.error("Failed to load news:", err);
 
-        if (isMounted) {
+        if (isMounted && !cachedPosts) {
           setError(err?.message || "Failed to load news.");
         }
       } finally {
@@ -234,7 +217,17 @@ export default function News() {
     return () => {
       isMounted = false;
     };
-  }, [selectedCategory]);
+  }, []);
+
+  const newsItems = useMemo(() => {
+    if (!selectedCategory) {
+      return allPosts;
+    }
+
+    const selected = selectedCategory.trim().toLowerCase();
+
+    return allPosts.filter((item) => item.rawCategory === selected);
+  }, [allPosts, selectedCategory]);
 
   return (
     <main className="min-h-screen bg-white">

@@ -11,6 +11,10 @@ import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { useEffect, useRef, useState } from "react";
 import api from "../../services/api";
+import { cleanImageUrl } from "../../utils/mediaUrl";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
 
 function ResizableImage({ editor, node, updateAttributes, selected, getPos }) {
   const imageRef = useRef(null);
@@ -165,7 +169,7 @@ function ResizableImage({ editor, node, updateAttributes, selected, getPos }) {
       >
         <img
           ref={imageRef}
-          src={node.attrs.src}
+          src={cleanImageUrl(node.attrs.src, API_BASE_URL)}
           alt={node.attrs.alt || ""}
           title={node.attrs.title || ""}
           draggable={false}
@@ -463,13 +467,13 @@ export default function RichTextEditor({ value, onChange }) {
 
       const response = await api.post("/api/content/upload-image", formData);
 
-      const imageUrl = response.data.url;
+      const imageUrl = cleanImageUrl(response.data.url);
 
       editor
         .chain()
         .focus()
         .setImage({
-          src: `http://localhost:5250${imageUrl}`,
+          src: imageUrl,
           alt: file.name || "",
           imageAlign: "center",
           imageWidth: "400px",
@@ -508,14 +512,15 @@ export default function RichTextEditor({ value, onChange }) {
 
       const response = await api.post("/api/content/upload-image", formData);
 
-      const imageUrl = response.data.url;
+      const imageUrl = cleanImageUrl(response.data.url);
 
       editor
         .chain()
         .focus()
         .updateAttributes("image", {
-          src: `http://localhost:5250${imageUrl}`,
+          src: imageUrl,
           imageCrop: false,
+
           imageCropPosition: "50% 50%",
         })
         .run();
@@ -556,9 +561,8 @@ export default function RichTextEditor({ value, onChange }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={`rounded px-3 py-1.5 text-sm font-bold ${
-            editor.isActive("bold") ? "bg-slate-200" : "hover:bg-slate-200"
-          }`}
+          className={`rounded px-3 py-1.5 text-sm font-bold ${editor.isActive("bold") ? "bg-slate-200" : "hover:bg-slate-200"
+            }`}
         >
           B
         </button>
@@ -567,9 +571,8 @@ export default function RichTextEditor({ value, onChange }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={`rounded px-3 py-1.5 text-sm italic ${
-            editor.isActive("italic") ? "bg-slate-200" : "hover:bg-slate-200"
-          }`}
+          className={`rounded px-3 py-1.5 text-sm italic ${editor.isActive("italic") ? "bg-slate-200" : "hover:bg-slate-200"
+            }`}
         >
           I
         </button>
@@ -580,11 +583,10 @@ export default function RichTextEditor({ value, onChange }) {
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 2 }).run()
           }
-          className={`rounded px-3 py-1.5 text-sm font-semibold ${
-            editor.isActive("heading", { level: 2 })
-              ? "bg-slate-200"
-              : "hover:bg-slate-200"
-          }`}
+          className={`rounded px-3 py-1.5 text-sm font-semibold ${editor.isActive("heading", { level: 2 })
+            ? "bg-slate-200"
+            : "hover:bg-slate-200"
+            }`}
         >
           H2
         </button>
@@ -595,11 +597,10 @@ export default function RichTextEditor({ value, onChange }) {
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 3 }).run()
           }
-          className={`rounded px-3 py-1.5 text-sm font-semibold ${
-            editor.isActive("heading", { level: 3 })
-              ? "bg-slate-200"
-              : "hover:bg-slate-200"
-          }`}
+          className={`rounded px-3 py-1.5 text-sm font-semibold ${editor.isActive("heading", { level: 3 })
+            ? "bg-slate-200"
+            : "hover:bg-slate-200"
+            }`}
         >
           H3
         </button>
@@ -608,11 +609,10 @@ export default function RichTextEditor({ value, onChange }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={`rounded px-3 py-1.5 text-sm ${
-            editor.isActive("bulletList")
-              ? "bg-slate-200"
-              : "hover:bg-slate-200"
-          }`}
+          className={`rounded px-3 py-1.5 text-sm ${editor.isActive("bulletList")
+            ? "bg-slate-200"
+            : "hover:bg-slate-200"
+            }`}
         >
           • List
         </button>
@@ -621,11 +621,10 @@ export default function RichTextEditor({ value, onChange }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={`rounded px-3 py-1.5 text-sm ${
-            editor.isActive("orderedList")
-              ? "bg-slate-200"
-              : "hover:bg-slate-200"
-          }`}
+          className={`rounded px-3 py-1.5 text-sm ${editor.isActive("orderedList")
+            ? "bg-slate-200"
+            : "hover:bg-slate-200"
+            }`}
         >
           1. List
         </button>
@@ -702,7 +701,7 @@ export default function RichTextEditor({ value, onChange }) {
                 }
               >
                 {imageAttributes.imageLayout === "left" ||
-                imageAttributes.imageLayout === "right" ? (
+                  imageAttributes.imageLayout === "right" ? (
                   <>
                     <option value="top">Top</option>
                     <option value="center">Center</option>

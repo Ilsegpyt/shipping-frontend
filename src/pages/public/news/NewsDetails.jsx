@@ -3,8 +3,9 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 
 import contentService from '../../../services/contentService';
+import { cleanImageUrl, cleanHtmlImages } from '../../../utils/mediaUrl';
 
-const API_BASE_URL = 'http://localhost:5250';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 function createSlug(title = '') {
     return title
@@ -17,16 +18,9 @@ function createSlug(title = '') {
 }
 
 function getImageUrl(image) {
-    if (!image) {
-        return '';
-    }
-
-    if (image.startsWith('http')) {
-        return image;
-    }
-
-    return `${API_BASE_URL}${image}`;
+    return cleanImageUrl(image, API_BASE_URL);
 }
+
 
 function getContentTypeName(type) {
     if (typeof type === 'string') {
@@ -273,7 +267,7 @@ export default function NewsDetails() {
                             <div
                                 className="prose prose-slate max-w-3xl prose-p:text-base prose-p:leading-8 prose-p:text-slate-600 sm:prose-p:text-lg"
                                 dangerouslySetInnerHTML={{
-                                    __html: content.body || '',
+                                    __html: cleanHtmlImages(content.body, API_BASE_URL),
                                 }}
                             />
 

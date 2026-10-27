@@ -7,9 +7,11 @@ import RichTextEditor from "../../../components/common/RichTextEditor";
 import RepeatableSection from "../../../components/common/RepeatableSection";
 import ContentBlockEditor from "../../../components/common/ContentBlockEditor";
 import { createEmptyAboutPage, parseAboutPage, serializeAboutPage, StructuredAboutEditor } from "../../../components/common/StructuredAboutContent";
+import { cleanImageUrl } from "../../../utils/mediaUrl";
 
 const PHILOSOPHY_SCHEMA = "ils-philosophy-v2";
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 const createEmptyCard = (id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`) => ({
   id,
@@ -650,8 +652,7 @@ export default function Content() {
 
         ...prev,
 
-        featuredImage: response.data.url,
-
+        featuredImage: cleanImageUrl(response.data.url),
       }));
 
     } catch (err) {
@@ -1331,14 +1332,11 @@ export default function Content() {
                 {form.featuredImage && (
                   <div className="relative mt-3 w-fit">
                     <img
-                      src={
-                        form.featuredImage?.startsWith("http")
-                          ? form.featuredImage
-                          : `http://localhost:5250${form.featuredImage}`
-                      }
+                      src={cleanImageUrl(form.featuredImage, API_BASE_URL)}
                       alt="Featured preview"
                       className="h-32 w-48 rounded-lg border border-slate-200 object-cover"
                     />
+
 
                     <button
                       type="button"

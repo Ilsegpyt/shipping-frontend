@@ -1,4 +1,5 @@
 import RichTextEditor from "./RichTextEditor";
+import { cleanHtmlImages } from "../../utils/mediaUrl";
 
 export const STRUCTURED_PAGE_MARKER = "<!--ILS_STRUCTURED_PAGE_V1-->";
 export const STRUCTURED_PAGE_SCHEMA = "ils-structured-page-v1";
@@ -230,7 +231,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
           {data.introText && (
             <div
               className="structured-rich mt-6 max-w-3xl text-base leading-8 text-slate-100 sm:text-lg"
-              dangerouslySetInnerHTML={{ __html: data.introText }}
+              dangerouslySetInnerHTML={{ __html: cleanHtmlImages(data.introText) }}
             />
           )}
           {/* <a
@@ -272,7 +273,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
                 {section.content && (
                   <div
                     className="structured-rich mt-5 text-xl leading-8 text-sky-800"
-                    dangerouslySetInnerHTML={{ __html: section.content }}
+                    dangerouslySetInnerHTML={{ __html: cleanHtmlImages(section.content) }}
                   />
                 )}
               </div>
