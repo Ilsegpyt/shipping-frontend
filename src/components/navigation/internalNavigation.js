@@ -10,6 +10,8 @@ import {
     UserPlus,
     Phone,
     ShieldCheck,
+    Ship,
+    FileSpreadsheet,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -20,6 +22,21 @@ export const getInternalNavigation = (user) => [
                 label: "Dashboard",
                 path: "/dashboard",
                 icon: LayoutDashboard,
+            },
+        ],
+    },
+    {
+        section: "Operations",
+        items: [
+            {
+                label: "Transport Dashboard",
+                path: "/transport/dashboard",
+                icon: Ship,
+            },
+            {
+                label: "Transport Data Entry",
+                path: "/transport/entry",
+                icon: FileSpreadsheet,
             },
         ],
     },

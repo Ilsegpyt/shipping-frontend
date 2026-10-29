@@ -56,6 +56,7 @@ import ResetPassword from "../pages/auth/ResetPassword";
 
 // Internal pages
 import Dashboard from "../pages/internal/shared/Dashboard";
+import OceanTransportDashboard from "../pages/internal/operations/OceanTransport/OceanTransportDashboard";
 import Profile from "../pages/internal/shared/Profile";
 import Users from "../pages/internal/super-admin/Users";
 import Roles from "../pages/internal/super-admin/Roles";
@@ -207,6 +208,9 @@ export default function AppRoutes() {
           }
         >
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/ocean-transport" element={<OceanTransportDashboard />} />
+          <Route path="/transport/dashboard" element={<OceanTransportDashboard defaultView="dashboard" />} />
+          <Route path="/transport/entry" element={<OceanTransportDashboard defaultView="entry" />} />
           <Route path="/profile" element={<Profile />} />
           <Route
             path="/users"
