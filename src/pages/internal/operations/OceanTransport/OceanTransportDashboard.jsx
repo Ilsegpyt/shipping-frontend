@@ -71,6 +71,9 @@ import {
   getOperationDrivers,
   getOperationVehicles,
   getOperationDestinations,
+  getAllFclApprovals,
+  approveFclSuggestion,
+  unapproveFclSuggestion,
 } from '../../../../services/operationsService';
 import { mapBackendOperationsToFrontend, normalizeContainerType } from './operationsAdapter';
 
@@ -92,7 +95,20 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const [viewMode, setViewMode] = useState(isEntryPath ? 'entry' : 'dashboard'); // 'dashboard' | 'entry'
 
   // Within dashboard: 'Import' | 'Export' | 'FCL'
-  const [dashTab, setDashTab] = useState('Import');
+  const [dashTab, setDashTab] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('ocean_dash_tab');
+      if (saved && ['Import', 'Export', 'FCL'].includes(saved)) return saved;
+    } catch (e) {}
+    return 'Import';
+  });
+
+  const handleSelectDashTab = (tab) => {
+    setDashTab(tab);
+    try {
+      sessionStorage.setItem('ocean_dash_tab', tab);
+    } catch (e) {}
+  };
   // Within entry: 'Import' | 'Export'
   const [entryDir, setEntryDir] = useState('Import');
 
@@ -114,6 +130,14 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const [entry, setEntry] = useState(INITIAL_ENTRY);
   const [ships, setShips] = useState(INITIAL_SHIPS);
   const [approvals, setApprovals] = useState(new Set());
+  const [fclApprovedList, setFclApprovedList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('fcl_approved_allocations_v2');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [opSeq, setOpSeq] = useState(183);
 
   // Lookups & API Loading
@@ -160,6 +184,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         vehiclesResult,
         destinationsResult,
         deletedResult,
+        fclApprovalsResult,
       ] = await Promise.allSettled([
         getAllOperations(),
         getOperationCustomers(),
@@ -170,11 +195,15 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         getOperationVehicles(),
         getOperationDestinations(),
         getDeletedOperations(),
+        getAllFclApprovals(),
       ]);
 
       if (deletedResult.status === 'fulfilled' && Array.isArray(deletedResult.value)) {
         setDeletedOperations(deletedResult.value);
       }
+
+      let finalEntry = null;
+      let finalShips = null;
 
       if (opsResult.status === 'fulfilled' && Array.isArray(opsResult.value)) {
         const { entry: mappedEntry, ships: mappedShips } = mapBackendOperationsToFrontend(opsResult.value);
@@ -186,11 +215,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           if (draftJson) savedDraft = JSON.parse(draftJson);
         } catch (e) {}
 
-        const finalEntry = {
+        finalEntry = {
           Import: [...mappedEntry.Import],
           Export: [...mappedEntry.Export],
         };
-        const finalShips = {
+        finalShips = {
           Import: { ...mappedShips.Import },
           Export: { ...mappedShips.Export },
         };
@@ -229,6 +258,107 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         setEntry(finalEntry);
         setShips(finalShips);
       }
+
+      // Reconstruct and synchronize FCL Approvals with full details
+      const backendApprovals = fclApprovalsResult.status === 'fulfilled' && Array.isArray(fclApprovalsResult.value)
+        ? fclApprovalsResult.value
+        : [];
+
+      const approvedSet = new Set();
+      backendApprovals.forEach((a) => {
+        if (a.importContainerId) approvedSet.add(String(a.importContainerId).toLowerCase());
+        if (a.approvalKey) {
+          approvedSet.add(a.approvalKey);
+          const parts = a.approvalKey.split('|');
+          if (parts.length >= 2) {
+            approvedSet.add(`${parts[0].trim().toUpperCase()}|${parts[1].trim().toUpperCase()}`);
+          }
+        }
+      });
+
+      let savedApproved = [];
+      try {
+        const raw = localStorage.getItem('fcl_approved_allocations_v2');
+        if (raw) savedApproved = JSON.parse(raw);
+      } catch (e) {}
+
+      const approvedMap = new Map();
+
+      // 1. Add locally saved records
+      savedApproved.forEach((item) => {
+        if (item && item.im?.cntr) {
+          const key = `${item.im.cntr.trim().toUpperCase()}|${(item.im.bl || '').trim().toUpperCase()}`;
+          approvedMap.set(key, item);
+        }
+      });
+
+      // 2. Reconstruct from backend approvals if missing
+      const importList = finalEntry?.Import || [];
+      const exportList = finalEntry?.Export || [];
+
+      backendApprovals.forEach((b) => {
+        const parts = (b.approvalKey || '').split('|');
+        const cntr = parts[0]?.trim()?.toUpperCase();
+        const bl = parts[1]?.trim()?.toUpperCase();
+        const key = cntr && bl ? `${cntr}|${bl}` : null;
+
+        if (key && !approvedMap.has(key)) {
+          const imRow = importList.find(
+            (r) => (r.cntr && r.cntr.trim().toUpperCase() === cntr) ||
+                   (b.importContainerId && r._containerId === b.importContainerId)
+          );
+          const exRow = exportList.find(
+            (r) => (r.cntr && r.cntr.trim().toUpperCase() === cntr) ||
+                   (b.exportOperationId && r._operationId === b.exportOperationId)
+          );
+
+          if (imRow || exRow) {
+            approvedMap.set(key, {
+              id: b.id || `appr_${Date.now()}`,
+              pairKey: b.approvalKey || key,
+              type: 'assigned',
+              im: imRow || { cntr, bl, line: exRow?.line || '', dest: exRow?.dest || '', pod: exRow?.pol || '' },
+              ex: exRow || { booking: parts[2] || '-', line: imRow?.line || '', dest: imRow?.dest || '', pol: imRow?.pod || '' },
+              score: { passed: 6, recommended: true, leadH: 0, freeMarginH: 0 },
+              approvedAt: b.approvedAtUtc || new Date().toISOString(),
+              approvedBy: b.approvedByUserId || 'Operations',
+            });
+          }
+        }
+      });
+
+      // 3. ANY export row in exportList that has a container that also exists in importList
+      exportList.forEach((exRow) => {
+        if (exRow.cntr && exRow.cntr.trim()) {
+          const cUpper = exRow.cntr.trim().toUpperCase();
+          const imRow = importList.find((im) => im.cntr && im.cntr.trim().toUpperCase() === cUpper);
+          if (imRow) {
+            const key = `${cUpper}|${(imRow.bl || '').trim().toUpperCase()}`;
+            approvedSet.add(key);
+            approvedSet.add(cUpper);
+            if (imRow._containerId) approvedSet.add(String(imRow._containerId).toLowerCase());
+            if (!approvedMap.has(key)) {
+              approvedMap.set(key, {
+                id: `assigned_${cUpper}_${exRow.booking || 'exp'}`,
+                pairKey: `${cUpper}|${imRow.bl || ''}|${exRow.booking || ''}`,
+                type: 'assigned',
+                im: imRow,
+                ex: exRow,
+                score: { passed: 6, recommended: true, leadH: 0, freeMarginH: 0 },
+                approvedAt: new Date().toISOString(),
+                approvedBy: 'Operations',
+              });
+            }
+          }
+        }
+      });
+
+      const finalApprovedList = Array.from(approvedMap.values());
+      setFclApprovedList(finalApprovedList);
+      setApprovals(approvedSet);
+      try {
+        localStorage.setItem('fcl_approved_allocations_v2', JSON.stringify(finalApprovedList));
+      } catch (e) {}
 
       setLookups({
         customers: customersResult.status === 'fulfilled' && Array.isArray(customersResult.value) ? customersResult.value : [],
@@ -322,78 +452,132 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const handleCreateOperation = async (dir, opData) => {
     const isImport = dir === 'Import';
 
-    // 1. Resolve IDs from Lookups if not present directly
-    let clientId = opData.clientId;
+    // 1. Resolve IDs from Lookups with strict GUID validation
+    let clientId = toGuidOrNull(opData.clientId);
     if (!clientId && lookups.customers?.length > 0) {
+      const target = String(opData.client || opData.clientId || '').trim().toLowerCase();
       const match = lookups.customers.find(
-        (c) => (c.companyName || c.name) === opData.client
+        (c) => (c.companyName || c.name || '')?.trim().toLowerCase() === target
       );
-      if (match) clientId = match.customerId || match.id;
+      if (match) clientId = toGuidOrNull(match.customerId || match.id);
     }
 
-    let shippingLineId = opData.shippingLineId;
+    let shippingLineId = toGuidOrNull(opData.shippingLineId);
     if (!shippingLineId && lookups.shippingLines?.length > 0) {
+      const target = String(opData.line || opData.shippingLineId || '').trim().toLowerCase();
       const match = lookups.shippingLines.find(
-        (l) => l.name === opData.line
+        (l) => (l.name || '')?.trim().toLowerCase() === target
       );
-      if (match) shippingLineId = match.id;
+      if (match) shippingLineId = toGuidOrNull(match.id);
     }
 
-    let portId = opData.portId;
+    let portId = toGuidOrNull(opData.portId);
     if (!portId && lookups.ports?.length > 0) {
+      const target = String(opData.port || opData.portId || '').trim().toLowerCase();
       const match = lookups.ports.find(
-        (p) => p.name === opData.port
+        (p) =>
+          (p.name || '')?.trim().toLowerCase() === target ||
+          (p.code || '')?.trim().toLowerCase() === target
       );
-      if (match) portId = match.id;
+      if (match) portId = toGuidOrNull(match.id);
+    }
+
+    let powId = toGuidOrNull(opData.powId);
+    if (!powId && opData.pow && lookups.ports?.length > 0) {
+      const target = String(opData.pow || '').trim().toLowerCase();
+      const match = lookups.ports.find(
+        (p) =>
+          (p.name || '')?.trim().toLowerCase() === target ||
+          (p.code || '')?.trim().toLowerCase() === target
+      );
+      if (match) powId = toGuidOrNull(match.id);
     }
 
     // 2. Validate Required Fields & Rules
     if (!clientId) {
-      showToast(lang === 'ar' ? 'يرجى اختيار العميل من القائمة' : 'Please select a valid client');
-      return;
+      showToast(
+        lang === 'ar'
+          ? 'يرجى اختيار العميل من القائمة المعتمدة في النظام (يجب أن يكون مسجلاً في قاعدة البيانات)'
+          : 'Please select a valid registered client from the list',
+        'warning'
+      );
+      return false;
     }
     if (!shippingLineId) {
-      showToast(lang === 'ar' ? 'يرجى اختيار الخط الملاحي من القائمة' : 'Please select a valid shipping line');
-      return;
+      showToast(
+        lang === 'ar'
+          ? 'يرجى اختيار الخط الملاحي من القائمة المعتمدة في النظام (يجب أن يكون مسجلاً في قاعدة البيانات)'
+          : 'Please select a valid registered shipping line from the list',
+        'warning'
+      );
+      return false;
     }
     if (!opData.blOrBooking || !opData.blOrBooking.trim()) {
       showToast(
         lang === 'ar'
           ? (isImport ? 'يرجى إدخال رقم البوليصة M/BL' : 'يرجى إدخال رقم البوكينج')
-          : (isImport ? 'Please enter M/BL Number' : 'Please enter Booking Number')
+          : (isImport ? 'Please enter M/BL Number' : 'Please enter Booking Number'),
+        'warning'
       );
-      return;
+      return false;
     }
 
     if (isImport) {
       if (!portId) {
-        showToast(lang === 'ar' ? 'يرجى اختيار ميناء الوصول (POD)' : 'Please select POD');
-        return;
+        showToast(
+          lang === 'ar'
+            ? 'يرجى اختيار ميناء الوصول (POD) من القائمة المعتمدة في النظام'
+            : 'Please select a valid POD from the list',
+          'warning'
+        );
+        return false;
       }
       if (!opData.dest || !opData.dest.trim()) {
-        showToast(lang === 'ar' ? 'يرجى تحديد مكان التعتيق' : 'Please specify destination');
-        return;
+        showToast(
+          lang === 'ar' ? 'يرجى تحديد مكان التعتيق' : 'Please specify destination',
+          'warning'
+        );
+        return false;
       }
       if (!opData.freeOrCut) {
-        showToast(lang === 'ar' ? 'يرجى تحديد فترة السماح' : 'Please specify Free Time Till');
-        return;
+        showToast(
+          lang === 'ar' ? 'يرجى تحديد فترة السماح' : 'Please specify Free Time Till',
+          'warning'
+        );
+        return false;
       }
       if (!opData.reqDate || !opData.reqTime) {
-        showToast(lang === 'ar' ? 'يرجى تحديد تاريخ ووقت التعتيق المطلوب' : 'Please specify required offloading date and time');
-        return;
+        showToast(
+          lang === 'ar' ? 'يرجى تحديد تاريخ ووقت التعتيق المطلوب' : 'Please specify required offloading date and time',
+          'warning'
+        );
+        return false;
       }
     } else {
       if (!portId) {
-        showToast(lang === 'ar' ? 'يرجى اختيار ميناء الشحن (POL)' : 'Please select POL');
-        return;
+        showToast(
+          lang === 'ar'
+            ? 'يرجى اختيار ميناء الشحن (POL) من القائمة المعتمدة في النظام'
+            : 'Please select a valid POL from the list',
+          'warning'
+        );
+        return false;
       }
     }
+
+    // Helper to format DateOnly: YYYY-MM-DD
+    const formatDateOnly = (d) => {
+      if (!d) return null;
+      const s = String(d).trim();
+      if (!s) return null;
+      return s.slice(0, 10);
+    };
 
     // Helper to format TimeOnly: HH:mm:00
     const formatTimeOnly = (t) => {
       if (!t) return '08:00:00';
-      const parts = t.split(':');
-      if (parts.length === 2) return `${parts[0]}:${parts[1]}:00`;
+      const parts = String(t).trim().split(':');
+      if (parts.length >= 2) return `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}:00`;
       return t;
     };
 
@@ -405,15 +589,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       return 2;
     };
 
-    const containerCount = Number(opData.cntrCount);
-    if (!containerCount || containerCount <= 0) {
-      showToast(
-        lang === 'ar'
-          ? 'عدد الحاويات (Containers in this operation) لا يمكن أن يكون صفر، يرجى إدخال عدد الحاويات (1 فأكثر)'
-          : 'Containers in this operation cannot be 0, please enter a valid count'
-      );
-      return false;
-    }
+    const containerCount = Number(opData.cntrCount) || 1;
 
     // Build Payload adhering to CreateOperationRequest & Backend Validators
     const payload = {
@@ -426,45 +602,49 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       mblNumber: isImport ? opData.blOrBooking.trim() : null,
       destination: isImport ? opData.dest.trim() : null,
       podId: isImport ? portId : null,
-      freeTimeTill: isImport ? opData.freeOrCut : null,
-      requiredOffloadingDate: isImport ? opData.reqDate : null,
+      freeTimeTill: isImport ? formatDateOnly(opData.freeOrCut) : null,
+      requiredOffloadingDate: isImport ? formatDateOnly(opData.reqDate) : null,
       requiredOffloadingTime: isImport ? formatTimeOnly(opData.reqTime) : null,
 
       // Export Fields (Must be null for Import)
       clearanceType: isImport ? null : resolveClearanceType(opData.clrType),
       bookingNumber: isImport ? null : opData.blOrBooking.trim(),
       polId: isImport ? null : portId,
-      powId: isImport ? null : (opData.powId || null),
-      cutOffDate: isImport ? null : (opData.freeOrCut || null),
-      exportDestination: isImport ? null : (opData.dest || null),
+      powId: isImport ? null : (powId || null),
+      cutOffDate: isImport ? null : formatDateOnly(opData.freeOrCut),
+      exportDestination: isImport ? null : (opData.dest ? opData.dest.trim() : null),
     };
 
     try {
       showToast(lang === 'ar' ? 'جاري إنشاء العملية في قاعدة البيانات...' : 'Creating operation in database...');
-      await createOperation(payload);
+      const newOpId = await createOperation(payload);
 
       showToast(
         lang === 'ar'
           ? `تم إنشاء العملية بإجمالي ${containerCount} حاوية وحفظها بنجاح`
-          : `Operation created with ${containerCount} container(s) successfully`
+          : `Operation created with ${containerCount} container(s) successfully`,
+        'success'
       );
 
       // Refresh data from backend to display real rows and containers
       await loadData();
-      return true;
+
+      // Return the exact generated reference (e.g. OPS-2DA2AD1B) so DataEntryTab can immediately focus & scroll
+      const rawId = String(
+        typeof newOpId === 'object' && newOpId?.id ? newOpId.id : (newOpId || '')
+      ).replace(/^"+|"+$/g, '').trim();
+
+      const createdRef = rawId && rawId.length >= 8 ? `OPS-${rawId.slice(0, 8).toUpperCase()}` : null;
+      return createdRef || newOpId || true;
     } catch (err) {
       console.error('Failed to create operation:', err);
-      const errMsg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
-        err?.message ||
-        'Error creating operation';
+      const errMsg = extractErrorMessage(err);
 
       showToast(
         lang === 'ar'
           ? `خطأ أثناء إنشاء العملية: ${errMsg}`
-          : `Error creating operation: ${errMsg}`
+          : `Error creating operation: ${errMsg}`,
+        'error'
       );
       return false;
     }
@@ -573,8 +753,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       await deleteOperation(opId);
       showToast(
         lang === 'ar'
-          ? 'تم حذف العملية بنجاح ونقلها إلى سجل المحذوفات'
-          : 'Operation deleted successfully and moved to Deleted archive',
+          ? 'تم إيقاف العملية بنجاح ونقلها إلى سجل العمليات غير النشطة'
+          : 'Operation moved to Inactive archive successfully',
         'success'
       );
       // Immediately remove from current active entry state
@@ -773,18 +953,45 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           if (!cntrId) {
             throw new Error(lang === 'ar' ? 'معرّف الحاوية غير صالح في قاعدة البيانات' : 'Invalid container ID');
           }
+
+          let resolvedTruckerId = toGuidOrNull(r.truckerId);
+          if (!resolvedTruckerId && r.trucker && lookups.transporters?.length > 0) {
+            const m = lookups.transporters.find(
+              (t) => (t.name || '').trim().toLowerCase() === String(r.trucker).trim().toLowerCase()
+            );
+            if (m) resolvedTruckerId = m.id;
+          }
+
+          let resolvedDriverId = toGuidOrNull(r.driverId);
+          if (!resolvedDriverId && (r.driver || r.mob) && lookups.drivers?.length > 0) {
+            const m = lookups.drivers.find(
+              (d) =>
+                (r.mob && d.mobileNumber && d.mobileNumber.trim() === String(r.mob).trim()) ||
+                (r.driver && d.name && d.name.trim().toLowerCase() === String(r.driver).trim().toLowerCase())
+            );
+            if (m) resolvedDriverId = m.id;
+          }
+
+          let resolvedVehicleId = toGuidOrNull(r.carId);
+          if (!resolvedVehicleId && r.car && lookups.vehicles?.length > 0) {
+            const m = lookups.vehicles.find(
+              (v) => (v.carNumber || '').trim().toLowerCase() === String(r.car).trim().toLowerCase()
+            );
+            if (m) resolvedVehicleId = m.id;
+          }
+
           return {
             containerId: cntrId,
             actualArrivalDate: r.arrDate ? r.arrDate.slice(0, 10) : null,
             actualArrivalTime: r.arrTime ? (r.arrTime.length === 5 ? `${r.arrTime}:00` : r.arrTime.slice(0, 8)) : null,
             gateOutDate: r.gateOut ? r.gateOut.slice(0, 10) : null,
             gateOutTime: r.gateOutT ? (r.gateOutT.length === 5 ? `${r.gateOutT}:00` : r.gateOutT.slice(0, 8)) : null,
-            containerType: normalizeContainerType(r.size),
+            containerType: normalizeContainerType(r.size) || null,
             containerNumber: r.cntr?.trim() || null,
-            transporterId: toGuidOrNull(r.truckerId),
-            vehicleId: toGuidOrNull(r.carId),
+            transporterId: resolvedTruckerId,
+            vehicleId: resolvedVehicleId,
             carNumber: r.car?.trim() || null,
-            driverId: toGuidOrNull(r.driverId),
+            driverId: resolvedDriverId,
             checkOutFromThePort: r.checkout
               ? (r.checkout.includes('T') ? r.checkout : `${r.checkout.slice(0, 10)}T00:00:00Z`)
               : null,
@@ -881,9 +1088,36 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             throw new Error(lang === 'ar' ? 'معرّف الحاوية غير صالح في قاعدة البيانات' : 'Invalid container ID');
           }
           const cntrNum = r.cntr?.trim() || null;
+
+          let resolvedTruckerId = toGuidOrNull(r.truckerId);
+          if (!resolvedTruckerId && r.trucker && lookups.transporters?.length > 0) {
+            const m = lookups.transporters.find(
+              (t) => (t.name || '').trim().toLowerCase() === String(r.trucker).trim().toLowerCase()
+            );
+            if (m) resolvedTruckerId = m.id;
+          }
+
+          let resolvedDriverId = toGuidOrNull(r.driverId);
+          if (!resolvedDriverId && (r.driver || r.mob) && lookups.drivers?.length > 0) {
+            const m = lookups.drivers.find(
+              (d) =>
+                (r.mob && d.mobileNumber && d.mobileNumber.trim() === String(r.mob).trim()) ||
+                (r.driver && d.name && d.name.trim().toLowerCase() === String(r.driver).trim().toLowerCase())
+            );
+            if (m) resolvedDriverId = m.id;
+          }
+
+          let resolvedVehicleId = toGuidOrNull(r.carId);
+          if (!resolvedVehicleId && r.car && lookups.vehicles?.length > 0) {
+            const m = lookups.vehicles.find(
+              (v) => (v.carNumber || '').trim().toLowerCase() === String(r.car).trim().toLowerCase()
+            );
+            if (m) resolvedVehicleId = m.id;
+          }
+
           return {
             containerId: cntrId,
-            containerType: normalizeContainerType(r.size),
+            containerType: normalizeContainerType(r.size) || null,
             containerNumber: cntrNum ? cntrNum.slice(0, 11) : null,
             requiredLoadingDate: r.reqDate ? r.reqDate.slice(0, 10) : null,
             requiredLoadingTime: r.reqTime ? (r.reqTime.length === 5 ? `${r.reqTime}:00` : r.reqTime.slice(0, 8)) : null,
@@ -892,10 +1126,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             actualArrivalTime: r.arrTime ? (r.arrTime.length === 5 ? `${r.arrTime}:00` : r.arrTime.slice(0, 8)) : null,
             gateOutDate: r.gateOut ? r.gateOut.slice(0, 10) : null,
             gateOutTime: r.gateOutT ? (r.gateOutT.length === 5 ? `${r.gateOutT}:00` : r.gateOutT.slice(0, 8)) : null,
-            transporterId: toGuidOrNull(r.truckerId),
-            vehicleId: toGuidOrNull(r.carId),
+            transporterId: resolvedTruckerId,
+            vehicleId: resolvedVehicleId,
             carNumber: r.car?.trim() || null,
-            driverId: toGuidOrNull(r.driverId),
+            driverId: resolvedDriverId,
             missingDocs: r.missDoc?.trim() || null,
             missingDocsReceivedDate: r.missRcv ? r.missRcv.slice(0, 10) : null,
           };
@@ -960,35 +1194,211 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     });
   };
 
-  const handleApproveMatch = (match) => {
-    const { im, ex, pairKey } = match;
+  const handleApproveMatch = async (match) => {
+    const { im, ex, pairKey, score } = match;
+
+    const cntrNorm = String(im?.cntr || '').trim().toUpperCase();
+    const blNorm = String(im?.bl || '').trim().toUpperCase();
+    const cntrBlKey = cntrNorm && blNorm ? `${cntrNorm}|${blNorm}` : null;
+
+    // 1. Mark as approved in local React state so UI updates immediately.
+    // Notice: We add cntrBlKey so this container is blocked under this M/BL only!
     setApprovals((prev) => {
       const next = new Set(prev);
-      next.add(pairKey);
+      if (pairKey) next.add(pairKey);
+      if (cntrBlKey) next.add(cntrBlKey);
+      if (im?._containerId) next.add(String(im._containerId).toLowerCase());
       return next;
     });
 
+    // 2. Build the rich approved allocation record
+    const newRecord = {
+      id: `appr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      pairKey: pairKey || `${im?.cntr}|${im?.bl}|${ex?.booking}`,
+      type: 'assigned',
+      im: { ...im },
+      ex: { ...ex },
+      score: { ...score },
+      approvedAt: new Date().toISOString(),
+      approvedBy: 'Operations',
+    };
+
+    setFclApprovedList((prev) => {
+      const next = [newRecord, ...prev.filter((r) => r.pairKey !== newRecord.pairKey)];
+      try {
+        localStorage.setItem('fcl_approved_allocations_v2', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    // 3. Assign container to export shipment in memory AND in backend database
     if (im?.cntr && ex) {
-      setEntry((prev) => {
-        const exports = (prev.Export || []).map((r) => {
-          if (r.booking === ex.booking || r._ref === ex._ref) {
-            return {
-              ...r,
-              cntr: im.cntr,
-              size: im.size || r.size,
-              line: im.line || r.line,
-            };
+      const exportList = entry.Export || [];
+      const targetRef = ex._ref || ex.booking;
+
+      // Find all rows belonging to this export shipment
+      const shipmentRows = exportList.filter(
+        (r) => r.booking === ex.booking || r._ref === targetRef
+      );
+
+      // Find the specific container row to assign to
+      let assignedRow = null;
+      const updatedShipmentRows = shipmentRows.map((r) => {
+        const isTargetSlot =
+          (ex._containerId && r._containerId === ex._containerId) ||
+          (ex._rowId && r._rowId === ex._rowId) ||
+          (ex.ordinal && r.ordinal === ex.ordinal && (r.booking === ex.booking || r._ref === targetRef));
+
+        if (!assignedRow && (isTargetSlot || (!r.cntr && (r.booking === ex.booking || r._ref === targetRef)))) {
+          // Transfer transport & driver details from the matched import container
+          let truckerName = im.trucker || r.trucker || '';
+          let truckerId = im.truckerId || r.truckerId || null;
+          if (!truckerId && truckerName && lookups.transporters?.length > 0) {
+            const tMatch = lookups.transporters.find(
+              (t) => (t.name || '').trim().toLowerCase() === truckerName.trim().toLowerCase()
+            );
+            if (tMatch) truckerId = tMatch.id;
           }
-          return r;
-        });
-        return { ...prev, Export: exports };
+
+          let carNumber = im.car || r.car || '';
+          let carId = im.carId || r.carId || null;
+          if (!carId && carNumber && lookups.vehicles?.length > 0) {
+            const vMatch = lookups.vehicles.find(
+              (v) => (v.carNumber || '').trim().toLowerCase() === carNumber.trim().toLowerCase()
+            );
+            if (vMatch) carId = vMatch.id;
+          }
+
+          let driverName = im.driver || r.driver || '';
+          let driverId = im.driverId || r.driverId || null;
+          let driverMob = im.mob || r.mob || '';
+          if (!driverId && (driverName || driverMob) && lookups.drivers?.length > 0) {
+            const dMatch = lookups.drivers.find(
+              (d) =>
+                (driverMob && d.mobileNumber && d.mobileNumber.trim() === driverMob.trim()) ||
+                (driverName && d.name && d.name.trim().toLowerCase() === driverName.trim().toLowerCase())
+            );
+            if (dMatch) {
+              driverId = dMatch.id;
+              if (!driverName) driverName = dMatch.name;
+              if (!driverMob) driverMob = dMatch.mobileNumber;
+            }
+          }
+
+          assignedRow = {
+            ...r,
+            cntr: im.cntr,
+            size: im.size || r.size,
+            line: im.line || r.line,
+            trucker: truckerName,
+            truckerId: truckerId,
+            car: carNumber,
+            carId: carId,
+            driver: driverName,
+            driverId: driverId,
+            mob: driverMob,
+          };
+          return assignedRow;
+        }
+        return r;
       });
+
+      // Update local state immediately
+      if (assignedRow) {
+        setEntry((prev) => ({
+          ...prev,
+          Export: (prev.Export || []).map((r) => {
+            if (
+              (assignedRow._containerId && r._containerId === assignedRow._containerId) ||
+              (assignedRow._rowId && r._rowId === assignedRow._rowId)
+            ) {
+              return assignedRow;
+            }
+            return r;
+          }),
+        }));
+
+        // Persist approval to backend FclApprovals table FIRST so loadData sees it
+        if (im?._containerId && !String(im._containerId).startsWith('dummy_')) {
+          try {
+            await approveFclSuggestion(im._containerId);
+          } catch (err) {
+            console.warn('Backend FCL approval note:', err?.response?.data?.error || err.message);
+          }
+        }
+
+        // Persist to database using handleSaveShipment (which calls loadData to refresh)
+        try {
+          showToast(
+            lang === 'ar'
+              ? `جاري حفظ وتخصيص الحاوية ${im.cntr} في شحنة الصادر...`
+              : `Assigning container ${im.cntr} to export shipment...`
+          );
+          await handleSaveShipment('Export', targetRef, updatedShipmentRows, { silent: false });
+        } catch (e) {
+          console.error('Assign save error:', e);
+          showToast(
+            lang === 'ar'
+              ? `فشل حفظ التخصيص في قاعدة البيانات: ${extractErrorMessage(e)}`
+              : `Failed to persist assignment: ${extractErrorMessage(e)}`,
+            'error'
+          );
+        }
+      }
     }
 
     showToast(
       lang === 'ar'
-        ? `تم اعتماد ترشيح الحاوية ${im.cntr} لشحنة الصادر ${ex.booking}`
-        : `Approved container ${im.cntr} for export booking ${ex.booking}`
+        ? `تم اعتماد وتخصيص الحاوية ${im?.cntr || ''} لشحنة الصادر ${ex?.booking || ''} بنجاح`
+        : `Approved & assigned container ${im?.cntr || ''} to booking ${ex?.booking || ''}`
+    );
+  };
+
+  const handleUnapproveMatch = async (record) => {
+    if (!record) return;
+    if (record.type === 'assigned') {
+      showToast(
+        lang === 'ar'
+          ? 'لا يمكن التراجع عن تخصيص نهائي من هنا؛ الحاوية ارتبطت رسمياً بشحنة الصادر في تفاصيل العمليات'
+          : 'Cannot revoke a committed assignment from here',
+        'error'
+      );
+      return;
+    }
+
+    const { im, pairKey } = record;
+
+    // 1. Remove from approvals Set so the match immediately reappears as candidate
+    setApprovals((prev) => {
+      const next = new Set(prev);
+      if (pairKey) next.delete(pairKey);
+      if (im?._containerId) next.delete(String(im._containerId).toLowerCase());
+      if (im?.cntr) next.delete(String(im.cntr).toUpperCase());
+      return next;
+    });
+
+    // 2. Remove from approved records list
+    setFclApprovedList((prev) => {
+      const next = prev.filter((r) => r.id !== record.id && r.pairKey !== pairKey);
+      try {
+        localStorage.setItem('fcl_approved_allocations_v2', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+
+    // 3. Call backend unapprove endpoint if available
+    if (im?._containerId && !String(im._containerId).startsWith('dummy_')) {
+      try {
+        await unapproveFclSuggestion(im._containerId);
+      } catch (e) {
+        console.warn('Backend unapprove note:', e.message);
+      }
+    }
+
+    showToast(
+      lang === 'ar'
+        ? `تم التراجع عن اعتماد الحاوية ${im?.cntr || ''} وإعادتها لقائمة الترشيحات المتاحة`
+        : `Revoked approval for container ${im?.cntr || ''} and restored to available matches`
     );
   };
 
@@ -1269,7 +1679,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
             <button
               type="button"
-              onClick={() => setDashTab('Import')}
+              onClick={() => handleSelectDashTab('Import')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                 dashTab === 'Import'
                   ? 'bg-slate-900 text-white shadow-sm'
@@ -1289,7 +1699,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
             <button
               type="button"
-              onClick={() => setDashTab('Export')}
+              onClick={() => handleSelectDashTab('Export')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                 dashTab === 'Export'
                   ? 'bg-slate-900 text-white shadow-sm'
@@ -1309,7 +1719,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
             <button
               type="button"
-              onClick={() => setDashTab('FCL')}
+              onClick={() => handleSelectDashTab('FCL')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${
                 dashTab === 'FCL'
                   ? 'bg-blue-600 text-white shadow-sm'
@@ -1332,7 +1742,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           {dashTab === 'FCL' ? (
             <FclTab
               matches={fclMatches}
+              allData={enrichedData}
+              lookups={lookups}
+              approvedList={fclApprovedList}
               onApproveMatch={handleApproveMatch}
+              onUnapproveMatch={handleUnapproveMatch}
               lang={lang}
             />
           ) : (

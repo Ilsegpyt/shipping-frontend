@@ -279,9 +279,33 @@ export default function DataEntryTab({
   // Toggleable Unmerge / Merge state for dest, missDoc, and status per shipment
   const [unmergedCols, setUnmergedCols] = useState({});
 
-  // Auto-focus and scroll to edited row after save/refresh
+  // Auto-focus and scroll to edited or created row after save/refresh
   const pendingScrollRef = useRef(null);
   const [highlightedShipRef, setHighlightedShipRef] = useState(null);
+
+  const isShipmentMatch = (shipRows, target) => {
+    if (!target || !shipRows || shipRows.length === 0) return false;
+    const t = String(target).trim().toLowerCase();
+    const tClean = t.startsWith('ops-') ? t.slice(4) : t;
+
+    return shipRows.some((r) => {
+      const ref = (r._ref || '').toLowerCase();
+      const shipNo = (r.shipNo || '').toLowerCase();
+      const opId = (r._operationId || '').toLowerCase();
+      const bl = (r.bl || '').trim().toLowerCase();
+      const booking = (r.booking || '').trim().toLowerCase();
+
+      return (
+        ref === t ||
+        shipNo === t ||
+        opId === t ||
+        (opId && (opId.startsWith(tClean) || tClean.startsWith(opId.slice(0, 8)))) ||
+        (ref && (ref.includes(tClean) || tClean.includes(ref.replace('ops-', '')))) ||
+        (bl && bl === t) ||
+        (booking && booking === t)
+      );
+    });
+  };
 
   const { user } = useAuth();
   const currentUserName = user?.name || user?.userName || user?.email?.split('@')[0] || 'User';
@@ -876,9 +900,10 @@ export default function DataEntryTab({
       return;
     }
 
+    const createdBl = (newOp.blOrBooking || '').trim();
     if (onCreateOperation) {
-      const success = await onCreateOperation(currentDir, newOp);
-      if (success !== false) {
+      const createRes = await onCreateOperation(currentDir, newOp);
+      if (createRes) {
         // Reset all form fields to default clean state (-- Select --)
         setNewOp({
           cntrCount: 0,
@@ -897,6 +922,27 @@ export default function DataEntryTab({
           pow: '',
           powId: '',
         });
+
+        // Resolve the exact shipRef (e.g. 'OPS-2DA2AD1B') to trigger identical highlight and smooth scroll!
+        let targetShipRef = typeof createRes === 'string' && createRes.startsWith('OPS-') ? createRes : null;
+        if (!targetShipRef) {
+          const matchRow = (entry[currentDir] || []).find(
+            (r) => (r.bl && r.bl.trim().toLowerCase() === createdBl.toLowerCase()) ||
+                   (r.booking && r.booking.trim().toLowerCase() === createdBl.toLowerCase())
+          );
+          if (matchRow?._ref) {
+            targetShipRef = matchRow._ref;
+          }
+        }
+        if (!targetShipRef && typeof createRes === 'string' && createRes !== 'true') {
+          targetShipRef = createRes;
+        }
+        if (!targetShipRef) {
+          targetShipRef = createdBl;
+        }
+
+        pendingScrollRef.current = targetShipRef;
+        setHighlightedShipRef(targetShipRef);
       }
     }
   };
@@ -1179,14 +1225,12 @@ export default function DataEntryTab({
     return filteredShipments.slice(start, start + pageSize);
   }, [filteredShipments, page, pageSize]);
 
-  // Auto-focus and scroll smoothly to the edited shipment after save / auto-refresh
+  // Auto-focus and scroll smoothly to the edited or newly created shipment after save / auto-refresh
   useEffect(() => {
     if (!highlightedShipRef) return;
 
     // 1. Ensure the user is on the page containing this shipment
-    const shipIdx = filteredShipments.findIndex(
-      (rows) => rows[0]?._ref === highlightedShipRef || rows[0]?.shipNo === highlightedShipRef
-    );
+    const shipIdx = filteredShipments.findIndex((rows) => isShipmentMatch(rows, highlightedShipRef));
     if (shipIdx !== -1) {
       const targetPage = Math.floor(shipIdx / pageSize) + 1;
       if (page !== targetPage) {
@@ -1196,10 +1240,19 @@ export default function DataEntryTab({
 
     // 2. Perform smooth scroll directly to the row inside the table AND scroll the page window down
     const performScroll = () => {
+      const t = String(highlightedShipRef).trim();
+      const tLower = t.toLowerCase();
+      const tClean = tLower.startsWith('ops-') ? tLower.slice(4) : tLower;
+
       const rowEl =
-        document.querySelector(`[data-ship-ref="${highlightedShipRef}"]`) ||
-        document.getElementById(`shipment-row-${highlightedShipRef}`) ||
-        document.querySelector(`[data-ship-no="${highlightedShipRef}"]`);
+        document.querySelector(`[data-ship-ref="${t}"]`) ||
+        document.getElementById(`shipment-row-${t}`) ||
+        document.querySelector(`[data-ship-no="${t}"]`) ||
+        document.querySelector(`[data-op-id="${t}"]`) ||
+        document.querySelector(`[data-bl="${t}"]`) ||
+        document.querySelector(`[data-booking="${t}"]`) ||
+        document.querySelector(`[data-ship-ref*="${tClean}"]`) ||
+        document.querySelector(`[data-op-id*="${tClean}"]`);
       const gridEl = gridRef?.current;
 
       if (rowEl) {
@@ -1231,8 +1284,9 @@ export default function DataEntryTab({
 
     // Attempt immediately and with stagger for DOM updates/pagination
     const t1 = setTimeout(performScroll, 80);
-    const t2 = setTimeout(performScroll, 250);
-    const t3 = setTimeout(performScroll, 550);
+    const t2 = setTimeout(performScroll, 220);
+    const t3 = setTimeout(performScroll, 500);
+    const t4 = setTimeout(performScroll, 850);
 
     // 3. Keep highlight glow visible for 3.5 seconds
     const clearTimer = setTimeout(() => {
@@ -1244,6 +1298,7 @@ export default function DataEntryTab({
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
+      clearTimeout(t4);
       clearTimeout(clearTimer);
     };
   }, [entry, highlightedShipRef, filteredShipments, pageSize, page]);
@@ -1773,10 +1828,10 @@ export default function DataEntryTab({
             type="button"
             onClick={() => { onChangeDir && onChangeDir('Deleted'); setPage(1); }}
             className={`etab ${currentDir === 'Deleted' ? 'on' : ''} border-rose-200 hover:border-rose-300 text-rose-700 bg-rose-50/70`}
-            title={lang === 'ar' ? 'عرض العمليات المحذوفة' : 'View Deleted Shipments'}
+            title={lang === 'ar' ? 'عرض العمليات غير النشطة' : 'View Inactive Shipments'}
           >
             <Trash2 size={13} className="text-rose-600" />
-            <span>{lang === 'ar' ? 'المحذوفات' : 'Deleted'}</span>
+            <span>{lang === 'ar' ? 'غير النشطة' : 'Inactive'}</span>
             <span className="cnt bg-rose-100 text-rose-700 border-rose-200">{deletedOperations.length}</span>
           </button>
 
@@ -2134,16 +2189,16 @@ export default function DataEntryTab({
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-bold text-slate-900">
-                    {lang === 'ar' ? 'سجل العمليات والشحنات المحذوفة' : 'Deleted Operations Archive'}
+                    {lang === 'ar' ? 'سجل العمليات والشحنات غير النشطة' : 'Inactive Operations Archive'}
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
-                    {filteredDeletedOperations.length} {lang === 'ar' ? 'شحنة محذوفة' : 'deleted'}
+                    {filteredDeletedOperations.length} {lang === 'ar' ? 'شحنة غير نشطة' : 'inactive'}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
                   {lang === 'ar'
-                    ? 'يتم أرشفة جميع العمليات المحذوفة هنا مع توثيق اسم المستخدم وتاريخ وساعة الحذف بدقة'
-                    : 'All deleted operations are securely archived here with author and exact timestamp'}
+                    ? 'يتم أرشفة جميع العمليات غير النشطة هنا مع توثيق اسم المستخدم وتاريخ وساعة الإيقاف بدقة'
+                    : 'All inactive operations are securely archived here with author and exact timestamp'}
                 </p>
               </div>
             </div>
@@ -2174,7 +2229,7 @@ export default function DataEntryTab({
             <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
               <Loader2 size={28} className="animate-spin text-rose-600 mx-auto mb-2" />
               <p className="text-xs text-slate-500 font-medium">
-                {lang === 'ar' ? 'جاري تحميل العمليات المحذوفة...' : 'Loading deleted operations...'}
+                {lang === 'ar' ? 'جاري تحميل العمليات غير النشطة...' : 'Loading inactive operations...'}
               </p>
             </div>
           ) : filteredDeletedOperations.length === 0 ? (
@@ -2183,12 +2238,12 @@ export default function DataEntryTab({
                 <Trash2 size={24} />
               </div>
               <h4 className="text-sm font-bold text-slate-800">
-                {lang === 'ar' ? 'لا توجد شحنات محذوفة مطابقة' : 'No Matching Deleted Shipments'}
+                {lang === 'ar' ? 'لا توجد شحنات غير نشطة مطابقة' : 'No Matching Inactive Shipments'}
               </h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
                 {lang === 'ar'
-                  ? 'لم يتم العثور على أي شحنات محذوفة تطابق معايير البحث أو الفلتر المحددة.'
-                  : 'No deleted operations matched your search or filter criteria.'}
+                  ? 'لم يتم العثور على أي شحنات غير نشطة تطابق معايير البحث أو الفلتر المحددة.'
+                  : 'No inactive operations matched your search or filter criteria.'}
               </p>
             </div>
           ) : (
@@ -2202,10 +2257,10 @@ export default function DataEntryTab({
                     <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والخط' : 'Client & Line'}</th>
                     <th className="py-3 px-3 text-start">{lang === 'ar' ? 'الحاويات' : 'Containers'}</th>
                     <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-900 border-x border-rose-100">
-                      {lang === 'ar' ? 'تم الحذف بواسطة' : 'Deleted By'}
+                      {lang === 'ar' ? 'تم الإيقاف بواسطة' : 'Inactive By'}
                     </th>
                     <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-900">
-                      {lang === 'ar' ? 'تاريخ وساعة الحذف' : 'Deleted At'}
+                      {lang === 'ar' ? 'تاريخ وساعة الإيقاف' : 'Inactive At'}
                     </th>
                     <th className="py-3 px-3 text-center">
                       {lang === 'ar' ? 'التفاصيل الكاملة' : 'Full Details'}
@@ -2382,15 +2437,18 @@ export default function DataEntryTab({
                     const rowSpan = shipRows.length;
                     const shipRef = shipRows[0]?._ref || `ship_${shipIdx}`;
 
-                    return shipRows.map((r, rIdx) => {
+                    const renderedRows = shipRows.map((r, rIdx) => {
                       const isFirstRow = rIdx === 0;
-                      const isHighlighted = highlightedShipRef && (shipRef === highlightedShipRef || r.shipNo === highlightedShipRef);
+                      const isHighlighted = highlightedShipRef && (shipRef === highlightedShipRef || r.shipNo === highlightedShipRef || isShipmentMatch(shipRows, highlightedShipRef));
 
                       return (
                         <tr
                           key={r._rowId || `${shipIdx}_${rIdx}`}
                           data-ship-ref={shipRef}
                           data-ship-no={r.shipNo || ''}
+                          data-op-id={r._operationId || ''}
+                          data-bl={r.bl || ''}
+                          data-booking={r.booking || ''}
                           id={isFirstRow ? `shipment-row-${shipRef}` : undefined}
                           tabIndex={isFirstRow ? -1 : undefined}
                           className={`outline-none transition-colors duration-500 ${
@@ -3071,9 +3129,14 @@ export default function DataEntryTab({
                                       onChange={(e) =>
                                         onUpdateCell && onUpdateCell(currentDir, r._rowId, 'size', e.target.value)
                                       }
-                                      className="w-full text-xs font-semibold bg-transparent outline-none cursor-pointer text-slate-700 px-1 truncate"
+                                      className={`w-full text-xs font-semibold bg-transparent outline-none cursor-pointer px-1 truncate ${
+                                        !normalizeContainerType(val) ? 'text-slate-400 italic font-normal' : 'text-slate-700 font-semibold'
+                                      }`}
                                       title="نوع ومقاس الحاوية (Container Type)"
                                     >
+                                      <option value="" className="text-slate-400 font-normal">
+                                        {lang === 'ar' ? '-- اختر نوع ومقاس الحاوية --' : '-- Select Type --'}
+                                      </option>
                                       {CONTAINER_TYPES.map((ct) => (
                                         <option key={ct.value} value={ct.value}>
                                           {ct.label}
@@ -3529,7 +3592,49 @@ export default function DataEntryTab({
                           })}
                         </tr>
                       );
-                    });
+                                        });
+
+                    if (shipIdx > 0) {
+                      const spacerRow = (
+                        <tr
+                          key={`shipment_gap_${shipRef}_${shipIdx}`}
+                          className="shipment-divider-row select-none pointer-events-none"
+                          aria-hidden="true"
+                        >
+                          <td
+                            colSpan={cols.length}
+                            style={{
+                              padding: 0,
+                              height: '24px',
+                              border: 'none',
+                              background: 'transparent',
+                            }}
+                          >
+                            <div
+                              style={{
+                                height: '24px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '0 4px',
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: '100%',
+                                  height: '2px',
+                                  background: 'linear-gradient(90deg, #94a3b8 0%, #cbd5e1 20%, #e2e8f0 50%, #cbd5e1 80%, #94a3b8 100%)',
+                                  borderRadius: '999px',
+                                  opacity: 0.7,
+                                }}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                      return [spacerRow, ...renderedRows];
+                    }
+
+                    return renderedRows;
                   })
                 )}
               </tbody>
@@ -4140,7 +4245,7 @@ export default function DataEntryTab({
                   <div>
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-bold text-slate-800">
-                        {lang === 'ar' ? 'التفاصيل الكاملة للعملية المحذوفة' : 'Deleted Operation Full Details'}
+                        {lang === 'ar' ? 'التفاصيل الكاملة للعملية غير النشطة' : 'Inactive Operation Full Details'}
                       </h3>
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
@@ -4170,12 +4275,12 @@ export default function DataEntryTab({
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
                   <span className="text-slate-600">
-                    {lang === 'ar' ? 'تم الحذف بواسطة:' : 'Deleted By:'}{' '}
+                    {lang === 'ar' ? 'تم الإيقاف بواسطة:' : 'Inactive By:'}{' '}
                     <strong className="text-rose-900">{op.deletedByName || (lang === 'ar' ? 'مستخدم' : 'User')}</strong>
                   </span>
                 </div>
                 <div className="text-slate-500 text-[11px]">
-                  <span>{lang === 'ar' ? 'تاريخ وساعة الحذف:' : 'Deleted At:'} </span>
+                  <span>{lang === 'ar' ? 'تاريخ وساعة الإيقاف:' : 'Inactive At:'} </span>
                   <strong className="text-slate-700">{fmtUpdateDateTime(op.deletedAtUtc)}</strong>
                 </div>
               </div>
@@ -4287,7 +4392,7 @@ export default function DataEntryTab({
 
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
                       <span className="text-[10px] text-slate-400 block font-medium">
-                        {lang === 'ar' ? 'الحالة السابقة' : 'Status before delete'}
+                        {lang === 'ar' ? 'الحالة السابقة' : 'Status before inactive'}
                       </span>
                       <span className="text-xs font-bold text-slate-800 block">
                         {op.status || 'Open'}
@@ -4406,7 +4511,7 @@ export default function DataEntryTab({
               <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-[11px] text-slate-400 flex items-center gap-1">
                   <Lock size={12} className="text-slate-400" />
-                  {lang === 'ar' ? 'أرشيف العمليات المحذوفة (Read-Only Archive)' : 'Read-Only Deleted Archive'}
+                  {lang === 'ar' ? 'أرشيف العمليات غير النشطة (Read-Only Archive)' : 'Read-Only Inactive Archive'}
                 </span>
                 <button
                   type="button"

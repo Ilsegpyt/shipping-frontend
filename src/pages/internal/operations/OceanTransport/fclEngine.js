@@ -40,43 +40,79 @@ export const fclEvaluate = (im, ex) => {
 };
 
 export const fclCandidates = (rows = [], approvals = new Set()) => {
-  // Import candidates: Open status, has a container number
+  const normApprovals = new Set();
+  (approvals || []).forEach((a) => {
+    if (typeof a === 'string') {
+      normApprovals.add(a.toLowerCase());
+      normApprovals.add(a.toUpperCase());
+    } else if (a) {
+      normApprovals.add(String(a));
+    }
+  });
+
+  // An import container is approved ONLY if it was approved under the exact same M/BL (or exact container ID)
+  // If the same physical container arrives later with a DIFFERENT M/BL, it is considered a new trip and allowed!
+  const isContainerApproved = (r) => {
+    if (!r) return false;
+    if (r._containerId && (normApprovals.has(String(r._containerId).toLowerCase()) || normApprovals.has(String(r._containerId)))) return true;
+
+    const cntrNorm = fclNorm(r.cntr);
+    const blNorm = fclNorm(r.bl);
+    if (!cntrNorm) return false;
+
+    // Check exact CNTR|MBL key
+    if (blNorm) {
+      const cntrBlKey = `${cntrNorm}|${blNorm}`;
+      if (normApprovals.has(cntrBlKey) || normApprovals.has(cntrBlKey.toLowerCase())) return true;
+
+      // Check backend approval key pattern: CNTR|MBL|BOOKING
+      const prefix = `${cntrNorm}|${blNorm}|`;
+      for (const a of normApprovals) {
+        if (typeof a === 'string' && a.toUpperCase().startsWith(prefix)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
+  // Import candidates: Open status, has a container number, and not already approved in FclApprovals
   const imported = rows.filter((r) =>
     r.dir === 'Import' &&
     String(r.cntr || '').trim() &&
     !/^\(/.test(r.cntr) &&
-    String(r.status || 'Open').trim().toLowerCase() === 'open'
+    String(r.status || 'Open').trim().toLowerCase() === 'open' &&
+    !isContainerApproved(r)
   );
 
-  // Export candidates: Has required loading date
+  // Export candidates: Has required loading date, Open status, and doesn't already have an assigned container
   const exported = rows.filter((r) =>
     r.dir === 'Export' &&
     r.reqDate &&
-    String(r.status || 'Open').trim().toLowerCase() === 'open'
+    String(r.status || 'Open').trim().toLowerCase() === 'open' &&
+    !String(r.cntr || '').trim()
   );
 
-  const rowKey = (r, dir, idx) =>
-    `${dir}|${r._ref || ''}|${idx}|${fclNorm(r.cntr)}|${fclNorm(r.bl || r.booking)}`;
-
-  const usedImports = new Set();
-  const usedExports = new Set();
+  const seenPairs = new Set();
   const matches = [];
 
   for (let i = 0; i < imported.length; i++) {
     const im = imported[i];
-    const imKey = rowKey(im, 'Import', i);
-    if (usedImports.has(imKey)) continue;
 
     for (let j = 0; j < exported.length; j++) {
       const ex = exported[j];
-      const exKey = rowKey(ex, 'Export', j);
-      if (usedExports.has(exKey)) continue;
 
       const score = fclEvaluate(im, ex);
       if (!score.recommended && !score.isNearMatch) continue;
 
-      const pairKey = `${fclNorm(im.cntr)}|${fclNorm(im.bl)}|${fclNorm(ex.booking)}`;
-      const isApproved = approvals.has(pairKey);
+      const slotKey = ex._containerId || ex._rowId || ex.ordinal || `slot_${j}`;
+      const pairKey = `${fclNorm(im.cntr)}|${fclNorm(im.bl)}|${fclNorm(ex.booking)}|${slotKey}`;
+      if (seenPairs.has(pairKey)) continue;
+      seenPairs.add(pairKey);
+
+      const isApproved = normApprovals.has(pairKey) || normApprovals.has(pairKey.toLowerCase());
+      if (isApproved) continue; // Don't show approved suggestions again
 
       matches.push({
         id: `fcl_${i}_${j}`,
@@ -84,14 +120,10 @@ export const fclCandidates = (rows = [], approvals = new Set()) => {
         im,
         ex,
         score,
-        isApproved,
+        isApproved: false,
       });
-
-      if (score.recommended) {
-        usedImports.add(imKey);
-        usedExports.add(exKey);
-        break; // Match found for this import container
-      }
+      // Do NOT break! Show all matching export opportunities for this import container
+      // so the operations specialist can choose the best one.
     }
   }
 

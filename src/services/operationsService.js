@@ -115,3 +115,28 @@ export const searchOperations = async (searchRequest) => {
   return response.data;
 };
 
+/**
+ * FCL Approvals Endpoints
+ */
+export const getAllFclApprovals = async () => {
+  const response = await api.get('/api/fcl-approvals');
+  return response.data;
+};
+
+export const approveFclSuggestion = async (importContainerId) => {
+  const response = await api.post(`/api/fcl-suggestions/${importContainerId}/approve`);
+  return response.data;
+};
+
+export const unapproveFclSuggestion = async (approvalIdOrContainerId) => {
+  try {
+    const response = await api.delete(`/api/fcl-approvals/${approvalIdOrContainerId}`);
+    return response.data;
+  } catch (err) {
+    // If backend doesn't support DELETE endpoint, log note and continue client-side revoke
+    console.warn('Backend FCL unapprove note:', err?.response?.data?.error || err.message);
+    return null;
+  }
+};
+
+

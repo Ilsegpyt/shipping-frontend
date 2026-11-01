@@ -4,13 +4,14 @@ import { CONTAINER_TYPES } from './constants';
  * Normalizes any backend container type or description to the exact backend enum string
  */
 export function normalizeContainerType(type) {
-  if (!type) return 'DryStandard40';
+  if (!type) return '';
   const found = CONTAINER_TYPES.find(
     (c) => c.value.toLowerCase() === String(type).toLowerCase() ||
            c.label.toLowerCase() === String(type).toLowerCase()
   );
   if (found) return found.value;
-  const s = String(type).toLowerCase();
+  const s = String(type).toLowerCase().trim();
+  if (!s) return '';
   if (s.includes('tank') && s.includes('20')) return 'Tank20';
   if (s.includes('tank')) return 'Tank40';
   if (s.includes('reefer') && s.includes('20')) return 'ReeferStandard20';
@@ -24,7 +25,8 @@ export function normalizeContainerType(type) {
   if (s.includes('45')) return 'DryHigh45';
   if (s.includes('hc') || s.includes('high')) return 'DryHigh40';
   if (s.includes('20')) return 'DryStandard20';
-  return 'DryStandard40';
+  if (s.includes('40')) return 'DryStandard40';
+  return '';
 }
 
 export function mapBackendOperationsToFrontend(operations = []) {
@@ -55,7 +57,7 @@ export function mapBackendOperationsToFrontend(operations = []) {
             id: `${op.id}_dummy_0`,
             ordinal: 1,
             containerNumber: '',
-            containerType: 'DryStandard40',
+            containerType: '',
             destination: isImport ? op.importDetails?.destination || '' : '',
           },
         ];
@@ -73,6 +75,8 @@ export function mapBackendOperationsToFrontend(operations = []) {
         _containerId: cntr.id,
         _ref: ref,
         _rowId: rowId,
+        _ordinal: cntr.ordinal || (idx + 1),
+        ordinal: cntr.ordinal || (idx + 1),
         _operationType: isImport ? 'Import' : 'Export',
         operationType: isImport ? 'Import' : 'Export',
         _createdAtUtc: op.createdAtUtc || '',
