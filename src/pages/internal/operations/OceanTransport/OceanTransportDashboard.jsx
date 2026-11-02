@@ -94,11 +94,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const isEntryPath = location.pathname.includes('/entry');
   const [viewMode, setViewMode] = useState(isEntryPath ? 'entry' : 'dashboard'); // 'dashboard' | 'entry'
 
-  // Within dashboard: 'Import' | 'Export' | 'FCL'
+  // Within dashboard: 'Import' | 'Export'
   const [dashTab, setDashTab] = useState(() => {
     try {
       const saved = sessionStorage.getItem('ocean_dash_tab');
-      if (saved && ['Import', 'Export', 'FCL'].includes(saved)) return saved;
+      if (saved && ['Import', 'Export'].includes(saved)) return saved;
     } catch (e) {}
     return 'Import';
   });
