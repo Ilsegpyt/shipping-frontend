@@ -28,8 +28,10 @@ import {
   History,
   Clock,
   ArrowRight,
+  ArrowRightLeft,
   Eye,
 } from 'lucide-react';
+import FclTab from './FclTab';
 import { COLS, MASTER_DEFAULTS, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
 import { normalizeContainerType } from '../operationsAdapter';
@@ -98,6 +100,12 @@ export default function DataEntryTab({
   onRefreshDeleted,
   showToast,
   lang = 'en',
+  fclMatches = [],
+  fclApprovedList = [],
+  onApproveMatch,
+  onUnapproveMatch,
+  fclRecommendedCount = 0,
+  enrichedData = [],
 }) {
   const [formOpen, setFormOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -941,6 +949,11 @@ export default function DataEntryTab({
           targetShipRef = createdBl;
         }
 
+        if (searchTerm) {
+          setSearchTerm("");
+        }
+        setPage(1);
+
         pendingScrollRef.current = targetShipRef;
         setHighlightedShipRef(targetShipRef);
       }
@@ -1244,15 +1257,36 @@ export default function DataEntryTab({
       const tLower = t.toLowerCase();
       const tClean = tLower.startsWith('ops-') ? tLower.slice(4) : tLower;
 
-      const rowEl =
-        document.querySelector(`[data-ship-ref="${t}"]`) ||
+      let rowEl =
+        document.querySelector(`[data-ship-ref="${t}" i]`) ||
         document.getElementById(`shipment-row-${t}`) ||
-        document.querySelector(`[data-ship-no="${t}"]`) ||
-        document.querySelector(`[data-op-id="${t}"]`) ||
-        document.querySelector(`[data-bl="${t}"]`) ||
-        document.querySelector(`[data-booking="${t}"]`) ||
-        document.querySelector(`[data-ship-ref*="${tClean}"]`) ||
-        document.querySelector(`[data-op-id*="${tClean}"]`);
+        document.querySelector(`[data-ship-no="${t}" i]`) ||
+        document.querySelector(`[data-op-id="${t}" i]`) ||
+        document.querySelector(`[data-bl="${t}" i]`) ||
+        document.querySelector(`[data-booking="${t}" i]`) ||
+        document.querySelector(`[data-ship-ref*="${tClean}" i]`) ||
+        document.querySelector(`[data-op-id*="${tClean}" i]`);
+
+      // Fallback: search all table rows if direct selector didn't catch due to special chars
+      if (!rowEl) {
+        const candidateRows = document.querySelectorAll('#eTable tbody tr[data-ship-ref]');
+        for (const cr of candidateRows) {
+          const cRef = (cr.getAttribute('data-ship-ref') || '').toLowerCase();
+          const cBl = (cr.getAttribute('data-bl') || '').toLowerCase();
+          const cBkg = (cr.getAttribute('data-booking') || '').toLowerCase();
+          const cOp = (cr.getAttribute('data-op-id') || '').toLowerCase();
+          if (
+            cRef === tLower ||
+            (tClean && cRef.includes(tClean)) ||
+            (tLower && (cBl === tLower || cBkg === tLower)) ||
+            (tClean && cOp.includes(tClean))
+          ) {
+            rowEl = cr;
+            break;
+          }
+        }
+      }
+
       const gridEl = gridRef?.current;
 
       if (rowEl) {
@@ -1270,12 +1304,19 @@ export default function DataEntryTab({
           });
         }
 
-        // B. Scroll the browser window / page viewport down until the row is centered in view
-        rowEl.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest',
-        });
+        // B. Ensure the page window brings the grid / row cleanly into view if user is looking at top form
+        const rowRect = rowEl.getBoundingClientRect();
+        const isInViewport = rowRect.top >= 100 && rowRect.bottom <= (window.innerHeight || document.documentElement.clientHeight);
+        if (!isInViewport) {
+          rowEl.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+          });
+        }
+
+        if (typeof rowEl.focus === 'function') {
+          rowEl.focus({ preventScroll: true });
+        }
 
         return true;
       }
@@ -1283,22 +1324,24 @@ export default function DataEntryTab({
     };
 
     // Attempt immediately and with stagger for DOM updates/pagination
-    const t1 = setTimeout(performScroll, 80);
-    const t2 = setTimeout(performScroll, 220);
-    const t3 = setTimeout(performScroll, 500);
-    const t4 = setTimeout(performScroll, 850);
+    const t1 = setTimeout(performScroll, 60);
+    const t2 = setTimeout(performScroll, 180);
+    const t3 = setTimeout(performScroll, 400);
+    const t4 = setTimeout(performScroll, 750);
+    const t5 = setTimeout(performScroll, 1200);
 
-    // 3. Keep highlight glow visible for 3.5 seconds
+    // 3. Keep highlight glow visible for 5.0 seconds
     const clearTimer = setTimeout(() => {
       setHighlightedShipRef(null);
       pendingScrollRef.current = null;
-    }, 3500);
+    }, 5000);
 
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
       clearTimeout(t3);
       clearTimeout(t4);
+      clearTimeout(t5);
       clearTimeout(clearTimer);
     };
   }, [entry, highlightedShipRef, filteredShipments, pageSize, page]);
@@ -1399,7 +1442,8 @@ export default function DataEntryTab({
   return (
     <div className="space-y-4">
       {/* 1. Compact New Operation Form */}
-      {formOpen ? (
+      {currentDir !== 'FCL' && (
+        formOpen ? (
         <form onSubmit={handleFormSubmit} className="opcard">
           <div className="ophead">
             <div>
@@ -1787,6 +1831,7 @@ export default function DataEntryTab({
             <span>{lang === 'ar' ? 'إظهار نموذج الإدخال' : 'Show form'}</span>
           </button>
         </div>
+        )
       )}
 
       {/* 2. Direction Tabs & Action Strip (Merged Sections 5 & 2) */}
@@ -1821,6 +1866,20 @@ export default function DataEntryTab({
             <span className="ico">🔒</span>
             <span>{lang === 'ar' ? 'الشحنات المسلّمة' : 'Delivered shipments'}</span>
             <span className="cnt">{deliveredCount}</span>
+          </button>
+
+          {/* FCL Recommendations Button (Placed between Delivered and Inactive) */}
+          <button
+            type="button"
+            onClick={() => { onChangeDir && onChangeDir('FCL'); setPage(1); }}
+            className={`etab ${currentDir === 'FCL' ? 'on bg-blue-600 text-white border-blue-600 shadow-sm' : 'border-blue-200 hover:border-blue-300 text-blue-700 bg-blue-50/70'}`}
+            title={lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}
+          >
+            <ArrowRightLeft size={13} className={currentDir === 'FCL' ? 'text-white' : 'text-blue-600'} />
+            <span>{lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}</span>
+            <span className={`cnt ${currentDir === 'FCL' ? 'bg-blue-700 text-white border-blue-700' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+              {fclRecommendedCount}
+            </span>
           </button>
 
           {/* Deleted Button (View soft-deleted shipments) */}
@@ -1904,7 +1963,9 @@ export default function DataEntryTab({
       </div>
 
       {/* 3. Search Bar & Unified Single-Row Filters Toolbar */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs space-y-3">
+      {currentDir !== 'FCL' && (
+        <>
+          <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs space-y-3">
         {/* Row 1: Spacious Search Bar with Full Readable Placeholder */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="relative flex-1 max-w-2xl">
@@ -2175,10 +2236,24 @@ export default function DataEntryTab({
             ›
           </button>
         </div>
-      </div>
+        </div>
+        </>
+      )}
 
-      {/* 5. The Grid Table or Deleted Operations View */}
-      {currentDir === 'Deleted' ? (
+      {/* 5. The Grid Table, FCL View, or Inactive Operations View */}
+      {currentDir === 'FCL' ? (
+        <div className="my-2">
+          <FclTab
+            matches={fclMatches}
+            allData={enrichedData}
+            lookups={lookups}
+            approvedList={fclApprovedList}
+            onApproveMatch={onApproveMatch}
+            onUnapproveMatch={onUnapproveMatch}
+            lang={lang}
+          />
+        </div>
+      ) : currentDir === 'Deleted' ? (
         <div className="space-y-4 my-2">
           {/* Top Bar of Deleted Operations */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-rose-200/80 shadow-xs">

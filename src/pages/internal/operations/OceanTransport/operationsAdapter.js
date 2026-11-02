@@ -44,7 +44,14 @@ export function mapBackendOperationsToFrontend(operations = []) {
     return { entry, ships };
   }
 
-  operations.forEach((op) => {
+  // Ensure newest operations are always listed first (Page 1, Top)
+  const sortedOperations = [...operations].sort((a, b) => {
+    const timeA = a.createdAtUtc ? new Date(a.createdAtUtc).getTime() : 0;
+    const timeB = b.createdAtUtc ? new Date(b.createdAtUtc).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  sortedOperations.forEach((op) => {
     const isImport = op.operationType === 'Import' || op.operationType === 0;
     const dir = isImport ? 'Import' : 'Export';
     const ref = op.id ? `OPS-${op.id.slice(0, 8).toUpperCase()}` : (op.shipmentNumber || 'OPS-UNKNOWN');

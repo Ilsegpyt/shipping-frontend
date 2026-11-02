@@ -631,8 +631,12 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
       // Return the exact generated reference (e.g. OPS-2DA2AD1B) so DataEntryTab can immediately focus & scroll
       const rawId = String(
-        typeof newOpId === 'object' && newOpId?.id ? newOpId.id : (newOpId || '')
-      ).replace(/^"+|"+$/g, '').trim();
+        typeof newOpId === 'object' && newOpId?.id
+          ? newOpId.id
+          : typeof newOpId === 'object' && newOpId?.value
+            ? newOpId.value
+            : (newOpId || '')
+      ).replace(/^["'{]+|["'}]+$/g, '').trim();
 
       const createdRef = rawId && rawId.length >= 8 ? `OPS-${rawId.slice(0, 8).toUpperCase()}` : null;
       return createdRef || newOpId || true;
@@ -1719,46 +1723,14 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
                 {entry.Export?.length || 0}
               </span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectDashTab('FCL')}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${
-                dashTab === 'FCL'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              <ArrowRightLeft size={16} />
-              <span>{lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-                  dashTab === 'FCL' ? 'bg-blue-700 text-white' : 'bg-blue-50 text-blue-700'
-                }`}
-              >
-                {recommendedCount}
-              </span>
-            </button>
           </div>
 
           {/* Tab Sub-View */}
-          {dashTab === 'FCL' ? (
-            <FclTab
-              matches={fclMatches}
-              allData={enrichedData}
-              lookups={lookups}
-              approvedList={fclApprovedList}
-              onApproveMatch={handleApproveMatch}
-              onUnapproveMatch={handleUnapproveMatch}
-              lang={lang}
-            />
-          ) : (
-            <AnalyticsTab
-              data={enrichedData.filter((r) => r.dir === dashTab)}
-              lang={lang}
-              direction={dashTab}
-            />
-          )}
+          <AnalyticsTab
+            data={enrichedData.filter((r) => r.dir === dashTab)}
+            lang={lang}
+            direction={dashTab}
+          />
         </div>
       )}
 
@@ -1794,6 +1766,12 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           onRefreshDeleted={loadDeletedOperations}
           showToast={showToast}
           lang={lang}
+          fclMatches={fclMatches}
+          fclApprovedList={fclApprovedList}
+          onApproveMatch={handleApproveMatch}
+          onUnapproveMatch={handleUnapproveMatch}
+          fclRecommendedCount={recommendedCount}
+          enrichedData={enrichedData}
         />
       )}
 
