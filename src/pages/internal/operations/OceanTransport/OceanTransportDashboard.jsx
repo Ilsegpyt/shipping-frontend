@@ -156,8 +156,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const [deletedOperations, setDeletedOperations] = useState([]);
   const [isLoadingDeleted, setIsLoadingDeleted] = useState(false);
 
-  const loadDeletedOperations = async () => {
-    setIsLoadingDeleted(true);
+  const loadDeletedOperations = async (silent = false) => {
+    if (!silent) setIsLoadingDeleted(true);
     try {
       const data = await getDeletedOperations();
       if (Array.isArray(data)) {
@@ -166,7 +166,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     } catch (err) {
       console.error('Failed to load deleted operations:', err);
     } finally {
-      setIsLoadingDeleted(false);
+      if (!silent) setIsLoadingDeleted(false);
     }
   };
 
@@ -744,7 +744,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
   useEffect(() => {
     if (entryDir === 'Deleted') {
-      loadDeletedOperations();
+      // If we don't have any deleted operations loaded yet, load with full loader.
+      // If we already have them in memory, refresh quietly in background without hiding data.
+      const hasExisting = deletedOperations.length > 0;
+      loadDeletedOperations(!hasExisting ? false : true);
     }
   }, [entryDir]);
 

@@ -2225,7 +2225,7 @@ export default function DataEntryTab({
           </div>
 
           {/* Deleted Operations Table or Empty State */}
-          {isLoadingDeleted ? (
+          {isLoadingDeleted && deletedOperations.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
               <Loader2 size={28} className="animate-spin text-rose-600 mx-auto mb-2" />
               <p className="text-xs text-slate-500 font-medium">
