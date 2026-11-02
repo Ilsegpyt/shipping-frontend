@@ -13,8 +13,18 @@ import {
   Layers,
   Container,
 } from 'lucide-react';
-import { FCL_RULES, MASTER_DEFAULTS } from '../constants';
+import { FCL_RULES, MASTER_DEFAULTS, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
+
+// Helper to get user-friendly container type label from CONTAINER_TYPES
+export const getContainerSizeLabel = (val) => {
+  if (!val) return '';
+  const found = CONTAINER_TYPES.find(
+    (c) => c.value.toLowerCase() === String(val).toLowerCase() ||
+           c.label.toLowerCase() === String(val).toLowerCase()
+  );
+  return found ? found.label : String(val);
+};
 
 // Visual themes for distinguishing different import container groups
 const GROUP_THEMES = [
@@ -107,57 +117,39 @@ export default function FclTab({
   // Filters for Approved Allocations
   const [apprSearch, setApprSearch] = useState('');
 
-  // Dynamic & comprehensive filter options extracted across the whole system
+  // Dynamic & comprehensive filter options extracted exclusively across available candidate matches
   const options = useMemo(() => {
     const lines = new Set();
-    const sizes = new Set();
     const ports = new Set();
+    const sizeMap = new Map();
 
-    // 1. From Lookups (Backend Master Tables)
-    if (lookups?.shippingLines && Array.isArray(lookups.shippingLines)) {
-      lookups.shippingLines.forEach((l) => {
-        const val = typeof l === 'string' ? l : (l?.name || l?.shippingLineName || l?.lineName);
-        if (val && typeof val === 'string' && val.trim()) lines.add(val.trim());
-      });
-    }
-
-    if (lookups?.ports && Array.isArray(lookups.ports)) {
-      lookups.ports.forEach((p) => {
-        const val = typeof p === 'string' ? p : (p?.name || p?.portName);
-        if (val && typeof val === 'string' && val.trim()) ports.add(val.trim());
-      });
-    }
-
-    // 2. From all active operations data (Import + Export)
-    (allData || []).forEach((r) => {
-      if (r.line && typeof r.line === 'string' && r.line.trim()) lines.add(r.line.trim());
-      if (r.pod && typeof r.pod === 'string' && r.pod.trim()) ports.add(r.pod.trim());
-      if (r.pol && typeof r.pol === 'string' && r.pol.trim()) ports.add(r.pol.trim());
-      if (r.size && typeof r.size === 'string' && r.size.trim()) sizes.add(r.size.trim());
-    });
-
-    // 3. From current computed matches
     (matches || []).forEach((m) => {
       if (m.im?.line?.trim()) lines.add(m.im.line.trim());
       if (m.ex?.line?.trim()) lines.add(m.ex.line.trim());
-      if (m.im?.size?.trim()) sizes.add(m.im.size.trim());
-      if (m.ex?.size?.trim()) sizes.add(m.ex.size.trim());
+
+      const imSize = m.im?.size?.trim();
+      const exSize = m.ex?.size?.trim();
+      [imSize, exSize].forEach((sz) => {
+        if (sz && sz.toUpperCase() !== 'LCL') {
+          const label = getContainerSizeLabel(sz);
+          if (!sizeMap.has(sz)) {
+            sizeMap.set(sz, { value: sz, label });
+          }
+        }
+      });
+
       if (m.im?.pod?.trim()) ports.add(m.im.pod.trim());
       if (m.ex?.pol?.trim()) ports.add(m.ex.pol.trim());
     });
 
-    // 4. Fallback defaults
-    (MASTER_DEFAULTS.line || []).forEach((l) => lines.add(l));
-    (MASTER_DEFAULTS.pol || []).forEach((p) => ports.add(p));
-    (MASTER_DEFAULTS.pod || []).forEach((p) => ports.add(p));
-    ["20'", "40'", "40' HC", "LCL"].forEach((s) => sizes.add(s));
+    const sizes = Array.from(sizeMap.values()).sort((a, b) => a.label.localeCompare(b.label));
 
     return {
       lines: Array.from(lines).filter(Boolean).sort((a, b) => a.localeCompare(b)),
-      sizes: Array.from(sizes).filter(Boolean).sort((a, b) => a.localeCompare(b)),
+      sizes,
       ports: Array.from(ports).filter(Boolean).sort((a, b) => a.localeCompare(b)),
     };
-  }, [matches, allData, lookups]);
+  }, [matches]);
 
   // Matching helper functions
   const portMatches = (rowPort, target) => {
@@ -166,12 +158,21 @@ export default function FclTab({
     return rowPort.trim().toLowerCase() === target.trim().toLowerCase();
   };
 
+  const sizeMatches = (rowSize, target) => {
+    if (!target || target === 'ALL') return true;
+    if (!rowSize) return false;
+    if (rowSize === target) return true;
+    const l1 = getContainerSizeLabel(rowSize).toLowerCase();
+    const l2 = getContainerSizeLabel(target).toLowerCase();
+    return l1 === l2;
+  };
+
   // 1. Filtered Matches for Pending Recommendations
   const filteredMatches = useMemo(() => {
     return (matches || []).filter((m) => {
       if (filterMode === 'rec_only' && !m.score?.recommended) return false;
       if (filterLine !== 'ALL' && m.im?.line !== filterLine && m.ex?.line !== filterLine) return false;
-      if (filterSize !== 'ALL' && m.im?.size !== filterSize) return false;
+      if (!sizeMatches(m.im?.size, filterSize)) return false;
       if (filterPort !== 'ALL') {
         const imPod = portMatches(m.im?.pod, filterPort);
         const exPol = portMatches(m.ex?.pol, filterPort);
@@ -215,7 +216,7 @@ export default function FclTab({
     return (matches || []).filter((m) => {
       if (!m.score?.isNearMatch) return false;
       if (filterLine !== 'ALL' && m.im?.line !== filterLine && m.ex?.line !== filterLine) return false;
-      if (filterSize !== 'ALL' && m.im?.size !== filterSize) return false;
+      if (!sizeMatches(m.im?.size, filterSize)) return false;
       if (filterPort !== 'ALL') {
         const imPod = portMatches(m.im?.pod, filterPort);
         const exPol = portMatches(m.ex?.pol, filterPort);
@@ -368,8 +369,8 @@ export default function FclTab({
                   className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="ALL">{lang === 'ar' ? 'كل المقاسات' : 'All types'}</option>
-                  {options.sizes.map((size) => (
-                    <option key={size} value={size}>{size}</option>
+                  {options.sizes.map((s) => (
+                    <option key={s.value} value={s.value}>{s.label}</option>
                   ))}
                 </select>
               </label>
@@ -509,7 +510,7 @@ export default function FclTab({
                   {lang === 'ar' ? 'الفلاتر النشطة: ' : 'Active filters: '}
                   {[
                     filterLine !== 'ALL' && `${lang === 'ar' ? 'الخط' : 'Line'}: ${filterLine}`,
-                    filterSize !== 'ALL' && `${lang === 'ar' ? 'المقاس' : 'Size'}: ${filterSize}`,
+                    filterSize !== 'ALL' && `${lang === 'ar' ? 'المقاس' : 'Size'}: ${getContainerSizeLabel(filterSize)}`,
                     filterPort !== 'ALL' && `${lang === 'ar' ? 'الميناء' : 'Port'}: ${filterPort}`,
                     selectedImportKey !== 'ALL' && `${lang === 'ar' ? 'الحاوية المحددة' : 'Container'}: ${selectedImportKey}`,
                   ].filter(Boolean).join(' · ')}
@@ -583,7 +584,7 @@ export default function FclTab({
                               {im?.cntr || 'UNKNOWN_CONTAINER'}
                             </h3>
                             <span className="text-[11px] font-bold text-slate-600 bg-slate-100 border border-slate-200 rounded px-2 py-0.5">
-                              {im?.size || "40'"}
+                              {getContainerSizeLabel(im?.size) || "40'"}
                             </span>
                             <span className={`text-xs font-bold rounded-md px-2 py-0.5 border ${theme.containerTag}`}>
                               {im?.line || '-'}
@@ -665,7 +666,7 @@ export default function FclTab({
                               <div className="flex items-baseline gap-2">
                                 <h4>{im?.cntr || 'CNTR'}</h4>
                                 <span className="text-[10px] text-slate-400 font-bold border border-slate-200 rounded px-1.5 py-0.5">
-                                  {im?.size || "40'"}
+                                  {getContainerSizeLabel(im?.size) || "40'"}
                                 </span>
                               </div>
                               {isRec ? (
@@ -855,15 +856,15 @@ export default function FclTab({
         <>
           {/* Filter & Search Bar for Approved */}
           <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-xl border border-slate-200 text-xs shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <div className="flex items-center gap-3 flex-1 min-w-[280px]">
+              <div className="relative w-full max-w-lg">
+                <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="text"
                   value={apprSearch}
                   onChange={(e) => setApprSearch(e.target.value)}
                   placeholder={lang === 'ar' ? 'بحث بالحاوية، البوكينج، البوليصة...' : 'Search container, booking, M/BL...'}
-                  className="ps-8 pe-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 w-64 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-full ps-9 pe-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-sm"
                 />
               </div>
 
@@ -948,7 +949,7 @@ export default function FclTab({
                       <div className="flex items-baseline gap-2">
                         <h4>{item.im?.cntr || 'CNTR'}</h4>
                         <span className="text-[10px] text-slate-400 font-bold border border-slate-200 rounded px-1.5 py-0.5">
-                          {item.im?.size || "40'"}
+                          {getContainerSizeLabel(item.im?.size) || "40'"}
                         </span>
                       </div>
 
