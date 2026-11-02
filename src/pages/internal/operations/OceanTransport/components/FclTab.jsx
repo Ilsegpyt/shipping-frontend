@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   CheckCircle2,
   AlertCircle,
@@ -12,6 +12,8 @@ import {
   Sparkles,
   Layers,
   Container,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { FCL_RULES, MASTER_DEFAULTS, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
@@ -264,6 +266,24 @@ export default function FclTab({
       return true;
     });
   }, [approvedList, apprSearch]);
+
+  // Pagination state for Approved Allocations
+  const [apprPage, setApprPage] = useState(1);
+  const [apprPageSize, setApprPageSize] = useState(6);
+
+  // Reset to page 1 whenever search query or page size changes
+  useEffect(() => {
+    setApprPage(1);
+  }, [apprSearch, apprPageSize]);
+
+  const totalApprItems = filteredApprovedList.length;
+  const totalApprPages = Math.max(1, Math.ceil(totalApprItems / apprPageSize));
+  const currentApprPage = Math.min(Math.max(1, apprPage), totalApprPages);
+
+  const paginatedApprovedList = useMemo(() => {
+    const start = (currentApprPage - 1) * apprPageSize;
+    return filteredApprovedList.slice(start, start + apprPageSize);
+  }, [filteredApprovedList, currentApprPage, apprPageSize]);
 
   const totalApproved = approvedList.length;
   const coveredApprovedPorts = new Set(approvedList.map((a) => a.im?.pod || a.ex?.pol).filter(Boolean)).size;
@@ -939,7 +959,7 @@ export default function FclTab({
                 </button>
               </div>
             ) : (
-              filteredApprovedList.map((item) => {
+              paginatedApprovedList.map((item) => {
                 const formattedDate = item.approvedAt ? new Date(item.approvedAt).toLocaleString() : '';
 
                 return (
@@ -1091,6 +1111,92 @@ export default function FclTab({
               })
             )}
           </div>
+
+          {/* Pagination Controls for Approved Allocations */}
+          {totalApprItems > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-white rounded-xl border border-slate-200 text-xs shadow-sm mt-3">
+              {/* Left: Summary text */}
+              <div className="flex items-center gap-2 text-slate-500 font-medium">
+                <span>
+                  {lang === 'ar'
+                    ? `عرض ${(currentApprPage - 1) * apprPageSize + 1}–${Math.min(currentApprPage * apprPageSize, totalApprItems)} من إجمالي ${totalApprItems} حاوية معتمدة`
+                    : `Showing ${(currentApprPage - 1) * apprPageSize + 1}–${Math.min(currentApprPage * apprPageSize, totalApprItems)} of ${totalApprItems} approved containers`}
+                </span>
+              </div>
+
+              {/* Center / Right: Page Size Selector & Navigation */}
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Page Size */}
+                <div className="flex items-center gap-1.5 text-slate-500 font-medium">
+                  <span>{lang === 'ar' ? 'لكل صفحة:' : 'Per page:'}</span>
+                  <select
+                    value={apprPageSize}
+                    onChange={(e) => setApprPageSize(Number(e.target.value))}
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700 hover:border-slate-300 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value={6}>6</option>
+                    <option value={12}>12</option>
+                    <option value={24}>24</option>
+                    <option value={48}>48</option>
+                  </select>
+                </div>
+
+                {/* Page Navigator */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={currentApprPage <= 1}
+                    onClick={() => setApprPage((p) => Math.max(1, p - 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title={lang === 'ar' ? 'الصفحة السابقة' : 'Previous page'}
+                  >
+                    <ChevronLeft size={15} />
+                  </button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalApprPages }, (_, i) => i + 1)
+                      .filter((p) => {
+                        if (totalApprPages <= 7) return true;
+                        if (p === 1 || p === totalApprPages) return true;
+                        if (Math.abs(p - currentApprPage) <= 1) return true;
+                        return false;
+                      })
+                      .map((p, idx, arr) => {
+                        const prev = arr[idx - 1];
+                        const showEllipsis = prev && p - prev > 1;
+                        return (
+                          <React.Fragment key={p}>
+                            {showEllipsis && <span className="px-1 text-slate-400">…</span>}
+                            <button
+                              type="button"
+                              onClick={() => setApprPage(p)}
+                              className={`h-7 w-7 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                currentApprPage === p
+                                  ? 'bg-emerald-600 text-white shadow-xs'
+                                  : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                              }`}
+                            >
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={currentApprPage >= totalApprPages}
+                    onClick={() => setApprPage((p) => Math.min(totalApprPages, p + 1))}
+                    className="p-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                    title={lang === 'ar' ? 'الصفحة التالية' : 'Next page'}
+                  >
+                    <ChevronRight size={15} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
