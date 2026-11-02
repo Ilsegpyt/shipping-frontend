@@ -207,10 +207,30 @@ export default function AppRoutes() {
             </PortalGuard>
           }
         >
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/ocean-transport" element={<OceanTransportDashboard />} />
-          <Route path="/transport/dashboard" element={<OceanTransportDashboard defaultView="dashboard" />} />
-          <Route path="/transport/entry" element={<OceanTransportDashboard defaultView="entry" />} />
+          <Route
+            path="/dashboard"
+            element={<ProtectedRoute requiredPermission="reports.view" />}
+          >
+            <Route index element={<Dashboard />} />
+          </Route>
+          <Route
+            path="/transport/dashboard"
+            element={<ProtectedRoute requiredPermission="reports.view" />}
+          >
+            <Route index element={<OceanTransportDashboard defaultView="dashboard" />} />
+          </Route>
+          <Route
+            path="/transport/entry"
+            element={<ProtectedRoute requiredPermission="operations.view" />}
+          >
+            <Route index element={<OceanTransportDashboard defaultView="entry" />} />
+          </Route>
+          <Route
+            path="/ocean-transport"
+            element={<ProtectedRoute requiredPermission="operations.view" />}
+          >
+            <Route index element={<OceanTransportDashboard />} />
+          </Route>
           <Route path="/profile" element={<Profile />} />
           <Route
             path="/users"

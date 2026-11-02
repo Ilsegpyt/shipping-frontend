@@ -21,6 +21,7 @@ export const getInternalNavigation = (user) => [
             {
                 label: "Dashboard",
                 path: "/dashboard",
+                permission: "reports.view",
                 icon: LayoutDashboard,
             },
         ],
@@ -31,11 +32,13 @@ export const getInternalNavigation = (user) => [
             {
                 label: "Transport Dashboard",
                 path: "/transport/dashboard",
+                permission: "reports.view",
                 icon: Ship,
             },
             {
                 label: "Transport Data Entry",
                 path: "/transport/entry",
+                permission: "operations.view",
                 icon: FileSpreadsheet,
             },
         ],

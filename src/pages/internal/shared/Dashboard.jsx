@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-
+import { useNavigate } from 'react-router-dom';
 import { Users } from 'lucide-react';
 
 import { useAuth } from '../../../auth/AuthContext';
@@ -9,11 +9,35 @@ import { getCustomers } from '../../../services/customersService';
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const navigate = useNavigate();
+
+    const isOperationsStaff = Boolean(
+        user?.permissions?.includes('operations.view') &&
+        !user?.permissions?.includes('reports.view')
+    );
+
+    // If operations employee lands here, immediately redirect to Data Entry
+    useEffect(() => {
+        if (isOperationsStaff) {
+            navigate('/transport/entry', { replace: true });
+        }
+    }, [isOperationsStaff, navigate]);
+
+    // Total Customers is only visible to Super Admin / Customer management roles, NOT operations roles
+    const canViewCustomers = Boolean(
+        (user?.isSuperAdmin || user?.roleName === 'Super Admin' || user?.permissions?.includes('customers.view')) &&
+        !user?.roleName?.includes('Operations')
+    );
 
     const [totalCustomers, setTotalCustomers] = useState(0);
     const [loadingCustomers, setLoadingCustomers] = useState(true);
 
     useEffect(() => {
+        if (!canViewCustomers) {
+            setLoadingCustomers(false);
+            return;
+        }
+
         const loadDashboardData = async () => {
             try {
                 setLoadingCustomers(true);
@@ -35,7 +59,11 @@ export default function Dashboard() {
         };
 
         loadDashboardData();
-    }, []);
+    }, [canViewCustomers]);
+
+    if (isOperationsStaff) {
+        return null;
+    }
 
     return (
         <div className="space-y-4">
@@ -61,35 +89,36 @@ export default function Dashboard() {
                         </h1>
 
                         <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">
-                            Manage your customers and operational activity from
-                            one place.
+                            Manage your operational activity from one place.
                         </p>
                     </div>
                 </div>
             </section>
 
-            {/* Quick Overview */}
-            <section className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-none">
-                    <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium text-slate-500">
-                            Total Customers
-                        </p>
+            {/* Quick Overview (Hidden from Operations Manager) */}
+            {canViewCustomers && (
+                <section className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-none">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-slate-500">
+                                Total Customers
+                            </p>
 
-                        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
-                            <Users size={19} />
+                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                                <Users size={19} />
+                            </div>
                         </div>
+
+                        <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+                            {loadingCustomers ? '...' : totalCustomers}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                            Active customer accounts
+                        </p>
                     </div>
-
-                    <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-                        {loadingCustomers ? '...' : totalCustomers}
-                    </p>
-
-                    <p className="mt-1 text-xs text-slate-400">
-                        Active customer accounts
-                    </p>
-                </div>
-            </section>
+                </section>
+            )}
         </div>
     );
 }

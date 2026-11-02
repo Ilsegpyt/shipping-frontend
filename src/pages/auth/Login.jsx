@@ -37,6 +37,11 @@ export default function Login() {
                 navigate('/subaccount');
             } else if (currentUser.tokenType === 'customer') {
                 navigate('/customer');
+            } else if (
+                currentUser.permissions?.includes('operations.view') &&
+                !currentUser.permissions?.includes('reports.view')
+            ) {
+                navigate('/transport/entry');
             } else {
                 navigate('/dashboard');
             }

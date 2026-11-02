@@ -1,3 +1,4 @@
+import { useAuth } from '../../../../auth/AuthContext';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -89,10 +90,31 @@ import './ocean-dashboard-style.css';
 export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const canViewDashboard = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.permissions?.includes('reports.view')
+  );
+  const canExportExcel = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.permissions?.includes('reports.download')
+  );
 
   // Detect mode from URL: if path contains 'entry', start on entry mode, else dashboard
   const isEntryPath = location.pathname.includes('/entry');
-  const [viewMode, setViewMode] = useState(isEntryPath ? 'entry' : 'dashboard'); // 'dashboard' | 'entry'
+  const [viewMode, setViewMode] = useState(() => {
+    if (!canViewDashboard || isEntryPath || defaultView === 'entry') return 'entry';
+    return 'dashboard';
+  });
+
+  useEffect(() => {
+    if (!canViewDashboard && viewMode === 'dashboard') {
+      setViewMode('entry');
+    }
+  }, [canViewDashboard, viewMode]); // 'dashboard' | 'entry'
 
   // Within dashboard: 'Import' | 'Export'
   const [dashTab, setDashTab] = useState(() => {

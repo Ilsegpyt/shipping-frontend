@@ -32,9 +32,15 @@ function getTokenType() {
     }
 }
 
-function getPortalHome(tokenType) {
+function getPortalHome(tokenType, user) {
     switch (tokenType) {
         case 'internal':
+            if (
+                user?.permissions?.includes('operations.view') &&
+                !user?.permissions?.includes('reports.view')
+            ) {
+                return '/transport/entry';
+            }
             return '/dashboard';
 
         case 'customer':
@@ -112,7 +118,7 @@ export default function ProtectedRoute({ requiredPermission }) {
         !user.permissions?.includes(requiredPermission)
     ) {
         const tokenType = getTokenType();
-        const portalHome = getPortalHome(tokenType);
+        const portalHome = getPortalHome(tokenType, user);
 
         if (location.pathname !== portalHome) {
             return (

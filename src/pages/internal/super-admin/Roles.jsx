@@ -202,6 +202,27 @@ const PERMISSION_GROUPS = [
 
     {
 
+        name: 'Operations',
+
+        permissions: [
+
+            'operations.view',
+
+            'operations.create',
+
+            'operations.edit',
+
+            'operations.delete',
+
+            'operations.deliver',
+
+            'operations.reopen',
+
+        ],
+
+    },
+
+    {
         name: 'Reports',
 
         permissions: [

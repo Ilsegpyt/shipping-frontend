@@ -327,6 +327,21 @@ export default function DataEntryTab({
     user?.role === 'SuperAdmin' ||
     user?.permissions?.includes('operations.delete')
   );
+  const canUploadReport = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.permissions?.includes('reports.upload')
+  );
+  const canExportExcel = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.permissions?.includes('reports.download')
+  );
+  const canViewDashboard = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.permissions?.includes('reports.view')
+  );
 
   // Delete Modal State
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -1895,28 +1910,32 @@ export default function DataEntryTab({
           </button>
 
           {/* Upload Report Button (Relocated into Section 5) */}
-          <button
-            type="button"
-            onClick={onOpenUploadModal}
-            className="ebtn text-xs font-semibold flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
-          >
-            <Upload size={13} className="text-slate-600" />
-            <span>{lang === 'ar' ? 'رفع التقرير' : 'Upload Report'}</span>
-          </button>
+          {canUploadReport && (
+            <button
+              type="button"
+              onClick={onOpenUploadModal}
+              className="ebtn text-xs font-semibold flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-2xs"
+            >
+              <Upload size={13} className="text-slate-600" />
+              <span>{lang === 'ar' ? 'رفع التقرير' : 'Upload Report'}</span>
+            </button>
+          )}
         </div>
 
         <div className="espacer" />
 
         {/* Right Side: Section 2 Relocated Actions */}
         <div className="estatus flex items-center gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={onSwitchToDashboard}
-            className="ebtn text-xs font-semibold flex items-center gap-1.5 text-blue-700 bg-blue-50/80 border border-blue-200 hover:bg-blue-100 shadow-2xs"
-          >
-            <LayoutDashboard size={13} />
-            <span>{lang === 'ar' ? 'الداشبورد' : 'View Dashboard'}</span>
-          </button>
+          {canViewDashboard && (
+            <button
+              type="button"
+              onClick={onSwitchToDashboard}
+              className="ebtn text-xs font-semibold flex items-center gap-1.5 text-blue-700 bg-blue-50/80 border border-blue-200 hover:bg-blue-100 shadow-2xs"
+            >
+              <LayoutDashboard size={13} />
+              <span>{lang === 'ar' ? 'الداشبورد' : 'View Dashboard'}</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -1927,14 +1946,16 @@ export default function DataEntryTab({
             <span>Email it</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => onExportExcel && onExportExcel(Array.from(selectedOps))}
-            className="ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
-          >
-            <FileSpreadsheet size={13} className="text-emerald-600" />
-            <span>{lang === 'ar' ? 'حفظ كاكسيل' : 'Save as Excel'}</span>
-          </button>
+          {canExportExcel && (
+            <button
+              type="button"
+              onClick={() => onExportExcel && onExportExcel(Array.from(selectedOps))}
+              className="ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
+            >
+              <FileSpreadsheet size={13} className="text-emerald-600" />
+              <span>{lang === 'ar' ? 'حفظ كاكسيل' : 'Save as Excel'}</span>
+            </button>
+          )}
 
           {unsavedDraftsCount > 0 && onSaveAllToDatabase && (
             <button
