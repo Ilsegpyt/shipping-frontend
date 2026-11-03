@@ -140,3 +140,42 @@ export const unapproveFclSuggestion = async (approvalIdOrContainerId) => {
 };
 
 
+
+/**
+ * Master Data / Lookups Full Management (Super Admin)
+ */
+export const getPortsFull = (includeInactive = true) => api.get(`/api/operations/ports?includeInactive=${includeInactive}`).then(r => r.data);
+export const getPortById = (id) => api.get(`/api/operations/ports/${id}`).then(r => r.data);
+export const createPort = (data) => api.post('/api/operations/ports', data).then(r => r.data);
+export const updatePort = (id, data) => api.put(`/api/operations/ports/${id}`, data).then(r => r.data);
+export const deactivatePort = (id) => api.delete(`/api/operations/ports/${id}`).then(r => r.data);
+
+export const getDestinationsFull = (includeInactive = true) => api.get(`/api/operations/destinations?includeInactive=${includeInactive}`).then(r => r.data);
+export const getDestinationById = (id) => api.get(`/api/operations/destinations/${id}`).then(r => r.data);
+export const createDestinationItem = (data) => api.post('/api/operations/destinations', data).then(r => r.data);
+export const updateDestination = (id, data) => api.put(`/api/operations/destinations/${id}`, data).then(r => r.data);
+export const deactivateDestination = (id) => api.delete(`/api/operations/destinations/${id}`).then(r => r.data);
+
+export const getDriversFull = (includeInactive = true) => api.get(`/api/operations/drivers?includeInactive=${includeInactive}`).then(r => r.data);
+export const getDriverById = (id) => api.get(`/api/operations/drivers/${id}`).then(r => r.data);
+export const createDriver = (data) => api.post('/api/operations/drivers', data).then(r => r.data);
+export const updateDriver = (id, data) => api.put(`/api/operations/drivers/${id}`, data).then(r => r.data);
+export const deactivateDriver = (id) => api.delete(`/api/operations/drivers/${id}`).then(r => r.data);
+
+export const getShippingLinesFull = (includeInactive = true) => api.get(`/api/operations/shipping-lines?includeInactive=${includeInactive}`).then(r => r.data);
+export const getShippingLineById = (id) => api.get(`/api/operations/shipping-lines/${id}`).then(r => r.data);
+export const createShippingLine = (data) => api.post('/api/operations/shipping-lines', data).then(r => r.data);
+export const updateShippingLine = (id, data) => api.put(`/api/operations/shipping-lines/${id}`, data).then(r => r.data);
+export const deactivateShippingLine = (id) => api.delete(`/api/operations/shipping-lines/${id}`).then(r => r.data);
+
+export const getTransportersFull = (includeInactive = true) => api.get(`/api/operations/transporters?includeInactive=${includeInactive}`).then(r => r.data);
+export const getTransporterById = (id) => api.get(`/api/operations/transporters/${id}`).then(r => r.data);
+export const createTransporter = (data) => api.post('/api/operations/transporters', data).then(r => r.data);
+export const updateTransporter = (id, data) => api.put(`/api/operations/transporters/${id}`, data).then(r => r.data);
+export const deactivateTransporter = (id) => api.delete(`/api/operations/transporters/${id}`).then(r => r.data);
+
+export const getVehiclesFull = (includeInactive = true) => api.get(`/api/operations/vehicles?includeInactive=${includeInactive}`).then(r => r.data);
+export const getVehicleById = (id) => api.get(`/api/operations/vehicles/${id}`).then(r => r.data);
+export const createVehicle = (data) => api.post('/api/operations/vehicles', data).then(r => r.data);
+export const updateVehicle = (id, data) => api.put(`/api/operations/vehicles/${id}`, data).then(r => r.data);
+export const deactivateVehicle = (id) => api.delete(`/api/operations/vehicles/${id}`).then(r => r.data);

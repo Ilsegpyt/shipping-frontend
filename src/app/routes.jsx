@@ -68,6 +68,7 @@ import AgentOpportunities from "../pages/internal/super-admin/AgentOpportunities
 import Quotations from "../pages/internal/super-admin/Quotations";
 import RecruitmentRequests from "../pages/internal/super-admin/RecruitmentRequests";
 import ContactInquiries from "../pages/internal/super-admin/ContactInquiries";
+import OperationsLookups from "../pages/internal/super-admin/OperationsLookups";
 
 // Customer pages
 import CustomerDashboard from "../pages/customer/CustomerDashboard";
@@ -256,6 +257,7 @@ export default function AppRoutes() {
           >
             <Route index element={<Customers />} />
           </Route>
+          <Route path="/operations-lookups" element={<OperationsLookups />} />
           <Route path="/content" element={<Content />} />
           <Route path="/locations" element={<Locations />} />
           <Route path="/agent-opportunities" element={<AgentOpportunities />} />

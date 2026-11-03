@@ -12,6 +12,7 @@ import {
     ShieldCheck,
     Ship,
     FileSpreadsheet,
+    Database,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -75,6 +76,11 @@ export const getInternalNavigation = (user) => [
 
             ...(user?.roleName === "Super Admin"
                 ? [
+                    {
+                        label: "Operations Lookups",
+                        path: "/operations-lookups",
+                        icon: Database,
+                    },
                     {
                         label: "Content Management",
                         path: "/content",

@@ -367,7 +367,7 @@ export default function WebsiteNavbar() {
             to={portalPath}
             className="hidden shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 lg:inline-flex"
           >
-            Client Portal
+            Portal
           </Link>
 
           {/* Mobile controls */}
