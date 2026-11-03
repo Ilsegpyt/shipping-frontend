@@ -1,4 +1,4 @@
-import { useAuth } from '../../../../auth/AuthContext';
+﻿import { useAuth } from '../../../../auth/AuthContext';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -488,7 +488,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     if (!shippingLineId && lookups.shippingLines?.length > 0) {
       const target = String(opData.line || opData.shippingLineId || '').trim().toLowerCase();
       const match = lookups.shippingLines.find(
-        (l) => (l.name || '')?.trim().toLowerCase() === target
+        (l) => (l.name || '')?.trim().toLowerCase() === target || (l.abbreviation || '')?.trim().toLowerCase() === target
       );
       if (match) shippingLineId = toGuidOrNull(match.id);
     }
@@ -836,7 +836,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       let shippingLineId = first.lineId;
       if (!shippingLineId && lookups.shippingLines?.length > 0) {
         const match = lookups.shippingLines.find(
-          (l) => (l.name || '').toLowerCase() === String(first.line || '').toLowerCase().trim()
+          (l) => (l.name || '').toLowerCase() === String(first.line || '').toLowerCase().trim() || (l.abbreviation || '').toLowerCase() === String(first.line || '').toLowerCase().trim()
         );
         shippingLineId = match ? match.id : lookups.shippingLines[0]?.id;
       }

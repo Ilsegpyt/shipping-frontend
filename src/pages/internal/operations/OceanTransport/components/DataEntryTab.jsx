@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Plus,
   Save,
@@ -1544,7 +1544,7 @@ export default function DataEntryTab({
                     onChange={(e) => {
                       const val = e.target.value;
                       const item = (lookups.shippingLines || []).find(
-                        (l) => l.id === val || l.name === val
+                        (l) => l.id === val || l.name === val || l.abbreviation === val
                       );
                       setNewOp({
                         ...newOp,
@@ -1557,7 +1557,7 @@ export default function DataEntryTab({
                     {lookups.shippingLines?.length > 0
                       ? lookups.shippingLines.map((l) => (
                         <option key={l.id} value={l.id}>
-                          {l.name}
+                          {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
                         </option>
                       ))
                       : MASTER_DEFAULTS.line.map((l) => (
@@ -1690,7 +1690,7 @@ export default function DataEntryTab({
                     onChange={(e) => {
                       const val = e.target.value;
                       const item = (lookups.shippingLines || []).find(
-                        (l) => l.id === val || l.name === val
+                        (l) => l.id === val || l.name === val || l.abbreviation === val
                       );
                       setNewOp({
                         ...newOp,
@@ -1703,7 +1703,7 @@ export default function DataEntryTab({
                     {lookups.shippingLines?.length > 0
                       ? lookups.shippingLines.map((l) => (
                         <option key={l.id} value={l.id}>
-                          {l.name}
+                          {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
                         </option>
                       ))
                       : MASTER_DEFAULTS.line.map((l) => (
@@ -2066,7 +2066,7 @@ export default function DataEntryTab({
             <option value="">{lang === 'ar' ? 'الخط: الكل' : 'Line: All'}</option>
             {(lookups.shippingLines || []).map((l) => (
               <option key={l.id} value={l.name}>
-                {l.name}
+                {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
               </option>
             ))}
           </select>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import {
   Anchor,
   MapPin,
@@ -48,6 +48,7 @@ export default function OperationsLookups() {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
+    abbreviation: '',
     driverNumber: '',
     mobileNumber: '',
     carNumber: '',
@@ -114,6 +115,7 @@ export default function OperationsLookups() {
     setFormData({
       name: '',
       code: '',
+      abbreviation: '',
       driverNumber: '',
       mobileNumber: '',
       carNumber: '',
@@ -129,6 +131,7 @@ export default function OperationsLookups() {
     setFormData({
       name: item.name || '',
       code: item.code || '',
+      abbreviation: item.abbreviation || '',
       driverNumber: item.driverNumber || '',
       mobileNumber: item.mobileNumber || '',
       carNumber: item.carNumber || '',
@@ -162,7 +165,7 @@ export default function OperationsLookups() {
           mobileNumber: formData.mobileNumber || null
         });
       } else if (activeTab === 'lines') {
-        await opsService.createShippingLine({ name: formData.name });
+        await opsService.createShippingLine({ name: formData.name, abbreviation: formData.abbreviation || null });
       } else if (activeTab === 'transporters') {
         await opsService.createTransporter({ name: formData.name });
       } else if (activeTab === 'vehicles') {
@@ -209,6 +212,7 @@ export default function OperationsLookups() {
       } else if (activeTab === 'lines') {
         await opsService.updateShippingLine(selectedItem.id, {
           name: formData.name,
+          abbreviation: formData.abbreviation || null,
           isActive: formData.isActive
         });
       } else if (activeTab === 'transporters') {
@@ -475,9 +479,11 @@ export default function OperationsLookups() {
                     <th className="px-6 py-3.5">Mobile Number</th>
                   </>
                 )}
-                {activeTab === 'lines' && <th className="px-6 py-3.5">Shipping Line Name</th>}
+                {activeTab === 'lines' && (<><th className="px-6 py-3.5">Abbreviation</th><th className="px-6 py-3.5">Shipping Line Name</th></>)}
+                      <>
                 {activeTab === 'transporters' && <th className="px-6 py-3.5">Transporter Name</th>}
                 {activeTab === 'vehicles' && <th className="px-6 py-3.5">Car Number / Plate</th>}
+                      </>
 
                 <th className="px-6 py-3.5">Status</th>
                 <th className="px-6 py-3.5 text-right">Actions</th>
@@ -504,7 +510,7 @@ export default function OperationsLookups() {
                     {activeTab === 'ports' && (
                       <>
                         <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
-                        <td className="px-6 py-3.5 font-mono text-xs text-slate-600">{item.code || '—'}</td>
+                        <td className="px-6 py-3.5 font-mono text-xs text-slate-600">{item.code || '-'}</td>
                       </>
                     )}
                     {activeTab === 'destinations' && (
@@ -514,11 +520,14 @@ export default function OperationsLookups() {
                       <>
                         <td className="px-6 py-3.5 font-mono text-xs text-slate-700">{item.driverNumber}</td>
                         <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
-                        <td className="px-6 py-3.5 text-slate-600">{item.mobileNumber || '—'}</td>
+                        <td className="px-6 py-3.5 text-slate-600">{item.mobileNumber || '-'}</td>
                       </>
                     )}
                     {activeTab === 'lines' && (
-                      <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
+                      <>
+                        <td className="px-6 py-3.5 font-mono text-xs font-bold text-blue-700">{item.abbreviation || '-'}</td>
+                        <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
+                      </>
                     )}
                     {activeTab === 'transporters' && (
                       <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
@@ -694,17 +703,29 @@ export default function OperationsLookups() {
               )}
 
               {activeTab === 'lines' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Shipping Line Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Maersk, MSC, CMA CGM, Hapag-Lloyd"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Abbreviation / Code</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. MSC, MSK, CMA, HPL"
+                      value={formData.abbreviation}
+                      onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none mb-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Shipping Line Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Mediterranean Shipping Company"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </>
               )}
 
               {activeTab === 'transporters' && (
@@ -844,16 +865,28 @@ export default function OperationsLookups() {
               )}
 
               {activeTab === 'lines' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Shipping Line Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Abbreviation / Code</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. MSC, MSK, CMA"
+                      value={formData.abbreviation}
+                      onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none mb-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Shipping Line Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </>
               )}
 
               {activeTab === 'transporters' && (
