@@ -126,30 +126,14 @@ export const CONTAINER_TYPES = [
 ];
 
 export const MASTER_DEFAULTS = {
-  oper: ['Fatma', 'Hager', 'Mohamed', 'Nadia', 'Sara', 'Yasmin'],
-  client: [
-    'CHEMICALS', 'DICE', 'DICOOMIX', 'FUFENG', 'GERMAN COMPANY',
-    'GOLDEN SUN', 'HENG TONG', 'LANDMARK', 'London Foods',
-    'MIDEA', 'MIDEA KITCHEN', 'MIRACO'
-  ],
-  line: [
-    'CMA CGM', 'COSCO', 'EGYPT SEA', 'HAPAG-LLOYD', 'MAERSK',
-    'MSC', 'ONE', 'PIL', 'TARROS', 'EGL'
-  ],
-  pod: [
-    'ALEXANDRIA', 'BARCELONA', 'BEIRUT', 'JEDDAH', 'SOKHNA',
-    'TANGER MED', 'United States'
-  ],
-  pol: ['ALEXANDRIA', 'PORT SAID', 'SOKHNA'],
-  pow: ['SOKHNA', 'ALEXANDRIA'],
-  dest: [
-    '10OF RAMDAN', '6TH OF OCTOBER', 'ABU RAWASH', 'ALEXANDRIA',
-    'BORG EL ARAB', 'EL SADAT', 'OCTOBER', 'SOKHNA', 'WADI EL NATRUN'
-  ],
-  trucker: [
-    'ABU ELDAHAB', 'ALDamnhory', 'ALRihab', 'Ayman', 'Darwesh',
-    'EURO', 'Eldawlya', 'Medil East', 'Ranin', 'TAQA'
-  ],
+  oper: [],
+  client: [],
+  line: [],
+  pod: [],
+  pol: [],
+  pow: [],
+  dest: [],
+  trucker: [],
   size: CONTAINER_TYPES.map((c) => c.value),
   clrType: ['CERT', 'BOSLA'],
   status: ['Open', 'Delivered', 'In progress', 'On hold'],

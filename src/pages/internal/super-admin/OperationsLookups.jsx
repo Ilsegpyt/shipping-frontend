@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Anchor,
   MapPin,
@@ -15,25 +15,36 @@ import {
   XCircle,
   X,
   AlertCircle,
-  RotateCcw
+  RotateCcw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import * as opsService from '../../../services/operationsService';
 
 const TABS = [
-  { key: 'ports', label: 'Ports', icon: Anchor },
+  { key: 'lines', label: 'Shipping Lines', icon: Ship },
   { key: 'destinations', label: 'Destinations', icon: MapPin },
   { key: 'drivers', label: 'Drivers', icon: User },
-  { key: 'lines', label: 'Shipping Lines', icon: Ship },
+  { key: 'ports', label: 'Ports', icon: Anchor },
   { key: 'transporters', label: 'Transporters', icon: Truck },
   { key: 'vehicles', label: 'Vehicles', icon: Car }
 ];
 
 export default function OperationsLookups() {
-  const [activeTab, setActiveTab] = useState('ports');
+  const [activeTab, setActiveTab] = useState('lines');
   const [data, setData] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
+  const [inactiveCount, setInactiveCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('active'); // 'active' | 'inactive' | 'all'
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -55,19 +66,58 @@ export default function OperationsLookups() {
     isActive: true
   });
 
-  const loadData = async (tab = activeTab) => {
+  // Debounce search term by 300ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const loadData = async (
+    tab = activeTab,
+    targetPage = page,
+    targetPageSize = pageSize,
+    targetSearch = debouncedSearch,
+    targetStatus = statusFilter
+  ) => {
     try {
       setLoading(true);
       setError('');
-      let result = [];
-      if (tab === 'ports') result = await opsService.getPortsFull(true);
-      else if (tab === 'destinations') result = await opsService.getDestinationsFull(true);
-      else if (tab === 'drivers') result = await opsService.getDriversFull(true);
-      else if (tab === 'lines') result = await opsService.getShippingLinesFull(true);
-      else if (tab === 'transporters') result = await opsService.getTransportersFull(true);
-      else if (tab === 'vehicles') result = await opsService.getVehiclesFull(true);
+      const params = {
+        page: targetPage,
+        pageSize: targetPageSize,
+        search: targetSearch.trim() || undefined,
+        status: targetStatus
+      };
 
-      setData(result || []);
+      let result;
+      if (tab === 'lines') result = await opsService.getShippingLinesFull(params);
+      else if (tab === 'ports') result = await opsService.getPortsFull(params);
+      else if (tab === 'destinations') result = await opsService.getDestinationsFull(params);
+      else if (tab === 'drivers') result = await opsService.getDriversFull(params);
+      else if (tab === 'transporters') result = await opsService.getTransportersFull(params);
+      else if (tab === 'vehicles') result = await opsService.getVehiclesFull(params);
+
+      if (result && Array.isArray(result.items)) {
+        setData(result.items);
+        setTotalCount(result.totalCount ?? 0);
+        setActiveCount(result.activeCount ?? 0);
+        setInactiveCount(result.inactiveCount ?? 0);
+        setTotalPages(result.totalPages || 1);
+      } else if (Array.isArray(result)) {
+        setData(result);
+        setTotalCount(result.length);
+        setActiveCount(result.filter((x) => x.isActive !== false && !x.isDeleted).length);
+        setInactiveCount(result.filter((x) => x.isActive === false || x.isDeleted).length);
+        setTotalPages(Math.max(1, Math.ceil(result.length / targetPageSize)));
+      } else {
+        setData([]);
+        setTotalCount(0);
+        setActiveCount(0);
+        setInactiveCount(0);
+        setTotalPages(1);
+      }
     } catch (err) {
       console.error(err);
       setError('Failed to load data for ' + tab);
@@ -77,38 +127,26 @@ export default function OperationsLookups() {
   };
 
   useEffect(() => {
+    loadData(activeTab, page, pageSize, debouncedSearch, statusFilter);
+  }, [activeTab, page, pageSize, debouncedSearch, statusFilter]);
+
+  const handleTabChange = (newTab) => {
+    setActiveTab(newTab);
     setSearchTerm('');
+    setDebouncedSearch('');
     setStatusFilter('active');
-    loadData(activeTab);
-  }, [activeTab]);
+    setPage(1);
+  };
 
-  const activeCount = useMemo(() => {
-    return (data || []).filter((item) => item.isActive !== false && !item.isDeleted).length;
-  }, [data]);
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setPage(1);
+  };
 
-  const inactiveCount = useMemo(() => {
-    return (data || []).filter((item) => item.isActive === false || item.isDeleted).length;
-  }, [data]);
-
-  const filteredData = useMemo(() => {
-    return (data || []).filter((item) => {
-      // Status filter
-      const isItemActive = item.isActive !== false && !item.isDeleted;
-      if (statusFilter === 'active' && !isItemActive) return false;
-      if (statusFilter === 'inactive' && isItemActive) return false;
-
-      // Search filter
-      if (!searchTerm.trim()) return true;
-      const term = searchTerm.toLowerCase();
-      const nameMatch = item.name && item.name.toLowerCase().includes(term);
-      const codeMatch = item.code && item.code.toLowerCase().includes(term);
-      const driverNumMatch = item.driverNumber && item.driverNumber.toLowerCase().includes(term);
-      const phoneMatch = item.mobileNumber && item.mobileNumber.toLowerCase().includes(term);
-      const carMatch = item.carNumber && item.carNumber.toLowerCase().includes(term);
-
-      return nameMatch || codeMatch || driverNumMatch || phoneMatch || carMatch;
-    });
-  }, [data, statusFilter, searchTerm]);
+  const handleStatusFilterChange = (newStatus) => {
+    setStatusFilter(newStatus);
+    setPage(1);
+  };
 
   // Open Add
   const handleOpenAdd = () => {
@@ -349,10 +387,10 @@ export default function OperationsLookups() {
             <button
               key={tab.key}
               type="button"
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
               className={`flex items-center gap-2 border-b-2 px-5 py-3 text-sm font-medium transition whitespace-nowrap ${isActive
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
                 }`}
             >
               <Icon size={16} />
@@ -384,7 +422,7 @@ export default function OperationsLookups() {
             type="text"
             placeholder={`Search ${currentTabObj?.label}...`}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             className="w-full rounded-lg border border-slate-200 pl-9 pr-4 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
         </div>
@@ -394,10 +432,10 @@ export default function OperationsLookups() {
           <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 text-xs font-semibold">
             <button
               type="button"
-              onClick={() => setStatusFilter('active')}
+              onClick={() => handleStatusFilterChange('active')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${statusFilter === 'active'
-                  ? 'bg-white text-blue-700 shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-blue-700 shadow-2xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <CheckCircle2 size={13} className="text-emerald-500" />
@@ -412,10 +450,10 @@ export default function OperationsLookups() {
 
             <button
               type="button"
-              onClick={() => setStatusFilter('inactive')}
+              onClick={() => handleStatusFilterChange('inactive')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${statusFilter === 'inactive'
-                  ? 'bg-rose-50 text-rose-700 shadow-2xs font-bold border border-rose-200'
-                  : 'text-slate-600 hover:text-rose-600'
+                ? 'bg-rose-50 text-rose-700 shadow-2xs font-bold border border-rose-200'
+                : 'text-slate-600 hover:text-rose-600'
                 }`}
               title="View Inactive items"
             >
@@ -431,10 +469,10 @@ export default function OperationsLookups() {
 
             <button
               type="button"
-              onClick={() => setStatusFilter('all')}
+              onClick={() => handleStatusFilterChange('all')}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 transition ${statusFilter === 'all'
-                  ? 'bg-white text-slate-900 shadow-2xs font-bold'
-                  : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-white text-slate-900 shadow-2xs font-bold'
+                : 'text-slate-600 hover:text-slate-900'
                 }`}
             >
               <span>All</span>
@@ -442,14 +480,14 @@ export default function OperationsLookups() {
                 className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[10px] ${statusFilter === 'all' ? 'bg-slate-300 text-slate-900' : 'bg-slate-200/80 text-slate-600'
                   }`}
               >
-                {data.length}
+                {activeCount + inactiveCount}
               </span>
             </button>
           </div>
 
           <button
             type="button"
-            onClick={() => loadData(activeTab)}
+            onClick={() => loadData(activeTab, page, pageSize, debouncedSearch, statusFilter)}
             disabled={loading}
             className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-2xs hover:bg-slate-50 transition"
           >
@@ -480,10 +518,10 @@ export default function OperationsLookups() {
                   </>
                 )}
                 {activeTab === 'lines' && (<><th className="px-6 py-3.5">Abbreviation</th><th className="px-6 py-3.5">Shipping Line Name</th></>)}
-                      <>
-                {activeTab === 'transporters' && <th className="px-6 py-3.5">Transporter Name</th>}
-                {activeTab === 'vehicles' && <th className="px-6 py-3.5">Car Number / Plate</th>}
-                      </>
+                <>
+                  {activeTab === 'transporters' && <th className="px-6 py-3.5">Transporter Name</th>}
+                  {activeTab === 'vehicles' && <th className="px-6 py-3.5">Car Number / Plate</th>}
+                </>
 
                 <th className="px-6 py-3.5">Status</th>
                 <th className="px-6 py-3.5 text-right">Actions</th>
@@ -497,7 +535,7 @@ export default function OperationsLookups() {
                     Loading {currentTabObj?.label}...
                   </td>
                 </tr>
-              ) : filteredData.length === 0 ? (
+              ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                     No {statusFilter === 'active' ? 'active ' : statusFilter === 'inactive' ? 'inactive ' : ''}
@@ -505,7 +543,7 @@ export default function OperationsLookups() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((item) => (
+                data.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition">
                     {activeTab === 'ports' && (
                       <>
@@ -542,8 +580,8 @@ export default function OperationsLookups() {
                         return (
                           <span
                             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${isItemActive
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border border-rose-200'
                               }`}
                           >
                             {isItemActive ? (
@@ -608,6 +646,94 @@ export default function OperationsLookups() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Controls */}
+      {!loading && totalCount > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 bg-white border border-slate-200 rounded-xl shadow-2xs mt-3">
+          <div className="text-xs text-slate-500 flex flex-wrap items-center gap-2">
+            <span>
+              Showing <span className="font-bold text-slate-700">{totalCount === 0 ? 0 : ((page - 1) * pageSize) + 1}</span> to{' '}
+              <span className="font-bold text-slate-700">{Math.min(page * pageSize, totalCount)}</span> of{' '}
+              <span className="font-bold text-slate-700">{totalCount.toLocaleString()}</span> entries
+            </span>
+            <span className="text-slate-300">|</span>
+            <label className="flex items-center gap-1.5 text-slate-600">
+              <span>Per page:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700 outline-none focus:border-blue-500 cursor-pointer"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={200}>200</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage(1)}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="First Page"
+            >
+              <ChevronsLeft size={16} />
+            </button>
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="Previous Page"
+            >
+              <ChevronLeft size={16} />
+            </button>
+
+            <div className="flex items-center gap-1 px-2 text-xs font-medium text-slate-700">
+              <span>Page</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={page}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                    setPage(val);
+                  }
+                }}
+                className="w-14 rounded border border-slate-200 bg-white px-1.5 py-1 text-center text-xs font-bold text-slate-800 outline-none focus:border-blue-500"
+              />
+              <span>of {totalPages.toLocaleString()}</span>
+            </div>
+
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="Next Page"
+            >
+              <ChevronRight size={16} />
+            </button>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage(totalPages)}
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              title="Last Page"
+            >
+              <ChevronsRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ----------------- ADD MODAL ----------------- */}
       {addModalOpen && (

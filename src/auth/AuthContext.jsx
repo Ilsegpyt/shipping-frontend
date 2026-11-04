@@ -117,7 +117,14 @@ export function AuthProvider({ children }) {
                         return;
                     }
 
-                    if (error.response?.status === 401) {
+                    const isDeactivated =
+                        error.response?.status === 401 ||
+                        error.response?.status === 403 ||
+                        (error.response?.status === 400 &&
+                            typeof error.response?.data === 'string' &&
+                            error.response.data.toLowerCase().includes('deactivated'));
+
+                    if (isDeactivated) {
                         clearSession();
                         setUser(null);
                         setImpersonation(null);

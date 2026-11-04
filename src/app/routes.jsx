@@ -216,7 +216,18 @@ export default function AppRoutes() {
           </Route>
           <Route
             path="/transport/dashboard"
-            element={<ProtectedRoute requiredPermission="reports.view" />}
+            element={
+              <ProtectedRoute
+                requiredPermission="operations.view"
+                customCheck={(user) => Boolean(
+                  user?.isSuperAdmin ||
+                  user?.roleName === "Super Admin" ||
+                  user?.roleName === "Ocean Operations Manager" ||
+                  user?.permissions?.includes("operations.reopen") ||
+                  user?.permissions?.includes("reports.view")
+                )}
+              />
+            }
           >
             <Route index element={<OceanTransportDashboard defaultView="dashboard" />} />
           </Route>

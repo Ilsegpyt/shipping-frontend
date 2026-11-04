@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Plus,
   Save,
@@ -32,11 +32,12 @@ import {
   Eye,
 } from 'lucide-react';
 import FclTab from './FclTab';
-import { COLS, MASTER_DEFAULTS, CONTAINER_TYPES } from '../constants';
+import SearchableSelect from '../../../../../components/common/SearchableSelect';
+import { COLS, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
-import { normalizeContainerType } from '../operationsAdapter';
+import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
-import { addContainerUpdate, getOperationStatusAudits } from '../../../../../services/operationsService';
+import { addContainerUpdate, getOperationStatusAudits, getPagedOperations } from '../../../../../services/operationsService';
 import { useAuth } from '../../../../../auth/AuthContext';
 
 export const parseUtcDate = (utcStr) => {
@@ -82,7 +83,7 @@ export default function DataEntryTab({
   currentDir = 'Import',
   onChangeDir,
   onCreateOperation,
-  onUpdateCell,
+  onUpdateCell: onUpdateCellProp,
   onToggleStatus,
   onSaveShipment,
   onRestoreShipment,
@@ -98,6 +99,10 @@ export default function DataEntryTab({
   deletedOperations = [],
   isLoadingDeleted = false,
   onRefreshDeleted,
+  counts = {},
+  deliveredOperations = [],
+  isLoadingDelivered = false,
+  onRefreshDelivered,
   showToast,
   lang = 'en',
   fclMatches = [],
@@ -127,10 +132,148 @@ export default function DataEntryTab({
   });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [page, setPage] = useState(1);
-  const pageSize = 25;
+  const pageSize = 10;
+
+  // Server-Side Pagination & Search state
+  const [serverPageRows, setServerPageRows] = useState([]);
+  const [serverTotalCount, setServerTotalCount] = useState(0);
+  const [serverTotalContainers, setServerTotalContainers] = useState(0);
+  const [serverTotalPages, setServerTotalPages] = useState(1);
+  const [isPageLoading, setIsPageLoading] = useState(false);
+
+  const isServerSide = currentDir === 'Import' || currentDir === 'Export';
+
+  const onUpdateCell = (dir, rowId, colKey, val) => {
+    if (isServerSide) {
+      setServerPageRows((prev) =>
+        prev.map((r) =>
+          r._rowId === rowId || r._containerId === rowId ? { ...r, [colKey]: val } : r
+        )
+      );
+    }
+    if (onUpdateCellProp) {
+      onUpdateCellProp(dir, rowId, colKey, val);
+    }
+  };
+
+  const fetchServerPage = useCallback(
+    async (
+      targetPage = 1,
+      targetSearch = '',
+      targetFilters = {},
+      targetDir = 'Import'
+    ) => {
+      if (targetDir !== 'Import' && targetDir !== 'Export') return;
+      setIsPageLoading(true);
+      try {
+        const res = await getPagedOperations({
+          page: targetPage,
+          pageSize,
+          operationType: targetDir,
+          search: targetSearch?.trim() || undefined,
+          onlyActive: true,
+          client: targetFilters.client || undefined,
+          line: targetFilters.line || undefined,
+          port: targetFilters.port || undefined,
+          transporter: targetFilters.transporter || undefined,
+          containerType: targetFilters.containerType || undefined,
+          destination: targetFilters.destination || undefined,
+          clearanceType: targetDir === 'Export' ? (targetFilters.clearanceType || undefined) : undefined,
+          missingDocs: targetFilters.missingDocs || undefined,
+          createdBy: targetFilters.createdBy || undefined,
+          customs: targetDir === 'Export' ? (targetFilters.customs || undefined) : undefined,
+          dateType: targetFilters.dateType || undefined,
+          dateFrom: targetFilters.dateFrom || undefined,
+          dateTo: targetFilters.dateTo || undefined,
+          status: targetFilters.status || undefined,
+        });
+
+        if (res && Array.isArray(res.items)) {
+          const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
+          const mappedRows = mapped[targetDir] || [];
+          setServerPageRows(mappedRows);
+          setServerTotalCount(res.totalCount ?? 0);
+          setServerTotalContainers(res.totalContainersCount ?? 0);
+          setServerTotalPages(
+            res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / pageSize))
+          );
+        }
+      } catch (err) {
+        console.error('Failed to fetch server page:', err);
+      } finally {
+        setIsPageLoading(false);
+      }
+    },
+    [pageSize]
+  );
+
+  // Debounced server-side fetch on search, filters, page, or tab change
+  useEffect(() => {
+    if (!isServerSide) return;
+    const timer = setTimeout(() => {
+      fetchServerPage(page, searchTerm, filters, currentDir);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [isServerSide, page, searchTerm, filters, currentDir, fetchServerPage]);
+
+  // Reset Export-specific filters when switching away from Export tab
+  useEffect(() => {
+    if (currentDir !== 'Export') {
+      setFilters((prev) => {
+        if (prev.clearanceType || prev.customs) {
+          return { ...prev, clearanceType: '', customs: '' };
+        }
+        return prev;
+      });
+    }
+  }, [currentDir]);
 
   // Selected Operations state for checkbox column
   const [selectedOps, setSelectedOps] = useState(new Set());
+
+  // Memoized Lookup options for SearchableSelect (ultra-fast search across 14,000+ items)
+  const customerOptions = useMemo(() => {
+    return (lookups.customers || []).map((c) => ({
+      value: c.customerId || c.id,
+      label: c.companyName || c.name,
+      item: c,
+    }));
+  }, [lookups.customers]);
+
+  const shippingLineOptions = useMemo(() => {
+    return (lookups.shippingLines || []).map((l) => ({
+      value: l.id,
+      label: l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name,
+      sublabel: l.abbreviation,
+      searchStr: `${l.abbreviation || ''} ${l.name || ''}`,
+      item: l,
+    }));
+  }, [lookups.shippingLines]);
+
+  const portOptions = useMemo(() => {
+    return (lookups.ports || []).map((p) => ({
+      value: p.id,
+      label: p.code ? `${p.name} (${p.code})` : p.name,
+      sublabel: p.code,
+      searchStr: `${p.name || ''} ${p.code || ''}`,
+      item: p,
+    }));
+  }, [lookups.ports]);
+
+  const destinationOptions = useMemo(() => {
+    return (lookups.destinations || []).map((d) => {
+      const name = typeof d === 'string' ? d : d.name;
+      return { value: name, label: name };
+    });
+  }, [lookups.destinations]);
+
+  const transporterOptions = useMemo(() => {
+    return (lookups.transporters || []).map((t) => ({
+      value: t.id || t.name,
+      label: t.name,
+      item: t,
+    }));
+  }, [lookups.transporters]);
 
   // Shipment Edit Mode State
   const [editingShipments, setEditingShipments] = useState({});
@@ -249,6 +392,9 @@ export default function DataEntryTab({
       if (onSaveShipment) {
         const success = await onSaveShipment(currentDir, shipRef, shipRows);
         if (success) {
+          if (isServerSide) {
+            fetchServerPage(page, searchTerm, filters, currentDir);
+          }
           pendingScrollRef.current = shipRef;
           setHighlightedShipRef(shipRef);
           setEditingShipments((prev) => {
@@ -337,9 +483,12 @@ export default function DataEntryTab({
     user?.role === 'SuperAdmin' ||
     user?.permissions?.includes('reports.download')
   );
+  const isOceanManager = user?.roleName === 'Ocean Operations Manager' || user?.permissions?.includes('operations.reopen');
   const canViewDashboard = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
+    user?.roleName === 'Super Admin' ||
+    isOceanManager ||
     user?.permissions?.includes('reports.view')
   );
 
@@ -846,13 +995,19 @@ export default function DataEntryTab({
     () => (entry.Export || []).filter((r) => r.status !== 'Delivered'),
     [entry.Export]
   );
-  const deliveredRows = useMemo(
-    () => [
+  const deliveredRows = useMemo(() => {
+    if (Array.isArray(deliveredOperations) && deliveredOperations.length > 0) {
+      if (deliveredOperations[0]?._rowId || deliveredOperations[0]?._operationId) {
+        return deliveredOperations;
+      }
+      const { entry: mapped } = mapBackendOperationsToFrontend(deliveredOperations);
+      return [...(mapped.Import || []), ...(mapped.Export || [])];
+    }
+    return [
       ...(entry.Import || []).filter((r) => r.status === 'Delivered'),
       ...(entry.Export || []).filter((r) => r.status === 'Delivered'),
-    ],
-    [entry.Import, entry.Export]
-  );
+    ];
+  }, [entry.Import, entry.Export, deliveredOperations]);
 
   // Helper to count unique shipments (operations) rather than individual container trips
   const countUniqueShipments = (rowList) => {
@@ -871,9 +1026,11 @@ export default function DataEntryTab({
   const cols = isDeliveredTab ? (COLS.Delivered || COLS.Export || []) : (COLS[currentDir] || []);
   const rows = isDeliveredTab
     ? deliveredRows
-    : currentDir === 'Export'
-      ? activeExportRows
-      : activeImportRows;
+    : isServerSide
+      ? serverPageRows
+      : currentDir === 'Export'
+        ? activeExportRows
+        : activeImportRows;
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -951,7 +1108,7 @@ export default function DataEntryTab({
         if (!targetShipRef) {
           const matchRow = (entry[currentDir] || []).find(
             (r) => (r.bl && r.bl.trim().toLowerCase() === createdBl.toLowerCase()) ||
-                   (r.booking && r.booking.trim().toLowerCase() === createdBl.toLowerCase())
+              (r.booking && r.booking.trim().toLowerCase() === createdBl.toLowerCase())
           );
           if (matchRow?._ref) {
             targetShipRef = matchRow._ref;
@@ -968,6 +1125,9 @@ export default function DataEntryTab({
           setSearchTerm("");
         }
         setPage(1);
+        if (isServerSide) {
+          fetchServerPage(1, '', filters, currentDir);
+        }
 
         pendingScrollRef.current = targetShipRef;
         setHighlightedShipRef(targetShipRef);
@@ -1022,14 +1182,14 @@ export default function DataEntryTab({
     if (filters.transporter) count++;
     if (filters.containerType) count++;
     if (filters.destination) count++;
-    if (filters.clearanceType) count++;
+    if (currentDir === 'Export' && filters.clearanceType) count++;
     if (filters.missingDocs) count++;
     if (filters.createdBy) count++;
-    if (filters.customs) count++;
+    if (currentDir === 'Export' && filters.customs) count++;
     if (filters.status) count++;
     if (filters.dateFrom || filters.dateTo) count++;
     return count;
-  }, [filters]);
+  }, [filters, currentDir]);
 
   const handleResetFilters = () => {
     setSearchTerm('');
@@ -1152,8 +1312,8 @@ export default function DataEntryTab({
         if (!destMatch) return false;
       }
 
-      // 8. Clearance Type Filter (CERT / BOSLA)
-      if (filters.clearanceType) {
+      // 8. Clearance Type Filter (CERT / BOSLA) - Export only
+      if (currentDir === 'Export' && filters.clearanceType) {
         const clrTarget = filters.clearanceType.toUpperCase();
         const clrMatch = shipRows.some(
           (r) => (r.clrType || 'CERT').toUpperCase() === clrTarget
@@ -1184,8 +1344,8 @@ export default function DataEntryTab({
         if (!creatorMatch) return false;
       }
 
-      // 11. Customs (الجمارك / الساحات) Filter
-      if (filters.customs) {
+      // 11. Customs (الجمارك / الساحات) Filter - Export only
+      if (currentDir === 'Export' && filters.customs) {
         const targetCustoms = filters.customs.toLowerCase();
         const customsMatch = shipRows.some(
           (r) => r.customs && r.customs.toLowerCase().includes(targetCustoms)
@@ -1242,16 +1402,19 @@ export default function DataEntryTab({
 
       return true;
     });
-  }, [groupedShipments, searchTerm, filters]);
+  }, [groupedShipments, searchTerm, filters, currentDir]);
 
   // Flattened paginated rows with rowSpan metadata
-  const totalShipments = filteredShipments.length;
-  const totalTrips = filteredShipments.reduce((sum, s) => sum + s.length, 0);
+  const totalShipments = isServerSide ? serverTotalCount : filteredShipments.length;
+  const totalTrips = isServerSide ? serverTotalContainers : filteredShipments.reduce((sum, s) => sum + s.length, 0);
 
   const paginatedShipments = useMemo(() => {
+    if (isServerSide) {
+      return filteredShipments;
+    }
     const start = (page - 1) * pageSize;
     return filteredShipments.slice(start, start + pageSize);
-  }, [filteredShipments, page, pageSize]);
+  }, [isServerSide, filteredShipments, page, pageSize]);
 
   // Auto-focus and scroll smoothly to the edited or newly created shipment after save / auto-refresh
   useEffect(() => {
@@ -1423,7 +1586,7 @@ export default function DataEntryTab({
     });
   }, [deletedOperations, searchTerm, filters]);
 
-  const totalPages = Math.ceil(totalShipments / pageSize) || 1;
+  const totalPages = isServerSide ? serverTotalPages : (Math.ceil(totalShipments / pageSize) || 1);
 
   useEffect(() => {
     const updateScrollWidth = () => {
@@ -1459,393 +1622,304 @@ export default function DataEntryTab({
       {/* 1. Compact New Operation Form */}
       {currentDir !== 'FCL' && (
         formOpen ? (
-        <form onSubmit={handleFormSubmit} className="opcard">
-          <div className="ophead">
-            <div>
-              <span className="opref">OPS-2026-0185</span>
-              <span className="text-xs text-slate-500 mx-2">
-                {currentDir === 'Import'
-                  ? (lang === 'ar' ? 'عملية وارد جديدة · املأ البيانات المشتركة مرة واحدة' : 'New Import operation · fill the shared details once')
-                  : (lang === 'ar' ? 'عملية صادر جديدة · املأ البيانات المشتركة مرة واحدة' : 'New Export operation · fill the shared details once')}
+          <form onSubmit={handleFormSubmit} className="opcard">
+            <div className="ophead">
+              <div>
+                <span className="opref">OPS-2026-0185</span>
+                <span className="text-xs text-slate-500 mx-2">
+                  {currentDir === 'Import'
+                    ? (lang === 'ar' ? 'عملية وارد جديدة · املأ البيانات المشتركة مرة واحدة' : 'New Import operation · fill the shared details once')
+                    : (lang === 'ar' ? 'عملية صادر جديدة · املأ البيانات المشتركة مرة واحدة' : 'New Export operation · fill the shared details once')}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormOpen(false)}
+                className="ebtn text-xs cursor-pointer flex items-center gap-1 hover:bg-slate-100"
+              >
+                <ChevronUp size={14} />
+                <span>{lang === 'ar' ? 'إخفاء النموذج' : 'Hide form'}</span>
+              </button>
+            </div>
+
+            <div className="opgrid">
+              {currentDir === 'Export' ? (
+                <>
+                  {/* 1. Clearance Type (g1) */}
+                  <div className="opf g1">
+                    <label>{lang === 'ar' ? 'نوع الإفراج' : 'Clearance Type'} <i>{lang === 'ar' ? 'اختيار' : 'Text'}</i></label>
+                    <select
+                      value={newOp.clrType}
+                      onChange={(e) => setNewOp({ ...newOp, clrType: e.target.value })}
+                    >
+                      <option value="CERT">CERT</option>
+                      <option value="BOSLA">BOSLA</option>
+                    </select>
+                  </div>
+
+                  {/* 2. BOOKING NO. (g1) */}
+                  <div className="opf g1">
+                    <label>{lang === 'ar' ? 'رقم البوكينج' : 'BOOKING NO.'} <i>{lang === 'ar' ? 'رقم / معرف' : 'Number / ID'}</i> *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newOp.blOrBooking}
+                      onChange={(e) => setNewOp({ ...newOp, blOrBooking: e.target.value })}
+                      placeholder="BK-2026-09"
+                    />
+                  </div>
+
+                  {/* 3. CLEINT (g1) */}
+                  <div className="opf g1">
+                    <label>{lang === 'ar' ? 'العميل' : 'CLEINT'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i> *</label>
+                    <SearchableSelect
+                      value={newOp.clientId || newOp.client}
+                      options={customerOptions}
+                      placeholder={lang === 'ar' ? '-- اختر العميل --' : '-- Select Client --'}
+                      onChange={(val, item) => {
+                        const cObj = item || customerOptions.find((c) => c.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          clientId: cObj ? (cObj.customerId || cObj.id) : val,
+                          client: cObj ? (cObj.companyName || cObj.name) : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 4. Shipping Line (g2) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
+                    <SearchableSelect
+                      value={newOp.shippingLineId || newOp.line}
+                      options={shippingLineOptions}
+                      placeholder={lang === 'ar' ? '-- اختر الخط الملاحي --' : '-- Select Shipping Line --'}
+                      onChange={(val, item) => {
+                        const lObj = item || shippingLineOptions.find((l) => l.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          shippingLineId: lObj ? lObj.id : val,
+                          line: lObj ? lObj.name : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 5. POL (g2) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'ميناء الشحن (POL)' : 'POL'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
+                    <SearchableSelect
+                      value={newOp.portId || newOp.port}
+                      options={portOptions}
+                      placeholder={lang === 'ar' ? '-- اختر الميناء --' : '-- Select Port (POL) --'}
+                      onChange={(val, item) => {
+                        const pObj = item || portOptions.find((p) => p.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          portId: pObj ? pObj.id : val,
+                          port: pObj ? pObj.name : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 6. POW (g2 optional) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'ميناء الوصول (POW)' : 'POW'} <i>{lang === 'ar' ? 'اختياري' : 'Text (optional)'}</i></label>
+                    <SearchableSelect
+                      value={newOp.powId || newOp.pow}
+                      options={portOptions}
+                      placeholder={lang === 'ar' ? 'لا يوجد (None)' : 'None'}
+                      onChange={(val, item) => {
+                        const pObj = item || portOptions.find((p) => p.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          powId: pObj ? pObj.id : val,
+                          pow: pObj ? pObj.name : val,
+                        });
+                      }}
+                    />
+                    <div className="op-hint">{lang === 'ar' ? 'اتركه فارغاً لاستخدام نفس ميناء الشحن' : 'Leave empty to use the POL'}</div>
+                  </div>
+
+                  {/* 7. CUT OFF (g3 optional) */}
+                  <div className="opf g3">
+                    <label>{lang === 'ar' ? 'تاريخ Cut Off' : 'CUT OFF'} <i>{lang === 'ar' ? '(اختياري)' : '((optional))'}</i></label>
+                    <input
+                      type="date"
+                      value={newOp.freeOrCut}
+                      onChange={(e) => setNewOp({ ...newOp, freeOrCut: e.target.value })}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* IMPORT FIELDS */}
+                  {/* 1. CLEINT (g1) */}
+                  <div className="opf g1">
+                    <label>{lang === 'ar' ? 'العميل' : 'CLEINT'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i> *</label>
+                    <SearchableSelect
+                      value={newOp.clientId || newOp.client}
+                      options={customerOptions}
+                      placeholder={lang === 'ar' ? '-- اختر العميل --' : '-- Select Client --'}
+                      onChange={(val, item) => {
+                        const cObj = item || customerOptions.find((c) => c.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          clientId: cObj ? (cObj.customerId || cObj.id) : val,
+                          client: cObj ? (cObj.companyName || cObj.name) : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 2. M/BL Number (g1) */}
+                  <div className="opf g1">
+                    <label>{lang === 'ar' ? 'رقم البوليصة (M/BL)' : 'M/BL Number'} <i>{lang === 'ar' ? 'رقم / معرف' : 'Number / ID'}</i> *</label>
+                    <input
+                      type="text"
+                      required
+                      value={newOp.blOrBooking}
+                      onChange={(e) => setNewOp({ ...newOp, blOrBooking: e.target.value })}
+                      placeholder="HUSG50003700"
+                    />
+                  </div>
+
+                  {/* 3. Shipping Line (g2) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
+                    <SearchableSelect
+                      value={newOp.shippingLineId || newOp.line}
+                      options={shippingLineOptions}
+                      placeholder={lang === 'ar' ? '-- اختر الخط الملاحي --' : '-- Select Shipping Line --'}
+                      onChange={(val, item) => {
+                        const lObj = item || shippingLineOptions.find((l) => l.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          shippingLineId: lObj ? lObj.id : val,
+                          line: lObj ? lObj.name : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 4. destination (g2) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'مكان التعتيق / الوجهة' : 'destination'} <i>{lang === 'ar' ? 'اختيار' : 'Select'}</i></label>
+                    <SearchableSelect
+                      value={newOp.dest}
+                      options={destinationOptions}
+                      allowCustom={true}
+                      placeholder={lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}
+                      onChange={(val) => setNewOp({ ...newOp, dest: val })}
+                    />
+                  </div>
+
+                  {/* 5. POD (g2) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'ميناء الوصول (POD)' : 'POD'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
+                    <SearchableSelect
+                      value={newOp.portId || newOp.port}
+                      options={portOptions}
+                      placeholder={lang === 'ar' ? '-- اختر الميناء --' : '-- Select Port (POD) --'}
+                      onChange={(val, item) => {
+                        const pObj = item || portOptions.find((p) => p.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          portId: pObj ? pObj.id : val,
+                          port: pObj ? pObj.name : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 6. Free Time Till (g2) */}
+                  <div className="opf g2">
+                    <label>{lang === 'ar' ? 'نهاية فترة السماح' : 'free time till'} <i>{lang === 'ar' ? 'تاريخ' : 'Date'}</i></label>
+                    <input
+                      type="date"
+                      value={newOp.freeOrCut}
+                      onChange={(e) => setNewOp({ ...newOp, freeOrCut: e.target.value })}
+                    />
+                  </div>
+
+                  {/* 7. Required Offloading Date (g3) */}
+                  <div className="opf g3">
+                    <label>{lang === 'ar' ? 'تاريخ التعتيق المطلوب' : 'Required Offloading Date'}</label>
+                    <input
+                      type="date"
+                      value={newOp.reqDate}
+                      onChange={(e) => setNewOp({ ...newOp, reqDate: e.target.value })}
+                    />
+                  </div>
+
+                  {/* 8. Required Offloading Time (g3) */}
+                  <div className="opf g3">
+                    <label>{lang === 'ar' ? 'وقت التعتيق المطلوب' : 'Required Offloading Time'}</label>
+                    <input
+                      type="time"
+                      value={newOp.reqTime}
+                      onChange={(e) => setNewOp({ ...newOp, reqTime: e.target.value })}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="opfoot">
+              <div className="opcount">
+                <label className="font-semibold text-slate-700">
+                  {lang === 'ar' ? 'عدد الحاويات في هذه العملية' : 'Containers in this operation'}
+                </label>
+                <input
+                  ref={cntrCountInputRef}
+                  type="number"
+                  min="0"
+                  max="200"
+                  value={newOp.cntrCount === '' ? '' : newOp.cntrCount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNewOp({
+                      ...newOp,
+                      cntrCount: val === '' ? '' : Math.max(0, parseInt(val, 10) || 0),
+                    });
+                  }}
+                  className={`font-bold text-center px-3 py-1.5 rounded-lg border text-sm transition ${(!newOp.cntrCount || Number(newOp.cntrCount) <= 0)
+                    ? 'border-amber-400 bg-amber-50/70 text-amber-900 focus:ring-amber-300'
+                    : 'border-slate-300 bg-white text-slate-900 focus:border-sky-500'
+                    }`}
+                  placeholder="0"
+                />
+              </div>
+
+              <button type="submit" className="ebtn go">
+                {lang === 'ar' ? 'إنشاء العملية' : 'Create operation'}
+              </button>
+
+              <span className="text-xs text-slate-400">
+                {lang === 'ar'
+                  ? 'املأ بيانات الشحنة المشتركة واضغط إنشاء — سيتم تجميع الصفوف التي تشترك في نفس البوليصة تلقائياً.'
+                  : 'Fill the shipment details once and press Create — rows that share one M/BL are grouped together automatically.'}
+              </span>
+            </div>
+          </form>
+        ) : (
+          <div className="flex items-center justify-between px-5 py-3 bg-white border border-slate-200/90 rounded-2xl shadow-xs transition">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+              <span className="text-xs font-semibold text-slate-700">
+                {lang === 'ar' ? 'نموذج إدخال شحنة جديدة مخفي' : 'New operation creation form is hidden'}
               </span>
             </div>
             <button
               type="button"
-              onClick={() => setFormOpen(false)}
-              className="ebtn text-xs cursor-pointer flex items-center gap-1 hover:bg-slate-100"
+              onClick={() => setFormOpen(true)}
+              className="ebtn text-xs cursor-pointer flex items-center gap-1.5 bg-sky-50 text-sky-700 border border-sky-300 hover:bg-sky-100 font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition"
             >
-              <ChevronUp size={14} />
-              <span>{lang === 'ar' ? 'إخفاء النموذج' : 'Hide form'}</span>
+              <Plus size={14} />
+              <span>{lang === 'ar' ? 'إظهار نموذج الإدخال' : 'Show form'}</span>
             </button>
           </div>
-
-          <div className="opgrid">
-            {currentDir === 'Export' ? (
-              <>
-                {/* 1. Clearance Type (g1) */}
-                <div className="opf g1">
-                  <label>{lang === 'ar' ? 'نوع الإفراج' : 'Clearance Type'} <i>{lang === 'ar' ? 'اختيار' : 'Text'}</i></label>
-                  <select
-                    value={newOp.clrType}
-                    onChange={(e) => setNewOp({ ...newOp, clrType: e.target.value })}
-                  >
-                    <option value="CERT">CERT</option>
-                    <option value="BOSLA">BOSLA</option>
-                  </select>
-                </div>
-
-                {/* 2. BOOKING NO. (g1) */}
-                <div className="opf g1">
-                  <label>{lang === 'ar' ? 'رقم البوكينج' : 'BOOKING NO.'} <i>{lang === 'ar' ? 'رقم / معرف' : 'Number / ID'}</i> *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newOp.blOrBooking}
-                    onChange={(e) => setNewOp({ ...newOp, blOrBooking: e.target.value })}
-                    placeholder="BK-2026-09"
-                  />
-                </div>
-
-                {/* 3. CLEINT (g1) */}
-                <div className="opf g1">
-                  <label>{lang === 'ar' ? 'العميل' : 'CLEINT'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i> *</label>
-                  <select
-                    value={newOp.clientId || newOp.client}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.customers || []).find(
-                        (c) => (c.customerId || c.id) === val || (c.companyName || c.name) === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        clientId: item ? (item.customerId || item.id) : val,
-                        client: item ? (item.companyName || item.name) : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر العميل --' : '-- Select Client --'}</option>
-                    {lookups.customers?.length > 0
-                      ? lookups.customers.map((c) => (
-                        <option key={c.customerId || c.id} value={c.customerId || c.id}>
-                          {c.companyName || c.name}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.client.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* 4. Shipping Line (g2) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
-                  <select
-                    value={newOp.shippingLineId || newOp.line}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.shippingLines || []).find(
-                        (l) => l.id === val || l.name === val || l.abbreviation === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        shippingLineId: item ? item.id : val,
-                        line: item ? item.name : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر الخط الملاحي --' : '-- Select Shipping Line --'}</option>
-                    {lookups.shippingLines?.length > 0
-                      ? lookups.shippingLines.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.line.map((l) => (
-                        <option key={l} value={l}>{l}</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* 5. POL (g2) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'ميناء الشحن (POL)' : 'POL'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
-                  <select
-                    value={newOp.portId || newOp.port}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.ports || []).find(
-                        (p) => p.id === val || p.name === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        portId: item ? item.id : val,
-                        port: item ? item.name : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر الميناء --' : '-- Select Port (POL) --'}</option>
-                    {lookups.ports?.length > 0
-                      ? lookups.ports.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} {p.code ? `(${p.code})` : ''}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.pol.map((p) => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* 6. POW (g2 optional) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'ميناء الوصول (POW)' : 'POW'} <i>{lang === 'ar' ? 'اختياري' : 'Text (optional)'}</i></label>
-                  <select
-                    value={newOp.powId || newOp.pow}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.ports || []).find(
-                        (p) => p.id === val || p.name === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        powId: item ? item.id : val,
-                        pow: item ? item.name : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? 'لا يوجد (None)' : 'None'}</option>
-                    {lookups.ports?.length > 0
-                      ? lookups.ports.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} {p.code ? `(${p.code})` : ''}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.pow.map((p) => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                  </select>
-                  <div className="op-hint">{lang === 'ar' ? 'اتركه فارغاً لاستخدام نفس ميناء الشحن' : 'Leave empty to use the POL'}</div>
-                </div>
-
-                {/* 7. CUT OFF (g3 optional) */}
-                <div className="opf g3">
-                  <label>{lang === 'ar' ? 'تاريخ Cut Off' : 'CUT OFF'} <i>{lang === 'ar' ? '(اختياري)' : '((optional))'}</i></label>
-                  <input
-                    type="date"
-                    value={newOp.freeOrCut}
-                    onChange={(e) => setNewOp({ ...newOp, freeOrCut: e.target.value })}
-                  />
-                </div>
-              </>
-            ) : (
-              <>
-                {/* IMPORT FIELDS */}
-                {/* 1. CLEINT (g1) */}
-                <div className="opf g1">
-                  <label>{lang === 'ar' ? 'العميل' : 'CLEINT'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i> *</label>
-                  <select
-                    value={newOp.clientId || newOp.client}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.customers || []).find(
-                        (c) => (c.customerId || c.id) === val || (c.companyName || c.name) === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        clientId: item ? (item.customerId || item.id) : val,
-                        client: item ? (item.companyName || item.name) : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر العميل --' : '-- Select Client --'}</option>
-                    {lookups.customers?.length > 0
-                      ? lookups.customers.map((c) => (
-                        <option key={c.customerId || c.id} value={c.customerId || c.id}>
-                          {c.companyName || c.name}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.client.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* 2. M/BL Number (g1) */}
-                <div className="opf g1">
-                  <label>{lang === 'ar' ? 'رقم البوليصة (M/BL)' : 'M/BL Number'} <i>{lang === 'ar' ? 'رقم / معرف' : 'Number / ID'}</i> *</label>
-                  <input
-                    type="text"
-                    required
-                    value={newOp.blOrBooking}
-                    onChange={(e) => setNewOp({ ...newOp, blOrBooking: e.target.value })}
-                    placeholder="HUSG50003700"
-                  />
-                </div>
-
-                {/* 3. Shipping Line (g2) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
-                  <select
-                    value={newOp.shippingLineId || newOp.line}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.shippingLines || []).find(
-                        (l) => l.id === val || l.name === val || l.abbreviation === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        shippingLineId: item ? item.id : val,
-                        line: item ? item.name : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر الخط الملاحي --' : '-- Select Shipping Line --'}</option>
-                    {lookups.shippingLines?.length > 0
-                      ? lookups.shippingLines.map((l) => (
-                        <option key={l.id} value={l.id}>
-                          {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.line.map((l) => (
-                        <option key={l} value={l}>{l}</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* 4. destination (g2) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'مكان التعتيق / الوجهة' : 'destination'} <i>{lang === 'ar' ? 'اختيار' : 'Select'}</i></label>
-                  <select
-                    value={newOp.dest}
-                    onChange={(e) => setNewOp({ ...newOp, dest: e.target.value })}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}</option>
-                    {(lookups.destinations && lookups.destinations.length > 0
-                      ? lookups.destinations.map((d) => (typeof d === 'string' ? d : d.name))
-                      : MASTER_DEFAULTS.dest
-                    ).map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 5. POD (g2) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'ميناء الوصول (POD)' : 'POD'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
-                  <select
-                    value={newOp.portId || newOp.port}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const item = (lookups.ports || []).find(
-                        (p) => p.id === val || p.name === val
-                      );
-                      setNewOp({
-                        ...newOp,
-                        portId: item ? item.id : val,
-                        port: item ? item.name : val,
-                      });
-                    }}
-                  >
-                    <option value="">{lang === 'ar' ? '-- اختر الميناء --' : '-- Select Port (POD) --'}</option>
-                    {lookups.ports?.length > 0
-                      ? lookups.ports.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} {p.code ? `(${p.code})` : ''}
-                        </option>
-                      ))
-                      : MASTER_DEFAULTS.pod.map((p) => (
-                        <option key={p} value={p}>{p}</option>
-                      ))}
-                  </select>
-                </div>
-
-                {/* 6. Free Time Till (g2) */}
-                <div className="opf g2">
-                  <label>{lang === 'ar' ? 'نهاية فترة السماح' : 'free time till'} <i>{lang === 'ar' ? 'تاريخ' : 'Date'}</i></label>
-                  <input
-                    type="date"
-                    value={newOp.freeOrCut}
-                    onChange={(e) => setNewOp({ ...newOp, freeOrCut: e.target.value })}
-                  />
-                </div>
-
-                {/* 7. Required Offloading Date (g3) */}
-                <div className="opf g3">
-                  <label>{lang === 'ar' ? 'تاريخ التعتيق المطلوب' : 'Required Offloading Date'}</label>
-                  <input
-                    type="date"
-                    value={newOp.reqDate}
-                    onChange={(e) => setNewOp({ ...newOp, reqDate: e.target.value })}
-                  />
-                </div>
-
-                {/* 8. Required Offloading Time (g3) */}
-                <div className="opf g3">
-                  <label>{lang === 'ar' ? 'وقت التعتيق المطلوب' : 'Required Offloading Time'}</label>
-                  <input
-                    type="time"
-                    value={newOp.reqTime}
-                    onChange={(e) => setNewOp({ ...newOp, reqTime: e.target.value })}
-                  />
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="opfoot">
-            <div className="opcount">
-              <label className="font-semibold text-slate-700">
-                {lang === 'ar' ? 'عدد الحاويات في هذه العملية' : 'Containers in this operation'}
-              </label>
-              <input
-                ref={cntrCountInputRef}
-                type="number"
-                min="0"
-                max="200"
-                value={newOp.cntrCount === '' ? '' : newOp.cntrCount}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setNewOp({
-                    ...newOp,
-                    cntrCount: val === '' ? '' : Math.max(0, parseInt(val, 10) || 0),
-                  });
-                }}
-                className={`font-bold text-center px-3 py-1.5 rounded-lg border text-sm transition ${(!newOp.cntrCount || Number(newOp.cntrCount) <= 0)
-                    ? 'border-amber-400 bg-amber-50/70 text-amber-900 focus:ring-amber-300'
-                    : 'border-slate-300 bg-white text-slate-900 focus:border-sky-500'
-                  }`}
-                placeholder="0"
-              />
-            </div>
-
-            <button type="submit" className="ebtn go">
-              {lang === 'ar' ? 'إنشاء العملية' : 'Create operation'}
-            </button>
-
-            <span className="text-xs text-slate-400">
-              {lang === 'ar'
-                ? 'املأ بيانات الشحنة المشتركة واضغط إنشاء — سيتم تجميع الصفوف التي تشترك في نفس البوليصة تلقائياً.'
-                : 'Fill the shipment details once and press Create — rows that share one M/BL are grouped together automatically.'}
-            </span>
-          </div>
-        </form>
-      ) : (
-        <div className="flex items-center justify-between px-5 py-3 bg-white border border-slate-200/90 rounded-2xl shadow-xs transition">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
-            <span className="text-xs font-semibold text-slate-700">
-              {lang === 'ar' ? 'نموذج إدخال شحنة جديدة مخفي' : 'New operation creation form is hidden'}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setFormOpen(true)}
-            className="ebtn text-xs cursor-pointer flex items-center gap-1.5 bg-sky-50 text-sky-700 border border-sky-300 hover:bg-sky-100 font-semibold px-3 py-1.5 rounded-lg shadow-2xs transition"
-          >
-            <Plus size={14} />
-            <span>{lang === 'ar' ? 'إظهار نموذج الإدخال' : 'Show form'}</span>
-          </button>
-        </div>
         )
       )}
 
@@ -1860,7 +1934,7 @@ export default function DataEntryTab({
           >
             <span className="ico">↓</span>
             <span>{lang === 'ar' ? 'وارد' : 'Import'}</span>
-            <span className="cnt">{activeImportCount}</span>
+            <span className="cnt">{counts?.activeImportCount ?? activeImportCount}</span>
           </button>
 
           <button
@@ -1870,7 +1944,7 @@ export default function DataEntryTab({
           >
             <span className="ico">↑</span>
             <span>{lang === 'ar' ? 'صادر' : 'Export'}</span>
-            <span className="cnt">{activeExportCount}</span>
+            <span className="cnt">{counts?.activeExportCount ?? activeExportCount}</span>
           </button>
 
           <button
@@ -1880,7 +1954,7 @@ export default function DataEntryTab({
           >
             <span className="ico">🔒</span>
             <span>{lang === 'ar' ? 'الشحنات المسلّمة' : 'Delivered shipments'}</span>
-            <span className="cnt">{deliveredCount}</span>
+            <span className="cnt">{counts?.deliveredCount ?? deliveredCount}</span>
           </button>
 
           {/* FCL Recommendations Button (Placed between Delivered and Inactive) */}
@@ -1906,7 +1980,7 @@ export default function DataEntryTab({
           >
             <Trash2 size={13} className="text-rose-600" />
             <span>{lang === 'ar' ? 'غير النشطة' : 'Inactive'}</span>
-            <span className="cnt bg-rose-100 text-rose-700 border-rose-200">{deletedOperations.length}</span>
+            <span className="cnt bg-rose-100 text-rose-700 border-rose-200">{counts?.inactiveCount ?? deletedOperations.length}</span>
           </button>
 
           {/* Upload Report Button (Relocated into Section 5) */}
@@ -1987,277 +2061,286 @@ export default function DataEntryTab({
       {currentDir !== 'FCL' && (
         <>
           <div className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs space-y-3">
-        {/* Row 1: Spacious Search Bar with Full Readable Placeholder */}
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-2xl">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-              <Search size={16} />
-            </span>
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-              placeholder={
-                lang === 'ar'
-                  ? 'بحث شامل بالشحنة، الحاوية، البوليصة، البوكينج، العميل، الخط، السائق... (Ctrl + K)'
-                  : 'Search by Shipment #, Container #, BL, Booking, Client, Line, Driver... (Ctrl + K)'
-              }
-              className="w-full pl-9 pr-20 py-2 rounded-xl border border-slate-300 bg-slate-50/70 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition shadow-2xs"
-            />
-            <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1.5">
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => { setSearchTerm(''); setPage(1); }}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 cursor-pointer"
-                  title="مسح البحث"
-                >
-                  <X size={13} />
-                </button>
+            {/* Row 1: Spacious Search Bar with Full Readable Placeholder */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-2xl">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                  <Search size={16} />
+                </span>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+                  placeholder={
+                    lang === 'ar'
+                      ? 'بحث شامل بالشحنة، الحاوية، البوليصة، البوكينج، العميل، الخط، السائق... (Ctrl + K)'
+                      : 'Search by Shipment #, Container #, BL, Booking, Client, Line, Driver... (Ctrl + K)'
+                  }
+                  className="w-full pl-9 pr-20 py-2 rounded-xl border border-slate-300 bg-slate-50/70 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition shadow-2xs"
+                />
+                <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center gap-1.5">
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => { setSearchTerm(''); setPage(1); }}
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 cursor-pointer"
+                      title="مسح البحث"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                  <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-100 border border-slate-200 rounded">
+                    Ctrl K
+                  </kbd>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeFiltersCount > 0 && (
+                  <span className="px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-xs font-semibold">
+                    {activeFiltersCount} {lang === 'ar' ? 'فلاتر مطبقة' : 'active filters'}
+                  </span>
+                )}
+                {(activeFiltersCount > 0 || searchTerm) && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition shadow-2xs"
+                  >
+                    <RotateCcw size={13} />
+                    <span>{lang === 'ar' ? 'إعادة ضبط الفلاتر' : 'Reset Filters'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: All Filters on a Single Unified Horizontal Row */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+              {/* Client Filter */}
+              <select
+                value={filters.client}
+                onChange={(e) => { setFilters({ ...filters, client: e.target.value }); setPage(1); }}
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[135px]"
+              >
+                <option value="">{lang === 'ar' ? 'العميل: الكل' : 'Client: All'}</option>
+                {(lookups.customers || []).map((c) => (
+                  <option key={c.customerId || c.id} value={c.companyName || c.name}>
+                    {c.companyName || c.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Shipping Line Filter */}
+              <select
+                value={filters.line}
+                onChange={(e) => { setFilters({ ...filters, line: e.target.value }); setPage(1); }}
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[125px]"
+              >
+                <option value="">{lang === 'ar' ? 'الخط: الكل' : 'Line: All'}</option>
+                {(lookups.shippingLines || []).map((l) => (
+                  <option key={l.id} value={l.name}>
+                    {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Port Filter (High-speed searchable) */}
+              <div className="shrink-0 w-[130px]">
+                <SearchableSelect
+                  compact={true}
+                  value={filters.port}
+                  placeholder={lang === 'ar' ? 'الميناء: الكل' : 'Port: All'}
+                  options={portOptions}
+                  onChange={(val, opt) => {
+                    const name = opt?.raw?.name || opt?.label?.replace(/\s*\(.*\)$/, '') || val;
+                    setFilters({ ...filters, port: name });
+                    setPage(1);
+                  }}
+                />
+              </div>
+
+              {/* Transporter Filter */}
+              <select
+                value={filters.transporter}
+                onChange={(e) => { setFilters({ ...filters, transporter: e.target.value }); setPage(1); }}
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
+              >
+                <option value="">{lang === 'ar' ? 'المقاول: الكل' : 'Transporter: All'}</option>
+                {(lookups.transporters || []).map((t) => (
+                  <option key={t.id} value={t.name}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+
+              {/* Container Type Filter */}
+              <select
+                value={filters.containerType}
+                onChange={(e) => { setFilters({ ...filters, containerType: e.target.value }); setPage(1); }}
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
+              >
+                <option value="">{lang === 'ar' ? 'نوع الحاوية: الكل' : 'CNTR Type: All'}</option>
+                {CONTAINER_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Destination Filter */}
+              <select
+                value={filters.destination}
+                onChange={(e) => { setFilters({ ...filters, destination: e.target.value }); setPage(1); }}
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
+              >
+                <option value="">{lang === 'ar' ? 'الوجهة: الكل' : 'Destination: All'}</option>
+                {(lookups.destinations || []).map((d) => (typeof d === 'string' ? d : d.name || d.label || d.value)).map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+
+              {/* Export-Only Filters: Clearance Type & Customs */}
+              {currentDir === 'Export' && (
+                <>
+                  {/* Clearance Type (CERT / BOSLA) */}
+                  <select
+                    value={filters.clearanceType}
+                    onChange={(e) => { setFilters({ ...filters, clearanceType: e.target.value }); setPage(1); }}
+                    className="text-xs rounded-xl border border-sky-300 bg-sky-50/50 px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[125px] font-medium"
+                    title={lang === 'ar' ? 'نوع الإفراج (صادر فقط)' : 'Clearance Type (Export only)'}
+                  >
+                    <option value="">{lang === 'ar' ? 'الإفراج: الكل' : 'Clearance: All'}</option>
+                    <option value="CERT">CERT</option>
+                    <option value="BOSLA">BOSLA</option>
+                  </select>
+
+                  {/* Customs Filter (الجمارك / الساحات) */}
+                  <select
+                    value={filters.customs}
+                    onChange={(e) => { setFilters({ ...filters, customs: e.target.value }); setPage(1); }}
+                    className="text-xs rounded-xl border border-sky-300 bg-sky-50/50 px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px] font-medium"
+                    title={lang === 'ar' ? 'الجمارك / الساحات (صادر فقط)' : 'Customs (Export only)'}
+                  >
+                    <option value="">{lang === 'ar' ? 'الجمارك: الكل' : 'Customs: All'}</option>
+                    {['الإسكندرية', 'الدخيلة', 'دمياط', 'بورسعيد غرب', 'بورسعيد شرق', 'السخنة', 'السويس', 'العاشر من رمضان', 'السادس من أكتوبر', 'سفاجا', 'نويبع', 'المطار'].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </>
               )}
-              <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold text-slate-400 bg-slate-100 border border-slate-200 rounded">
-                Ctrl K
-              </kbd>
+
+              {/* Missing Docs Filter */}
+              <select
+                value={filters.missingDocs}
+                onChange={(e) => { setFilters({ ...filters, missingDocs: e.target.value }); setPage(1); }}
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[110px]"
+              >
+                <option value="">{lang === 'ar' ? 'المستندات: الكل' : 'Docs: All'}</option>
+                <option value="yes">{lang === 'ar' ? 'يوجد نواقص' : 'Has Missing'}</option>
+                <option value="no">{lang === 'ar' ? 'مكتملة (Clean)' : 'Clean'}</option>
+              </select>
+
+              {/* Created By Filter (المُدخل) */}
+              <div className="relative shrink-0 max-w-[130px]">
+                <input
+                  type="text"
+                  value={filters.createdBy}
+                  onChange={(e) => { setFilters({ ...filters, createdBy: e.target.value }); setPage(1); }}
+                  placeholder={lang === 'ar' ? 'المُدخل: الكل' : 'Created By: All'}
+                  className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 w-full"
+                />
+                {filters.createdBy && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilters({ ...filters, createdBy: '' }); setPage(1); }}
+                    className="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600"
+                  >
+                    <X size={11} />
+                  </button>
+                )}
+              </div>
+
+              {/* Date Range Controls */}
+              <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shrink-0 text-xs">
+                <span className="text-[11px] font-bold text-slate-600 shrink-0">
+                  {lang === 'ar' ? 'التاريخ:' : 'Date:'}
+                </span>
+                <select
+                  value={filters.dateType}
+                  onChange={(e) => setFilters({ ...filters, dateType: e.target.value })}
+                  className="text-xs rounded-lg border border-slate-300 bg-white px-2 py-1 text-slate-700 outline-none focus:border-sky-500 cursor-pointer max-w-[125px]"
+                >
+                  <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created Date'}</option>
+                  <option value="reqDate">{lang === 'ar' ? 'تاريخ التحميل/التعتيق' : 'Req Date'}</option>
+                  <option value="arrDate">{lang === 'ar' ? 'الوصول الفعلي' : 'Actual Arrival'}</option>
+                  <option value="gateOut">{lang === 'ar' ? 'خروج البوابة (Gate Out)' : 'Gate Out'}</option>
+                  <option value="freeOrCut">{lang === 'ar' ? 'المهلة / Cut Off' : 'Free Time / Cut Off'}</option>
+                  <option value="delivered">{lang === 'ar' ? 'تاريخ التسليم' : 'Delivered Date'}</option>
+                  <option value="checkout">{lang === 'ar' ? 'سحب الميناء' : 'Port Checkout'}</option>
+                  <option value="invRcv">{lang === 'ar' ? 'تاريخ استلام الفواتير' : 'Invoices Receive Date'}</option>
+                  <option value="missRcv">{lang === 'ar' ? 'تاريخ استلام المستندات' : 'Receive Date Missing Docs'}</option>
+                </select>
+                <span className="text-[11px] text-slate-400">{lang === 'ar' ? 'من' : 'From'}</span>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => { setFilters({ ...filters, dateFrom: e.target.value }); setPage(1); }}
+                  className="text-xs rounded-lg border border-slate-300 bg-white px-1.5 py-1 text-slate-700 outline-none focus:border-sky-500 w-[115px]"
+                />
+                <span className="text-[11px] text-slate-400">{lang === 'ar' ? 'إلى' : 'To'}</span>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => { setFilters({ ...filters, dateTo: e.target.value }); setPage(1); }}
+                  className="text-xs rounded-lg border border-slate-300 bg-white px-1.5 py-1 text-slate-700 outline-none focus:border-sky-500 w-[115px]"
+                />
+                {(filters.dateFrom || filters.dateTo) && (
+                  <button
+                    type="button"
+                    onClick={() => { setFilters({ ...filters, dateFrom: '', dateTo: '' }); setPage(1); }}
+                    className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
+                    title="مسح التاريخ"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {activeFiltersCount > 0 && (
-              <span className="px-2.5 py-1 bg-sky-50 text-sky-700 border border-sky-200 rounded-lg text-xs font-semibold">
-                {activeFiltersCount} {lang === 'ar' ? 'فلاتر مطبقة' : 'active filters'}
+          {/* 4. Operations & Trips Counter + Pagination Info */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500 px-1 pt-0.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-slate-700">
+                {lang === 'ar'
+                  ? `عدد العمليات: ${totalShipments}  ·  عدد الرحلات: ${totalTrips}`
+                  : `${totalShipments} Operations  ·  ${totalTrips} Trips`}
               </span>
-            )}
-            {(activeFiltersCount > 0 || searchTerm) && (
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span>Shipments {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalShipments)} of {totalShipments} · Page {page}/{totalPages}</span>
               <button
                 type="button"
-                onClick={handleResetFilters}
-                className="inline-flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 font-semibold px-2.5 py-1.5 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-200 cursor-pointer transition shadow-2xs"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
               >
-                <RotateCcw size={13} />
-                <span>{lang === 'ar' ? 'إعادة ضبط الفلاتر' : 'Reset Filters'}</span>
+                ‹
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: All Filters on a Single Unified Horizontal Row */}
-        <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
-          {/* Client Filter */}
-          <select
-            value={filters.client}
-            onChange={(e) => { setFilters({ ...filters, client: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[135px]"
-          >
-            <option value="">{lang === 'ar' ? 'العميل: الكل' : 'Client: All'}</option>
-            {(lookups.customers || []).map((c) => (
-              <option key={c.customerId || c.id} value={c.companyName || c.name}>
-                {c.companyName || c.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Shipping Line Filter */}
-          <select
-            value={filters.line}
-            onChange={(e) => { setFilters({ ...filters, line: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[125px]"
-          >
-            <option value="">{lang === 'ar' ? 'الخط: الكل' : 'Line: All'}</option>
-            {(lookups.shippingLines || []).map((l) => (
-              <option key={l.id} value={l.name}>
-                {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Port Filter */}
-          <select
-            value={filters.port}
-            onChange={(e) => { setFilters({ ...filters, port: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[125px]"
-          >
-            <option value="">{lang === 'ar' ? 'الميناء: الكل' : 'Port: All'}</option>
-            {(lookups.ports || []).map((p) => (
-              <option key={p.id} value={p.name}>
-                {p.name} {p.code ? `(${p.code})` : ''}
-              </option>
-            ))}
-          </select>
-
-          {/* Transporter Filter */}
-          <select
-            value={filters.transporter}
-            onChange={(e) => { setFilters({ ...filters, transporter: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
-          >
-            <option value="">{lang === 'ar' ? 'المقاول: الكل' : 'Transporter: All'}</option>
-            {(lookups.transporters || []).map((t) => (
-              <option key={t.id} value={t.name}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Container Type Filter */}
-          <select
-            value={filters.containerType}
-            onChange={(e) => { setFilters({ ...filters, containerType: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
-          >
-            <option value="">{lang === 'ar' ? 'نوع الحاوية: الكل' : 'CNTR Type: All'}</option>
-            {CONTAINER_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-
-          {/* Destination Filter */}
-          <select
-            value={filters.destination}
-            onChange={(e) => { setFilters({ ...filters, destination: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
-          >
-            <option value="">{lang === 'ar' ? 'الوجهة: الكل' : 'Destination: All'}</option>
-            {(lookups.destinations && lookups.destinations.length > 0
-              ? lookups.destinations.map((d) => (typeof d === 'string' ? d : d.name || d.label || d.value))
-              : MASTER_DEFAULTS.dest
-            ).map((d) => (
-              <option key={d} value={d}>{d}</option>
-            ))}
-          </select>
-
-          {/* Clearance Type (CERT / BOSLA) */}
-          <select
-            value={filters.clearanceType}
-            onChange={(e) => { setFilters({ ...filters, clearanceType: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[120px]"
-          >
-            <option value="">{lang === 'ar' ? 'الإفراج: الكل' : 'Clearance: All'}</option>
-            <option value="CERT">CERT</option>
-            <option value="BOSLA">BOSLA</option>
-          </select>
-
-          {/* Missing Docs Filter */}
-          <select
-            value={filters.missingDocs}
-            onChange={(e) => { setFilters({ ...filters, missingDocs: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[110px]"
-          >
-            <option value="">{lang === 'ar' ? 'المستندات: الكل' : 'Docs: All'}</option>
-            <option value="yes">{lang === 'ar' ? 'يوجد نواقص' : 'Has Missing'}</option>
-            <option value="no">{lang === 'ar' ? 'مكتملة (Clean)' : 'Clean'}</option>
-          </select>
-
-          {/* Created By Filter (المُدخل) */}
-          <select
-            value={filters.createdBy}
-            onChange={(e) => { setFilters({ ...filters, createdBy: e.target.value }); setPage(1); }}
-            className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
-          >
-            <option value="">{lang === 'ar' ? 'المُدخل: الكل' : 'Created By: All'}</option>
-            {uniqueCreators.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-
-          {/* Customs Filter (الجمارك / الساحات) */}
-          {uniqueCustoms.length > 0 && (
-            <select
-              value={filters.customs}
-              onChange={(e) => { setFilters({ ...filters, customs: e.target.value }); setPage(1); }}
-              className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[125px]"
-            >
-              <option value="">{lang === 'ar' ? 'الجمارك: الكل' : 'Customs: All'}</option>
-              {uniqueCustoms.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Date Range Controls */}
-          <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shrink-0 text-xs">
-            <span className="text-[11px] font-bold text-slate-600 shrink-0">
-              {lang === 'ar' ? 'التاريخ:' : 'Date:'}
-            </span>
-            <select
-              value={filters.dateType}
-              onChange={(e) => setFilters({ ...filters, dateType: e.target.value })}
-              className="text-xs rounded-lg border border-slate-300 bg-white px-2 py-1 text-slate-700 outline-none focus:border-sky-500 cursor-pointer max-w-[125px]"
-            >
-              <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created Date'}</option>
-              <option value="reqDate">{lang === 'ar' ? 'تاريخ التحميل/التعتيق' : 'Req Date'}</option>
-              <option value="arrDate">{lang === 'ar' ? 'الوصول الفعلي' : 'Actual Arrival'}</option>
-              <option value="gateOut">{lang === 'ar' ? 'خروج البوابة (Gate Out)' : 'Gate Out'}</option>
-              <option value="freeOrCut">{lang === 'ar' ? 'المهلة / Cut Off' : 'Free Time / Cut Off'}</option>
-              <option value="delivered">{lang === 'ar' ? 'تاريخ التسليم' : 'Delivered Date'}</option>
-              <option value="checkout">{lang === 'ar' ? 'سحب الميناء' : 'Port Checkout'}</option>
-              <option value="invRcv">{lang === 'ar' ? 'تاريخ استلام الفواتير' : 'Invoices Receive Date'}</option>
-              <option value="missRcv">{lang === 'ar' ? 'تاريخ استلام المستندات' : 'Receive Date Missing Docs'}</option>
-            </select>
-            <span className="text-[11px] text-slate-400">{lang === 'ar' ? 'من' : 'From'}</span>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => { setFilters({ ...filters, dateFrom: e.target.value }); setPage(1); }}
-              className="text-xs rounded-lg border border-slate-300 bg-white px-1.5 py-1 text-slate-700 outline-none focus:border-sky-500 w-[115px]"
-            />
-            <span className="text-[11px] text-slate-400">{lang === 'ar' ? 'إلى' : 'To'}</span>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => { setFilters({ ...filters, dateTo: e.target.value }); setPage(1); }}
-              className="text-xs rounded-lg border border-slate-300 bg-white px-1.5 py-1 text-slate-700 outline-none focus:border-sky-500 w-[115px]"
-            />
-            {(filters.dateFrom || filters.dateTo) && (
               <button
                 type="button"
-                onClick={() => { setFilters({ ...filters, dateFrom: '', dateTo: '' }); setPage(1); }}
-                className="p-0.5 text-slate-400 hover:text-slate-600 rounded cursor-pointer"
-                title="مسح التاريخ"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
               >
-                <X size={12} />
+                ›
               </button>
-            )}
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* 4. Operations & Trips Counter + Pagination Info */}
-      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500 px-1 pt-0.5">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-slate-700">
-            {lang === 'ar'
-              ? `عدد العمليات: ${totalShipments}  ·  عدد الرحلات: ${totalTrips}`
-              : `${totalShipments} Operations  ·  ${totalTrips} Trips`}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span>Shipments {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalShipments)} of {totalShipments} · Page {page}/{totalPages}</span>
-          <button
-            type="button"
-            disabled={page <= 1}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            disabled={page >= totalPages}
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
-          >
-            ›
-          </button>
-        </div>
-        </div>
         </>
       )}
 
@@ -2375,8 +2458,8 @@ export default function DataEntryTab({
                         <td className="py-3 px-3">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
-                                ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                                : 'bg-purple-50 text-purple-700 border border-purple-200'
+                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                              : 'bg-purple-50 text-purple-700 border border-purple-200'
                               }`}
                           >
                             {isImport ? 'Import' : 'Export'}
@@ -2513,7 +2596,7 @@ export default function DataEntryTab({
                 </tr>
               </thead>
               <tbody>
-                {isLoading ? (
+                {(isLoading || isPageLoading || (isDeliveredTab && isLoadingDelivered)) ? (
                   <tr>
                     <td colSpan={cols.length} className="text-center py-16 text-slate-500">
                       <div className="flex flex-col items-center justify-center gap-2">
@@ -2547,9 +2630,8 @@ export default function DataEntryTab({
                           data-booking={r.booking || ''}
                           id={isFirstRow ? `shipment-row-${shipRef}` : undefined}
                           tabIndex={isFirstRow ? -1 : undefined}
-                          className={`outline-none transition-colors duration-500 ${
-                            isHighlighted ? 'bg-sky-100/70 ring-2 ring-sky-400 ring-inset font-medium' : ''
-                          }`}
+                          className={`outline-none transition-colors duration-500 ${isHighlighted ? 'bg-sky-100/70 ring-2 ring-sky-400 ring-inset font-medium' : ''
+                            }`}
                         >
                           {cols.map((c) => {
                             const canUnmerge = c.canUnmerge === true;
@@ -2973,8 +3055,8 @@ export default function DataEntryTab({
                                           type="button"
                                           onClick={() => setStatusMenuOpenRef((prev) => (prev === shipRef ? null : shipRef))}
                                           className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold border transition shadow-2xs cursor-pointer select-none ${isDeliveredStatus
-                                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400'
-                                              : 'bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100 hover:border-sky-400'
+                                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400'
+                                            : 'bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100 hover:border-sky-400'
                                             }`}
                                           title={lang === 'ar' ? 'تغيير حالة الشحنة' : 'Change status'}
                                         >
@@ -3004,8 +3086,8 @@ export default function DataEntryTab({
                                                 setStatusMenuOpenRef(null);
                                               }}
                                               className={`flex items-center justify-between w-full px-3 py-2 rounded-xl transition text-left cursor-pointer ${!isDeliveredStatus
-                                                  ? 'bg-sky-50 text-sky-900 font-bold border border-sky-200'
-                                                  : 'text-slate-700 hover:bg-slate-50'
+                                                ? 'bg-sky-50 text-sky-900 font-bold border border-sky-200'
+                                                : 'text-slate-700 hover:bg-slate-50'
                                                 }`}
                                             >
                                               <div className="flex items-center gap-2">
@@ -3022,8 +3104,8 @@ export default function DataEntryTab({
                                                 setStatusMenuOpenRef(null);
                                               }}
                                               className={`flex items-center justify-between w-full px-3 py-2 rounded-xl transition text-left cursor-pointer ${isDeliveredStatus
-                                                  ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
-                                                  : 'text-slate-700 hover:bg-slate-50'
+                                                ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                                                : 'text-slate-700 hover:bg-slate-50'
                                                 }`}
                                             >
                                               <div className="flex items-center gap-2">
@@ -3058,9 +3140,9 @@ export default function DataEntryTab({
                             if (c.k === 'pod' && currentDir === 'Export') {
                               const podMatch = (lookups.ports || []).find(
                                 (p) => (p.name || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
-                                       (p.code || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
-                                       p.id === val ||
-                                       (r.podId && p.id === r.podId)
+                                  (p.code || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
+                                  p.id === val ||
+                                  (r.podId && p.id === r.podId)
                               );
                               const selectedPodVal = podMatch ? podMatch.name : (val || '');
 
@@ -3087,15 +3169,17 @@ export default function DataEntryTab({
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <select
+                                    <SearchableSelect
+                                      compact={true}
                                       value={selectedPodVal}
                                       disabled={isDisabled}
-                                      onChange={(e) => {
-                                        const nextPort = e.target.value;
-                                        const match = (lookups.ports || []).find(
+                                      placeholder="Select POD"
+                                      options={portOptions}
+                                      onChange={(nextPort, opt) => {
+                                        const match = opt?.item || (lookups.ports || []).find(
                                           (p) => (p.name || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
-                                                 (p.code || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
-                                                 p.id === nextPort
+                                            (p.code || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
+                                            p.id === nextPort
                                         );
                                         const finalName = match ? match.name : nextPort;
                                         const finalId = match ? match.id : null;
@@ -3107,18 +3191,7 @@ export default function DataEntryTab({
                                           onUpdateCell && onUpdateCell(currentDir, r._rowId, 'podId', finalId);
                                         }
                                       }}
-                                      className="w-full text-xs font-semibold bg-transparent outline-none cursor-pointer text-slate-700"
-                                    >
-                                      <option value="">Select POD</option>
-                                      {(lookups.ports && lookups.ports.length > 0
-                                        ? lookups.ports
-                                        : MASTER_DEFAULTS.pod.map(name => ({ id: name, name }))
-                                      ).map((p) => (
-                                        <option key={p.id || p.name} value={p.name}>
-                                          {p.name} {p.code ? `(${p.code})` : ''}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    />
                                   </div>
                                 </td>
                               );
@@ -3128,9 +3201,9 @@ export default function DataEntryTab({
                             if (c.k === 'pow' && currentDir === 'Export') {
                               const powMatch = (lookups.ports || []).find(
                                 (p) => (p.name || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
-                                       (p.code || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
-                                       p.id === val ||
-                                       (r.powId && p.id === r.powId)
+                                  (p.code || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
+                                  p.id === val ||
+                                  (r.powId && p.id === r.powId)
                               );
                               const selectedPowVal = powMatch ? powMatch.name : (val || '');
 
@@ -3157,15 +3230,17 @@ export default function DataEntryTab({
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <select
+                                    <SearchableSelect
+                                      compact={true}
                                       value={selectedPowVal}
                                       disabled={isDisabled}
-                                      onChange={(e) => {
-                                        const nextPow = e.target.value;
-                                        const pObj = (lookups.ports || []).find(
+                                      placeholder="None (Optional)"
+                                      options={portOptions}
+                                      onChange={(nextPow, opt) => {
+                                        const pObj = opt?.item || (lookups.ports || []).find(
                                           (p) => (p.name || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
-                                                 (p.code || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
-                                                 p.id === nextPow
+                                            (p.code || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
+                                            p.id === nextPow
                                         );
                                         const finalName = pObj ? pObj.name : nextPow;
                                         const finalId = pObj ? pObj.id : null;
@@ -3177,18 +3252,7 @@ export default function DataEntryTab({
                                           onUpdateCell && onUpdateCell(currentDir, r._rowId, 'powId', finalId);
                                         }
                                       }}
-                                      className="w-full text-xs font-semibold bg-transparent outline-none cursor-pointer text-slate-700"
-                                    >
-                                      <option value="">None (Optional)</option>
-                                      {(lookups.ports && lookups.ports.length > 0
-                                        ? lookups.ports
-                                        : MASTER_DEFAULTS.pow.map(name => ({ id: name, name }))
-                                      ).map((p) => (
-                                        <option key={p.id || p.name} value={p.name}>
-                                          {p.name} {p.code ? `(${p.code})` : ''}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    />
                                   </div>
                                 </td>
                               );
@@ -3225,9 +3289,8 @@ export default function DataEntryTab({
                                       onChange={(e) =>
                                         onUpdateCell && onUpdateCell(currentDir, r._rowId, 'size', e.target.value)
                                       }
-                                      className={`w-full text-xs font-semibold bg-transparent outline-none cursor-pointer px-1 truncate ${
-                                        !normalizeContainerType(val) ? 'text-slate-400 italic font-normal' : 'text-slate-700 font-semibold'
-                                      }`}
+                                      className={`w-full text-xs font-semibold bg-transparent outline-none cursor-pointer px-1 truncate ${!normalizeContainerType(val) ? 'text-slate-400 italic font-normal' : 'text-slate-700 font-semibold'
+                                        }`}
                                       title="نوع ومقاس الحاوية (Container Type)"
                                     >
                                       <option value="" className="text-slate-400 font-normal">
@@ -3328,32 +3391,20 @@ export default function DataEntryTab({
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <select
+                                    <SearchableSelect
+                                      compact={true}
                                       value={val}
                                       disabled={isDisabled}
-                                      onChange={(e) => {
-                                        const selectedName = e.target.value;
+                                      placeholder="Select Transporter"
+                                      options={transporterOptions}
+                                      onChange={(selectedName, opt) => {
                                         onUpdateCell && onUpdateCell(currentDir, r._rowId, 'trucker', selectedName);
-                                        const match = (lookups.transporters || []).find((t) => t.name === selectedName);
+                                        const match = opt?.item || (lookups.transporters || []).find((t) => t.name === selectedName || t.id === selectedName);
                                         if (match) {
                                           onUpdateCell && onUpdateCell(currentDir, r._rowId, 'truckerId', match.id);
                                         }
                                       }}
-                                      className="w-full text-xs font-semibold bg-transparent outline-none cursor-pointer text-slate-700"
-                                    >
-                                      <option value="">Select Transporter</option>
-                                      {lookups.transporters?.length > 0
-                                        ? lookups.transporters.map((t) => (
-                                          <option key={t.id} value={t.name}>
-                                            {t.name}
-                                          </option>
-                                        ))
-                                        : MASTER_DEFAULTS.trucker.map((t) => (
-                                          <option key={t} value={t}>
-                                            {t}
-                                          </option>
-                                        ))}
-                                    </select>
+                                    />
                                   </div>
                                 </td>
                               );
@@ -3511,9 +3562,7 @@ export default function DataEntryTab({
 
                             // 8.5 Column: Destination (dest - Dropdown from database lookups with merge/unmerge support)
                             if (c.k === 'dest') {
-                              const destList = (lookups.destinations && lookups.destinations.length > 0)
-                                ? lookups.destinations.map((d) => (typeof d === 'string' ? d : d.name))
-                                : (MASTER_DEFAULTS.dest || []);
+                              const destList = (lookups.destinations || []).map((d) => (typeof d === 'string' ? d : d.name));
                               const hasVal = !val || destList.some((opt) => opt.toLowerCase() === String(val).toLowerCase());
 
                               return (
@@ -3566,34 +3615,21 @@ export default function DataEntryTab({
                                       </button>
                                     )}
 
-                                    <select
+                                    <SearchableSelect
+                                      compact={true}
                                       value={val || ''}
                                       disabled={isDisabled || isReadOnly}
-                                      onChange={(e) => {
-                                        const selectedVal = e.target.value;
+                                      allowCustom={true}
+                                      placeholder={lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}
+                                      options={destinationOptions}
+                                      onChange={(selectedVal) => {
                                         if (isMergedCol) {
                                           handleMergedColChange(shipRows, c.k, selectedVal);
                                         } else {
                                           onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, selectedVal);
                                         }
                                       }}
-                                      className="w-full text-xs font-semibold bg-transparent outline-none cursor-pointer text-slate-700"
-                                      style={{
-                                        textAlign: isMergedCol ? 'center' : 'start',
-                                        cursor: isReadOnly ? 'not-allowed' : 'pointer',
-                                        opacity: isReadOnly ? 0.72 : 1,
-                                      }}
-                                    >
-                                      <option value="">{lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}</option>
-                                      {!hasVal && val && (
-                                        <option value={val}>{val}</option>
-                                      )}
-                                      {destList.map((d) => (
-                                        <option key={d} value={d}>
-                                          {d}
-                                        </option>
-                                      ))}
-                                    </select>
+                                    />
                                   </div>
                                 </td>
                               );
@@ -3688,7 +3724,7 @@ export default function DataEntryTab({
                           })}
                         </tr>
                       );
-                                        });
+                    });
 
                     if (shipIdx > 0) {
                       const spacerRow = (
@@ -4177,8 +4213,8 @@ export default function DataEntryTab({
                 </span>
                 <span
                   className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${statusHistoryTarget.row?.status === 'Delivered'
-                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                      : 'bg-sky-50 text-sky-800 border-sky-300'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                    : 'bg-sky-50 text-sky-800 border-sky-300'
                     }`}
                 >
                   <span
@@ -4226,10 +4262,10 @@ export default function DataEntryTab({
                           {/* Timeline Node Badge */}
                           <div
                             className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-xs border-2 transition ${isDelivered
-                                ? 'bg-emerald-50 border-emerald-500 text-emerald-600'
-                                : isReopened
-                                  ? 'bg-amber-50 border-amber-500 text-amber-600'
-                                  : 'bg-sky-50 border-sky-500 text-sky-600'
+                              ? 'bg-emerald-50 border-emerald-500 text-emerald-600'
+                              : isReopened
+                                ? 'bg-amber-50 border-amber-500 text-amber-600'
+                                : 'bg-sky-50 border-sky-500 text-sky-600'
                               }`}
                           >
                             {isDelivered && <CheckCircle2 size={18} />}
@@ -4243,10 +4279,10 @@ export default function DataEntryTab({
                             <div className="flex items-center justify-between gap-2 mb-1.5">
                               <span
                                 className={`text-xs font-bold ${isDelivered
-                                    ? 'text-emerald-800'
-                                    : isReopened
-                                      ? 'text-amber-800'
-                                      : 'text-sky-800'
+                                  ? 'text-emerald-800'
+                                  : isReopened
+                                    ? 'text-amber-800'
+                                    : 'text-sky-800'
                                   }`}
                               >
                                 {item.title}
@@ -4345,8 +4381,8 @@ export default function DataEntryTab({
                       </h3>
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
-                            ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                            : 'bg-purple-50 text-purple-700 border border-purple-200'
+                          ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                          : 'bg-purple-50 text-purple-700 border border-purple-200'
                           }`}
                       >
                         {isImport ? 'Import' : 'Export'}
@@ -4649,15 +4685,14 @@ export default function DataEntryTab({
             if (internalToastTimeoutRef.current) clearTimeout(internalToastTimeoutRef.current);
             internalToastTimeoutRef.current = setTimeout(() => setInternalToast(null), 4000);
           }}
-          className={`fixed bottom-6 right-6 z-50 flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-lg ${
-            internalToast.type === 'error'
-              ? 'bg-rose-950/95 text-rose-100 border-rose-600/70 shadow-rose-950/50 ring-1 ring-rose-500/30'
-              : internalToast.type === 'warning'
+          className={`fixed bottom-6 right-6 z-50 flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-lg ${internalToast.type === 'error'
+            ? 'bg-rose-950/95 text-rose-100 border-rose-600/70 shadow-rose-950/50 ring-1 ring-rose-500/30'
+            : internalToast.type === 'warning'
               ? 'bg-amber-950/95 text-amber-100 border-amber-500/70 shadow-amber-950/50 ring-1 ring-amber-500/30'
               : internalToast.type === 'success'
-              ? 'bg-emerald-950/95 text-emerald-100 border-emerald-500/70 shadow-emerald-950/50 ring-1 ring-emerald-500/30'
-              : 'bg-slate-900/95 text-slate-100 border-slate-700/80 shadow-slate-950/50 ring-1 ring-slate-600/30'
-          }`}
+                ? 'bg-emerald-950/95 text-emerald-100 border-emerald-500/70 shadow-emerald-950/50 ring-1 ring-emerald-500/30'
+                : 'bg-slate-900/95 text-slate-100 border-slate-700/80 shadow-slate-950/50 ring-1 ring-slate-600/30'
+            }`}
           dir={lang === 'ar' ? 'rtl' : 'ltr'}
         >
           {/* Status Icon */}

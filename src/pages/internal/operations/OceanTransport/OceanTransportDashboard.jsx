@@ -1,4 +1,4 @@
-﻿import { useAuth } from '../../../../auth/AuthContext';
+import { useAuth } from '../../../../auth/AuthContext';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -65,13 +65,10 @@ import {
   reopenOperation,
   deleteOperation,
   getDeletedOperations,
-  getOperationCustomers,
-  getOperationShippingLines,
-  getOperationPorts,
-  getOperationTransporters,
-  getOperationDrivers,
-  getOperationVehicles,
-  getOperationDestinations,
+  getDeliveredOperations,
+  getOperationsCounts,
+  getCachedLookups,
+  clearLookupsCache,
   getAllFclApprovals,
   approveFclSuggestion,
   unapproveFclSuggestion,
@@ -92,9 +89,12 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  const isOceanManager = user?.roleName === 'Ocean Operations Manager' || user?.permissions?.includes('operations.reopen');
   const canViewDashboard = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
+    user?.roleName === 'Super Admin' ||
+    isOceanManager ||
     user?.permissions?.includes('reports.view')
   );
   const canExportExcel = Boolean(
@@ -121,7 +121,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     try {
       const saved = sessionStorage.getItem('ocean_dash_tab');
       if (saved && ['Import', 'Export'].includes(saved)) return saved;
-    } catch (e) {}
+    } catch (e) { }
     return 'Import';
   });
 
@@ -129,7 +129,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     setDashTab(tab);
     try {
       sessionStorage.setItem('ocean_dash_tab', tab);
-    } catch (e) {}
+    } catch (e) { }
   };
   // Within entry: 'Import' | 'Export'
   const [entryDir, setEntryDir] = useState('Import');
@@ -164,6 +164,13 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
   // Lookups & API Loading
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [operationsCounts, setOperationsCounts] = useState({
+    activeImportCount: 0,
+    activeExportCount: 0,
+    deliveredCount: 0,
+    inactiveCount: 0,
+  });
+
   const [lookups, setLookups] = useState({
     customers: [],
     shippingLines: [],
@@ -174,9 +181,34 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     destinations: [],
   });
 
-  // Deleted Operations State
+  // Delivered Operations State (Lazy loaded on clicking Delivered tab)
+  const [deliveredOperations, setDeliveredOperations] = useState([]);
+  const [isLoadingDelivered, setIsLoadingDelivered] = useState(false);
+  const [hasLoadedDelivered, setHasLoadedDelivered] = useState(false);
+
+  // Deleted Operations State (Lazy loaded on clicking Inactive tab)
   const [deletedOperations, setDeletedOperations] = useState([]);
   const [isLoadingDeleted, setIsLoadingDeleted] = useState(false);
+  const [hasLoadedDeleted, setHasLoadedDeleted] = useState(false);
+
+  // FCL State (Lazy loaded on clicking FCL tab)
+  const [hasLoadedFcl, setHasLoadedFcl] = useState(false);
+
+  const loadDeliveredOperations = async (silent = false) => {
+    if (!silent) setIsLoadingDelivered(true);
+    try {
+      const data = await getDeliveredOperations();
+      if (Array.isArray(data)) {
+        const { entry: mapped } = mapBackendOperationsToFrontend(data);
+        setDeliveredOperations([...(mapped.Import || []), ...(mapped.Export || [])]);
+        setHasLoadedDelivered(true);
+      }
+    } catch (err) {
+      console.error('Failed to load delivered operations:', err);
+    } finally {
+      if (!silent) setIsLoadingDelivered(false);
+    }
+  };
 
   const loadDeletedOperations = async (silent = false) => {
     if (!silent) setIsLoadingDeleted(true);
@@ -184,6 +216,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       const data = await getDeletedOperations();
       if (Array.isArray(data)) {
         setDeletedOperations(data);
+        setHasLoadedDeleted(true);
       }
     } catch (err) {
       console.error('Failed to load deleted operations:', err);
@@ -192,205 +225,136 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     }
   };
 
-  // Fetch real data from Backend APIs
-  const loadData = async () => {
-    setIsLoadingData(true);
+  const loadFclData = async () => {
     try {
-      const [
-        opsResult,
-        customersResult,
-        shippingLinesResult,
-        portsResult,
-        transportersResult,
-        driversResult,
-        vehiclesResult,
-        destinationsResult,
-        deletedResult,
-        fclApprovalsResult,
-      ] = await Promise.allSettled([
-        getAllOperations(),
-        getOperationCustomers(),
-        getOperationShippingLines(),
-        getOperationPorts(),
-        getOperationTransporters(),
-        getOperationDrivers(),
-        getOperationVehicles(),
-        getOperationDestinations(),
-        getDeletedOperations(),
-        getAllFclApprovals(),
-      ]);
-
-      if (deletedResult.status === 'fulfilled' && Array.isArray(deletedResult.value)) {
-        setDeletedOperations(deletedResult.value);
-      }
-
-      let finalEntry = null;
-      let finalShips = null;
-
-      if (opsResult.status === 'fulfilled' && Array.isArray(opsResult.value)) {
-        const { entry: mappedEntry, ships: mappedShips } = mapBackendOperationsToFrontend(opsResult.value);
-
-        // Restore unpersisted uploaded rows from localStorage draft so refresh doesn't wipe them
-        let savedDraft = null;
-        try {
-          const draftJson = localStorage.getItem('ocean_transport_uploaded_draft');
-          if (draftJson) savedDraft = JSON.parse(draftJson);
-        } catch (e) {}
-
-        finalEntry = {
-          Import: [...mappedEntry.Import],
-          Export: [...mappedEntry.Export],
-        };
-        finalShips = {
-          Import: { ...mappedShips.Import },
-          Export: { ...mappedShips.Export },
-        };
-
-        if (savedDraft?.Import?.length || savedDraft?.Export?.length) {
-          ['Import', 'Export'].forEach((dir) => {
-            (savedDraft[dir] || []).forEach((draftRow) => {
-              const exists = finalEntry[dir].some(
-                (r) =>
-                  (draftRow._operationId && r._operationId === draftRow._operationId) ||
-                  (draftRow._rowId && r._rowId === draftRow._rowId) ||
-                  (draftRow.cntr && r.cntr && r.cntr === draftRow.cntr && (r.bl === draftRow.bl || r.booking === draftRow.booking))
-              );
-              if (!exists) {
-                const newIdx = finalEntry[dir].length;
-                finalEntry[dir].push(draftRow);
-                const ref = draftRow._ref || (dir === 'Import' ? draftRow.bl : draftRow.booking) || `DRAFT_${newIdx}`;
-                if (!finalShips[dir][ref]) {
-                  finalShips[dir][ref] = {
-                    id: null,
-                    ref,
-                    dir,
-                    status: draftRow.status || 'Open',
-                    day: draftRow.reqDate || new Date().toISOString().slice(0, 10),
-                    user: draftRow.oper || '',
-                    rows: [],
-                    unmerged: [],
-                  };
-                }
-                finalShips[dir][ref].rows.push(newIdx);
-              }
-            });
-          });
-        }
-
-        setEntry(finalEntry);
-        setShips(finalShips);
-      }
-
-      // Reconstruct and synchronize FCL Approvals with full details
-      const backendApprovals = fclApprovalsResult.status === 'fulfilled' && Array.isArray(fclApprovalsResult.value)
-        ? fclApprovalsResult.value
-        : [];
-
-      const approvedSet = new Set();
-      backendApprovals.forEach((a) => {
-        if (a.importContainerId) approvedSet.add(String(a.importContainerId).toLowerCase());
-        if (a.approvalKey) {
-          approvedSet.add(a.approvalKey);
-          const parts = a.approvalKey.split('|');
-          if (parts.length >= 2) {
-            approvedSet.add(`${parts[0].trim().toUpperCase()}|${parts[1].trim().toUpperCase()}`);
-          }
-        }
-      });
-
-      let savedApproved = [];
-      try {
-        const raw = localStorage.getItem('fcl_approved_allocations_v2');
-        if (raw) savedApproved = JSON.parse(raw);
-      } catch (e) {}
-
-      const approvedMap = new Map();
-
-      // 1. Add locally saved records
-      savedApproved.forEach((item) => {
-        if (item && item.im?.cntr) {
-          const key = `${item.im.cntr.trim().toUpperCase()}|${(item.im.bl || '').trim().toUpperCase()}`;
-          approvedMap.set(key, item);
-        }
-      });
-
-      // 2. Reconstruct from backend approvals if missing
-      const importList = finalEntry?.Import || [];
-      const exportList = finalEntry?.Export || [];
-
-      backendApprovals.forEach((b) => {
-        const parts = (b.approvalKey || '').split('|');
-        const cntr = parts[0]?.trim()?.toUpperCase();
-        const bl = parts[1]?.trim()?.toUpperCase();
-        const key = cntr && bl ? `${cntr}|${bl}` : null;
-
-        if (key && !approvedMap.has(key)) {
-          const imRow = importList.find(
-            (r) => (r.cntr && r.cntr.trim().toUpperCase() === cntr) ||
-                   (b.importContainerId && r._containerId === b.importContainerId)
-          );
-          const exRow = exportList.find(
-            (r) => (r.cntr && r.cntr.trim().toUpperCase() === cntr) ||
-                   (b.exportOperationId && r._operationId === b.exportOperationId)
-          );
-
-          if (imRow || exRow) {
-            approvedMap.set(key, {
-              id: b.id || `appr_${Date.now()}`,
-              pairKey: b.approvalKey || key,
-              type: 'assigned',
-              im: imRow || { cntr, bl, line: exRow?.line || '', dest: exRow?.dest || '', pod: exRow?.pol || '' },
-              ex: exRow || { booking: parts[2] || '-', line: imRow?.line || '', dest: imRow?.dest || '', pol: imRow?.pod || '' },
-              score: { passed: 6, recommended: true, leadH: 0, freeMarginH: 0 },
-              approvedAt: b.approvedAtUtc || new Date().toISOString(),
-              approvedBy: b.approvedByUserId || 'Operations',
-            });
-          }
-        }
-      });
-
-      // 3. ANY export row in exportList that has a container that also exists in importList
-      exportList.forEach((exRow) => {
-        if (exRow.cntr && exRow.cntr.trim()) {
-          const cUpper = exRow.cntr.trim().toUpperCase();
-          const imRow = importList.find((im) => im.cntr && im.cntr.trim().toUpperCase() === cUpper);
-          if (imRow) {
-            const key = `${cUpper}|${(imRow.bl || '').trim().toUpperCase()}`;
-            approvedSet.add(key);
-            approvedSet.add(cUpper);
-            if (imRow._containerId) approvedSet.add(String(imRow._containerId).toLowerCase());
-            if (!approvedMap.has(key)) {
-              approvedMap.set(key, {
-                id: `assigned_${cUpper}_${exRow.booking || 'exp'}`,
-                pairKey: `${cUpper}|${imRow.bl || ''}|${exRow.booking || ''}`,
-                type: 'assigned',
-                im: imRow,
-                ex: exRow,
-                score: { passed: 6, recommended: true, leadH: 0, freeMarginH: 0 },
-                approvedAt: new Date().toISOString(),
-                approvedBy: 'Operations',
-              });
+      const data = await getAllFclApprovals();
+      if (Array.isArray(data)) {
+        const approvedSet = new Set();
+        data.forEach((a) => {
+          if (a.importContainerId) approvedSet.add(String(a.importContainerId).toLowerCase());
+          if (a.approvalKey) {
+            approvedSet.add(a.approvalKey);
+            const parts = a.approvalKey.split('|');
+            if (parts.length >= 2) {
+              approvedSet.add(`${parts[0].trim().toUpperCase()}|${parts[1].trim().toUpperCase()}`);
             }
           }
-        }
-      });
+        });
+        setApprovals(approvedSet);
+        setHasLoadedFcl(true);
+      }
+    } catch (err) {
+      console.error('Failed to load FCL approvals:', err);
+    }
+  };
 
-      const finalApprovedList = Array.from(approvedMap.values());
-      setFclApprovedList(finalApprovedList);
-      setApprovals(approvedSet);
-      try {
-        localStorage.setItem('fcl_approved_allocations_v2', JSON.stringify(finalApprovedList));
-      } catch (e) {}
+  // Helper to process active operations and merge localStorage drafts
+  const processOperationsResult = (opsList) => {
+    if (!Array.isArray(opsList)) return;
+    const { entry: mappedEntry, ships: mappedShips } = mapBackendOperationsToFrontend(opsList);
 
-      setLookups({
-        customers: customersResult.status === 'fulfilled' && Array.isArray(customersResult.value) ? customersResult.value : [],
-        shippingLines: shippingLinesResult.status === 'fulfilled' && Array.isArray(shippingLinesResult.value) ? shippingLinesResult.value : [],
-        ports: portsResult.status === 'fulfilled' && Array.isArray(portsResult.value) ? portsResult.value : [],
-        transporters: transportersResult.status === 'fulfilled' && Array.isArray(transportersResult.value) ? transportersResult.value : [],
-        drivers: driversResult.status === 'fulfilled' && Array.isArray(driversResult.value) ? driversResult.value : [],
-        vehicles: vehiclesResult.status === 'fulfilled' && Array.isArray(vehiclesResult.value) ? vehiclesResult.value : [],
-        destinations: destinationsResult.status === 'fulfilled' && Array.isArray(destinationsResult.value) ? destinationsResult.value : [],
+    let savedDraft = null;
+    try {
+      const draftJson = localStorage.getItem('ocean_transport_uploaded_draft');
+      if (draftJson) savedDraft = JSON.parse(draftJson);
+    } catch (e) { }
+
+    const finalEntry = {
+      Import: [...mappedEntry.Import],
+      Export: [...mappedEntry.Export],
+    };
+    const finalShips = {
+      Import: { ...mappedShips.Import },
+      Export: { ...mappedShips.Export },
+    };
+
+    if (savedDraft?.Import?.length || savedDraft?.Export?.length) {
+      ['Import', 'Export'].forEach((dir) => {
+        (savedDraft[dir] || []).forEach((draftRow) => {
+          const exists = finalEntry[dir].some(
+            (r) =>
+              (draftRow._operationId && r._operationId === draftRow._operationId) ||
+              (draftRow._rowId && r._rowId === draftRow._rowId) ||
+              (draftRow.cntr && r.cntr && r.cntr === draftRow.cntr && (r.bl === draftRow.bl || r.booking === draftRow.booking))
+          );
+          if (!exists) {
+            const newIdx = finalEntry[dir].length;
+            finalEntry[dir].push(draftRow);
+            const ref = draftRow._ref || (dir === 'Import' ? draftRow.bl : draftRow.booking) || `DRAFT_${newIdx}`;
+            if (!finalShips[dir][ref]) {
+              finalShips[dir][ref] = {
+                id: null,
+                ref,
+                dir,
+                status: draftRow.status || 'Open',
+                day: draftRow.reqDate || new Date().toISOString().slice(0, 10),
+                user: draftRow.oper || '',
+                rows: [],
+                unmerged: [],
+              };
+            }
+            finalShips[dir][ref].rows.push(newIdx);
+          }
+        });
       });
+    }
+
+    setEntry(finalEntry);
+    setShips(finalShips);
+  };
+
+  // Ultra-fast refresh for Active Operations & Counts only (< 200ms)
+  const refreshActiveOperations = async () => {
+    try {
+      const [opsResult, countsResult] = await Promise.allSettled([
+        getAllOperations(true),
+        getOperationsCounts(),
+      ]);
+
+      if (countsResult.status === 'fulfilled' && countsResult.value) {
+        setOperationsCounts(countsResult.value);
+      }
+
+      if (opsResult.status === 'fulfilled' && Array.isArray(opsResult.value)) {
+        processOperationsResult(opsResult.value);
+      }
+    } catch (err) {
+      console.error('Failed to refresh active operations:', err);
+    }
+  };
+
+  // Main initial load: Lookups (5-hour cached) + Active Operations + Counts
+  const loadData = async (forceRefresh = false) => {
+    setIsLoadingData(true);
+    try {
+      if (forceRefresh) {
+        clearLookupsCache();
+      }
+
+      const tasks = [
+        getCachedLookups(forceRefresh),
+        getOperationsCounts(),
+      ];
+      if (viewMode === 'dashboard') {
+        tasks.push(getAllOperations(true));
+      }
+
+      const results = await Promise.allSettled(tasks);
+      const lookupsResult = results[0];
+      const countsResult = results[1];
+      const opsResult = results[2];
+
+      if (lookupsResult && lookupsResult.status === 'fulfilled' && lookupsResult.value) {
+        setLookups(lookupsResult.value);
+      }
+
+      if (countsResult && countsResult.status === 'fulfilled' && countsResult.value) {
+        setOperationsCounts(countsResult.value);
+      }
+
+      if (opsResult && opsResult.status === 'fulfilled' && Array.isArray(opsResult.value)) {
+        processOperationsResult(opsResult.value);
+      }
     } catch (err) {
       console.error('Failed to load operations data from backend:', err);
     } finally {
@@ -401,6 +365,18 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Handle switching tabs with Lazy Loading
+  const handleDirChange = (newDir) => {
+    setEntryDir(newDir);
+    if (newDir === 'Delivered' && !hasLoadedDelivered) {
+      loadDeliveredOperations();
+    } else if (newDir === 'Deleted' && !hasLoadedDeleted) {
+      loadDeletedOperations();
+    } else if (newDir === 'FCL' && !hasLoadedFcl) {
+      loadFclData();
+    }
+  };
 
   // Modals
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -438,10 +414,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         type === 'warning'
           ? (lang === 'ar' ? 'تنبيه مهم' : 'Warning')
           : type === 'error'
-          ? (lang === 'ar' ? 'تنبيه خطأ' : 'Error Notice')
-          : type === 'success'
-          ? (lang === 'ar' ? 'تمت العملية بنجاح' : 'Success')
-          : (lang === 'ar' ? 'إشعار' : 'Notice')
+            ? (lang === 'ar' ? 'تنبيه خطأ' : 'Error Notice')
+            : type === 'success'
+              ? (lang === 'ar' ? 'تمت العملية بنجاح' : 'Success')
+              : (lang === 'ar' ? 'إشعار' : 'Notice')
       ),
       createdAt: Date.now(),
       duration,
@@ -461,10 +437,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     return enrich(all);
   }, [entry]);
 
-  // FCL Recommendations
+  // FCL Recommendations (Computed lazily ONLY on FCL tab or Dashboard view)
   const fclMatches = useMemo(() => {
+    if (entryDir !== 'FCL' && viewMode !== 'dashboard') return [];
     return fclCandidates(enrichedData, approvals);
-  }, [enrichedData, approvals]);
+  }, [entryDir, viewMode, enrichedData, approvals]);
 
   const recommendedCount = useMemo(() => {
     return fclMatches.filter((m) => m.score?.recommended).length;
@@ -648,8 +625,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         'success'
       );
 
-      // Refresh data from backend to display real rows and containers
-      await loadData();
+      // Fast refresh of active operations & counts only (instant < 300ms)
+      await refreshActiveOperations();
 
       // Return the exact generated reference (e.g. OPS-2DA2AD1B) so DataEntryTab can immediately focus & scroll
       const rawId = String(
@@ -753,7 +730,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           ? 'تمت إعادة فتح العملية بنجاح وأصبحت مفتوحة للتعديل'
           : 'Operation reopened successfully and is now open for editing'
       );
-      await loadData();
+      await refreshActiveOperations();
+      if (hasLoadedDelivered) loadDeliveredOperations(true);
       return true;
     } catch (err) {
       console.error('Failed to reopen operation:', err);
@@ -796,9 +774,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         });
         return next;
       });
-      // Refresh backend data
-      loadData();
-      loadDeletedOperations();
+      // Refresh active operations and deleted list
+      await refreshActiveOperations();
+      if (hasLoadedDeleted) loadDeletedOperations(true);
       return true;
     } catch (err) {
       console.error('Failed to delete operation:', err);
@@ -885,10 +863,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
                 );
                 localStorage.setItem('ocean_transport_uploaded_draft', JSON.stringify(parsedDraft));
               }
-            } catch (e) {}
+            } catch (e) { }
 
             if (!isBulk) {
-              await loadData();
+              await refreshActiveOperations();
               if (!silent) {
                 showToast(
                   lang === 'ar'
@@ -950,7 +928,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         }
         try {
           localStorage.setItem('ocean_transport_uploaded_draft', JSON.stringify(next));
-        } catch (e) {}
+        } catch (e) { }
         return next;
       });
 
@@ -1042,7 +1020,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             'success'
           );
         }
-        if (!isBulk) await loadData();
+        if (!isBulk) await refreshActiveOperations();
         return true;
       } catch (err) {
         console.error('Failed to update import operation:', err);
@@ -1073,8 +1051,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       if (!resolvedPodId && first.pod && lookups.ports?.length > 0) {
         const pMatch = lookups.ports.find(
           (p) => (p.name || '').toLowerCase().trim() === String(first.pod || '').toLowerCase().trim() ||
-                 (p.code || '').toLowerCase().trim() === String(first.pod || '').toLowerCase().trim() ||
-                 p.id === first.pod
+            (p.code || '').toLowerCase().trim() === String(first.pod || '').toLowerCase().trim() ||
+            p.id === first.pod
         );
         if (pMatch) resolvedPodId = pMatch.id;
       }
@@ -1083,8 +1061,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       if (!resolvedPowId && first.pow && lookups.ports?.length > 0) {
         const pMatch = lookups.ports.find(
           (p) => (p.name || '').toLowerCase().trim() === String(first.pow || '').toLowerCase().trim() ||
-                 (p.code || '').toLowerCase().trim() === String(first.pow || '').toLowerCase().trim() ||
-                 p.id === first.pow
+            (p.code || '').toLowerCase().trim() === String(first.pow || '').toLowerCase().trim() ||
+            p.id === first.pow
         );
         if (pMatch) resolvedPowId = pMatch.id;
       }
@@ -1093,8 +1071,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       if (!resolvedPolId && first.pol && lookups.ports?.length > 0) {
         const pMatch = lookups.ports.find(
           (p) => (p.name || '').toLowerCase().trim() === String(first.pol || '').toLowerCase().trim() ||
-                 (p.code || '').toLowerCase().trim() === String(first.pol || '').toLowerCase().trim() ||
-                 p.id === first.pol
+            (p.code || '').toLowerCase().trim() === String(first.pol || '').toLowerCase().trim() ||
+            p.id === first.pol
         );
         if (pMatch) resolvedPolId = pMatch.id;
       }
@@ -1175,7 +1153,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             'success'
           );
         }
-        if (!isBulk) await loadData();
+        if (!isBulk) await refreshActiveOperations();
         return true;
       } catch (err) {
         console.error('Failed to update export operation:', err);
@@ -1256,7 +1234,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       const next = [newRecord, ...prev.filter((r) => r.pairKey !== newRecord.pairKey)];
       try {
         localStorage.setItem('fcl_approved_allocations_v2', JSON.stringify(next));
-      } catch (e) {}
+      } catch (e) { }
       return next;
     });
 
@@ -1411,7 +1389,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       const next = prev.filter((r) => r.id !== record.id && r.pairKey !== pairKey);
       try {
         localStorage.setItem('fcl_approved_allocations_v2', JSON.stringify(next));
-      } catch (e) {}
+      } catch (e) { }
       return next;
     });
 
@@ -1464,7 +1442,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
     try {
       localStorage.setItem('ocean_transport_uploaded_draft', JSON.stringify(newEntry));
-    } catch (e) {}
+    } catch (e) { }
 
     const totalCount = (parsed.Import?.length || 0) + (parsed.Export?.length || 0);
 
@@ -1564,7 +1542,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
     try {
       localStorage.removeItem('ocean_transport_uploaded_draft');
-    } catch (e) {}
+    } catch (e) { }
 
     await loadData();
     setIsLoadingData(false);
@@ -1632,12 +1610,25 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     setExportExcelModalOpen(true);
   };
 
-  const switchToView = (targetMode) => {
+  const switchToView = async (targetMode) => {
     setViewMode(targetMode);
     if (targetMode === 'entry') {
       navigate('/transport/entry');
     } else {
       navigate('/transport/dashboard');
+      if (!entry.Import || entry.Import.length === 0) {
+        setIsLoadingData(true);
+        try {
+          const ops = await getAllOperations(true);
+          if (Array.isArray(ops)) {
+            processOperationsResult(ops);
+          }
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsLoadingData(false);
+        }
+      }
     }
   };
 
@@ -1709,18 +1700,16 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             <button
               type="button"
               onClick={() => handleSelectDashTab('Import')}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${
-                dashTab === 'Import'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${dashTab === 'Import'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
             >
               <ArrowDownCircle size={16} />
               <span>{lang === 'ar' ? 'الوارد (Import)' : 'Import Trips'}</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-xs ${
-                  dashTab === 'Import' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
-                }`}
+                className={`rounded-full px-2 py-0.5 text-xs ${dashTab === 'Import' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                  }`}
               >
                 {entry.Import?.length || 0}
               </span>
@@ -1729,18 +1718,16 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             <button
               type="button"
               onClick={() => handleSelectDashTab('Export')}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${
-                dashTab === 'Export'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-              }`}
+              className={`flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition ${dashTab === 'Export'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                }`}
             >
               <ArrowUpCircle size={16} />
               <span>{lang === 'ar' ? 'الصادر (Export)' : 'Export Trips'}</span>
               <span
-                className={`rounded-full px-2 py-0.5 text-xs ${
-                  dashTab === 'Export' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
-                }`}
+                className={`rounded-full px-2 py-0.5 text-xs ${dashTab === 'Export' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
+                  }`}
               >
                 {entry.Export?.length || 0}
               </span>
@@ -1763,9 +1750,13 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           ships={ships}
           lookups={lookups}
           isLoading={isLoadingData}
-          onRefresh={loadData}
+          onRefresh={() => loadData(true)}
           currentDir={entryDir}
-          onChangeDir={setEntryDir}
+          onChangeDir={handleDirChange}
+          counts={operationsCounts}
+          deliveredOperations={deliveredOperations}
+          isLoadingDelivered={isLoadingDelivered}
+          onRefreshDelivered={loadDeliveredOperations}
           onCreateOperation={handleCreateOperation}
           onUpdateCell={handleUpdateCell}
           onToggleStatus={handleToggleStatus}
@@ -1841,15 +1832,14 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
             toastTimeoutRef.current = setTimeout(() => setToast(null), 4000);
           }}
-          className={`fixed bottom-6 right-6 z-50 flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-lg ${
-            toast.type === 'error'
-              ? 'bg-rose-950/95 text-rose-100 border-rose-600/70 shadow-rose-950/50 ring-1 ring-rose-500/30'
-              : toast.type === 'warning'
+          className={`fixed bottom-6 right-6 z-50 flex items-start gap-3.5 p-4 rounded-2xl shadow-2xl border backdrop-blur-xl transition-all animate-in fade-in slide-in-from-bottom-5 duration-300 max-w-lg ${toast.type === 'error'
+            ? 'bg-rose-950/95 text-rose-100 border-rose-600/70 shadow-rose-950/50 ring-1 ring-rose-500/30'
+            : toast.type === 'warning'
               ? 'bg-amber-950/95 text-amber-100 border-amber-500/70 shadow-amber-950/50 ring-1 ring-amber-500/30'
               : toast.type === 'success'
-              ? 'bg-emerald-950/95 text-emerald-100 border-emerald-500/70 shadow-emerald-950/50 ring-1 ring-emerald-500/30'
-              : 'bg-slate-900/95 text-slate-100 border-slate-700/80 shadow-slate-950/50 ring-1 ring-slate-600/30'
-          }`}
+                ? 'bg-emerald-950/95 text-emerald-100 border-emerald-500/70 shadow-emerald-950/50 ring-1 ring-emerald-500/30'
+                : 'bg-slate-900/95 text-slate-100 border-slate-700/80 shadow-slate-950/50 ring-1 ring-slate-600/30'
+            }`}
           dir={lang === 'ar' ? 'rtl' : 'ltr'}
         >
           {/* Status Icon */}

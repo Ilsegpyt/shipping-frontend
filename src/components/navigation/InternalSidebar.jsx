@@ -11,11 +11,15 @@ export default function InternalSidebar() {
             {/* Navigation */}
             <div className="relative z-10 space-y-6 overflow-y-auto p-4">
                 {internalNavigation.map((section) => {
-                    const visibleItems = (section.items ?? []).filter(
-                        (item) =>
+                    const visibleItems = (section.items ?? []).filter((item) => {
+                        if (typeof item.isVisible === 'function') {
+                            return item.isVisible(user);
+                        }
+                        return (
                             !item.permission ||
                             user?.permissions?.includes(item.permission)
-                    );
+                        );
+                    });
 
                     if (visibleItems.length === 0) return null;
 

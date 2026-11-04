@@ -13,7 +13,6 @@ import {
   Building2,
   FileText,
 } from 'lucide-react';
-import { MASTER_DEFAULTS } from '../constants';
 
 export const getScaleTicks = (maxVal) => {
   if (!maxVal || maxVal <= 0) return { maxScale: 10, ticks: [10, 8, 6, 4, 2, 0] };
@@ -1093,7 +1092,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             <label>{lang === 'ar' ? 'العميل (Client)' : 'Client'}</label>
             <select value={fClient} onChange={(e) => setFClient(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل العملاء' : 'All clients'}</option>
-              {(options.clients.length > 0 ? options.clients : MASTER_DEFAULTS.client).map((c) => (
+              {(options.clients || []).map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
@@ -1103,7 +1102,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             <label>{lang === 'ar' ? 'مقاول النقل (Transporter)' : 'Transporter'}</label>
             <select value={fTrucker} onChange={(e) => setFTrucker(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل المقاولين' : 'All transporters'}</option>
-              {(options.truckers.length > 0 ? options.truckers : MASTER_DEFAULTS.trucker).map((t) => (
+              {(options.truckers || []).map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
@@ -1118,7 +1117,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             </label>
             <select value={fDest} onChange={(e) => setFDest(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الأماكن' : 'All sites'}</option>
-              {(options.sites.length > 0 ? options.sites : (isImport ? MASTER_DEFAULTS.dest : ['10OF RAMDAN', 'EL SADAT', 'OCTOBER', 'BORG EL ARAB', 'SUEZ'])).map((d) => (
+              {(options.sites || []).map((d) => (
                 <option key={d} value={d}>{d}</option>
               ))}
             </select>
@@ -1140,7 +1139,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             <label>{lang === 'ar' ? 'فريق العمليات (Operations staff)' : 'Operations staff'}</label>
             <select value={fOper} onChange={(e) => setFOper(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الفريق' : 'All staff'}</option>
-              {(options.opers.length > 0 ? options.opers : MASTER_DEFAULTS.oper).map((o) => (
+              {(options.opers || []).map((o) => (
                 <option key={o} value={o}>{o}</option>
               ))}
             </select>
@@ -1150,7 +1149,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             <label>{lang === 'ar' ? 'الخط الملاحي (Shipping line)' : 'Shipping line'}</label>
             <select value={fLine} onChange={(e) => setFLine(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الخطوط' : 'All lines'}</option>
-              {(options.lines.length > 0 ? options.lines : MASTER_DEFAULTS.line).map((l) => (
+              {(options.lines || []).map((l) => (
                 <option key={l} value={l}>{l}</option>
               ))}
             </select>
@@ -1162,7 +1161,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
               <label>{lang === 'ar' ? 'ميناء الشحن (POL)' : 'POL'}</label>
               <select value={fPol} onChange={(e) => setFPol(e.target.value)}>
                 <option value="">{lang === 'ar' ? 'كل الموانئ' : 'All POL'}</option>
-                {(options.pols.length > 0 ? options.pols : ['ALEXANDRIA', 'DAMIETTA', 'PORT SAID', 'SOKHNA']).map((p) => (
+                {(options.pols || []).map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -1173,7 +1172,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             <label>{lang === 'ar' ? 'ميناء الوصول (POD)' : 'POD'}</label>
             <select value={fPort} onChange={(e) => setFPort(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الموانئ' : 'All ports'}</option>
-              {(options.pods.length > 0 ? options.pods : (isImport ? MASTER_DEFAULTS.pod : ['BARCELONA', 'BEIRUT', 'JEDDAH', 'TANGER MED', 'GENOVA', 'SINGAPORE'])).map((p) => (
+              {(options.pods || []).map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>

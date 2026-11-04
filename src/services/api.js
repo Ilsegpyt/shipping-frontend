@@ -79,6 +79,20 @@ api.interceptors.response.use(
 
         const originalRequest = error.config;
 
+        const isDeactivatedError =
+            error.response?.status === 403 ||
+            (error.response?.status === 400 &&
+                typeof error.response?.data === 'string' &&
+                error.response.data.toLowerCase().includes('deactivated'));
+
+        if (isDeactivatedError && localStorage.getItem('accessToken')) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('accessTokenExpiresAtUtc');
+            window.location.href = '/login';
+            return Promise.reject(error);
+        }
+
         if (
             error.response?.status !== 401 ||
             !originalRequest ||

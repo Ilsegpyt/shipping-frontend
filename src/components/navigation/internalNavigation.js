@@ -33,7 +33,13 @@ export const getInternalNavigation = (user) => [
             {
                 label: "Transport Dashboard",
                 path: "/transport/dashboard",
-                permission: "reports.view",
+                isVisible: (user) => Boolean(
+                    user?.isSuperAdmin ||
+                    user?.roleName === "Super Admin" ||
+                    user?.roleName === "Ocean Operations Manager" ||
+                    user?.permissions?.includes("operations.reopen") ||
+                    user?.permissions?.includes("reports.view")
+                ),
                 icon: Ship,
             },
             {

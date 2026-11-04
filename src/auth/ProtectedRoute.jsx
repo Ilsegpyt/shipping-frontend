@@ -57,7 +57,7 @@ function getPortalHome(tokenType, user) {
     }
 }
 
-export default function ProtectedRoute({ requiredPermission }) {
+export default function ProtectedRoute({ requiredPermission, customCheck }) {
     const {
         user,
         loading,
@@ -111,6 +111,12 @@ export default function ProtectedRoute({ requiredPermission }) {
                 state={{ from: location }}
             />
         );
+    }
+
+    if (customCheck && !customCheck(user)) {
+        const tokenType = getTokenType();
+        const portalHome = getPortalHome(tokenType, user);
+        return <Navigate to={portalHome} replace state={{ from: location }} />;
     }
 
     if (

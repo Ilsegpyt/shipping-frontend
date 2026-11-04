@@ -15,7 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { FCL_RULES, MASTER_DEFAULTS, CONTAINER_TYPES } from '../constants';
+import { FCL_RULES, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
 
 // Helper to get user-friendly container type label from CONTAINER_TYPES
