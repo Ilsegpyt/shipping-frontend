@@ -19,6 +19,7 @@ import {
     changeAccountManager,
     removeAccountManager,
 } from "../../../services/accountManagerAssignmentsService";
+import { extractApiErrorMessage } from "../../../utils/errorUtils";
 
 const PAGE_SIZE = 10;
 
@@ -93,9 +94,8 @@ export default function AccountManagerAssignments() {
             );
         } catch (error) {
             console.error(error);
-
             setError(
-                "Failed to load account manager assignments."
+                extractApiErrorMessage(error, "Failed to load account manager assignments.")
             );
         } finally {
             setLoading(false);
@@ -105,6 +105,13 @@ export default function AccountManagerAssignments() {
     useEffect(() => {
         loadAssignments();
     }, []);
+
+    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(""), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
 
     const filteredAssignments = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -272,10 +279,8 @@ export default function AccountManagerAssignments() {
             await loadAssignments();
         } catch (error) {
             console.error(error);
-
             setAssignError(
-                error?.response?.data?.error ||
-                "Failed to assign customer."
+                extractApiErrorMessage(error, "Failed to assign customer.")
             );
         } finally {
             setAssigning(false);
@@ -331,10 +336,8 @@ export default function AccountManagerAssignments() {
             await loadAssignments();
         } catch (error) {
             console.error(error);
-
             setChangeError(
-                error?.response?.data?.error ||
-                "Failed to change account manager."
+                extractApiErrorMessage(error, "Failed to change account manager.")
             );
         } finally {
             setChanging(false);
@@ -377,10 +380,8 @@ export default function AccountManagerAssignments() {
             await loadAssignments();
         } catch (error) {
             console.error(error);
-
             setRemoveError(
-                error?.response?.data?.error ||
-                "Failed to remove account manager."
+                extractApiErrorMessage(error, "Failed to remove account manager.")
             );
         } finally {
             setRemoving(false);
@@ -411,10 +412,18 @@ export default function AccountManagerAssignments() {
 
             {/* Error */}
             {!loading && error && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4">
+                <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-5 py-4 shadow-xs transition">
                     <p className="text-sm text-red-700">
                         {error}
                     </p>
+                    <button
+                        type="button"
+                        onClick={() => setError("")}
+                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                        title="إغلاق"
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
 

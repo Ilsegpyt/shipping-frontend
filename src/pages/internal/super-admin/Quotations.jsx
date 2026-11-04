@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import api from '../../../services/api';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const PAGE_SIZE = 10;
 
@@ -186,6 +187,18 @@ export default function Quotations() {
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [detailsError, setDetailsError] = useState('');
 
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
+
+    useEffect(() => {
+        if (!detailsError) return;
+        const timer = setTimeout(() => setDetailsError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [detailsError]);
+
     const totalPages = Math.max(
         1,
         Math.ceil(totalCount / PAGE_SIZE)
@@ -223,12 +236,7 @@ export default function Quotations() {
                 err
             );
 
-            setError(
-                err?.response?.data?.error ||
-                err?.response?.data?.message ||
-                'Failed to load quotations.'
-            );
-
+            setError(extractApiErrorMessage(err, 'Failed to load quotations.'));
             setQuotations([]);
             setTotalCount(0);
         } finally {
@@ -333,11 +341,7 @@ export default function Quotations() {
                 err
             );
 
-            setDetailsError(
-                err?.response?.data?.error ||
-                err?.response?.data?.message ||
-                'Failed to load quotation details.'
-            );
+            setDetailsError(extractApiErrorMessage(err, 'Failed to load quotation details.'));
         } finally {
             setDetailsLoading(false);
         }
@@ -441,8 +445,16 @@ export default function Quotations() {
 
                 {/* Error */}
                 {error && (
-                    <div className="border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {error}
+                    <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            onClick={() => setError('')}
+                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            title="Close"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 
@@ -771,8 +783,16 @@ export default function Quotations() {
                                         </div>
                                     </div>
                                 ) : detailsError ? (
-                                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                                        {detailsError}
+                                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                        <span>{detailsError}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setDetailsError('')}
+                                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                                            title="Close"
+                                        >
+                                            ✕
+                                        </button>
                                     </div>
                                 ) : selectedQuotation ? (
                                     <div className="space-y-6">

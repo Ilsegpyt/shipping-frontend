@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../auth/AuthContext';
 import { updateProfile, updateEmail } from '../../../auth/authService';
 import api from '../../../services/api';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 export default function Profile() {
     const { user, setUser } = useAuth();
@@ -55,6 +56,18 @@ export default function Profile() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
+
+    useEffect(() => {
+        if (!passwordError) return;
+        const timer = setTimeout(() => setPasswordError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [passwordError]);
 
     const handleEdit = () => {
         setName(user?.name || '');
@@ -123,15 +136,11 @@ export default function Profile() {
             setIsEditing(false);
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data ||
-                'Failed to update profile. Please try again.';
-
             setError(
-                typeof message === 'string'
-                    ? message
-                    : 'Failed to update profile. Please try again.'
+                extractApiErrorMessage(
+                    error,
+                    'Failed to update profile. Please try again.'
+                )
             );
         } finally {
             setSaving(false);
@@ -151,6 +160,11 @@ export default function Profile() {
 
         if (!newPassword) {
             setPasswordError('New password is required.');
+            return;
+        }
+
+        if (newPassword.length < 8) {
+            setPasswordError('Password must be at least 8 characters long.');
             return;
         }
 
@@ -180,15 +194,11 @@ export default function Profile() {
             );
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data ||
-                'Failed to change password. Please try again.';
-
             setPasswordError(
-                typeof message === 'string'
-                    ? message
-                    : 'Failed to change password. Please try again.'
+                extractApiErrorMessage(
+                    error,
+                    'Failed to change password. Please try again.'
+                )
             );
         } finally {
             setChangingPassword(false);
@@ -280,8 +290,16 @@ export default function Profile() {
                 </div>
 
                 {error && (
-                    <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {error}
+                    <div className="mt-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            onClick={() => setError('')}
+                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            title="Close"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 
@@ -450,8 +468,16 @@ export default function Profile() {
                 </div>
 
                 {passwordError && (
-                    <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                        {passwordError}
+                    <div className="mt-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <span>{passwordError}</span>
+                        <button
+                            type="button"
+                            onClick={() => setPasswordError('')}
+                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            title="Close"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 
@@ -531,7 +557,7 @@ export default function Profile() {
                                         }
                                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                         placeholder="Enter your new password"
-                                        minLength={6}
+                                        minLength={8}
                                         disabled={changingPassword}
                                         required
                                     />
@@ -555,6 +581,10 @@ export default function Profile() {
                                         />
                                     </button>
                                 </div>
+
+                                <p className="mt-1.5 text-xs text-gray-500">
+                                    Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-gray-700 bg-gray-100 px-1 py-0.5 rounded font-semibold">Pass@1234</span>).
+                                </p>
                             </div>
 
                             <div>

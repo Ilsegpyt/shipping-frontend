@@ -1,6 +1,7 @@
 import { useAuth } from '../../../../auth/AuthContext';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { extractApiErrorMessage } from '../../../../utils/errorUtils';
 import {
   Ship,
   Upload,
@@ -28,30 +29,7 @@ export const toGuidOrNull = (val) => {
   return guidRegex.test(clean) ? clean : null;
 };
 
-export const extractErrorMessage = (err) => {
-  if (!err) return 'Unknown error';
-  const data = err?.response?.data;
-  if (!data) return err.message || 'Error updating operation';
-  if (typeof data === 'string') return data;
-  if (data.Error && typeof data.Error === 'string') return data.Error;
-  if (data.error && typeof data.error === 'string') return data.error;
-  if (data.message && typeof data.message === 'string') return data.message;
-  if (data.title && typeof data.title === 'string') {
-    if (data.errors && typeof data.errors === 'object') {
-      const messages = Object.entries(data.errors)
-        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
-        .join(' | ');
-      return `${data.title}: ${messages}`;
-    }
-    return data.title;
-  }
-  if (data.errors && typeof data.errors === 'object') {
-    return Object.values(data.errors)
-      .flat()
-      .join(' | ');
-  }
-  return err.message || 'Error updating operation';
-};
+export const extractErrorMessage = (err) => extractApiErrorMessage(err);
 
 import { INITIAL_ENTRY, INITIAL_SHIPS } from './mockData';
 import { enrich, exportToExcel } from './tptEngine';
@@ -99,6 +77,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
     user?.permissions?.includes('reports.download')
+  );
+  const canUploadReport = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.permissions?.includes('reports.upload')
   );
 
   // Detect mode from URL: if path contains 'entry', start on entry mode, else dashboard
@@ -191,6 +174,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
   // FCL State (Lazy loaded on clicking FCL tab)
   const [hasLoadedFcl, setHasLoadedFcl] = useState(false);
+  const [isLoadingFcl, setIsLoadingFcl] = useState(false);
 
   const loadDeliveredOperations = async (silent = false) => {
     if (!silent) setIsLoadingDelivered(true);
@@ -223,12 +207,29 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     }
   };
 
-  const loadFclData = async () => {
+  const loadFclData = async (forceRefresh = false) => {
+    setIsLoadingFcl(true);
     try {
-      const data = await getAllFclApprovals();
-      if (Array.isArray(data)) {
+      const hasOps =
+        !forceRefresh &&
+        ((entry.Import && entry.Import.length > 0) || (entry.Export && entry.Export.length > 0));
+
+      const [approvalsData, opsData] = await Promise.all([
+        getAllFclApprovals().catch((err) => {
+          console.warn('Failed to load FCL approvals:', err);
+          return [];
+        }),
+        !hasOps
+          ? getAllOperations(true).catch((err) => {
+              console.warn('Failed to load operations for FCL:', err);
+              return [];
+            })
+          : Promise.resolve(null),
+      ]);
+
+      if (Array.isArray(approvalsData)) {
         const approvedSet = new Set();
-        data.forEach((a) => {
+        approvalsData.forEach((a) => {
           if (a.importContainerId) approvedSet.add(String(a.importContainerId).toLowerCase());
           if (a.approvalKey) {
             approvedSet.add(a.approvalKey);
@@ -239,10 +240,17 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           }
         });
         setApprovals(approvedSet);
-        setHasLoadedFcl(true);
       }
+
+      if (Array.isArray(opsData) && opsData.length > 0) {
+        processOperationsResult(opsData);
+      }
+
+      setHasLoadedFcl(true);
     } catch (err) {
-      console.error('Failed to load FCL approvals:', err);
+      console.error('Failed to load FCL data:', err);
+    } finally {
+      setIsLoadingFcl(false);
     }
   };
 
@@ -252,10 +260,12 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     const { entry: mappedEntry, ships: mappedShips } = mapBackendOperationsToFrontend(opsList);
 
     let savedDraft = null;
-    try {
-      const draftJson = localStorage.getItem('ocean_transport_uploaded_draft');
-      if (draftJson) savedDraft = JSON.parse(draftJson);
-    } catch (e) { }
+    if (canUploadReport) {
+      try {
+        const draftJson = localStorage.getItem('ocean_transport_uploaded_draft');
+        if (draftJson) savedDraft = JSON.parse(draftJson);
+      } catch (e) { }
+    }
 
     const finalEntry = {
       Import: [...mappedEntry.Import],
@@ -301,19 +311,22 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     setShips(finalShips);
   };
 
-  // Ultra-fast refresh for Active Operations & Counts only (< 200ms)
+  // Ultra-fast refresh for Counts (< 20ms) and Active Operations (only if on Dashboard view)
   const refreshActiveOperations = async () => {
     try {
-      const [opsResult, countsResult] = await Promise.allSettled([
-        getAllOperations(true),
-        getOperationsCounts(),
-      ]);
+      const tasks = [getOperationsCounts()];
+      if (viewMode === 'dashboard') {
+        tasks.push(getAllOperations(true));
+      }
+      const results = await Promise.allSettled(tasks);
+      const countsResult = results[0];
+      const opsResult = results[1];
 
-      if (countsResult.status === 'fulfilled' && countsResult.value) {
+      if (countsResult?.status === 'fulfilled' && countsResult.value) {
         setOperationsCounts(countsResult.value);
       }
 
-      if (opsResult.status === 'fulfilled' && Array.isArray(opsResult.value)) {
+      if (opsResult?.status === 'fulfilled' && Array.isArray(opsResult.value)) {
         processOperationsResult(opsResult.value);
       }
     } catch (err) {
@@ -435,11 +448,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     return enrich(all);
   }, [entry]);
 
-  // FCL Recommendations (Computed lazily ONLY on FCL tab or Dashboard view)
+  // FCL Recommendations (Computed lazily ONLY after user clicks FCL tab or on Dashboard view)
   const fclMatches = useMemo(() => {
-    if (entryDir !== 'FCL' && viewMode !== 'dashboard') return [];
+    if (!hasLoadedFcl && viewMode !== 'dashboard') return [];
     return fclCandidates(enrichedData, approvals);
-  }, [entryDir, viewMode, enrichedData, approvals]);
+  }, [hasLoadedFcl, viewMode, enrichedData, approvals]);
 
   const recommendedCount = useMemo(() => {
     return fclMatches.filter((m) => m.score?.recommended).length;
@@ -680,14 +693,31 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   };
 
   const handleToggleStatus = async (dir, refOrOpId, targetStatus) => {
-    const row = (entry[dir] || []).find(
-      (r) => r._operationId === refOrOpId || r._ref === refOrOpId || r.shipNo === refOrOpId
-    );
+    const isGuid = (val) =>
+      typeof val === 'string' &&
+      val.length > 20 &&
+      !val.startsWith('REF_') &&
+      !val.startsWith('DRAFT_');
+
+    const row = (entry[dir] || [])
+      .concat(deliveredOperations || [])
+      .find((r) => r._operationId === refOrOpId || r._ref === refOrOpId || r.shipNo === refOrOpId);
+
+    const opId = isGuid(refOrOpId)
+      ? refOrOpId
+      : (row?._operationId && isGuid(row._operationId) ? row._operationId : null);
+
     const nextStatus = targetStatus || (row?.status === 'Delivered' ? 'Open' : 'Delivered');
 
+    // 1. Optimistic entry state update
     setEntry((prev) => {
       const list = (prev[dir] || []).map((r) => {
-        if (r._operationId === refOrOpId || r._ref === refOrOpId || r.shipNo === refOrOpId) {
+        if (
+          r._operationId === refOrOpId ||
+          r._ref === refOrOpId ||
+          r.shipNo === refOrOpId ||
+          (opId && r._operationId === opId)
+        ) {
           return { ...r, status: nextStatus };
         }
         return r;
@@ -695,51 +725,94 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       return { ...prev, [dir]: list };
     });
 
-    if (row?._operationId && typeof row._operationId === 'string' && row._operationId.length > 20) {
+    // 2. Optimistic counts update immediately
+    setOperationsCounts((prev) => {
+      if (!prev) return prev;
+      const isImport = dir === 'Import' || row?.operationType === 'Import';
+      if (nextStatus === 'Delivered') {
+        return {
+          ...prev,
+          importCount: isImport ? Math.max(0, (prev.importCount || 0) - 1) : prev.importCount,
+          exportCount: !isImport ? Math.max(0, (prev.exportCount || 0) - 1) : prev.exportCount,
+          activeTotalCount: Math.max(0, (prev.activeTotalCount || 0) - 1),
+          deliveredCount: (prev.deliveredCount || 0) + 1,
+        };
+      } else {
+        return {
+          ...prev,
+          importCount: isImport ? (prev.importCount || 0) + 1 : prev.importCount,
+          exportCount: !isImport ? (prev.exportCount || 0) + 1 : prev.exportCount,
+          activeTotalCount: (prev.activeTotalCount || 0) + 1,
+          deliveredCount: Math.max(0, (prev.deliveredCount || 0) - 1),
+        };
+      }
+    });
+
+    if (opId) {
       try {
         if (nextStatus === 'Delivered') {
-          await deliverOperation(row._operationId);
+          await deliverOperation(opId);
         } else {
-          await reopenOperation(row._operationId, 'Reopened from Data Entry');
+          await reopenOperation(opId, 'Reopened from Data Entry');
         }
         showToast(
           lang === 'ar'
             ? `تم تحديث حالة العملية في السيرفر إلى ${nextStatus === 'Delivered' ? 'تم التسليم' : 'مفتوحة'}`
-            : `Operation status updated to ${nextStatus}`
+            : `Operation status updated to ${nextStatus}`,
+          'success'
         );
+        refreshActiveOperations();
+        if (hasLoadedDelivered) loadDeliveredOperations(true);
+        return true;
       } catch (err) {
         console.error('Failed to update status on server:', err);
+        refreshActiveOperations();
+        const errMsg = extractErrorMessage(err);
         showToast(
           lang === 'ar'
-            ? 'فشل تحديث الحالة في قاعدة البيانات'
-            : 'Failed to update status on server'
+            ? `فشل تحديث الحالة في قاعدة البيانات: ${errMsg}`
+            : `Failed to update status on server: ${errMsg}`,
+          'error'
         );
+        throw err;
       }
     } else {
       showToast(lang === 'ar' ? 'تم تحديث حالة الشحنة' : 'Shipment status updated');
+      return true;
     }
   };
 
   const handleReopenOperation = async (opId, reason) => {
+    // Optimistic removal from delivered operations list
+    setDeliveredOperations((prev) => prev.filter((r) => r._operationId !== opId));
+
+    // Optimistic count adjustment
+    setOperationsCounts((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        deliveredCount: Math.max(0, (prev.deliveredCount || 0) - 1),
+        activeTotalCount: (prev.activeTotalCount || 0) + 1,
+      };
+    });
+
     try {
       await reopenOperation(opId, reason);
       showToast(
         lang === 'ar'
           ? 'تمت إعادة فتح العملية بنجاح وأصبحت مفتوحة للتعديل'
-          : 'Operation reopened successfully and is now open for editing'
+          : 'Operation reopened successfully and is now open for editing',
+        'success'
       );
-      await refreshActiveOperations();
+      refreshActiveOperations();
       if (hasLoadedDelivered) loadDeliveredOperations(true);
       return true;
     } catch (err) {
       console.error('Failed to reopen operation:', err);
-      const errMsg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
-        err?.message ||
-        'Failed to reopen operation';
-      showToast(lang === 'ar' ? `خطأ أثناء فتح العملية: ${errMsg}` : `Error reopening: ${errMsg}`);
+      refreshActiveOperations();
+      if (hasLoadedDelivered) loadDeliveredOperations(true);
+      const errMsg = extractErrorMessage(err) || 'Failed to reopen operation';
+      showToast(lang === 'ar' ? `خطأ أثناء فتح العملية: ${errMsg}` : `Error reopening: ${errMsg}`, 'error');
       throw err;
     }
   };
@@ -754,6 +827,29 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   }, [entryDir]);
 
   const handleDeleteOperation = async (opId) => {
+    // Optimistic removal from active entry state
+    setEntry((prev) => {
+      const next = { ...prev };
+      ['Import', 'Export'].forEach((dir) => {
+        if (next[dir]) {
+          next[dir] = next[dir].filter((r) => r._operationId !== opId);
+        }
+      });
+      return next;
+    });
+
+    // Optimistic count adjustment
+    setOperationsCounts((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        importCount: entryDir === 'Import' ? Math.max(0, (prev.importCount || 0) - 1) : prev.importCount,
+        exportCount: entryDir === 'Export' ? Math.max(0, (prev.exportCount || 0) - 1) : prev.exportCount,
+        activeTotalCount: Math.max(0, (prev.activeTotalCount || 0) - 1),
+        deletedCount: (prev.deletedCount || 0) + 1,
+      };
+    });
+
     try {
       await deleteOperation(opId);
       showToast(
@@ -762,28 +858,14 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           : 'Operation moved to Inactive archive successfully',
         'success'
       );
-      // Immediately remove from current active entry state
-      setEntry((prev) => {
-        const next = { ...prev };
-        ['Import', 'Export'].forEach((dir) => {
-          if (next[dir]) {
-            next[dir] = next[dir].filter((r) => r._operationId !== opId);
-          }
-        });
-        return next;
-      });
-      // Refresh active operations and deleted list
-      await refreshActiveOperations();
+      // Fast refresh in background
+      refreshActiveOperations();
       if (hasLoadedDeleted) loadDeletedOperations(true);
       return true;
     } catch (err) {
       console.error('Failed to delete operation:', err);
-      const errMsg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
-        err?.message ||
-        'Failed to delete operation';
+      refreshActiveOperations();
+      const errMsg = extractErrorMessage(err) || 'Failed to delete operation';
       showToast(lang === 'ar' ? `خطأ أثناء الحذف: ${errMsg}` : `Error deleting: ${errMsg}`, 'error');
       throw err;
     }
@@ -1457,6 +1539,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   };
 
   const unsavedDrafts = useMemo(() => {
+    if (!canUploadReport) return [];
     const list = [];
     ['Import', 'Export'].forEach((dir) => {
       const rows = entry[dir] || [];
@@ -1475,10 +1558,12 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       });
     });
     return list;
-  }, [entry]);
+  }, [entry, canUploadReport]);
 
   const handleSaveAllDraftsToDatabase = async (targetEntry = null) => {
-    const currentEntry = targetEntry || entry;
+    // If invoked from an onClick event handler, targetEntry is a SyntheticEvent object, not a data dictionary
+    const validTarget = (targetEntry && (Array.isArray(targetEntry.Import) || Array.isArray(targetEntry.Export))) ? targetEntry : null;
+    const currentEntry = validTarget || entry;
     setIsLoadingData(true);
     let successCount = 0;
     let duplicateCount = 0;
@@ -1501,6 +1586,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     });
 
     if (shipmentsToSave.length === 0) {
+      // Clear any stale local storage key so the button doesn't remain stuck
+      try {
+        localStorage.removeItem('ocean_transport_uploaded_draft');
+      } catch (e) { }
       showToast(
         lang === 'ar' ? 'جميع الشحنات محفوظة بالفعل في قاعدة البيانات.' : 'All shipments are already saved in database.',
         'info'
@@ -1783,6 +1872,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           onUnapproveMatch={handleUnapproveMatch}
           fclRecommendedCount={recommendedCount}
           enrichedData={enrichedData}
+          isLoadingFcl={isLoadingFcl}
+          onRefreshFcl={() => loadFclData(true)}
         />
       )}
 

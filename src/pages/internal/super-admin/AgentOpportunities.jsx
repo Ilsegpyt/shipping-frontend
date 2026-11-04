@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import api from '../../../services/api';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const PAGE_SIZE = 10;
 
@@ -24,6 +25,12 @@ export default function AgentOpportunities() {
     const [applications, setApplications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [pageNumber, setPageNumber] = useState(1);
@@ -62,7 +69,7 @@ export default function AgentOpportunities() {
                 err
             );
 
-            setError('Failed to load agent opportunities.');
+            setError(extractApiErrorMessage(err, 'Failed to load agent opportunities.'));
         } finally {
             setLoading(false);
         }
@@ -121,7 +128,7 @@ export default function AgentOpportunities() {
                 err
             );
 
-            setError('Failed to load application details.');
+            setError(extractApiErrorMessage(err, 'Failed to load application details.'));
         } finally {
             setDetailsLoading(false);
         }
@@ -276,8 +283,16 @@ export default function AgentOpportunities() {
 
                 {/* Error */}
                 {error && (
-                    <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                        {error}
+                    <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            onClick={() => setError('')}
+                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            title="Close"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 

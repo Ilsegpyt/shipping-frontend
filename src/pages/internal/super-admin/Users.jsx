@@ -22,7 +22,8 @@ import {
     activateInternalUser,
     deactivateInternalUser,
     deleteInternalUsers,
-} from "../../../services/internalUsersService"
+} from "../../../services/internalUsersService";
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const PAGE_SIZE = 20;
 
@@ -94,7 +95,7 @@ export default function Users() {
             setOpenMenuId(null);
         } catch (error) {
             console.error(error);
-            setError('Failed to load users.');
+            setError(extractApiErrorMessage(error, 'Failed to load users.'));
         } finally {
             setLoading(false);
         }
@@ -103,6 +104,13 @@ export default function Users() {
     useEffect(() => {
         loadUsers(1);
     }, []);
+
+    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
 
     const filteredUsers = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -278,13 +286,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data?.error ||
-                error.response?.data?.message ||
-                'Failed to create user.';
-
-            setAddUserError(message);
+            setAddUserError(extractApiErrorMessage(error, 'Failed to create user.'));
         } finally {
             setCreatingUser(false);
         }
@@ -363,13 +365,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data?.error ||
-                error.response?.data?.message ||
-                'Failed to update user.';
-
-            setModalError(message);
+            setModalError(extractApiErrorMessage(error, 'Failed to update user.'));
         } finally {
             setSaving(false);
         }
@@ -411,13 +407,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data?.error ||
-                error.response?.data?.message ||
-                'Failed to change user status.';
-
-            setError(message);
+            setError(extractApiErrorMessage(error, 'Failed to change user status.'));
         } finally {
             setChangingStatus(false);
         }
@@ -453,13 +443,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data?.error ||
-                error.response?.data?.message ||
-                'Failed to delete user.';
-
-            setError(message);
+            setError(extractApiErrorMessage(error, 'Failed to delete user.'));
         } finally {
             setDeleting(false);
         }
@@ -492,13 +476,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
-
-            const message =
-                error.response?.data?.error ||
-                error.response?.data?.message ||
-                'Failed to delete selected users.';
-
-            setError(message);
+            setError(extractApiErrorMessage(error, 'Failed to delete selected users.'));
         } finally {
             setBulkDeleting(false);
         }
@@ -592,8 +570,16 @@ export default function Users() {
 
             {/* Error */}
             {error && (
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {error}
+                <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-xs transition">
+                    <span>{error}</span>
+                    <button
+                        type="button"
+                        onClick={() => setError('')}
+                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                        title="إغلاق"
+                    >
+                        ✕
+                    </button>
                 </div>
             )}
 

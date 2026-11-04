@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
+import { extractApiErrorMessage } from '../../utils/errorUtils';
 
 export default function ResetPassword() {
     const [searchParams] = useSearchParams();
@@ -16,6 +17,12 @@ export default function ResetPassword() {
     const [loading, setLoading] = useState(false);
     const [isResetComplete, setIsResetComplete] = useState(false);
 
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -26,6 +33,11 @@ export default function ResetPassword() {
             setError(
                 'This password reset link is invalid or incomplete.'
             );
+            return;
+        }
+
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters long.');
             return;
         }
 
@@ -52,8 +64,10 @@ export default function ResetPassword() {
             console.error(err);
 
             setError(
-                err.response?.data ||
-                'Password reset failed. The reset link may be invalid or expired.'
+                extractApiErrorMessage(
+                    err,
+                    'Password reset failed. The reset link may be invalid or expired.'
+                )
             );
         } finally {
             setLoading(false);
@@ -75,8 +89,16 @@ export default function ResetPassword() {
                 </div>
 
                 {error && (
-                    <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
-                        {error}
+                    <div className="mb-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            onClick={() => setError('')}
+                            className="ml-3 font-bold text-red-500 hover:text-red-700"
+                            title="Close"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 
@@ -102,9 +124,12 @@ export default function ResetPassword() {
                                 className="w-full rounded-lg border border-gray-300 p-2.5 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 placeholder="Enter your new password"
                                 required
-                                minLength={6}
+                                minLength={8}
                                 disabled={loading}
                             />
+                            <p className="mt-1.5 text-xs text-gray-500">
+                                Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-gray-700 bg-gray-100 px-1 py-0.5 rounded font-semibold">Pass@1234</span>).
+                            </p>
                         </div>
 
                         <div className="mb-6">
@@ -121,7 +146,7 @@ export default function ResetPassword() {
                                 className="w-full rounded-lg border border-gray-300 p-2.5 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 placeholder="Confirm your new password"
                                 required
-                                minLength={6}
+                                minLength={8}
                                 disabled={loading}
                             />
                         </div>

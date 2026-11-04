@@ -8,6 +8,7 @@ import RepeatableSection from "../../../components/common/RepeatableSection";
 import ContentBlockEditor from "../../../components/common/ContentBlockEditor";
 import { createEmptyAboutPage, parseAboutPage, serializeAboutPage, StructuredAboutEditor } from "../../../components/common/StructuredAboutContent";
 import { cleanImageUrl } from "../../../utils/mediaUrl";
+import { extractApiErrorMessage } from "../../../utils/errorUtils";
 
 const PHILOSOPHY_SCHEMA = "ils-philosophy-v2";
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
@@ -460,6 +461,24 @@ export default function Content() {
 
   const [deleteError, setDeleteError] = useState("");
 
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(""), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!saveError) return;
+    const timer = setTimeout(() => setSaveError(""), 5000);
+    return () => clearTimeout(timer);
+  }, [saveError]);
+
+  useEffect(() => {
+    if (!deleteError) return;
+    const timer = setTimeout(() => setDeleteError(""), 5000);
+    return () => clearTimeout(timer);
+  }, [deleteError]);
+
   const [deleteConfirm, setDeleteConfirm] = useState({
 
     open: false,
@@ -519,11 +538,8 @@ export default function Content() {
         setContents(response.data);
 
       } catch (err) {
-
         console.error("Failed to load content:", err);
-
-        setError("Failed to load content.");
-
+        setError(extractApiErrorMessage(err, "Failed to load content."));
       } finally {
 
         setLoading(false);
@@ -656,11 +672,8 @@ export default function Content() {
       }));
 
     } catch (err) {
-
       console.error("Failed to upload image:", err);
-
-      setSaveError(err.response?.data?.message || "Failed to upload image.");
-
+      setSaveError(extractApiErrorMessage(err, "Failed to upload image."));
     } finally {
 
       setUploadingImage(false);
@@ -814,15 +827,9 @@ export default function Content() {
     } catch (err) {
       console.error(
         "Failed to save content:",
-
         err,
       );
-
-      setSaveError(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        "Failed to save content.",
-      );
+      setSaveError(extractApiErrorMessage(err, "Failed to save content."));
     } finally {
       setSavingContent(false);
     }
@@ -971,19 +978,8 @@ export default function Content() {
       setShowAddForm(true);
 
     } catch (err) {
-
       console.error("Failed to load content:", err);
-
-      setSaveError(
-
-        err.response?.data?.message ||
-
-        err.response?.data?.error ||
-
-        "Failed to load content.",
-
-      );
-
+      setSaveError(extractApiErrorMessage(err, "Failed to load content."));
     }
 
   };
@@ -1075,25 +1071,12 @@ export default function Content() {
       });
 
     } catch (error) {
-
       console.error("Failed to delete content:", error);
-
       console.error("Status:", error.response?.status);
-
       console.error("Response:", error.response?.data);
 
-      const message =
-
-        error.response?.data?.message ||
-
-        error.response?.data?.error ||
-
-        "Failed to delete content.";
-
-      setDeleteError(message);
-
+      setDeleteError(extractApiErrorMessage(error, "Failed to delete content."));
       setDeleteConfirm((prev) => ({ ...prev, open: false }));
-
     }
 
   };
@@ -1379,8 +1362,16 @@ export default function Content() {
           {/* Save Error */}
 
           {saveError && (
-            <div className="mx-5 mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-              {saveError}
+            <div className="mx-5 mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <span>{saveError}</span>
+              <button
+                type="button"
+                onClick={() => setSaveError("")}
+                className="ml-3 font-bold text-red-500 hover:text-red-700"
+                title="Close"
+              >
+                ✕
+              </button>
             </div>
           )}
 
@@ -1483,8 +1474,16 @@ export default function Content() {
       {/* Delete Error */}
 
       {deleteError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-          {deleteError}
+        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <span>{deleteError}</span>
+          <button
+            type="button"
+            onClick={() => setDeleteError("")}
+            className="ml-3 font-bold text-red-500 hover:text-red-700"
+            title="Close"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -1504,8 +1503,16 @@ export default function Content() {
         )}
 
         {!loading && error && (
-          <div className="px-5 py-8 text-center text-sm text-red-600">
-            {error}
+          <div className="flex items-center justify-between px-5 py-4 text-sm text-red-600 bg-red-50 border-b border-red-100">
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              className="ml-3 font-bold text-red-500 hover:text-red-700"
+              title="Close"
+            >
+              ✕
+            </button>
           </div>
         )}
 

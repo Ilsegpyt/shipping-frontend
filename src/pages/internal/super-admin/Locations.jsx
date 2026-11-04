@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import api from '../../../services/api';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const EMPTY_FORM = {
     name: '',
@@ -86,6 +87,18 @@ export default function Locations() {
     const [deactivateLocation, setDeactivateLocation] = useState(null);
     const [deactivating, setDeactivating] = useState(false);
 
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
+
+    useEffect(() => {
+        if (!formError) return;
+        const timer = setTimeout(() => setFormError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [formError]);
+
     const loadLocations = async () => {
         try {
             setLoading(true);
@@ -104,7 +117,7 @@ export default function Locations() {
             setLocations(data);
         } catch (err) {
             console.error('Failed to load locations:', err);
-            setError('Failed to load locations.');
+            setError(extractApiErrorMessage(err, 'Failed to load locations.'));
         } finally {
             setLoading(false);
         }
@@ -195,7 +208,7 @@ export default function Locations() {
             setIsModalOpen(true);
         } catch (err) {
             console.error('Failed to load location:', err);
-            setError('Failed to load location details.');
+            setError(extractApiErrorMessage(err, 'Failed to load location details.'));
         }
     };
 
@@ -253,13 +266,7 @@ export default function Locations() {
             await loadLocations();
         } catch (err) {
             console.error('Failed to save location:', err);
-
-            const message =
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                'Failed to save location.';
-
-            setFormError(message);
+            setFormError(extractApiErrorMessage(err, 'Failed to save location.'));
         } finally {
             setSaving(false);
         }
@@ -296,12 +303,7 @@ export default function Locations() {
             await loadLocations();
         } catch (err) {
             console.error('Failed to deactivate location:', err);
-
-            setError(
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                'Failed to deactivate location.'
-            );
+            setError(extractApiErrorMessage(err, 'Failed to deactivate location.'));
         } finally {
             setDeactivating(false);
         }
@@ -321,12 +323,7 @@ export default function Locations() {
             setShowInactive(true);
         } catch (err) {
             console.error('Failed to restore location:', err);
-
-            setError(
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                'Failed to restore location.'
-            );
+            setError(extractApiErrorMessage(err, 'Failed to restore location.'));
         }
     };
 
@@ -459,8 +456,16 @@ export default function Locations() {
 
                 {/* Error */}
                 {error && (
-                    <div className="border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
-                        {error}
+                    <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            onClick={() => setError('')}
+                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            title="Close"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 
@@ -867,8 +872,16 @@ export default function Locations() {
                                 </label>
 
                                 {formError && (
-                                    <div className="rounded-md border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600 md:col-span-2">
-                                        {formError}
+                                    <div className="flex items-center justify-between rounded-md border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600 md:col-span-2">
+                                        <span>{formError}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormError('')}
+                                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                                            title="Close"
+                                        >
+                                            ✕
+                                        </button>
                                     </div>
                                 )}
                             </div>

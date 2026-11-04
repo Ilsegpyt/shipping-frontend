@@ -29,30 +29,12 @@ import {
     getCustomerOwner,
     impersonateCustomer,
 } from '../../../services/customersService';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const PAGE_SIZE = 10;
 
 function getApiErrorMessage(error, fallbackMessage) {
-    const data = error?.response?.data;
-
-    if (typeof data === 'string' && data.trim()) {
-        return data;
-    }
-
-    if (data?.message) return data.message;
-    if (data?.detail) return data.detail;
-    if (data?.title) return data.title;
-    if (data?.error) return data.error;
-
-    if (data?.errors && typeof data.errors === 'object') {
-        const messages = Object.values(data.errors).flat();
-
-        if (messages.length > 0) {
-            return messages.join(' ');
-        }
-    }
-
-    return fallbackMessage;
+    return extractApiErrorMessage(error, fallbackMessage);
 }
 
 export default function Customers() {
@@ -131,7 +113,7 @@ export default function Customers() {
         setTotalCount(result.totalCount ?? 0);
       } catch (err) {
         console.error("loadCustomers error:", err);
-        setError("Failed to load customers.");
+        setError(getApiErrorMessage(err, "Failed to load customers."));
       } finally {
         setLoading(false);
       }
@@ -140,6 +122,13 @@ export default function Customers() {
     useEffect(() => {
       loadCustomers(1);
     }, [recordStatus]);
+
+    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
+    useEffect(() => {
+      if (!error) return;
+      const timer = setTimeout(() => setError(''), 5000);
+      return () => clearTimeout(timer);
+    }, [error]);
 
     const handleRecordStatusChange = (event) => {
         setRecordStatus(event.target.value);
@@ -699,8 +688,16 @@ export default function Customers() {
                 )}
 
                 {!loading && error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-                        {error}
+                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-xs transition">
+                        <span>{error}</span>
+                        <button
+                            type="button"
+                            onClick={() => setError('')}
+                            className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                            title="إغلاق"
+                        >
+                            ✕
+                        </button>
                     </div>
                 )}
 

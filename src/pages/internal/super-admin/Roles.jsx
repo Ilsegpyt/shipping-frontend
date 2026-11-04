@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 
 import rolesService from '../../../services/rolesService';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const PERMISSION_GROUPS = [
 
@@ -328,32 +329,23 @@ export default function Roles() {
             setOpenMenuId(null);
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to load roles.';
-
-            setError(message);
-
+            setError(extractApiErrorMessage(error, 'Failed to load roles.'));
         } finally {
-
             setLoading(false);
-
         }
-
     }
 
     useEffect(() => {
-
         loadRoles();
-
     }, []);
+
+    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
 
     const filteredRoles = useMemo(() => {
 
@@ -478,19 +470,8 @@ export default function Roles() {
             await loadRoles();
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to create role.';
-
-            setAddRoleError(message);
-
+            setAddRoleError(extractApiErrorMessage(error, 'Failed to create role.'));
         } finally {
 
             setCreatingRole(false);
@@ -524,19 +505,8 @@ export default function Roles() {
             setRolePermissions(result ?? []);
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to load role permissions.';
-
-            setPermissionError(message);
-
+            setPermissionError(extractApiErrorMessage(error, 'Failed to load role permissions.'));
         } finally {
 
             setPermissionsLoading(false);
@@ -622,19 +592,8 @@ export default function Roles() {
             setSelectedPermission('');
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to grant permission.';
-
-            setPermissionError(message);
-
+            setPermissionError(extractApiErrorMessage(error, 'Failed to grant permission.'));
         } finally {
 
             setGrantingPermission(false);
@@ -674,21 +633,9 @@ export default function Roles() {
             return true;
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to revoke permission.';
-
-            setPermissionError(message);
-
+            setPermissionError(extractApiErrorMessage(error, 'Failed to revoke permission.'));
             return false;
-
         } finally {
 
             setRevokingPermission(null);
@@ -734,19 +681,8 @@ export default function Roles() {
             await loadRoles();
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to deactivate role.';
-
-            setError(message);
-
+            setError(extractApiErrorMessage(error, 'Failed to deactivate role.'));
         } finally {
 
             setDeactivatingRole(false);
@@ -782,19 +718,8 @@ export default function Roles() {
             await loadRoles();
 
         } catch (error) {
-
             console.error(error);
-
-            const message =
-
-                error.response?.data?.error ||
-
-                error.response?.data?.message ||
-
-                'Failed to activate role.';
-
-            setError(message);
-
+            setError(extractApiErrorMessage(error, 'Failed to activate role.'));
         } finally {
 
             setActivatingRole(false);
@@ -900,15 +825,18 @@ export default function Roles() {
             </div>
 
             {/* Error */}
-
             {error && (
-
-                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-
-                    {error}
-
+                <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-xs transition">
+                    <span>{error}</span>
+                    <button
+                        type="button"
+                        onClick={() => setError('')}
+                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                        title="إغلاق"
+                    >
+                        ✕
+                    </button>
                 </div>
-
             )}
 
             {/* Table */}

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 
 import contactInquiriesService from '../../../services/contactInquiriesService';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 export default function ContactInquiries() {
     const [inquiries, setInquiries] = useState([]);
@@ -17,6 +18,13 @@ export default function ContactInquiries() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(false);
     const [detailsLoading, setDetailsLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
+    }, [error]);
 
     const [page, setPage] = useState(1);
     const [pageSize] = useState(10);
@@ -25,6 +33,7 @@ export default function ContactInquiries() {
     const loadInquiries = async () => {
         try {
             setLoading(true);
+            setError('');
 
             const data =
                 await contactInquiriesService.getAll(
@@ -40,6 +49,7 @@ export default function ContactInquiries() {
                 error
             );
 
+            setError(extractApiErrorMessage(error, 'Failed to load contact inquiries.'));
             setInquiries([]);
             setTotalCount(0);
         } finally {
@@ -217,6 +227,21 @@ export default function ContactInquiries() {
                     </button>
                 </div>
             </div>
+
+            {/* Error Banner */}
+            {error && (
+                <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <span>{error}</span>
+                    <button
+                        type="button"
+                        onClick={() => setError('')}
+                        className="ml-3 font-bold text-red-500 hover:text-red-700"
+                        title="Close"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
 
             {/* Table */}
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">

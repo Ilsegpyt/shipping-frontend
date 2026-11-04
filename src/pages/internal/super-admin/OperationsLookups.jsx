@@ -22,6 +22,7 @@ import {
   ChevronsRight
 } from 'lucide-react';
 import * as opsService from '../../../services/operationsService';
+import { extractApiErrorMessage } from '../../../utils/errorUtils';
 
 const TABS = [
   { key: 'lines', label: 'Shipping Lines', icon: Ship },
@@ -74,6 +75,13 @@ export default function OperationsLookups() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(''), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
+
   const loadData = async (
     tab = activeTab,
     targetPage = page,
@@ -120,7 +128,7 @@ export default function OperationsLookups() {
       }
     } catch (err) {
       console.error(err);
-      setError('Failed to load data for ' + tab);
+      setError(extractApiErrorMessage(err, 'Failed to load data for ' + tab));
     } finally {
       setLoading(false);
     }
@@ -216,7 +224,7 @@ export default function OperationsLookups() {
       await loadData(activeTab);
     } catch (err) {
       console.error(err);
-      setError(err?.response?.data?.error || err?.response?.data?.message || err.message || 'Error creating item');
+      setError(extractApiErrorMessage(err, 'Error creating item'));
     } finally {
       setSubmitting(false);
     }
@@ -271,7 +279,7 @@ export default function OperationsLookups() {
       await loadData(activeTab);
     } catch (err) {
       console.error(err);
-      setError(err?.response?.data?.error || err?.response?.data?.message || err.message || 'Error updating item');
+      setError(extractApiErrorMessage(err, 'Error updating item'));
     } finally {
       setSubmitting(false);
     }
@@ -296,7 +304,7 @@ export default function OperationsLookups() {
       await loadData(activeTab);
     } catch (err) {
       console.error(err);
-      setError(err?.response?.data?.error || err?.response?.data?.message || err.message || 'Error deactivating item');
+      setError(extractApiErrorMessage(err, 'Error deactivating item'));
     } finally {
       setSubmitting(false);
     }
@@ -347,7 +355,7 @@ export default function OperationsLookups() {
       await loadData(activeTab);
     } catch (err) {
       console.error(err);
-      setError(err?.response?.data?.error || err?.response?.data?.message || err.message || 'Error activating item');
+      setError(extractApiErrorMessage(err, 'Error activating item'));
     } finally {
       setSubmitting(false);
     }
@@ -408,9 +416,19 @@ export default function OperationsLookups() {
         </div>
       )}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800 border border-rose-200">
-          <AlertCircle size={16} className="text-rose-600 shrink-0" />
-          <span>{error}</span>
+        <div className="flex items-center justify-between gap-2 rounded-lg bg-rose-50 p-3 text-sm text-rose-800 border border-rose-200 shadow-xs transition">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-rose-600 shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setError('')}
+            className="text-rose-400 hover:text-rose-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+            title="إغلاق"
+          >
+            ✕
+          </button>
         </div>
       )}
 

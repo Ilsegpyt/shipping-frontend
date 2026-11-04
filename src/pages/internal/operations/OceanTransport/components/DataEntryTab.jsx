@@ -111,6 +111,8 @@ export default function DataEntryTab({
   onUnapproveMatch,
   fclRecommendedCount = 0,
   enrichedData = [],
+  isLoadingFcl = false,
+  onRefreshFcl,
 }) {
   const [formOpen, setFormOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -520,21 +522,39 @@ export default function DataEntryTab({
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
+    const target = deleteTarget;
     setIsSubmittingDelete(true);
     setDeleteError('');
+
+    // 1. Optimistic instant removal from local table (0ms instant response)
+    if (isServerSide) {
+      setServerPageRows((prev) =>
+        prev.filter(
+          (r) =>
+            (target.opId ? r._operationId !== target.opId : true) &&
+            (target.shipRef ? r._ref !== target.shipRef && r.shipNo !== target.shipRef : true)
+        )
+      );
+      setServerTotalCount((prev) => Math.max(0, prev - 1));
+    }
+
     try {
-      if (deleteTarget.opId && onDeleteOperation) {
-        await onDeleteOperation(deleteTarget.opId);
+      if (target.opId && onDeleteOperation) {
+        await onDeleteOperation(target.opId);
       }
       setDeleteModalOpen(false);
       setDeleteTarget(null);
+
+      // 2. Synchronize server page in background
+      if (isServerSide) {
+        fetchServerPage(page, searchTerm, filters, currentDir);
+      }
     } catch (err) {
-      const errMsg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        (typeof err?.response?.data === 'string' ? err.response.data : null) ||
-        err?.message ||
-        'Failed to delete operation';
+      // On error, restore server page and keep modal open with error
+      if (isServerSide) {
+        fetchServerPage(page, searchTerm, filters, currentDir);
+      }
+      const errMsg = extractErrorMessage(err);
       setDeleteError(errMsg);
     } finally {
       setIsSubmittingDelete(false);
@@ -578,15 +598,60 @@ export default function DataEntryTab({
       setReopenModalOpen(false);
       setReopenTarget(null);
       setReopenReason('');
+      if (onRefreshDelivered) {
+        onRefreshDelivered(true);
+      }
     } catch (err) {
-      const errMsg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        'Failed to reopen operation';
+      const errMsg = extractErrorMessage(err) || 'Failed to reopen operation';
       setReopenError(errMsg);
     } finally {
       setIsSubmittingReopen(false);
+    }
+  };
+
+  const handleStatusToggle = async (targetRefOrOpId, newStatus) => {
+    setStatusMenuOpenRef(null);
+
+    // 1. Optimistic instant update in DataEntryTab (0ms instant response)
+    if (isServerSide) {
+      if (newStatus === 'Delivered') {
+        // Active Import/Export table only displays active operations, remove delivered operation immediately
+        setServerPageRows((prev) =>
+          prev.filter(
+            (r) =>
+              r._operationId !== targetRefOrOpId &&
+              r._ref !== targetRefOrOpId &&
+              r.shipNo !== targetRefOrOpId
+          )
+        );
+        setServerTotalCount((prev) => Math.max(0, prev - 1));
+      } else {
+        setServerPageRows((prev) =>
+          prev.map((r) =>
+            r._operationId === targetRefOrOpId ||
+            r._ref === targetRefOrOpId ||
+            r.shipNo === targetRefOrOpId
+              ? { ...r, status: newStatus }
+              : r
+          )
+        );
+      }
+    }
+
+    // 2. Trigger parent handler to call backend API
+    try {
+      if (onToggleStatus) {
+        await onToggleStatus(currentDir, targetRefOrOpId, newStatus);
+      }
+      // 3. Silently synchronize page in background
+      if (isServerSide) {
+        fetchServerPage(page, searchTerm, filters, currentDir);
+      }
+    } catch (err) {
+      // Revert if API failed
+      if (isServerSide) {
+        fetchServerPage(page, searchTerm, filters, currentDir);
+      }
     }
   };
 
@@ -2347,15 +2412,25 @@ export default function DataEntryTab({
       {/* 5. The Grid Table, FCL View, or Inactive Operations View */}
       {currentDir === 'FCL' ? (
         <div className="my-2">
-          <FclTab
-            matches={fclMatches}
-            allData={enrichedData}
-            lookups={lookups}
-            approvedList={fclApprovedList}
-            onApproveMatch={onApproveMatch}
-            onUnapproveMatch={onUnapproveMatch}
-            lang={lang}
-          />
+          {isLoadingFcl ? (
+            <div className="flex flex-col items-center justify-center p-16 bg-white rounded-2xl border border-slate-200/90 shadow-xs gap-3">
+              <RefreshCw size={28} className="animate-spin text-blue-600" />
+              <span className="text-sm font-semibold text-slate-600">
+                {lang === 'ar' ? 'جاري فحص وتوليد ترشيحات FCL الذكية...' : 'Analyzing & generating FCL smart recommendations...'}
+              </span>
+            </div>
+          ) : (
+            <FclTab
+              matches={fclMatches}
+              allData={enrichedData}
+              lookups={lookups}
+              approvedList={fclApprovedList}
+              onApproveMatch={onApproveMatch}
+              onUnapproveMatch={onUnapproveMatch}
+              onRefresh={() => onRefreshFcl && onRefreshFcl()}
+              lang={lang}
+            />
+          )}
         </div>
       ) : currentDir === 'Deleted' ? (
         <div className="space-y-4 my-2">
@@ -3082,8 +3157,7 @@ export default function DataEntryTab({
                                             <button
                                               type="button"
                                               onClick={() => {
-                                                onToggleStatus && onToggleStatus(currentDir, r._operationId || r._ref, 'Open');
-                                                setStatusMenuOpenRef(null);
+                                                handleStatusToggle(r._operationId || r._ref, 'Open');
                                               }}
                                               className={`flex items-center justify-between w-full px-3 py-2 rounded-xl transition text-left cursor-pointer ${!isDeliveredStatus
                                                 ? 'bg-sky-50 text-sky-900 font-bold border border-sky-200'
@@ -3100,8 +3174,7 @@ export default function DataEntryTab({
                                             <button
                                               type="button"
                                               onClick={() => {
-                                                onToggleStatus && onToggleStatus(currentDir, r._operationId || r._ref, 'Delivered');
-                                                setStatusMenuOpenRef(null);
+                                                handleStatusToggle(r._operationId || r._ref, 'Delivered');
                                               }}
                                               className={`flex items-center justify-between w-full px-3 py-2 rounded-xl transition text-left cursor-pointer ${isDeliveredStatus
                                                 ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
