@@ -2031,7 +2031,7 @@ export default function DataEntryTab({
             </button>
           )}
 
-          {unsavedDraftsCount > 0 && onSaveAllToDatabase && (
+          {canUploadReport && unsavedDraftsCount > 0 && onSaveAllToDatabase && (
             <button
               type="button"
               onClick={onSaveAllToDatabase}

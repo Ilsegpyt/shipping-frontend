@@ -93,9 +93,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const canViewDashboard = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
-    user?.roleName === 'Super Admin' ||
-    isOceanManager ||
-    user?.permissions?.includes('reports.view')
+    user?.roleName === 'Super Admin'
   );
   const canExportExcel = Boolean(
     user?.isSuperAdmin ||
@@ -148,9 +146,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     }
   };
 
-  // Core Data State
-  const [entry, setEntry] = useState(INITIAL_ENTRY);
-  const [ships, setShips] = useState(INITIAL_SHIPS);
+  // Core Data State - Clean production empty state
+  const [entry, setEntry] = useState({ Import: [], Export: [] });
+  const [ships, setShips] = useState({ Import: {}, Export: {} });
   const [approvals, setApprovals] = useState(new Set());
   const [fclApprovedList, setFclApprovedList] = useState(() => {
     try {
