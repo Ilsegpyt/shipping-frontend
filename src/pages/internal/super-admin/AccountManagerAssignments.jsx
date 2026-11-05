@@ -523,8 +523,8 @@ export default function AccountManagerAssignments() {
                                 }
                                 placeholder={
                                     activeTab === "managers"
-                                        ? "Search account manager or customer..."
-                                        : "Search customer or owner..."
+                                        ? "Search by manager name, email, customer company, or owner..."
+                                        : "Search by customer company, owner, or email..."
                                 }
                                 className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                             />
@@ -612,10 +612,9 @@ export default function AccountManagerAssignments() {
                                             <tbody>
                                                 {paginatedManagers.map(
                                                     (manager) => {
-                                                        const isExpanded =
-                                                            expandedManagers[
-                                                            manager.accountManagerId
-                                                            ];
+                                                        const isExpanded = search.trim()
+                                                            ? true
+                                                            : Boolean(expandedManagers[manager.accountManagerId]);
 
                                                         return (
                                                             <tr

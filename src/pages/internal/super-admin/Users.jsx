@@ -79,12 +79,25 @@ export default function Users() {
         roleId: '',
     });
 
-    async function loadUsers(page = pageNumber) {
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setPageNumber(1);
+    }, [debouncedSearch]);
+
+    async function loadUsers(page = pageNumber, search = debouncedSearch) {
         try {
             setLoading(true);
             setError('');
 
-            const result = await getInternalUsers(page, PAGE_SIZE);
+            const result = await getInternalUsers(page, PAGE_SIZE, search);
 
             setUsers(result.items ?? []);
             setPageNumber(result.pageNumber ?? page);
@@ -102,8 +115,8 @@ export default function Users() {
     }
 
     useEffect(() => {
-        loadUsers(1);
-    }, []);
+        loadUsers(pageNumber, debouncedSearch);
+    }, [pageNumber, debouncedSearch]);
 
     // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
     useEffect(() => {
@@ -114,10 +127,7 @@ export default function Users() {
 
     const filteredUsers = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
-
-        if (!term) {
-            return users;
-        }
+        if (!term) return users;
 
         return users.filter((user) =>
             [
@@ -159,13 +169,13 @@ export default function Users() {
 
     function handlePreviousPage() {
         if (pageNumber > 1) {
-            loadUsers(pageNumber - 1);
+            setPageNumber((prev) => prev - 1);
         }
     }
 
     function handleNextPage() {
         if (pageNumber < totalPages) {
-            loadUsers(pageNumber + 1);
+            setPageNumber((prev) => prev + 1);
         }
     }
 
@@ -524,12 +534,12 @@ export default function Users() {
 
             {/* Toolbar */}
             <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
-                <div className="relative w-full max-w-sm">
+                <div className="relative w-full max-w-md">
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
                     <input
                         type="search"
-                        placeholder="Search users..."
+                        placeholder="Search by name, email, role, or phone..." title="Search by name, email, role, or phone"
                         value={searchTerm}
                         onChange={(event) =>
                             setSearchTerm(event.target.value)

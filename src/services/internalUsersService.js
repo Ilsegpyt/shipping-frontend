@@ -1,11 +1,15 @@
 import api from './api';
 
-export async function getInternalUsers(pageNumber = 1, pageSize = 20) {
+export async function getInternalUsers(pageNumber = 1, pageSize = 20, search = '') {
+    const params = {
+        pageNumber,
+        pageSize,
+    };
+    if (search && search.trim()) {
+        params.search = search.trim();
+    }
     const response = await api.get('/api/internal-users/', {
-        params: {
-            pageNumber,
-            pageSize,
-        },
+        params,
     });
 
     return response.data;

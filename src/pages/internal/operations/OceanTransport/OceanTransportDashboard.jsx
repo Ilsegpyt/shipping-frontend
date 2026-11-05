@@ -221,9 +221,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         }),
         !hasOps
           ? getAllOperations(true).catch((err) => {
-              console.warn('Failed to load operations for FCL:', err);
-              return [];
-            })
+            console.warn('Failed to load operations for FCL:', err);
+            return [];
+          })
           : Promise.resolve(null),
       ]);
 
@@ -394,8 +394,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const [qualityModalOpen, setQualityModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailSelectedRefs, setEmailSelectedRefs] = useState([]);
+  const [emailActiveRows, setEmailActiveRows] = useState([]);
   const [exportExcelModalOpen, setExportExcelModalOpen] = useState(false);
   const [exportExcelSelectedRefs, setExportExcelSelectedRefs] = useState([]);
+  const [exportExcelActiveRows, setExportExcelActiveRows] = useState([]);
   const [toast, setToast] = useState(null);
 
   // Sync with URL if user navigates
@@ -1692,8 +1694,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     }
   };
 
-  const handleExportExcel = (selectedRefs = []) => {
+  const handleExportExcel = (selectedRefs = [], activeRows = []) => {
     setExportExcelSelectedRefs(Array.isArray(selectedRefs) ? selectedRefs : []);
+    setExportExcelActiveRows(Array.isArray(activeRows) ? activeRows : []);
     setExportExcelModalOpen(true);
   };
 
@@ -1853,8 +1856,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           onExportExcel={handleExportExcel}
           onOpenUploadModal={() => setUploadModalOpen(true)}
           onSwitchToDashboard={() => switchToView('dashboard')}
-          onEmailIt={(selectedRefs = []) => {
+          onEmailIt={(selectedRefs = [], activeRows = []) => {
             setEmailSelectedRefs(selectedRefs);
+            setEmailActiveRows(activeRows);
             setEmailModalOpen(true);
           }}
           onToggleLang={toggleLang}
@@ -1896,6 +1900,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         onClose={() => setEmailModalOpen(false)}
         currentDir={entryDir}
         entry={entry}
+        activeRows={emailActiveRows}
         preSelectedRefs={emailSelectedRefs}
         showToast={showToast}
         lang={lang}
@@ -1906,6 +1911,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         onClose={() => setExportExcelModalOpen(false)}
         currentDir={entryDir}
         entry={entry}
+        activeRows={exportExcelActiveRows}
         preSelectedRefs={exportExcelSelectedRefs}
         showToast={showToast}
         lang={lang}

@@ -16,9 +16,21 @@ export default function ContactInquiries() {
     const [selectedInquiry, setSelectedInquiry] = useState(null);
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [loading, setLoading] = useState(false);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
 
     useEffect(() => {
         if (!error) return;
@@ -38,7 +50,8 @@ export default function ContactInquiries() {
             const data =
                 await contactInquiriesService.getAll(
                     page,
-                    pageSize
+                    pageSize,
+                    debouncedSearch
                 );
 
             setInquiries(data?.items ?? []);
@@ -59,16 +72,11 @@ export default function ContactInquiries() {
 
     useEffect(() => {
         loadInquiries();
-    }, [page]);
+    }, [page, debouncedSearch]);
 
     const filteredInquiries = useMemo(() => {
-        const value = searchTerm
-            .trim()
-            .toLowerCase();
-
-        if (!value) {
-            return inquiries;
-        }
+        const value = searchTerm.trim().toLowerCase();
+        if (!value) return inquiries;
 
         return inquiries.filter((inquiry) =>
             [
@@ -77,12 +85,11 @@ export default function ContactInquiries() {
                 inquiry.email,
                 inquiry.phone,
                 inquiry.service,
+                inquiry.message,
             ]
                 .filter(Boolean)
                 .some((field) =>
-                    String(field)
-                        .toLowerCase()
-                        .includes(value)
+                    String(field).toLowerCase().includes(value)
                 )
         );
     }, [inquiries, searchTerm]);
@@ -203,7 +210,7 @@ export default function ContactInquiries() {
                                     event.target.value
                                 );
                             }}
-                            placeholder="Search inquiries..."
+                            placeholder="Search by name, company, email, phone, or service..." title="Search by name, company, email, phone, or service"
                             className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>

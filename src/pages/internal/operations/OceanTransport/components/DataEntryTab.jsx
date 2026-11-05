@@ -37,7 +37,7 @@ import { COLS, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
 import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
-import { addContainerUpdate, getOperationStatusAudits, getPagedOperations } from '../../../../../services/operationsService';
+import { addContainerUpdate, getOperationById, getOperationStatusAudits, getPagedOperations } from '../../../../../services/operationsService';
 import { useAuth } from '../../../../../auth/AuthContext';
 
 export const parseUtcDate = (utcStr) => {
@@ -158,15 +158,35 @@ export default function DataEntryTab({
     }
   };
 
+  // Dedicated debounce for search text only (so typing does not spam backend)
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState(searchTerm);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // High-performance in-memory cache for instant 0ms tab switching (Stale-While-Revalidate)
+  const tabPagesCacheRef = useRef({});
+
+  const clearTabPagesCache = useCallback(() => {
+    tabPagesCacheRef.current = {};
+  }, []);
+
   const fetchServerPage = useCallback(
     async (
       targetPage = 1,
       targetSearch = '',
       targetFilters = {},
-      targetDir = 'Import'
+      targetDir = 'Import',
+      isSilent = false
     ) => {
       if (targetDir !== 'Import' && targetDir !== 'Export') return;
-      setIsPageLoading(true);
+      if (!isSilent) {
+        setIsPageLoading(true);
+      }
       try {
         const res = await getPagedOperations({
           page: targetPage,
@@ -199,6 +219,15 @@ export default function DataEntryTab({
           setServerTotalPages(
             res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / pageSize))
           );
+
+          // Save to fast in-memory cache
+          const cacheKey = `${targetDir}_${targetPage}_${targetSearch}_${JSON.stringify(targetFilters)}`;
+          tabPagesCacheRef.current[cacheKey] = {
+            rows: mappedRows,
+            totalCount: res.totalCount ?? 0,
+            totalContainers: res.totalContainersCount ?? 0,
+            totalPages: res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / pageSize)),
+          };
         }
       } catch (err) {
         console.error('Failed to fetch server page:', err);
@@ -209,14 +238,27 @@ export default function DataEntryTab({
     [pageSize]
   );
 
-  // Debounced server-side fetch on search, filters, page, or tab change
+  // Server-side fetch: Instant 0ms execution on Tab switch & Pagination with Stale-While-Revalidate
   useEffect(() => {
     if (!isServerSide) return;
-    const timer = setTimeout(() => {
-      fetchServerPage(page, searchTerm, filters, currentDir);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [isServerSide, page, searchTerm, filters, currentDir, fetchServerPage]);
+
+    const cacheKey = `${currentDir}_${page}_${debouncedSearchTerm}_${JSON.stringify(filters)}`;
+    const cached = tabPagesCacheRef.current[cacheKey];
+
+    if (cached) {
+      // 0ms INSTANT SWITCH from in-memory cache!
+      setServerPageRows(cached.rows);
+      setServerTotalCount(cached.totalCount);
+      setServerTotalContainers(cached.totalContainers);
+      setServerTotalPages(cached.totalPages);
+
+      // Silently refresh in background without freezing UI
+      fetchServerPage(page, debouncedSearchTerm, filters, currentDir, true);
+    } else {
+      // Immediate fetch (no delay!)
+      fetchServerPage(page, debouncedSearchTerm, filters, currentDir, false);
+    }
+  }, [isServerSide, page, debouncedSearchTerm, filters, currentDir, fetchServerPage]);
 
   // Reset Export-specific filters when switching away from Export tab
   useEffect(() => {
@@ -245,6 +287,16 @@ export default function DataEntryTab({
   const shippingLineOptions = useMemo(() => {
     return (lookups.shippingLines || []).map((l) => ({
       value: l.id,
+      label: l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name,
+      sublabel: l.abbreviation,
+      searchStr: `${l.abbreviation || ''} ${l.name || ''}`,
+      item: l,
+    }));
+  }, [lookups.shippingLines]);
+
+  const shippingLineFilterOptions = useMemo(() => {
+    return (lookups.shippingLines || []).map((l) => ({
+      value: l.name,
       label: l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name,
       sublabel: l.abbreviation,
       searchStr: `${l.abbreviation || ''} ${l.name || ''}`,
@@ -394,6 +446,7 @@ export default function DataEntryTab({
       if (onSaveShipment) {
         const success = await onSaveShipment(currentDir, shipRef, shipRows);
         if (success) {
+          clearTabPagesCache();
           if (isServerSide) {
             fetchServerPage(page, searchTerm, filters, currentDir);
           }
@@ -500,6 +553,47 @@ export default function DataEntryTab({
   const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [viewDeletedDetailOp, setViewDeletedDetailOp] = useState(null);
+  const [isLoadingDeletedDetail, setIsLoadingDeletedDetail] = useState(false);
+  const deletedDetailsCacheRef = useRef({});
+
+  const handleOpenDeletedDetails = async (op) => {
+    if (!op) return;
+    const opId = op.id || op._operationId;
+
+    if (deletedDetailsCacheRef.current[opId]) {
+      setViewDeletedDetailOp(deletedDetailsCacheRef.current[opId]);
+      return;
+    }
+
+    setViewDeletedDetailOp(op);
+
+    const hasFullDetails = op.containers?.some(
+      (c) => c.driverName || c.transporterName || (c.updates && c.updates.length > 0)
+    );
+    if (hasFullDetails) {
+      deletedDetailsCacheRef.current[opId] = op;
+      return;
+    }
+
+    setIsLoadingDeletedDetail(true);
+    try {
+      const fullOp = await getOperationById(opId);
+      if (fullOp) {
+        const merged = {
+          ...op,
+          ...fullOp,
+          deletedByName: fullOp.deletedByName || op.deletedByName,
+          deletedAtUtc: fullOp.deletedAtUtc || op.deletedAtUtc,
+        };
+        deletedDetailsCacheRef.current[opId] = merged;
+        setViewDeletedDetailOp(merged);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch deleted operation full details on demand:', err);
+    } finally {
+      setIsLoadingDeletedDetail(false);
+    }
+  };
 
   const openDeleteModal = (shipRef, shipRows) => {
     if (!shipRows || shipRows.length === 0) return;
@@ -544,6 +638,7 @@ export default function DataEntryTab({
       }
       setDeleteModalOpen(false);
       setDeleteTarget(null);
+      clearTabPagesCache();
 
       // 2. Synchronize server page in background
       if (isServerSide) {
@@ -629,8 +724,8 @@ export default function DataEntryTab({
         setServerPageRows((prev) =>
           prev.map((r) =>
             r._operationId === targetRefOrOpId ||
-            r._ref === targetRefOrOpId ||
-            r.shipNo === targetRefOrOpId
+              r._ref === targetRefOrOpId ||
+              r.shipNo === targetRefOrOpId
               ? { ...r, status: newStatus }
               : r
           )
@@ -640,6 +735,7 @@ export default function DataEntryTab({
 
     // 2. Trigger parent handler to call backend API
     try {
+      clearTabPagesCache();
       if (onToggleStatus) {
         await onToggleStatus(currentDir, targetRefOrOpId, newStatus);
       }
@@ -1092,7 +1188,7 @@ export default function DataEntryTab({
   const rows = isDeliveredTab
     ? deliveredRows
     : isServerSide
-      ? serverPageRows
+      ? (serverPageRows.length > 0 && serverPageRows[0].operationType && serverPageRows[0].operationType !== currentDir ? [] : serverPageRows)
       : currentDir === 'Export'
         ? activeExportRows
         : activeImportRows;
@@ -1186,6 +1282,7 @@ export default function DataEntryTab({
           targetShipRef = createdBl;
         }
 
+        clearTabPagesCache();
         if (searchTerm) {
           setSearchTerm("");
         }
@@ -1257,6 +1354,7 @@ export default function DataEntryTab({
   }, [filters, currentDir]);
 
   const handleResetFilters = () => {
+    clearTabPagesCache();
     setSearchTerm('');
     setFilters({
       client: '',
@@ -2078,7 +2176,7 @@ export default function DataEntryTab({
 
           <button
             type="button"
-            onClick={() => onEmailIt && onEmailIt(Array.from(selectedOps))}
+            onClick={() => onEmailIt && onEmailIt(Array.from(selectedOps), rows)}
             className="ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs"
           >
             <Mail size={13} className="text-slate-500" />
@@ -2088,7 +2186,7 @@ export default function DataEntryTab({
           {canExportExcel && (
             <button
               type="button"
-              onClick={() => onExportExcel && onExportExcel(Array.from(selectedOps))}
+              onClick={() => onExportExcel && onExportExcel(Array.from(selectedOps), rows)}
               className="ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
             >
               <FileSpreadsheet size={13} className="text-emerald-600" />
@@ -2196,19 +2294,20 @@ export default function DataEntryTab({
                 ))}
               </select>
 
-              {/* Shipping Line Filter */}
-              <select
-                value={filters.line}
-                onChange={(e) => { setFilters({ ...filters, line: e.target.value }); setPage(1); }}
-                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[125px]"
-              >
-                <option value="">{lang === 'ar' ? 'الخط: الكل' : 'Line: All'}</option>
-                {(lookups.shippingLines || []).map((l) => (
-                  <option key={l.id} value={l.name}>
-                    {l.abbreviation ? `${l.abbreviation} - ${l.name}` : l.name}
-                  </option>
-                ))}
-              </select>
+              {/* Shipping Line Filter (SearchableSelect) */}
+              <div className="shrink-0 w-[130px]">
+                <SearchableSelect
+                  compact={true}
+                  value={filters.line}
+                  placeholder={lang === 'ar' ? 'الخط: الكل' : 'Line: All'}
+                  options={shippingLineFilterOptions}
+                  onChange={(val, opt) => {
+                    const name = opt?.item?.name || opt?.raw?.name || val || '';
+                    setFilters({ ...filters, line: name });
+                    setPage(1);
+                  }}
+                />
+              </div>
 
               {/* Port Filter (High-speed searchable) */}
               <div className="shrink-0 w-[130px]">
@@ -2580,7 +2679,7 @@ export default function DataEntryTab({
                         <td className="py-3 px-3 text-center">
                           <button
                             type="button"
-                            onClick={() => setViewDeletedDetailOp(op)}
+                            onClick={() => handleOpenDeletedDetails(op)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
                             title={lang === 'ar' ? 'عرض تفاصيل العملية المحذوفة بالكامل' : 'View Full Operation Details'}
                           >
@@ -3307,7 +3406,7 @@ export default function DataEntryTab({
                                       compact={true}
                                       value={selectedPowVal}
                                       disabled={isDisabled}
-                                      placeholder="None (Optional)"
+                                      placeholder={lang === 'ar' ? '-- اختياري --' : 'None (Optional)'}
                                       options={portOptions}
                                       onChange={(nextPow, opt) => {
                                         const pObj = opt?.item || (lookups.ports || []).find(
@@ -3468,7 +3567,7 @@ export default function DataEntryTab({
                                       compact={true}
                                       value={val}
                                       disabled={isDisabled}
-                                      placeholder="Select Transporter"
+                                      placeholder={lang === 'ar' ? '-- اختر المقاول --' : 'Select Transporter'}
                                       options={transporterOptions}
                                       onChange={(selectedName, opt) => {
                                         onUpdateCell && onUpdateCell(currentDir, r._rowId, 'trucker', selectedName);
@@ -3690,7 +3789,7 @@ export default function DataEntryTab({
 
                                     <SearchableSelect
                                       compact={true}
-                                      value={val || ''}
+                                      value={val}
                                       disabled={isDisabled || isReadOnly}
                                       allowCustom={true}
                                       placeholder={lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}
@@ -4607,108 +4706,119 @@ export default function DataEntryTab({
                 </div>
 
                 {/* 2. Containers Table */}
-                <div>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1.5 h-3.5 bg-emerald-600 rounded-full"></span>
-                      <span>{lang === 'ar' ? `تفاصيل الحاويات ورحلات النقل (${containers.length})` : `Containers & Trips (${containers.length})`}</span>
-                    </h4>
+                {isLoadingDeletedDetail ? (
+                  <div className="py-12 text-center bg-slate-50/80 rounded-2xl border border-slate-200">
+                    <Loader2 size={24} className="animate-spin text-rose-600 mx-auto mb-2.5" />
+                    <p className="text-xs text-slate-600 font-semibold">
+                      {lang === 'ar' ? 'جاري تحميل تفاصيل الحاويات والتحديثات...' : 'Loading container & trip details...'}
+                    </p>
                   </div>
+                ) : (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="w-1.5 h-3.5 bg-emerald-600 rounded-full"></span>
+                          <span>{lang === 'ar' ? `تفاصيل الحاويات ورحلات النقل (${containers.length})` : `Containers & Trips (${containers.length})`}</span>
+                        </h4>
+                      </div>
 
-                  {containers.length === 0 ? (
-                    <div className="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-400">
-                      {lang === 'ar' ? 'لا توجد حاويات مسجلة في هذه العملية' : 'No containers recorded in this operation'}
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
-                      <table className="w-full text-xs text-start border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold text-[11px]">
-                            <th className="py-2.5 px-3 text-start">#</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'رقم الحاوية والنوع' : 'Container & Type'}</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مكان التحميل / التعتيق' : 'Destination'}</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'السيارة والسائق' : 'Car & Driver'}</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'تاريخ الوصول' : 'Actual Arrival'}</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من البوابة' : 'Gate Out'}</th>
-                            <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'المستندات الناقصة' : 'Missing Docs'}</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {containers.map((c, cIdx) => (
-                            <tr key={c.id || cIdx} className="hover:bg-slate-50/60 transition-colors">
-                              <td className="py-2.5 px-3 font-semibold text-slate-500">
-                                {c.ordinal || cIdx + 1}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="font-bold text-slate-900 font-mono">
-                                  {c.containerNumber || '—'}
-                                </div>
-                                <div className="text-[10px] text-slate-500">
-                                  {c.containerType || '—'}
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 font-medium text-slate-700">
-                                {c.destination || '—'}
-                              </td>
-                              <td className="py-2.5 px-3 font-medium text-slate-700">
-                                {c.transporterName || '—'}
-                              </td>
-                              <td className="py-2.5 px-3">
-                                <div className="font-semibold text-slate-800">
-                                  {c.carNumber || '—'}
-                                </div>
-                                <div className="text-[10.5px] text-slate-500">
-                                  {c.driverName || '—'} {c.driverMobileNumber ? `(${c.driverMobileNumber})` : ''}
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-600 text-[11px]">
-                                {c.actualArrivalDate ? `${String(c.actualArrivalDate).slice(0, 10)} ${c.actualArrivalTime || ''}` : '—'}
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-600 text-[11px]">
-                                {c.gateOutDate ? `${String(c.gateOutDate).slice(0, 10)} ${c.gateOutTime || ''}` : '—'}
-                              </td>
-                              <td className="py-2.5 px-3 text-slate-600 text-[11px]">
-                                {c.missingDocs ? (
-                                  <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold text-[10.5px]">
-                                    {c.missingDocs}
-                                  </span>
-                                ) : '—'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. Container Updates Section if any container has updates */}
-                {containers.some((c) => c.updates && c.updates.length > 0) && (
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-                      <span className="w-1.5 h-3.5 bg-purple-600 rounded-full"></span>
-                      <span>{lang === 'ar' ? 'سجل تحديثات الحاويات (Container Updates)' : 'Container Updates Log'}</span>
-                    </h4>
-                    <div className="space-y-2">
-                      {containers.flatMap((c) =>
-                        (c.updates || []).map((u, uIdx) => (
-                          <div key={u.id || `${c.id}_${uIdx}`} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs flex items-start justify-between gap-3">
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="font-mono font-bold text-slate-800">{c.containerNumber}</span>
-                                <span className="text-[10.5px] text-slate-400">· {fmtUpdateDateTime(u.createdAtUtc)}</span>
-                              </div>
-                              <p className="text-slate-700 leading-relaxed">{u.details}</p>
-                            </div>
-                            <span className="text-[10.5px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">
-                              {u.createdByName || 'User'}
-                            </span>
-                          </div>
-                        ))
+                      {containers.length === 0 ? (
+                        <div className="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-400">
+                          {lang === 'ar' ? 'لا توجد حاويات مسجلة في هذه العملية' : 'No containers recorded in this operation'}
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
+                          <table className="w-full text-xs text-start border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold text-[11px]">
+                                <th className="py-2.5 px-3 text-start">#</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'رقم الحاوية والنوع' : 'Container & Type'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مكان التحميل / التعتيق' : 'Destination'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'السيارة والسائق' : 'Car & Driver'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'تاريخ الوصول' : 'Actual Arrival'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من البوابة' : 'Gate Out'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'المستندات الناقصة' : 'Missing Docs'}</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {containers.map((c, cIdx) => (
+                                <tr key={c.id || cIdx} className="hover:bg-slate-50/60 transition-colors">
+                                  <td className="py-2.5 px-3 font-semibold text-slate-500">
+                                    {c.ordinal || cIdx + 1}
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <div className="font-bold text-slate-900 font-mono">
+                                      {c.containerNumber || '—'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500">
+                                      {c.containerType || '—'}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-700">
+                                    {c.destination || '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-700">
+                                    {c.transporterName || '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <div className="font-semibold text-slate-800">
+                                      {c.carNumber || '—'}
+                                    </div>
+                                    <div className="text-[10.5px] text-slate-500">
+                                      {c.driverName || '—'} {c.driverMobileNumber ? `(${c.driverMobileNumber})` : ''}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                    {c.actualArrivalDate ? `${String(c.actualArrivalDate).slice(0, 10)} ${c.actualArrivalTime || ''}` : '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                    {c.gateOutDate ? `${String(c.gateOutDate).slice(0, 10)} ${c.gateOutTime || ''}` : '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                    {c.missingDocs ? (
+                                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold text-[10.5px]">
+                                        {c.missingDocs}
+                                      </span>
+                                    ) : '—'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       )}
                     </div>
-                  </div>
+
+                    {/* 3. Container Updates Section if any container has updates */}
+                    {containers.some((c) => c.updates && c.updates.length > 0) && (
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                          <span className="w-1.5 h-3.5 bg-purple-600 rounded-full"></span>
+                          <span>{lang === 'ar' ? 'سجل تحديثات الحاويات (Container Updates)' : 'Container Updates Log'}</span>
+                        </h4>
+                        <div className="space-y-2">
+                          {containers.flatMap((c) =>
+                            (c.updates || []).map((u, uIdx) => (
+                              <div key={u.id || `${c.id}_${uIdx}`} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-mono font-bold text-slate-800">{c.containerNumber}</span>
+                                    <span className="text-[10.5px] text-slate-400">· {fmtUpdateDateTime(u.createdAtUtc)}</span>
+                                  </div>
+                                  <p className="text-slate-700 leading-relaxed">{u.details}</p>
+                                </div>
+                                <span className="text-[10.5px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">
+                                  {u.createdByName || 'User'}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

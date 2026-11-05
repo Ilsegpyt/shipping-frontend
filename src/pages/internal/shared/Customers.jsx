@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../../auth/AuthContext';
@@ -64,6 +64,7 @@ export default function Customers() {
     const [error, setError] = useState('');
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [recordStatus, setRecordStatus] = useState('notDeleted');
     const [openActionsId, setOpenActionsId] = useState(null);
     const [selectedCustomerIds, setSelectedCustomerIds] = useState([]);
@@ -99,35 +100,46 @@ export default function Customers() {
         industry: '',
     });
 
-    const loadCustomers = async (page = pageNumber) => {
-      try {
-        setLoading(true);
-        setError("");
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
-        const result = await getCustomers(page, PAGE_SIZE, recordStatus);
+    useEffect(() => {
+        setPageNumber(1);
+    }, [debouncedSearch]);
 
-        setCustomers(result.items ?? []);
-        setSelectedCustomerIds([]);
-        setPageNumber(result.pageNumber ?? page);
-        setTotalPages(result.totalPages ?? 1);
-        setTotalCount(result.totalCount ?? 0);
-      } catch (err) {
-        console.error("loadCustomers error:", err);
-        setError(getApiErrorMessage(err, "Failed to load customers."));
-      } finally {
-        setLoading(false);
-      }
+    const loadCustomers = async (page = pageNumber, search = debouncedSearch) => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const result = await getCustomers(page, PAGE_SIZE, recordStatus, search);
+
+            setCustomers(result.items ?? []);
+            setSelectedCustomerIds([]);
+            setPageNumber(result.pageNumber ?? page);
+            setTotalPages(result.totalPages ?? 1);
+            setTotalCount(result.totalCount ?? 0);
+        } catch (err) {
+            console.error("loadCustomers error:", err);
+            setError(getApiErrorMessage(err, "Failed to load customers."));
+        } finally {
+            setLoading(false);
+        }
     };
 
     useEffect(() => {
-      loadCustomers(1);
-    }, [recordStatus]);
+        loadCustomers(pageNumber, debouncedSearch);
+    }, [pageNumber, debouncedSearch, recordStatus]);
 
     // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
     useEffect(() => {
-      if (!error) return;
-      const timer = setTimeout(() => setError(''), 5000);
-      return () => clearTimeout(timer);
+        if (!error) return;
+        const timer = setTimeout(() => setError(''), 5000);
+        return () => clearTimeout(timer);
     }, [error]);
 
     const handleRecordStatusChange = (event) => {
@@ -137,22 +149,20 @@ export default function Customers() {
 
     const handleRefresh = () => {
         setOpenActionsId(null);
-        loadCustomers(pageNumber);
+        loadCustomers(pageNumber, debouncedSearch);
     };
 
     const handlePreviousPage = () => {
         setOpenActionsId(null);
-
         if (pageNumber > 1) {
-            loadCustomers(pageNumber - 1);
+            setPageNumber((prev) => prev - 1);
         }
     };
 
     const handleNextPage = () => {
         setOpenActionsId(null);
-
         if (pageNumber < totalPages) {
-            loadCustomers(pageNumber + 1);
+            setPageNumber((prev) => prev + 1);
         }
     };
 
@@ -458,24 +468,20 @@ export default function Customers() {
         );
     };
 
-    const filteredCustomers = customers.filter((customer) => {
-        const searchValue = searchTerm.toLowerCase();
+    const filteredCustomers = useMemo(() => {
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return customers;
 
-        return (
-            customer.ownerName
-                ?.toLowerCase()
-                .includes(searchValue) ||
-            customer.companyName
-                ?.toLowerCase()
-                .includes(searchValue) ||
-            customer.ownerEmail
-                ?.toLowerCase()
-                .includes(searchValue) ||
-            customer.ownerPhone
-                ?.toLowerCase()
-                .includes(searchValue)
-        );
-    });
+        return customers.filter((customer) => {
+            return (
+                customer.companyName?.toLowerCase().includes(term) ||
+                customer.ownerName?.toLowerCase().includes(term) ||
+                customer.ownerEmail?.toLowerCase().includes(term) ||
+                customer.ownerPhone?.toLowerCase().includes(term) ||
+                customer.customerCode?.toLowerCase().includes(term)
+            );
+        });
+    }, [customers, searchTerm]);
 
     const handleSelectAllCustomers = () => {
         const visibleCustomerIds = filteredCustomers.map(
@@ -599,7 +605,7 @@ export default function Customers() {
                                     setSearchTerm(event.target.value)
                                 }
                                 onClick={(event) => event.stopPropagation()}
-                                placeholder="Search by name, company, email or phone..."
+                                placeholder="Search by company, owner, email, phone, or code..." title="Search by company, owner, email, phone, or code"
                                 className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
                             />
                         </div>

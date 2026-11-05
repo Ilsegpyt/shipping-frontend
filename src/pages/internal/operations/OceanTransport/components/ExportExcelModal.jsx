@@ -30,6 +30,7 @@ export default function ExportExcelModal({
   onClose,
   currentDir = 'Import',
   entry = { Import: [], Export: [] },
+  activeRows = [],
   preSelectedRefs = [],
   showToast,
   lang = 'en',
@@ -55,7 +56,9 @@ export default function ExportExcelModal({
   // 1. Group active rows into shipments
   const allGroupedShipments = useMemo(() => {
     let rows = [];
-    if (currentDir === 'Delivered') {
+    if (Array.isArray(activeRows) && activeRows.length > 0) {
+      rows = activeRows;
+    } else if (currentDir === 'Delivered') {
       rows = [
         ...(entry.Import || []).filter((r) => r.status === 'Delivered'),
         ...(entry.Export || []).filter((r) => r.status === 'Delivered'),
@@ -70,10 +73,10 @@ export default function ExportExcelModal({
       if (!map.has(ref)) {
         map.set(ref, []);
       }
-      map.get(ref).push({ ...r, _originalIdx: idx });
+      map.get(ref).push({ ...r, _originalIdx: idx, _computedShipRef: ref });
     });
     return Array.from(map.values());
-  }, [entry, activeDir, currentDir]);
+  }, [entry, activeDir, currentDir, activeRows]);
 
   // Reset form and selections whenever modal opens
   useEffect(() => {
@@ -88,9 +91,25 @@ export default function ExportExcelModal({
       // If user had selected specific shipments in the main grid, pre-select them;
       // otherwise, default to all shipments selected
       if (Array.isArray(preSelectedRefs) && preSelectedRefs.length > 0) {
-        setSelectedShipmentRefs(new Set(preSelectedRefs));
+        const preSet = new Set(preSelectedRefs);
+        const matched = new Set();
+        allGroupedShipments.forEach((s, idx) => {
+          const first = s[0] || {};
+          const ref = first._computedShipRef || first._ref || `ship_${idx}`;
+          if (
+            preSet.has(ref) ||
+            (first._ref && preSet.has(first._ref)) ||
+            (first._operationId && preSet.has(first._operationId)) ||
+            (first.bl && preSet.has(first.bl)) ||
+            (first.booking && preSet.has(first.booking)) ||
+            (first.shipNo && preSet.has(first.shipNo))
+          ) {
+            matched.add(ref);
+          }
+        });
+        setSelectedShipmentRefs(matched.size > 0 ? matched : preSet);
       } else {
-        const allRefs = allGroupedShipments.map((s, idx) => s[0]?._ref || `ship_${idx}`);
+        const allRefs = allGroupedShipments.map((s, idx) => s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
         setSelectedShipmentRefs(new Set(allRefs));
       }
     }
@@ -184,18 +203,18 @@ export default function ExportExcelModal({
   // Toggle all shipments visible in the filtered list
   const allVisibleShipmentsSelected =
     filteredModalShipments.length > 0 &&
-    filteredModalShipments.every((s, idx) => selectedShipmentRefs.has(s[0]?._ref || `ship_${idx}`));
+    filteredModalShipments.every((s, idx) => selectedShipmentRefs.has(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`));
 
   const toggleAllShipments = () => {
     setSelectedShipmentRefs((prev) => {
       const next = new Set(prev);
       if (allVisibleShipmentsSelected) {
         filteredModalShipments.forEach((s, idx) => {
-          next.delete(s[0]?._ref || `ship_${idx}`);
+          next.delete(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
         });
       } else {
         filteredModalShipments.forEach((s, idx) => {
-          next.add(s[0]?._ref || `ship_${idx}`);
+          next.add(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
         });
       }
       return next;
@@ -213,7 +232,7 @@ export default function ExportExcelModal({
     }
 
     const chosenShipments = allGroupedShipments.filter((s, idx) =>
-      selectedShipmentRefs.has(s[0]?._ref || `ship_${idx}`)
+      selectedShipmentRefs.has(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`)
     );
 
     if (chosenShipments.length === 0) {
@@ -493,7 +512,7 @@ export default function ExportExcelModal({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                   {filteredModalShipments.map((shipRows, idx) => {
                     const first = shipRows[0] || {};
-                    const shipRef = first._ref || `ship_${idx}`;
+                    const shipRef = first._computedShipRef || first._ref || `ship_${idx}`;
                     const isChecked = selectedShipmentRefs.has(shipRef);
 
                     const labelBlOrBooking = first.bl || first.booking || first.shipNo || 'N/A';
@@ -506,11 +525,10 @@ export default function ExportExcelModal({
                       <label
                         key={shipRef}
                         title={titleText}
-                        className={`flex items-center gap-2 cursor-pointer p-1.5 rounded-md border text-[11px] transition select-none ${
-                          isChecked
+                        className={`flex items-center gap-2 cursor-pointer p-1.5 rounded-md border text-[11px] transition select-none ${isChecked
                             ? 'border-sky-300 bg-sky-50/60 text-slate-900 font-medium'
                             : 'border-transparent text-slate-600 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         <input
                           type="checkbox"

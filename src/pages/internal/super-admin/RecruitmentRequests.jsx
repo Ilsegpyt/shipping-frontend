@@ -113,6 +113,7 @@ export default function RecruitmentRequests() {
     const [error, setError] = useState('');
 
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [page, setPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
 
@@ -123,6 +124,17 @@ export default function RecruitmentRequests() {
         useState(false);
 
     const [detailsError, setDetailsError] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
 
     useEffect(() => {
         if (!error) return;
@@ -141,7 +153,7 @@ export default function RecruitmentRequests() {
         Math.ceil(totalCount / PAGE_SIZE)
     );
 
-    const loadApplications = async (isRefresh = false) => {
+    const loadApplications = async (isRefresh = false, pageNum = page, searchTerm = debouncedSearch) => {
         try {
             if (isRefresh) {
                 setRefreshing(true);
@@ -151,14 +163,17 @@ export default function RecruitmentRequests() {
 
             setError('');
 
+            const params = {
+                PageNumber: pageNum,
+                PageSize: PAGE_SIZE,
+            };
+            if (searchTerm && searchTerm.trim()) {
+                params.Search = searchTerm.trim();
+            }
+
             const response = await api.get(
                 '/api/website/recruitment-applications',
-                {
-                    params: {
-                        PageNumber: page,
-                        PageSize: PAGE_SIZE,
-                    },
-                }
+                { params }
             );
 
             const result = normalizeResponse(response.data);
@@ -185,42 +200,25 @@ export default function RecruitmentRequests() {
     };
 
     useEffect(() => {
-        loadApplications();
-    }, [page]);
+        loadApplications(false, page, debouncedSearch);
+    }, [page, debouncedSearch]);
 
     const filteredApplications = useMemo(() => {
         const value = search.trim().toLowerCase();
-
-        if (!value) {
-            return applications;
-        }
+        if (!value) return applications;
 
         return applications.filter((application) => {
-            const department = formatValue(
-                getValue(
-                    application,
-                    'department',
-                    'Department'
-                )
-            ).toLowerCase();
-
-            const cvFileName = formatValue(
-                getValue(
-                    application,
-                    'cvFileName',
-                    'CvFileName'
-                )
-            ).toLowerCase();
-
-            const message = formatValue(
-                getValue(
-                    application,
-                    'message',
-                    'Message'
-                )
-            ).toLowerCase();
+            const department = formatValue(getValue(application, 'department', 'Department')).toLowerCase();
+            const cvFileName = formatValue(getValue(application, 'cvFileName', 'CvFileName')).toLowerCase();
+            const message = formatValue(getValue(application, 'message', 'Message')).toLowerCase();
+            const applicantName = formatValue(getValue(application, 'fullName', 'FullName') || getValue(application, 'name', 'Name')).toLowerCase();
+            const email = formatValue(getValue(application, 'email', 'Email')).toLowerCase();
+            const phone = formatValue(getValue(application, 'phone', 'Phone')).toLowerCase();
 
             return (
+                applicantName.includes(value) ||
+                email.includes(value) ||
+                phone.includes(value) ||
                 department.includes(value) ||
                 cvFileName.includes(value) ||
                 message.includes(value)
@@ -378,7 +376,7 @@ export default function RecruitmentRequests() {
                                 setSearch(event.target.value);
                                 setPage(1);
                             }}
-                            placeholder="Search recruitment requests..."
+                            placeholder="Search by applicant name, email, phone, department, or CV..." title="Search by applicant name, email, phone, department, or CV"
                             className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>

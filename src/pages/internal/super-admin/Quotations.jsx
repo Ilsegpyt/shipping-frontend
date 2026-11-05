@@ -180,12 +180,24 @@ export default function Quotations() {
     const [error, setError] = useState('');
 
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [page, setPage] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
 
     const [selectedQuotation, setSelectedQuotation] = useState(null);
     const [detailsLoading, setDetailsLoading] = useState(false);
     const [detailsError, setDetailsError] = useState('');
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch]);
 
     useEffect(() => {
         if (!error) return;
@@ -204,7 +216,7 @@ export default function Quotations() {
         Math.ceil(totalCount / PAGE_SIZE)
     );
 
-    const loadQuotations = async (isRefresh = false) => {
+    const loadQuotations = async (isRefresh = false, pageNum = page, searchTerm = debouncedSearch) => {
         try {
             if (isRefresh) {
                 setRefreshing(true);
@@ -214,14 +226,17 @@ export default function Quotations() {
 
             setError('');
 
+            const params = {
+                PageNumber: pageNum,
+                PageSize: PAGE_SIZE,
+            };
+            if (searchTerm && searchTerm.trim()) {
+                params.Search = searchTerm.trim();
+            }
+
             const response = await api.get(
                 '/api/website/quote-requests',
-                {
-                    params: {
-                        PageNumber: page,
-                        PageSize: PAGE_SIZE,
-                    },
-                }
+                { params }
             );
 
             const result = normalizeResponse(response.data);
@@ -246,59 +261,20 @@ export default function Quotations() {
     };
 
     useEffect(() => {
-        loadQuotations();
-    }, [page]);
+        loadQuotations(false, page, debouncedSearch);
+    }, [page, debouncedSearch]);
 
     const filteredQuotations = useMemo(() => {
         const value = search.trim().toLowerCase();
-
-        if (!value) {
-            return quotations;
-        }
+        if (!value) return quotations;
 
         return quotations.filter((quotation) => {
-            const fullName =
-                getFullName(quotation).toLowerCase();
-
-            const company = formatValue(
-                getValue(
-                    quotation,
-                    'company',
-                    'Company'
-                )
-            ).toLowerCase();
-
-            const country = formatValue(
-                getValue(
-                    quotation,
-                    'country',
-                    'Country'
-                )
-            ).toLowerCase();
-
-            const email = formatValue(
-                getValue(
-                    quotation,
-                    'email',
-                    'Email'
-                )
-            ).toLowerCase();
-
-            const phone = formatValue(
-                getValue(
-                    quotation,
-                    'phone',
-                    'Phone'
-                )
-            ).toLowerCase();
-
-            const interestType = formatEnum(
-                getValue(
-                    quotation,
-                    'interestType',
-                    'InterestType'
-                )
-            ).toLowerCase();
+            const fullName = getFullName(quotation).toLowerCase();
+            const company = formatValue(getValue(quotation, 'company', 'Company')).toLowerCase();
+            const country = formatValue(getValue(quotation, 'country', 'Country')).toLowerCase();
+            const email = formatValue(getValue(quotation, 'email', 'Email')).toLowerCase();
+            const phone = formatValue(getValue(quotation, 'phone', 'Phone')).toLowerCase();
+            const interestType = formatEnum(getValue(quotation, 'interestType', 'InterestType')).toLowerCase();
 
             return (
                 fullName.includes(value) ||
@@ -421,7 +397,7 @@ export default function Quotations() {
                                 setSearch(event.target.value);
                                 setPage(1);
                             }}
-                            placeholder="Search quotations..."
+                            placeholder="Search by name, company, country, email, phone, or service..." title="Search by name, company, country, email, phone, or service"
                             className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                         />
                     </div>

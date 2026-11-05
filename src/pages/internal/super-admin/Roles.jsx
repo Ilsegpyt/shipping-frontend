@@ -347,30 +347,26 @@ export default function Roles() {
         return () => clearTimeout(timer);
     }, [error]);
 
+    const ROLE_ARABIC_ALIASES = {
+        'super admin': 'مدير النظام سوبر ادمن ادمنز',
+        'operations': 'عمليات تشغيل نقل بحري',
+        'operations specialist': 'مسؤول عمليات تشغيل بحري',
+        'customs broker': 'مخلص جمركي تخليص جمارك',
+        'account manager': 'مدير حسابات عملاء اكاونت مانجر',
+        'sales': 'مبيعات سيلز',
+    };
+
     const filteredRoles = useMemo(() => {
-
         const term = searchTerm.trim().toLowerCase();
+        if (!term) return roles;
 
-        if (!term) {
+        return roles.filter((role) => {
+            const name = String(role.name || '').toLowerCase();
+            const desc = String(role.description || '').toLowerCase();
+            const alias = ROLE_ARABIC_ALIASES[name] || '';
 
-            return roles;
-
-        }
-
-        return roles.filter((role) =>
-
-            [role.name]
-
-                .filter(Boolean)
-
-                .some((value) =>
-
-                    String(value).toLowerCase().includes(term)
-
-                )
-
-        );
-
+            return name.includes(term) || desc.includes(term) || alias.includes(term);
+        });
     }, [roles, searchTerm]);
 
     const availablePermissions = useMemo(() => {
@@ -774,7 +770,7 @@ export default function Roles() {
 
             <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
 
-                <div className="relative w-full max-w-sm">
+                <div className="relative w-full max-w-md">
 
                     <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
@@ -782,7 +778,7 @@ export default function Roles() {
 
                         type="search"
 
-                        placeholder="Search roles..."
+                        placeholder="Search by role name, description, or alias..." title="Search by role name, description, or alias"
 
                         value={searchTerm}
 

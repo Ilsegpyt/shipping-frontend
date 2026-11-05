@@ -39,6 +39,7 @@ export default function EmailDraftModal({
   onClose,
   currentDir = 'Import',
   entry = { Import: [], Export: [] },
+  activeRows = [],
   preSelectedRefs = [],
   showToast,
   lang = 'en',
@@ -71,7 +72,9 @@ export default function EmailDraftModal({
   // 1. Group active rows into shipments
   const allGroupedShipments = useMemo(() => {
     let rows = [];
-    if (currentDir === 'Delivered') {
+    if (Array.isArray(activeRows) && activeRows.length > 0) {
+      rows = activeRows;
+    } else if (currentDir === 'Delivered') {
       rows = [
         ...(entry.Import || []).filter((r) => r.status === 'Delivered'),
         ...(entry.Export || []).filter((r) => r.status === 'Delivered'),
@@ -86,10 +89,10 @@ export default function EmailDraftModal({
       if (!map.has(ref)) {
         map.set(ref, []);
       }
-      map.get(ref).push({ ...r, _originalIdx: idx });
+      map.get(ref).push({ ...r, _originalIdx: idx, _computedShipRef: ref });
     });
     return Array.from(map.values());
-  }, [entry, activeDir, currentDir]);
+  }, [entry, activeDir, currentDir, activeRows]);
 
   // Reset form and selections whenever modal opens
   useEffect(() => {
@@ -107,9 +110,25 @@ export default function EmailDraftModal({
       // If user had selected specific shipments in the main grid, pre-select them;
       // otherwise, select all shipments
       if (Array.isArray(preSelectedRefs) && preSelectedRefs.length > 0) {
-        setSelectedShipmentRefs(new Set(preSelectedRefs));
+        const preSet = new Set(preSelectedRefs);
+        const matched = new Set();
+        allGroupedShipments.forEach((s, idx) => {
+          const first = s[0] || {};
+          const ref = first._computedShipRef || first._ref || `ship_${idx}`;
+          if (
+            preSet.has(ref) ||
+            (first._ref && preSet.has(first._ref)) ||
+            (first._operationId && preSet.has(first._operationId)) ||
+            (first.bl && preSet.has(first.bl)) ||
+            (first.booking && preSet.has(first.booking)) ||
+            (first.shipNo && preSet.has(first.shipNo))
+          ) {
+            matched.add(ref);
+          }
+        });
+        setSelectedShipmentRefs(matched.size > 0 ? matched : preSet);
       } else {
-        const allRefs = allGroupedShipments.map((s, idx) => s[0]?._ref || `ship_${idx}`);
+        const allRefs = allGroupedShipments.map((s, idx) => s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
         setSelectedShipmentRefs(new Set(allRefs));
       }
     }
@@ -203,18 +222,18 @@ export default function EmailDraftModal({
   // Toggle all shipments visible in the filtered list
   const allVisibleShipmentsSelected =
     filteredModalShipments.length > 0 &&
-    filteredModalShipments.every((s, idx) => selectedShipmentRefs.has(s[0]?._ref || `ship_${idx}`));
+    filteredModalShipments.every((s, idx) => selectedShipmentRefs.has(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`));
 
   const toggleAllShipments = () => {
     setSelectedShipmentRefs((prev) => {
       const next = new Set(prev);
       if (allVisibleShipmentsSelected) {
         filteredModalShipments.forEach((s, idx) => {
-          next.delete(s[0]?._ref || `ship_${idx}`);
+          next.delete(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
         });
       } else {
         filteredModalShipments.forEach((s, idx) => {
-          next.add(s[0]?._ref || `ship_${idx}`);
+          next.add(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
         });
       }
       return next;
@@ -239,7 +258,7 @@ export default function EmailDraftModal({
     }
 
     const chosenShipments = allGroupedShipments.filter((s, idx) =>
-      selectedShipmentRefs.has(s[0]?._ref || `ship_${idx}`)
+      selectedShipmentRefs.has(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`)
     );
 
     if (chosenShipments.length === 0) {
@@ -298,15 +317,15 @@ export default function EmailDraftModal({
       <thead>
         <tr style="height: 46px;">
           ${chosenCols
-            .map((c) => {
-              const colWidth = COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190);
-              const gStyle = GROUP_STYLES[c.g] || GROUP_STYLES.g7;
-              return `<th width="${colWidth}" style="width: ${colWidth}px; min-width: ${colWidth}px; background-color: ${gStyle.bg}; border: 1px solid ${gStyle.border}; color: ${gStyle.color}; font-weight: bold; padding: 11px 12px; text-align: center; font-size: 12px; line-height: 1.35; white-space: nowrap; box-sizing: border-box;">
+        .map((c) => {
+          const colWidth = COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190);
+          const gStyle = GROUP_STYLES[c.g] || GROUP_STYLES.g7;
+          return `<th width="${colWidth}" style="width: ${colWidth}px; min-width: ${colWidth}px; background-color: ${gStyle.bg}; border: 1px solid ${gStyle.border}; color: ${gStyle.color}; font-weight: bold; padding: 11px 12px; text-align: center; font-size: 12px; line-height: 1.35; white-space: nowrap; box-sizing: border-box;">
                 <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px; white-space: nowrap;"><nobr>${escapeHtml(c.h)}</nobr></div>
                 <div style="font-size: 10px; opacity: 0.85; font-weight: normal; white-space: nowrap;"><nobr>${escapeHtml(c.ar || '')}</nobr></div>
               </th>`;
-            })
-            .join('')}
+        })
+        .join('')}
         </tr>
       </thead>
     `;
@@ -314,80 +333,80 @@ export default function EmailDraftModal({
     const tbodyHtml = `
       <tbody>
         ${chosenShipments
-          .map((shipRows, shipIdx) => {
-            const rowSpan = shipRows.length;
-            const isEvenShip = shipIdx % 2 === 0;
-            const shipBg = isEvenShip ? '#ffffff' : '#f8fafc';
+        .map((shipRows, shipIdx) => {
+          const rowSpan = shipRows.length;
+          const isEvenShip = shipIdx % 2 === 0;
+          const shipBg = isEvenShip ? '#ffffff' : '#f8fafc';
 
-            return shipRows
-              .map((r, rIdx) => {
-                const isFirstRow = rIdx === 0;
+          return shipRows
+            .map((r, rIdx) => {
+              const isFirstRow = rIdx === 0;
 
-                const cells = chosenCols
-                  .map((c) => {
-                    const isMergedCol = c.uniq === true;
-                    if (isMergedCol && !isFirstRow) return null; // handled by rowspan
+              const cells = chosenCols
+                .map((c) => {
+                  const isMergedCol = c.uniq === true;
+                  if (isMergedCol && !isFirstRow) return null; // handled by rowspan
 
-                    let cellVal = r[c.k] ?? '';
+                  let cellVal = r[c.k] ?? '';
 
-                    // Formatting container updates (extract human-readable text)
-                    if (c.k === 'updates') {
-                      if (Array.isArray(cellVal) && cellVal.length > 0) {
-                        const manual = cellVal.filter(
-                          (up) =>
-                            up &&
-                            typeof up === 'object' &&
-                            (!up.details ||
-                              (!up.details.startsWith('Export container updated') &&
-                                !up.details.startsWith('Import container updated')))
-                        );
-                        const target = manual.length > 0 ? manual[0] : cellVal[0];
-                        if (target && typeof target === 'object') {
-                          cellVal = target.details || target.message || target.text || '';
-                        } else if (target) {
-                          cellVal = String(target);
-                        } else {
-                          cellVal = '';
-                        }
-                      } else if (typeof cellVal === 'object' && cellVal !== null) {
-                        cellVal = cellVal.details || cellVal.message || cellVal.text || '';
+                  // Formatting container updates (extract human-readable text)
+                  if (c.k === 'updates') {
+                    if (Array.isArray(cellVal) && cellVal.length > 0) {
+                      const manual = cellVal.filter(
+                        (up) =>
+                          up &&
+                          typeof up === 'object' &&
+                          (!up.details ||
+                            (!up.details.startsWith('Export container updated') &&
+                              !up.details.startsWith('Import container updated')))
+                      );
+                      const target = manual.length > 0 ? manual[0] : cellVal[0];
+                      if (target && typeof target === 'object') {
+                        cellVal = target.details || target.message || target.text || '';
+                      } else if (target) {
+                        cellVal = String(target);
                       } else {
-                        cellVal = cellVal ? String(cellVal) : '';
+                        cellVal = '';
                       }
+                    } else if (typeof cellVal === 'object' && cellVal !== null) {
+                      cellVal = cellVal.details || cellVal.message || cellVal.text || '';
+                    } else {
+                      cellVal = cellVal ? String(cellVal) : '';
                     }
+                  }
 
-                    // Formatting container types
-                    if (c.k === 'size' && cellVal) {
-                      const matchType = CONTAINER_TYPES.find((t) => t.value === cellVal);
-                      if (matchType) cellVal = matchType.label;
-                    }
+                  // Formatting container types
+                  if (c.k === 'size' && cellVal) {
+                    const matchType = CONTAINER_TYPES.find((t) => t.value === cellVal);
+                    if (matchType) cellVal = matchType.label;
+                  }
 
-                    // Formatting dates
-                    if (c.t === 'date' && cellVal) {
-                      cellVal = String(cellVal).slice(0, 10);
-                    }
+                  // Formatting dates
+                  if (c.t === 'date' && cellVal) {
+                    cellVal = String(cellVal).slice(0, 10);
+                  }
 
-                    // Safety guard: ensure no object or array ever prints as [object Object]
-                    if (typeof cellVal === 'object' && cellVal !== null) {
-                      cellVal = cellVal.name || cellVal.label || cellVal.value || cellVal.text || '';
-                    }
+                  // Safety guard: ensure no object or array ever prints as [object Object]
+                  if (typeof cellVal === 'object' && cellVal !== null) {
+                    cellVal = cellVal.name || cellVal.label || cellVal.value || cellVal.text || '';
+                  }
 
-                    const colWidth = COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190);
-                    const spanAttr = isMergedCol && rowSpan > 1 ? ` rowspan="${rowSpan}"` : '';
-                    const cellBg = isMergedCol ? shipBg : (rIdx % 2 === 0 ? '#ffffff' : '#fafafa');
+                  const colWidth = COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190);
+                  const spanAttr = isMergedCol && rowSpan > 1 ? ` rowspan="${rowSpan}"` : '';
+                  const cellBg = isMergedCol ? shipBg : (rIdx % 2 === 0 ? '#ffffff' : '#fafafa');
 
-                    return `<td width="${colWidth}"${spanAttr} style="width: ${colWidth}px; min-width: ${colWidth}px; background-color: ${cellBg}; border: 1px solid #cbd5e1; padding: 10px 14px; text-align: center; vertical-align: middle; font-size: 12.5px; line-height: 1.4; color: #1e293b; white-space: nowrap; box-sizing: border-box;">
+                  return `<td width="${colWidth}"${spanAttr} style="width: ${colWidth}px; min-width: ${colWidth}px; background-color: ${cellBg}; border: 1px solid #cbd5e1; padding: 10px 14px; text-align: center; vertical-align: middle; font-size: 12.5px; line-height: 1.4; color: #1e293b; white-space: nowrap; box-sizing: border-box;">
                       <nobr>${escapeHtml(cellVal)}</nobr>
                     </td>`;
-                  })
-                  .filter(Boolean)
-                  .join('');
+                })
+                .filter(Boolean)
+                .join('');
 
-                return `<tr>${cells}</tr>`;
-              })
-              .join('');
-          })
-          .join('')}
+              return `<tr>${cells}</tr>`;
+            })
+            .join('');
+        })
+        .join('')}
       </tbody>
     `;
 
@@ -492,11 +511,10 @@ export default function EmailDraftModal({
                 if (toError && e.target.value.trim()) setToError(false);
               }}
               placeholder="name@company.com; other@company.com"
-              className={`w-full text-xs rounded-lg border px-3 py-2 outline-none transition ${
-                toError
+              className={`w-full text-xs rounded-lg border px-3 py-2 outline-none transition ${toError
                   ? 'border-rose-400 bg-rose-50/20 focus:border-rose-500 focus:ring-1 focus:ring-rose-500'
                   : 'border-slate-300 focus:border-sky-500 focus:ring-1 focus:ring-sky-500'
-              }`}
+                }`}
             />
             {toError && (
               <p className="text-[11px] text-rose-600 mt-1 font-medium">
@@ -630,7 +648,7 @@ export default function EmailDraftModal({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                   {filteredModalShipments.map((shipRows, idx) => {
                     const first = shipRows[0] || {};
-                    const shipRef = first._ref || `ship_${idx}`;
+                    const shipRef = first._computedShipRef || first._ref || `ship_${idx}`;
                     const isChecked = selectedShipmentRefs.has(shipRef);
 
                     const labelBlOrBooking = first.bl || first.booking || first.shipNo || 'N/A';
@@ -643,11 +661,10 @@ export default function EmailDraftModal({
                       <label
                         key={shipRef}
                         title={titleText}
-                        className={`flex items-center gap-2 cursor-pointer p-1.5 rounded-md border text-[11px] transition select-none ${
-                          isChecked
+                        className={`flex items-center gap-2 cursor-pointer p-1.5 rounded-md border text-[11px] transition select-none ${isChecked
                             ? 'border-sky-300 bg-sky-50/60 text-slate-900 font-medium'
                             : 'border-transparent text-slate-600 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         <input
                           type="checkbox"

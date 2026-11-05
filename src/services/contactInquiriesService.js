@@ -1,15 +1,17 @@
 import api from './api';
 
 const contactInquiriesService = {
-    getAll: async (pageNumber = 1, pageSize = 10) => {
+    getAll: async (pageNumber = 1, pageSize = 10, search = '') => {
+        const params = {
+            PageNumber: pageNumber,
+            PageSize: pageSize,
+        };
+        if (search && search.trim()) {
+            params.Search = search.trim();
+        }
         const response = await api.get(
             '/api/website/contact-inquiries',
-            {
-                params: {
-                    PageNumber: pageNumber,
-                    PageSize: pageSize,
-                },
-            }
+            { params }
         );
 
         return response.data;

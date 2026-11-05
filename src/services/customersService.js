@@ -3,24 +3,28 @@ import api from './api';
 export const getCustomers = async (
     pageNumber = 1,
     pageSize = 10,
-    recordStatus = 'notDeleted'
+    recordStatus = 'notDeleted',
+    search = ''
 ) => {
+    const params = {
+        pageNumber,
+        pageSize,
+    };
+
+    if (search && search.trim()) {
+        params.search = search.trim();
+    }
+
     let response;
 
     if (recordStatus === 'notDeleted') {
         response = await api.get('/api/customers/', {
-            params: {
-                pageNumber,
-                pageSize,
-            },
+            params,
         });
     } else {
+        params.deletedOnly = recordStatus === 'deleted';
         response = await api.get('/api/customers/all', {
-            params: {
-                deletedOnly: recordStatus === 'deleted',
-                pageNumber,
-                pageSize,
-            },
+            params,
         });
     }
 

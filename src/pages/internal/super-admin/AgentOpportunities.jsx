@@ -33,6 +33,7 @@ export default function AgentOpportunities() {
     }, [error]);
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [pageNumber, setPageNumber] = useState(1);
     const [totalCount, setTotalCount] = useState(0);
 
@@ -43,20 +44,34 @@ export default function AgentOpportunities() {
 
     const [detailsLoading, setDetailsLoading] = useState(false);
 
-    const loadApplications = async (page = pageNumber) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchTerm);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
+
+    useEffect(() => {
+        setPageNumber(1);
+    }, [debouncedSearch]);
+
+    const loadApplications = async (page = pageNumber, search = debouncedSearch) => {
         try {
             setLoading(true);
             setError('');
             setOpenActionsId(null);
 
+            const params = {
+                PageNumber: page,
+                PageSize: PAGE_SIZE,
+            };
+            if (search && search.trim()) {
+                params.Search = search.trim();
+            }
+
             const response = await api.get(
                 '/api/website/agent-applications',
-                {
-                    params: {
-                        PageNumber: page,
-                        PageSize: PAGE_SIZE,
-                    },
-                }
+                { params }
             );
 
             const data = response.data;
@@ -76,20 +91,18 @@ export default function AgentOpportunities() {
     };
 
     useEffect(() => {
-        loadApplications(pageNumber);
-    }, [pageNumber]);
+        loadApplications(pageNumber, debouncedSearch);
+    }, [pageNumber, debouncedSearch]);
 
     const filteredApplications = useMemo(() => {
-        const search = searchTerm.trim().toLowerCase();
-
-        if (!search) {
-            return applications;
-        }
+        const term = searchTerm.trim().toLowerCase();
+        if (!term) return applications;
 
         return applications.filter((application) => {
             return [
                 application.firstName,
                 application.lastName,
+                `${application.firstName || ''} ${application.lastName || ''}`,
                 application.email,
                 application.country,
                 application.city,
@@ -99,9 +112,7 @@ export default function AgentOpportunities() {
             ]
                 .filter(Boolean)
                 .some((value) =>
-                    String(value)
-                        .toLowerCase()
-                        .includes(search)
+                    String(value).toLowerCase().includes(term)
                 );
         });
     }, [applications, searchTerm]);
@@ -260,7 +271,7 @@ export default function AgentOpportunities() {
                             onChange={(event) =>
                                 setSearchTerm(event.target.value)
                             }
-                            placeholder="Search applicants, email, city, industry..."
+                            placeholder="Search by name, country, city, email, phone, or industry..." title="Search by name, country, city, email, phone, or industry"
                             className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
                         />
                     </div>
