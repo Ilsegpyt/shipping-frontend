@@ -232,6 +232,24 @@ export const getOperationStatusAudits = async (operationId) => {
 };
 
 /**
+ * Concurrency / Soft Lock Endpoints
+ */
+export const lockOperation = async (id) => {
+  const response = await api.post(`/api/operations/${id}/lock`);
+  return response.data;
+};
+
+export const unlockOperation = async (id, force = false) => {
+  const response = await api.post(`/api/operations/${id}/unlock`, { force });
+  return response.data;
+};
+
+export const takeOverOperation = async (id) => {
+  const response = await api.post(`/api/operations/${id}/take-over`);
+  return response.data;
+};
+
+/**
  * Advanced Operations Search (Rule-based, Sorting, Pagination)
  * POST /api/operations/search
  */

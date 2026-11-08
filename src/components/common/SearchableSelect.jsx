@@ -54,7 +54,7 @@ export default function SearchableSelect({
   // Find currently selected option
   const selectedOption = useMemo(() => {
     if (value === null || value === undefined || value === '') return null;
-    return normalizedOptions.find((opt) => 
+    return normalizedOptions.find((opt) =>
       String(opt.value).toLowerCase() === String(value).toLowerCase() ||
       String(opt.label).toLowerCase() === String(value).toLowerCase()
     ) || (allowCustom ? { value, label: String(value) } : null);
@@ -78,8 +78,8 @@ export default function SearchableSelect({
       }
     }
     // Also get rough count if needed
-    const total = matches.length >= maxResults 
-      ? normalizedOptions.filter((opt) => opt.searchStr.includes(q)).length 
+    const total = matches.length >= maxResults
+      ? normalizedOptions.filter((opt) => opt.searchStr.includes(q)).length
       : matches.length;
 
     return { filtered: matches, totalMatches: total };
@@ -175,7 +175,7 @@ export default function SearchableSelect({
   return (
     <div
       ref={containerRef}
-      className={`relative inline-block w-full text-left font-sans ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
+      className={`relative inline-block w-full text-start font-sans ${disabled ? 'opacity-60 cursor-not-allowed' : ''} ${className}`}
       onKeyDown={handleKeyDown}
       id={id}
     >
@@ -186,17 +186,17 @@ export default function SearchableSelect({
       <div
         tabIndex={disabled ? -1 : 0}
         onClick={() => !disabled && setIsOpen(!isOpen)}
-        className={`flex items-center justify-between w-full cursor-pointer transition select-none ${
-          compact
+        title={displayLabel || placeholder}
+        className={`flex items-center justify-between w-full cursor-pointer transition select-none ${compact
             ? 'h-[34px] min-h-[34px] px-2 text-xs font-semibold bg-transparent rounded border border-transparent hover:border-sky-300 focus:border-sky-500 focus:bg-white text-slate-700'
-            : 'min-h-[40px] px-3 py-2 text-[13px] bg-white border border-slate-300 rounded-lg shadow-2xs hover:border-slate-400 focus:outline-hidden focus:border-sky-500 focus:ring-2 focus:ring-sky-100 text-slate-800'
-        } ${isOpen ? 'border-sky-500 ring-2 ring-sky-100' : ''}`}
+            : 'h-[44px] min-h-[44px] px-3.5 py-2 text-[14px] bg-white border border-slate-300 rounded-xl shadow-2xs hover:border-slate-400 focus:outline-hidden focus:border-sky-500 focus:ring-2 focus:ring-sky-100 text-slate-800'
+          } ${isOpen ? 'border-sky-500 ring-2 ring-sky-100' : ''}`}
       >
-        <span className={`truncate mr-1 ${!displayLabel ? 'text-slate-400 font-normal' : 'font-medium text-slate-800'}`}>
+        <span className={`truncate me-2 ${!displayLabel ? 'text-slate-400 font-normal' : 'font-medium text-slate-800'}`}>
           {displayLabel || placeholder}
         </span>
 
-        <div className="flex items-center gap-1 shrink-0 ml-1">
+        <div className="flex items-center gap-1 shrink-0 ms-1">
           {displayLabel && !disabled && (
             <button
               type="button"
@@ -217,12 +217,12 @@ export default function SearchableSelect({
       {/* Dropdown Menu */}
       {isOpen && (
         <div
-          className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+          className="absolute left-0 right-0 z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100 text-start"
           style={{ minWidth: '220px' }}
         >
           {/* Search Input Bar */}
           <div className="p-2 border-b border-slate-100 bg-slate-50/80 sticky top-0 z-10 flex items-center gap-2">
-            <Search size={14} className="text-slate-400 shrink-0 ml-1" />
+            <Search size={14} className="text-slate-400 shrink-0 ms-1" />
             <input
               ref={inputRef}
               type="text"
@@ -232,7 +232,7 @@ export default function SearchableSelect({
                 setHighlightIndex(-1);
               }}
               placeholder="Type to search..."
-              className="w-full text-xs bg-transparent border-none outline-hidden text-slate-800 placeholder-slate-400"
+              className="w-full text-xs bg-transparent border-none outline-hidden text-slate-800 placeholder-slate-400 text-start"
               onClick={(e) => e.stopPropagation()}
             />
             {query && (
@@ -273,17 +273,16 @@ export default function SearchableSelect({
                     key={`${opt.value}-${idx}`}
                     onClick={() => handleSelect(opt)}
                     onMouseEnter={() => setHighlightIndex(idx)}
-                    className={`px-3 py-2 cursor-pointer flex items-center justify-between transition ${
-                      isSelected
+                    className={`px-3.5 py-2.5 cursor-pointer flex items-center justify-between transition ${isSelected
                         ? 'bg-sky-50 text-sky-800 font-bold'
                         : isHighlighted
-                        ? 'bg-slate-100 text-slate-900'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
+                          ? 'bg-slate-100 text-slate-900'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
                   >
-                    <span className="truncate">{opt.label}</span>
+                    <span className="truncate text-start">{opt.label}</span>
                     {opt.sublabel && opt.sublabel !== opt.label && (
-                      <span className="ml-2 text-[10px] text-slate-400 shrink-0 font-mono bg-slate-100 px-1 py-0.5 rounded">
+                      <span className="ms-2 text-[10px] text-slate-400 shrink-0 font-mono bg-slate-100 px-1.5 py-0.5 rounded">
                         {opt.sublabel}
                       </span>
                     )}

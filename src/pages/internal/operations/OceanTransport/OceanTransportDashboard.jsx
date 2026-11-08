@@ -181,8 +181,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     try {
       const data = await getDeliveredOperations();
       if (Array.isArray(data)) {
-        const { entry: mapped } = mapBackendOperationsToFrontend(data);
-        setDeliveredOperations([...(mapped.Import || []), ...(mapped.Export || [])]);
+        setDeliveredOperations(data);
         setHasLoadedDelivered(true);
       }
     } catch (err) {
@@ -786,7 +785,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
   const handleReopenOperation = async (opId, reason) => {
     // Optimistic removal from delivered operations list
-    setDeliveredOperations((prev) => prev.filter((r) => r._operationId !== opId));
+    setDeliveredOperations((prev) => prev.filter((r) => r.id !== opId && r._operationId !== opId));
 
     // Optimistic count adjustment
     setOperationsCounts((prev) => {

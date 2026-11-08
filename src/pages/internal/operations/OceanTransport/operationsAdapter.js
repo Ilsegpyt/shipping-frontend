@@ -79,6 +79,9 @@ export function mapBackendOperationsToFrontend(operations = []) {
 
       const baseRow = {
         _operationId: op.id,
+        _lockedByUserId: op.lockedByUserId || op.LockedByUserId || null,
+        _lockedByName: op.lockedByName || op.LockedByName || '',
+        _lockedAtUtc: op.lockedAtUtc || op.LockedAtUtc || null,
         _containerId: cntr.id,
         _ref: ref,
         _rowId: rowId,

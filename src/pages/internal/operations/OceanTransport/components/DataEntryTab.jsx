@@ -37,8 +37,19 @@ import { COLS, CONTAINER_TYPES } from '../constants';
 import { fmtDay } from '../tptEngine';
 import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
-import { addContainerUpdate, getOperationById, getOperationStatusAudits, getPagedOperations } from '../../../../../services/operationsService';
+import { addContainerUpdate, getOperationById, getOperationStatusAudits, getPagedOperations, lockOperation, unlockOperation, takeOverOperation } from '../../../../../services/operationsService';
 import { useAuth } from '../../../../../auth/AuthContext';
+
+export const isLockActive = (lockedAtUtc, timeoutMinutes = 10) => {
+  if (!lockedAtUtc) return false;
+  try {
+    const lockTime = new Date(lockedAtUtc).getTime();
+    if (isNaN(lockTime)) return false;
+    return Date.now() - lockTime < timeoutMinutes * 60 * 1000;
+  } catch {
+    return false;
+  }
+};
 
 export const parseUtcDate = (utcStr) => {
   if (!utcStr) return null;
@@ -138,12 +149,13 @@ export default function DataEntryTab({
 
   // Server-Side Pagination & Search state
   const [serverPageRows, setServerPageRows] = useState([]);
+  const [serverPageOperations, setServerPageOperations] = useState([]);
   const [serverTotalCount, setServerTotalCount] = useState(0);
   const [serverTotalContainers, setServerTotalContainers] = useState(0);
   const [serverTotalPages, setServerTotalPages] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
 
-  const isServerSide = currentDir === 'Import' || currentDir === 'Export';
+  const isServerSide = currentDir === 'Import' || currentDir === 'Export' || currentDir === 'Delivered' || currentDir === 'Deleted';
 
   const onUpdateCell = (dir, rowId, colKey, val) => {
     if (isServerSide) {
@@ -168,6 +180,26 @@ export default function DataEntryTab({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
+  // Stable filter serializer ensuring consistent cache keys across renders
+  const serializeFilters = useCallback((f = {}, dir = 'Import') => {
+    const clean = {};
+    Object.keys(f || {}).forEach((k) => {
+      if (dir === 'Import' && (k === 'clearanceType' || k === 'customs')) return;
+      const v = f[k];
+      if (v !== '' && v !== null && v !== undefined) {
+        clean[k] = v;
+      }
+    });
+    return JSON.stringify(clean);
+  }, []);
+
+  // Request sequencing and current direction refs to prevent out-of-order race conditions
+  const fetchSeqRef = useRef(0);
+  const currentDirRef = useRef(currentDir);
+  useEffect(() => {
+    currentDirRef.current = currentDir;
+  }, [currentDir]);
+
   // High-performance in-memory cache for instant 0ms tab switching (Stale-While-Revalidate)
   const tabPagesCacheRef = useRef({});
 
@@ -183,17 +215,25 @@ export default function DataEntryTab({
       targetDir = 'Import',
       isSilent = false
     ) => {
-      if (targetDir !== 'Import' && targetDir !== 'Export') return;
+      if (!['Import', 'Export', 'Delivered', 'Deleted'].includes(targetDir)) return;
+      const seq = ++fetchSeqRef.current;
       if (!isSilent) {
         setIsPageLoading(true);
       }
       try {
+        const cleanSearch = targetSearch?.trim() || '';
+        const currentTabSize = (targetDir === 'Delivered' || targetDir === 'Deleted') ? 20 : pageSize;
+        const isDelivered = targetDir === 'Delivered';
+        const isDeleted = targetDir === 'Deleted';
+
         const res = await getPagedOperations({
           page: targetPage,
-          pageSize,
-          operationType: targetDir,
-          search: targetSearch?.trim() || undefined,
-          onlyActive: true,
+          pageSize: currentTabSize,
+          operationType: (isDelivered || isDeleted) ? undefined : targetDir,
+          status: isDelivered ? 'Delivered' : (isDeleted ? undefined : (targetFilters.status || undefined)),
+          onlyActive: (isDelivered || isDeleted) ? false : true,
+          isDeleted: isDeleted,
+          search: cleanSearch || undefined,
           client: targetFilters.client || undefined,
           line: targetFilters.line || undefined,
           port: targetFilters.port || undefined,
@@ -207,70 +247,88 @@ export default function DataEntryTab({
           dateType: targetFilters.dateType || undefined,
           dateFrom: targetFilters.dateFrom || undefined,
           dateTo: targetFilters.dateTo || undefined,
-          status: targetFilters.status || undefined,
         });
 
+        // Discard response if user changed tab or triggered a newer request while this one was inflight
+        if (seq !== fetchSeqRef.current || currentDirRef.current !== targetDir) {
+          return;
+        }
+
         if (res && Array.isArray(res.items)) {
-          const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
-          const mappedRows = mapped[targetDir] || [];
+          let mappedRows = [];
+          if (targetDir === 'Import' || targetDir === 'Export') {
+            const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
+            mappedRows = mapped[targetDir] || [];
+          } else {
+            const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
+            mappedRows = [...(mapped.Import || []), ...(mapped.Export || [])];
+          }
+
           setServerPageRows(mappedRows);
+          setServerPageOperations(res.items);
           setServerTotalCount(res.totalCount ?? 0);
           setServerTotalContainers(res.totalContainersCount ?? 0);
           setServerTotalPages(
-            res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / pageSize))
+            res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / currentTabSize))
           );
 
-          // Save to fast in-memory cache
-          const cacheKey = `${targetDir}_${targetPage}_${targetSearch}_${JSON.stringify(targetFilters)}`;
+          // Save to fast in-memory cache using stable serialized key
+          const cacheKey = `${targetDir}_${targetPage}_${cleanSearch}_${serializeFilters(targetFilters, targetDir)}`;
           tabPagesCacheRef.current[cacheKey] = {
             rows: mappedRows,
+            operations: res.items,
             totalCount: res.totalCount ?? 0,
             totalContainers: res.totalContainersCount ?? 0,
-            totalPages: res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / pageSize)),
+            totalPages: res.totalPages ?? Math.max(1, Math.ceil((res.totalCount ?? 0) / currentTabSize)),
           };
         }
       } catch (err) {
-        console.error('Failed to fetch server page:', err);
+        if (seq === fetchSeqRef.current) {
+          console.error('Failed to fetch server page:', err);
+        }
       } finally {
-        setIsPageLoading(false);
+        if (seq === fetchSeqRef.current && currentDirRef.current === targetDir) {
+          setIsPageLoading(false);
+        }
       }
     },
-    [pageSize]
+    [pageSize, serializeFilters]
   );
 
   // Server-side fetch: Instant 0ms execution on Tab switch & Pagination with Stale-While-Revalidate
   useEffect(() => {
     if (!isServerSide) return;
 
-    const cacheKey = `${currentDir}_${page}_${debouncedSearchTerm}_${JSON.stringify(filters)}`;
+    const cleanSearch = debouncedSearchTerm?.trim() || '';
+    const cacheKey = `${currentDir}_${page}_${cleanSearch}_${serializeFilters(filters, currentDir)}`;
     const cached = tabPagesCacheRef.current[cacheKey];
 
     if (cached) {
       // 0ms INSTANT SWITCH from in-memory cache!
       setServerPageRows(cached.rows);
+      setServerPageOperations(cached.operations || []);
       setServerTotalCount(cached.totalCount);
       setServerTotalContainers(cached.totalContainers);
       setServerTotalPages(cached.totalPages);
+      setIsPageLoading(false);
 
       // Silently refresh in background without freezing UI
-      fetchServerPage(page, debouncedSearchTerm, filters, currentDir, true);
+      fetchServerPage(page, cleanSearch, filters, currentDir, true);
     } else {
       // Immediate fetch (no delay!)
-      fetchServerPage(page, debouncedSearchTerm, filters, currentDir, false);
+      fetchServerPage(page, cleanSearch, filters, currentDir, false);
     }
-  }, [isServerSide, page, debouncedSearchTerm, filters, currentDir, fetchServerPage]);
+  }, [isServerSide, page, debouncedSearchTerm, filters, currentDir, fetchServerPage, serializeFilters]);
 
-  // Reset Export-specific filters when switching away from Export tab
+  // Pre-warm Export and Delivered page 1 in background on initial load so switching is instant 0ms
+  const hasPrewarmedRef = useRef(false);
   useEffect(() => {
-    if (currentDir !== 'Export') {
-      setFilters((prev) => {
-        if (prev.clearanceType || prev.customs) {
-          return { ...prev, clearanceType: '', customs: '' };
-        }
-        return prev;
-      });
+    if (currentDir === 'Import' && serverPageRows.length > 0 && !hasPrewarmedRef.current) {
+      hasPrewarmedRef.current = true;
+      fetchServerPage(1, '', {}, 'Export', true);
+      fetchServerPage(1, '', {}, 'Delivered', true);
     }
-  }, [currentDir]);
+  }, [currentDir, serverPageRows.length, fetchServerPage]);
 
   // Selected Operations state for checkbox column
   const [selectedOps, setSelectedOps] = useState(new Set());
@@ -356,7 +414,122 @@ export default function DataEntryTab({
     }
   };
 
-  const startEditingShipment = (shipRef, shipRows) => {
+  // Soft Concurrency & Lock Management Refs & State
+  const editingShipmentOpIdsRef = useRef({});
+  const [availableDrafts, setAvailableDrafts] = useState({});
+  const [checkingLock, setCheckingLock] = useState({});
+  const [openingEdit, setOpeningEdit] = useState({});
+  const [conflictModal, setConflictModal] = useState({
+    isOpen: false,
+    shipRef: '',
+    shipRows: [],
+    freshRows: null,
+    errMsg: '',
+    opId: null,
+    conflictType: 'TIMEOUT',
+    lockerName: '',
+  });
+  const [isRetryingSave, setIsRetryingSave] = useState(false);
+
+  // Tab Close / Pagehide keepalive beacon to immediately release lock (Case 3)
+  useEffect(() => {
+    const handleUnload = () => {
+      const activeOpIds = Object.values(editingShipmentOpIdsRef.current || {});
+      if (activeOpIds.length === 0) return;
+
+      const accessToken = localStorage.getItem('accessToken');
+      const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+
+      for (const opId of activeOpIds) {
+        try {
+          fetch(`${API_BASE_URL}/api/operations/${opId}/unlock`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+            body: JSON.stringify({ force: false }),
+            keepalive: true,
+          });
+        } catch (e) {
+          // ignore keepalive beacon errors during unload
+        }
+      }
+    };
+
+    window.addEventListener('pagehide', handleUnload);
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      window.removeEventListener('pagehide', handleUnload);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
+
+  // Heartbeat every 3.5 minutes to maintain active editing lock while user is typing (Case 6)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const activeShipRefs = Object.keys(editingShipments).filter((k) => editingShipments[k]);
+      if (activeShipRefs.length === 0) return;
+
+      activeShipRefs.forEach((shipRef) => {
+        const opId = editingShipmentOpIdsRef.current[shipRef];
+        if (opId) {
+          lockOperation(opId).catch((err) => {
+            console.warn(`Heartbeat lock renewal failed for ${opId}:`, err);
+          });
+        }
+      });
+    }, 210000); // 3.5 minutes
+
+    return () => clearInterval(interval);
+  }, [editingShipments]);
+
+  const hasShipmentEdits = (currentRows, snapshotRows) => {
+    if (!currentRows || !snapshotRows) return false;
+    if (currentRows.length !== snapshotRows.length) return true;
+
+    const editableKeys = [
+      'shipNo', 'vol', 'cert', 'client', 'bl', 'booking', 'line', 'dest', 'pod', 'pol', 'pow',
+      'free', 'reqDate', 'reqTime', 'arrDate', 'arrTime', 'gateOut', 'gateOutT',
+      'size', 'cntr', 'trucker', 'car', 'driver', 'mob', 'checkout', 'invRcv',
+      'missDoc', 'missRcv', 'status', 'clrType', 'customs', 'cut'
+    ];
+
+    for (let i = 0; i < currentRows.length; i++) {
+      const cur = currentRows[i];
+      const snap = snapshotRows[i];
+      if (!snap) return true;
+
+      for (const k of editableKeys) {
+        const vCur = (cur[k] ?? '').toString().trim();
+        const vSnap = (snap[k] ?? '').toString().trim();
+        if (vCur !== vSnap) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  const updateOperationRowsInTable = (opId, shipRef, freshRows) => {
+    if (!freshRows || freshRows.length === 0) return;
+    if (isServerSide) {
+      setServerPageRows((prev) => {
+        const firstIdx = prev.findIndex((r) => r._operationId === opId || r._ref === shipRef);
+        if (firstIdx === -1) return prev;
+        const oldRowsCount = prev.filter((r) => r._operationId === opId || r._ref === shipRef).length;
+        const next = [...prev];
+        next.splice(firstIdx, oldRowsCount, ...freshRows);
+        return next;
+      });
+    }
+    if (onRestoreShipment) {
+      onRestoreShipment(currentDir, shipRef, freshRows);
+    }
+  };
+
+  const startEditingShipment = async (shipRef, shipRows, isAlreadyLocked = false) => {
     if (!shipRows || shipRows.length === 0) return;
     if (shipRows[0]?.status === 'Delivered') {
       notify(
@@ -367,9 +540,105 @@ export default function DataEntryTab({
       );
       return;
     }
+
+    const firstRow = shipRows[0];
+    const opId = firstRow?._operationId;
+    const currentUserId = user?.id || user?.userId;
+    let targetRows = shipRows;
+
+    // Check if locked by another user (Action Gate - Case 1 & Case 7)
+    if (!isAlreadyLocked && opId) {
+      if (
+        firstRow._lockedByUserId &&
+        String(firstRow._lockedByUserId).toLowerCase() !== String(currentUserId).toLowerCase() &&
+        isLockActive(firstRow._lockedAtUtc, 10)
+      ) {
+        notify(
+          lang === 'ar'
+            ? `الشحنة قيد التعديل حالياً بواسطة (${firstRow._lockedByName || 'موظف آخر'}). لا يمكن تعديلها في نفس الوقت.`
+            : `Shipment is currently locked by (${firstRow._lockedByName || 'another user'}). Concurrent editing is prevented.`,
+          'warning'
+        );
+        return;
+      }
+
+      setOpeningEdit((prev) => ({ ...prev, [shipRef]: true }));
+
+      try {
+        await lockOperation(opId);
+        editingShipmentOpIdsRef.current[shipRef] = opId;
+        firstRow._lockedByUserId = currentUserId;
+        firstRow._lockedByName = currentUserName;
+        firstRow._lockedAtUtc = new Date().toISOString();
+
+        // Fetch latest saved data from the database so the user edits the freshest state
+        try {
+          const freshOp = await getOperationById(opId);
+          if (freshOp) {
+            const { entry: mapped } = mapBackendOperationsToFrontend([freshOp]);
+            const freshRows = mapped[currentDir] || [];
+            if (freshRows.length > 0) {
+              targetRows = freshRows;
+              targetRows.forEach((r) => {
+                r._lockedByUserId = currentUserId;
+                r._lockedByName = currentUserName;
+                r._lockedAtUtc = new Date().toISOString();
+              });
+              updateOperationRowsInTable(opId, shipRef, targetRows);
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Could not fetch fresh operation data on startEdit, continuing with current rows:', fetchErr);
+        }
+      } catch (err) {
+        const errMsg = extractErrorMessage(err);
+        const lockerName = err.response?.data?.lockedByName || err.response?.data?.error || errMsg;
+        notify(
+          lang === 'ar'
+            ? `تعذر فتح التعديل: الشحنة قيد التعديل حالياً بواسطة (${lockerName}).`
+            : `Cannot edit: shipment is currently being edited by (${lockerName}).`,
+          'warning'
+        );
+        if (isServerSide) {
+          fetchServerPage(page, searchTerm, filters, currentDir, true);
+        }
+        return;
+      } finally {
+        setOpeningEdit((prev) => {
+          const next = { ...prev };
+          delete next[shipRef];
+          return next;
+        });
+      }
+    } else if (opId) {
+      editingShipmentOpIdsRef.current[shipRef] = opId;
+    }
+
+    // Check if an unsaved local draft exists for this shipment (only if it has real differences)
+    try {
+      const draftKey = `ocean_draft_${shipRef}`;
+      const savedRaw = localStorage.getItem(draftKey);
+      if (savedRaw) {
+        const parsed = JSON.parse(savedRaw);
+        if (parsed?.rows && hasShipmentEdits(parsed.rows, targetRows)) {
+          setAvailableDrafts((prev) => ({ ...prev, [shipRef]: true }));
+        } else {
+          // If draft has no real changes compared to current data, clean it up!
+          localStorage.removeItem(draftKey);
+          setAvailableDrafts((prev) => {
+            const next = { ...prev };
+            delete next[shipRef];
+            return next;
+          });
+        }
+      }
+    } catch (e) {
+      // ignore localStorage errors
+    }
+
     setShipmentSnapshots((prev) => ({
       ...prev,
-      [shipRef]: shipRows.map((r) => ({ ...r })),
+      [shipRef]: targetRows.map((r) => ({ ...r })),
     }));
     setShipmentErrors((prev) => {
       const next = { ...prev };
@@ -379,11 +648,42 @@ export default function DataEntryTab({
     setEditingShipments((prev) => ({ ...prev, [shipRef]: true }));
   };
 
-  const cancelEditingShipment = (shipRef) => {
-    const snapshot = shipmentSnapshots[shipRef];
-    if (snapshot && onRestoreShipment) {
-      onRestoreShipment(currentDir, shipRef, snapshot);
+  const cancelEditingShipment = async (shipRef) => {
+    const opId = editingShipmentOpIdsRef.current[shipRef] || shipmentSnapshots[shipRef]?.[0]?._operationId;
+    if (opId) {
+      try {
+        await unlockOperation(opId);
+      } catch (e) {
+        console.warn('Unlock on cancel failed:', e);
+      }
+      delete editingShipmentOpIdsRef.current[shipRef];
     }
+
+    // Restore table row to true server data (including colleague's latest saved edits)
+    if (opId) {
+      try {
+        const freshOp = await getOperationById(opId);
+        if (freshOp) {
+          const { entry: mapped } = mapBackendOperationsToFrontend([freshOp]);
+          const freshRows = mapped[currentDir] || [];
+          if (freshRows.length > 0) {
+            updateOperationRowsInTable(opId, shipRef, freshRows);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch fresh operation data on cancel, restoring snapshot:', err);
+        const snapshot = shipmentSnapshots[shipRef];
+        if (snapshot) {
+          updateOperationRowsInTable(opId, shipRef, snapshot);
+        }
+      }
+    } else {
+      const snapshot = shipmentSnapshots[shipRef];
+      if (snapshot) {
+        updateOperationRowsInTable(opId, shipRef, snapshot);
+      }
+    }
+
     setEditingShipments((prev) => {
       const next = { ...prev };
       delete next[shipRef];
@@ -399,6 +699,112 @@ export default function DataEntryTab({
       delete next[shipRef];
       return next;
     });
+  };
+
+  const handleTakeOverShipment = async (shipRef, shipRows) => {
+    if (!shipRows || shipRows.length === 0) return;
+    const opId = shipRows[0]?._operationId;
+    if (!opId) return;
+
+    try {
+      await takeOverOperation(opId);
+
+      let targetRows = shipRows;
+      try {
+        const freshOp = await getOperationById(opId);
+        if (freshOp) {
+          const { entry: mapped } = mapBackendOperationsToFrontend([freshOp]);
+          const freshRows = mapped[currentDir] || [];
+          if (freshRows.length > 0) {
+            targetRows = freshRows;
+            updateOperationRowsInTable(opId, shipRef, freshRows);
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch fresh operation data on takeover:', fetchErr);
+      }
+
+      notify(
+        lang === 'ar'
+          ? 'تم سحب القفل بنجاح كمدير وجلب أحدث البيانات، وجاري فتح التعديل الآن'
+          : 'Lock seized successfully as manager and latest data loaded. Edit mode active.',
+        'success'
+      );
+      targetRows.forEach((r) => {
+        r._lockedByUserId = user?.id || user?.userId;
+        r._lockedByName = currentUserName;
+        r._lockedAtUtc = new Date().toISOString();
+      });
+      await startEditingShipment(shipRef, targetRows, true);
+    } catch (err) {
+      const errMsg = extractErrorMessage(err);
+      notify(errMsg, 'error');
+    }
+  };
+
+  const handleCheckAndEditShipment = async (shipRef, shipRows) => {
+    if (!shipRows || shipRows.length === 0) return;
+    const firstRow = shipRows[0];
+    const opId = firstRow?._operationId;
+    if (!opId) return;
+
+    const currentUserId = user?.id || user?.userId;
+    setCheckingLock((prev) => ({ ...prev, [shipRef]: true }));
+
+    try {
+      // 1. Acquire lock on server
+      await lockOperation(opId);
+
+      // 2. Fetch the latest saved data from the database so User A's changes appear immediately
+      let targetRows = shipRows;
+      try {
+        const freshOp = await getOperationById(opId);
+        if (freshOp) {
+          const { entry: mapped } = mapBackendOperationsToFrontend([freshOp]);
+          const freshRows = mapped[currentDir] || [];
+          if (freshRows.length > 0) {
+            targetRows = freshRows;
+            updateOperationRowsInTable(opId, shipRef, freshRows);
+          }
+        }
+      } catch (fetchErr) {
+        console.warn('Could not fetch fresh operation data, continuing with current rows:', fetchErr);
+      }
+
+      // 3. Mark lock as held by current user
+      editingShipmentOpIdsRef.current[shipRef] = opId;
+      targetRows.forEach((r) => {
+        r._lockedByUserId = currentUserId;
+        r._lockedByName = currentUserName;
+        r._lockedAtUtc = new Date().toISOString();
+      });
+
+      notify(
+        lang === 'ar'
+          ? 'تم تحرير الشحنة وجلب أحدث التعديلات بنجاح! وضع التعديل متاح الآن.'
+          : 'Lock acquired and latest data loaded! Edit mode active.',
+        'success'
+      );
+
+      // 4. Start editing the fresh rows
+      await startEditingShipment(shipRef, targetRows, true);
+    } catch (err) {
+      const errMsg = extractErrorMessage(err);
+      const lockerName = err.response?.data?.lockedByName || err.response?.data?.error || errMsg;
+      notify(
+        lang === 'ar'
+          ? `الشحنة ما زالت قيد التعديل حالياً بواسطة (${lockerName}).`
+          : `Shipment is still being edited by (${lockerName}).`,
+        'warning'
+      );
+      if (err.response?.data?.lockedByName) {
+        shipRows.forEach((r) => {
+          r._lockedByName = err.response.data.lockedByName;
+        });
+      }
+    } finally {
+      setCheckingLock((prev) => ({ ...prev, [shipRef]: false }));
+    }
   };
 
   const handleSaveShipmentAction = async (shipRef, shipRows) => {
@@ -442,10 +848,115 @@ export default function DataEntryTab({
       return next;
     });
 
+    const firstRow = shipRows[0];
+    const opId = firstRow?._operationId;
+    const currentUserId = user?.id || user?.userId;
+
+    if (opId) {
+      try {
+        // Pre-save Concurrency & Stale Check: Fetch latest operation from server to verify lock & state
+        const freshOp = await getOperationById(opId);
+        if (freshOp) {
+          const { entry: mapped } = mapBackendOperationsToFrontend([freshOp]);
+          const freshRows = mapped[currentDir] || [];
+
+          // Case A: Is the operation actively locked by another user?
+          const isLockedByOther =
+            freshOp.lockedByUserId &&
+            String(freshOp.lockedByUserId).toLowerCase() !== String(currentUserId).toLowerCase() &&
+            isLockActive(freshOp.lockedAtUtc, 10);
+
+          if (isLockedByOther) {
+            const lockerName = freshOp.lockedByName || 'موظف آخر';
+            try {
+              localStorage.setItem(
+                `ocean_draft_${shipRef}`,
+                JSON.stringify({
+                  shipRef,
+                  dir: currentDir,
+                  savedAt: new Date().toISOString(),
+                  rows: shipRows,
+                })
+              );
+              setAvailableDrafts((prev) => ({ ...prev, [shipRef]: true }));
+            } catch (e) { }
+
+            setConflictModal({
+              isOpen: true,
+              shipRef,
+              shipRows,
+              freshRows,
+              errMsg: lang === 'ar'
+                ? `الشحنة قيد التعديل حالياً بواسطة (${lockerName}). لا يمكن الحفظ في نفس الوقت.`
+                : `Shipment is currently locked by (${lockerName}). Concurrent save prevented.`,
+              opId,
+              conflictType: 'LOCKED_BY_OTHER',
+              lockerName,
+            });
+            setSavingShipments((prev) => ({ ...prev, [shipRef]: false }));
+            return;
+          }
+
+          // Case B: Did another user modify and save this shipment while current user was away?
+          const snapshot = shipmentSnapshots[shipRef];
+          if (snapshot && freshRows.length > 0 && hasShipmentEdits(freshRows, snapshot)) {
+            try {
+              localStorage.setItem(
+                `ocean_draft_${shipRef}`,
+                JSON.stringify({
+                  shipRef,
+                  dir: currentDir,
+                  savedAt: new Date().toISOString(),
+                  rows: shipRows,
+                })
+              );
+              setAvailableDrafts((prev) => ({ ...prev, [shipRef]: true }));
+            } catch (e) { }
+
+            setConflictModal({
+              isOpen: true,
+              shipRef,
+              shipRows,
+              freshRows,
+              errMsg: lang === 'ar'
+                ? 'قام موظف آخر بتعديل وحفظ هذه الشحنة أثناء غيابك. تم إيقاف الحفظ لحماية البيانات.'
+                : 'Another user modified and saved this shipment while you were away. Save stopped to prevent overwriting.',
+              opId,
+              conflictType: 'MODIFIED_BY_OTHER',
+              lockerName: freshOp.lockedByName || '',
+            });
+            setSavingShipments((prev) => ({ ...prev, [shipRef]: false }));
+            return;
+          }
+
+          // Case C: Nobody modified it in your absence! Ensure lock is active before saving
+          try {
+            await lockOperation(opId);
+            editingShipmentOpIdsRef.current[shipRef] = opId;
+          } catch (lockErr) {
+            console.warn('Auto-renew lock before save note:', lockErr);
+          }
+        }
+      } catch (checkErr) {
+        console.warn('Pre-save concurrency check network fallback:', checkErr);
+      }
+    }
+
     try {
       if (onSaveShipment) {
         const success = await onSaveShipment(currentDir, shipRef, shipRows);
         if (success) {
+          try {
+            localStorage.removeItem(`ocean_draft_${shipRef}`);
+            setAvailableDrafts((prev) => {
+              const next = { ...prev };
+              delete next[shipRef];
+              return next;
+            });
+          } catch (e) {
+            // ignore
+          }
+          delete editingShipmentOpIdsRef.current[shipRef];
           clearTabPagesCache();
           if (isServerSide) {
             fetchServerPage(page, searchTerm, filters, currentDir);
@@ -479,9 +990,359 @@ export default function DataEntryTab({
       }
     } catch (err) {
       const errMsg = extractErrorMessage(err);
-      setShipmentErrors((prev) => ({ ...prev, [shipRef]: errMsg }));
+      const isLockConflict =
+        err?.response?.status === 409 ||
+        errMsg.includes('locked by') ||
+        errMsg.includes('قيد التعديل') ||
+        errMsg.includes('القفل');
+
+      if (isLockConflict) {
+        // Safe Recovery Modal: Save local draft ONLY if actual edits were made!
+        const snapshot = shipmentSnapshots[shipRef];
+        const isDirty = hasShipmentEdits(shipRows, snapshot);
+
+        if (isDirty) {
+          try {
+            const draftKey = `ocean_draft_${shipRef}`;
+            localStorage.setItem(
+              draftKey,
+              JSON.stringify({
+                shipRef,
+                dir: currentDir,
+                savedAt: new Date().toISOString(),
+                rows: shipRows,
+              })
+            );
+            setAvailableDrafts((prev) => ({ ...prev, [shipRef]: true }));
+          } catch (e) {
+            console.warn('Failed to save draft to localStorage:', e);
+          }
+        }
+
+        setConflictModal({
+          isOpen: true,
+          shipRef,
+          shipRows,
+          freshRows: null,
+          errMsg,
+          opId: editingShipmentOpIdsRef.current[shipRef] || shipRows[0]?._operationId,
+          conflictType: 'LOCKED_BY_OTHER',
+          lockerName: '',
+        });
+      } else {
+        setShipmentErrors((prev) => ({ ...prev, [shipRef]: errMsg }));
+        notify(errMsg, 'error');
+      }
     } finally {
       setSavingShipments((prev) => ({ ...prev, [shipRef]: false }));
+    }
+  };
+
+  const handleRestoreDraft = (shipRef) => {
+    try {
+      const draftKey = `ocean_draft_${shipRef}`;
+      const savedRaw = localStorage.getItem(draftKey);
+      if (!savedRaw) return;
+      const parsed = JSON.parse(savedRaw);
+      const draftRows = parsed.rows || [];
+      if (draftRows.length === 0) return;
+
+      if (isServerSide) {
+        setServerPageRows((prev) =>
+          prev.map((r) => {
+            const match = draftRows.find(
+              (dr) =>
+                (dr._rowId && dr._rowId === r._rowId) ||
+                (dr._containerId && dr._containerId === r._containerId) ||
+                (dr.cntr && r.cntr && dr.cntr === r.cntr)
+            );
+            return match ? { ...r, ...match } : r;
+          })
+        );
+      }
+      if (onRestoreShipment) {
+        onRestoreShipment(currentDir, shipRef, draftRows);
+      }
+      notify(
+        lang === 'ar'
+          ? 'تم استرجاع المسودة المحفوظة بنجاح إلى حقول الشحنة!'
+          : 'Saved draft restored successfully into shipment fields!',
+        'success'
+      );
+      setAvailableDrafts((prev) => {
+        const next = { ...prev };
+        delete next[shipRef];
+        return next;
+      });
+    } catch (e) {
+      console.error('Failed to restore draft:', e);
+      notify(lang === 'ar' ? 'تعذر استرجاع المسودة' : 'Failed to restore draft', 'error');
+    }
+  };
+
+  const handleDiscardDraft = (shipRef) => {
+    try {
+      localStorage.removeItem(`ocean_draft_${shipRef}`);
+      setAvailableDrafts((prev) => {
+        const next = { ...prev };
+        delete next[shipRef];
+        return next;
+      });
+      notify(
+        lang === 'ar' ? 'تم تجاهل المسودة وحذفها بنجاح' : 'Draft discarded successfully',
+        'info'
+      );
+    } catch (e) {
+      console.error('Failed to discard draft:', e);
+    }
+  };
+
+  const handleRetryLockAndSave = async () => {
+    const { shipRef, shipRows, opId } = conflictModal;
+    if (!shipRef || !shipRows) return;
+    setIsRetryingSave(true);
+    try {
+      if (opId) {
+        await lockOperation(opId);
+        editingShipmentOpIdsRef.current[shipRef] = opId;
+      }
+      setConflictModal((prev) => ({ ...prev, isOpen: false }));
+      notify(
+        lang === 'ar' ? 'تم تجديد القفل بنجاح، جاري الحفظ...' : 'Lock renewed successfully, saving...',
+        'info'
+      );
+      await handleSaveShipmentAction(shipRef, shipRows);
+    } catch (err) {
+      const errMsg = extractErrorMessage(err);
+      notify(
+        lang === 'ar'
+          ? `تعذر تجديد القفل: ${errMsg}`
+          : `Could not renew lock: ${errMsg}`,
+        'error'
+      );
+    } finally {
+      setIsRetryingSave(false);
+    }
+  };
+
+  const handleCopyConflictData = async () => {
+    try {
+      const { shipRows, shipRef } = conflictModal;
+      if (!shipRows || shipRows.length === 0) return;
+
+      const activeCols = (COLS[currentDir] || COLS.Import || []).filter(
+        (c) => !['actions', 'sel', 'opEntered'].includes(c.k)
+      );
+
+      const headers = activeCols.map((c) => (lang === 'ar' ? (c.ar || c.h) : c.h));
+
+      const getCellVal = (row, col) => {
+        if (col.k === 'updates') {
+          const rawUpdates = Array.isArray(row.updates) ? row.updates : [];
+          const containerUpdates = rawUpdates.filter(
+            (up) => !up.details || (!up.details.startsWith('Export container updated') && !up.details.startsWith('Import container updated'))
+          );
+          if (containerUpdates.length === 0) return '';
+          if (containerUpdates.length === 1) {
+            const u = containerUpdates[0];
+            const text = (u.details || '').replace(/[\r\n\t]+/g, ' ').trim();
+            const by = u.createdByName ? ` (${u.createdByName})` : '';
+            return `${text}${by}`;
+          }
+          return containerUpdates
+            .map((u) => {
+              const text = (u.details || '').replace(/[\r\n\t]+/g, ' ').trim();
+              const by = u.createdByName ? ` (${u.createdByName})` : '';
+              return `• ${text}${by}`;
+            })
+            .filter(Boolean)
+            .join('\n');
+        }
+
+        let val = row[col.k];
+        if (col.k === 'bl' && !val && row.booking) val = row.booking;
+        if (col.k === 'reopenReason' && !val && row.reopenReason) val = row.reopenReason;
+        if (col.k === 'reopenedAt' && !val) val = row.reopenedAt || (row.reopenedAtUtc ? String(row.reopenedAtUtc).slice(0, 10) : '');
+        if (col.t === 'date' && val) return String(val).slice(0, 10);
+        if (val === null || val === undefined) return '';
+        return String(val).replace(/[\r\n\t]+/g, ' ').trim();
+      };
+
+      // Determine merge eligibility for each column in Excel:
+      // A column is merged in Excel IF:
+      // 1. Shipment has more than 1 container (shipRows.length > 1)
+      // 2. Column is a merged column (c.uniq === true)
+      // 3. User hasn't explicitly unmerged it (unmergedCols[`${shipRef}_${c.k}`] !== true)
+      // 4. AND all rows have identical values (if values differ across rows, keep separate rows so no data is lost!)
+      const colMergeInfo = activeCols.map((col) => {
+        const distinctVals = new Set(shipRows.map((r) => getCellVal(r, col)));
+        const hasMultipleDifferentValues = distinctVals.size > 1;
+        const isUnmergedByUser = shipRef && unmergedCols[`${shipRef}_${col.k}`] === true;
+        const shouldMerge = shipRows.length > 1 && col.uniq === true && !isUnmergedByUser && !hasMultipleDifferentValues;
+
+        return {
+          col,
+          shouldMerge,
+          val: getCellVal(shipRows[0], col),
+        };
+      });
+
+      const escapeTsvCell = (val) => {
+        const str = String(val ?? '');
+        if (str.includes('\t') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+          return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+      };
+
+      const escapeHtmlCell = (val) => {
+        const str = String(val ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        return str.replace(/\r?\n/g, '<br style="mso-data-placement:same-cell;"/>');
+      };
+
+      // Plain-text TSV fallback
+      const tsvContent = [
+        headers.map(escapeTsvCell).join('\t'),
+        ...shipRows.map((row) =>
+          activeCols.map((c) => escapeTsvCell(getCellVal(row, c))).join('\t')
+        ),
+      ].join('\r\n');
+
+      // Excel HTML Table with true rowspan merging and professional Excel styling
+      const htmlHeaderRow = `<tr>${activeCols.map((c) => {
+        const title = lang === 'ar' ? (c.ar || c.h) : c.h;
+        const sub = lang === 'ar' ? c.h : (c.ar || '');
+        return `<th style="background-color:#0284c7;color:#ffffff;font-weight:bold;text-align:center;border:1px solid #0369a1;padding:8px 6px;font-family:Calibri,Segoe UI,sans-serif;font-size:11pt;">${escapeHtmlCell(title)}${sub ? `<br/><span style="font-size:8pt;font-weight:normal;opacity:0.85;">${escapeHtmlCell(sub)}</span>` : ''}</th>`;
+      }).join('')}</tr>`;
+
+      const htmlBodyRows = shipRows.map((row, rIdx) => {
+        const isFirstRow = rIdx === 0;
+        const cellsHtml = colMergeInfo
+          .map((info) => {
+            const { col, shouldMerge } = info;
+            if (shouldMerge) {
+              if (!isFirstRow) return null; // Span from row 0!
+              const val = info.val;
+              return `<td rowspan="${shipRows.length}" style="vertical-align:middle;text-align:center;border:1px solid #cbd5e1;padding:8px;font-family:Calibri,Segoe UI,sans-serif;font-size:10pt;mso-number-format:'\\@';">${escapeHtmlCell(val)}</td>`;
+            }
+
+            const val = getCellVal(row, col);
+            const isCenterCol = col.t === 'num' || col.t === 'date' || col.t === 'time' || col.k === 'cntr' || col.k === 'size';
+            const align = isCenterCol ? 'center' : 'start';
+            return `<td style="vertical-align:middle;text-align:${align};border:1px solid #cbd5e1;padding:6px 8px;font-family:Calibri,Segoe UI,sans-serif;font-size:10pt;mso-number-format:'\\@';">${escapeHtmlCell(val)}</td>`;
+          })
+          .filter(Boolean)
+          .join('');
+
+        return `<tr>${cellsHtml}</tr>`;
+      }).join('');
+
+      const htmlContent = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Edits Backup</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--></head><body><table border="1" style="border-collapse:collapse;font-family:Calibri,Segoe UI,sans-serif;font-size:10pt;"><thead>${htmlHeaderRow}</thead><tbody>${htmlBodyRows}</tbody></table></body></html>`;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        try {
+          const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+          const blobText = new Blob([tsvContent], { type: 'text/plain' });
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              'text/plain': blobText,
+              'text/html': blobHtml,
+            }),
+          ]);
+        } catch {
+          await navigator.clipboard.writeText(tsvContent);
+        }
+      } else {
+        await navigator.clipboard.writeText(tsvContent);
+      }
+
+      notify(
+        lang === 'ar'
+          ? 'تم نسخ البيانات كجدول إكسل مع دمج الخلايا بدقة! افتح شيت إكسل واضغط (Ctrl + V).'
+          : 'Edits copied as Excel table with merged cells! Open Excel and press (Ctrl + V).',
+        'success'
+      );
+    } catch (e) {
+      console.error('Clipboard copy error:', e);
+      notify(lang === 'ar' ? 'تعذر النسخ إلى الحافظة' : 'Could not copy to clipboard', 'warning');
+    }
+  };
+
+  const handleDiscardConflictAndRefresh = () => {
+    const { shipRef, shipRows, errMsg, opId, freshRows, conflictType, lockerName: modalLocker } = conflictModal;
+    setConflictModal((prev) => ({ ...prev, isOpen: false }));
+
+    if (!shipRef) return;
+
+    // Extract the locker name from error message if available
+    let lockerName = modalLocker || '';
+    if (!lockerName && errMsg) {
+      const matchBy = errMsg.match(/locked by ([^.]+)/i) || errMsg.match(/بواسطة \(([^)]+)\)/);
+      if (matchBy && matchBy[1]) {
+        lockerName = matchBy[1].trim();
+      }
+    }
+    if (!lockerName && shipRows && shipRows[0]?._lockedByName) {
+      lockerName = shipRows[0]._lockedByName;
+    }
+    if (!lockerName) lockerName = lang === 'ar' ? 'مستخدم آخر' : 'another user';
+
+    // 1. Instantly exit edit mode locally
+    delete editingShipmentOpIdsRef.current[shipRef];
+    setEditingShipments((prev) => {
+      const next = { ...prev };
+      delete next[shipRef];
+      return next;
+    });
+    setShipmentErrors((prev) => {
+      const next = { ...prev };
+      delete next[shipRef];
+      return next;
+    });
+    setShipmentSnapshots((prev) => {
+      const next = { ...prev };
+      delete next[shipRef];
+      return next;
+    });
+
+    // 2. If fresh rows from server are available (colleague modified or holds lock), render them!
+    if (freshRows && freshRows.length > 0) {
+      updateOperationRowsInTable(opId, shipRef, freshRows);
+    } else {
+      const snapshot = shipmentSnapshots[shipRef];
+      if (snapshot && onRestoreShipment) {
+        onRestoreShipment(currentDir, shipRef, snapshot);
+      }
+    }
+
+    // 3. Update the lock badge in-place in memory if locked by another user
+    if (conflictType === 'LOCKED_BY_OTHER') {
+      const nowUtc = new Date().toISOString();
+      if (shipRows) {
+        shipRows.forEach((r) => {
+          r._lockedByName = lockerName;
+          r._lockedByUserId = 'other_user_locked';
+          r._lockedAtUtc = nowUtc;
+        });
+      }
+
+      if (isServerSide) {
+        setServerPageRows((prev) =>
+          prev.map((r) =>
+            (r._operationId === opId || r._ref === shipRef)
+              ? {
+                ...r,
+                _lockedByName: lockerName,
+                _lockedByUserId: 'other_user_locked',
+                _lockedAtUtc: nowUtc,
+              }
+              : r
+          )
+        );
+      }
     }
   };
 
@@ -539,6 +1400,13 @@ export default function DataEntryTab({
     user?.permissions?.includes('reports.download')
   );
   const isOceanManager = user?.roleName === 'Ocean Operations Manager' || user?.permissions?.includes('operations.reopen');
+  const canTakeOver = Boolean(
+    user?.isSuperAdmin ||
+    user?.role === 'SuperAdmin' ||
+    user?.roleName === 'Super Admin' ||
+    user?.roleName === 'Ocean Operations Manager' ||
+    user?.permissions?.includes('operations.reopen')
+  );
   const canViewDashboard = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
@@ -555,6 +1423,49 @@ export default function DataEntryTab({
   const [viewDeletedDetailOp, setViewDeletedDetailOp] = useState(null);
   const [isLoadingDeletedDetail, setIsLoadingDeletedDetail] = useState(false);
   const deletedDetailsCacheRef = useRef({});
+
+  const [viewDeliveredDetailOp, setViewDeliveredDetailOp] = useState(null);
+  const [isLoadingDeliveredDetail, setIsLoadingDeliveredDetail] = useState(false);
+  const deliveredDetailsCacheRef = useRef({});
+
+  const handleOpenDeliveredDetails = async (op) => {
+    if (!op) return;
+    const opId = op.id || op._operationId;
+
+    if (deliveredDetailsCacheRef.current[opId]) {
+      setViewDeliveredDetailOp(deliveredDetailsCacheRef.current[opId]);
+      return;
+    }
+
+    setViewDeliveredDetailOp(op);
+
+    const hasFullDetails = op.containers?.some(
+      (c) => c.driverName || c.transporterName || (c.updates && c.updates.length > 0)
+    );
+    if (hasFullDetails) {
+      deliveredDetailsCacheRef.current[opId] = op;
+      return;
+    }
+
+    setIsLoadingDeliveredDetail(true);
+    try {
+      const fullOp = await getOperationById(opId);
+      if (fullOp) {
+        const merged = {
+          ...op,
+          ...fullOp,
+          deliveredByName: fullOp.deliveredByName || op.deliveredByName,
+          deliveredAtUtc: fullOp.deliveredAtUtc || op.deliveredAtUtc,
+        };
+        deliveredDetailsCacheRef.current[opId] = merged;
+        setViewDeliveredDetailOp(merged);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch delivered operation full details on demand:', err);
+    } finally {
+      setIsLoadingDeliveredDetail(false);
+    }
+  };
 
   const handleOpenDeletedDetails = async (op) => {
     if (!op) return;
@@ -677,6 +1588,21 @@ export default function DataEntryTab({
     setReopenModalOpen(true);
   };
 
+  const openReopenModalForOp = (op) => {
+    if (!op) return;
+    const isImport = op.operationType === 'Import' || op.operationType === 1;
+    const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
+    setReopenTarget({
+      shipRef: op.shipmentNumber || refNum || op.id,
+      opId: op.id,
+      shipmentNumber: op.shipmentNumber || refNum || op.id,
+      rows: [],
+    });
+    setReopenReason('');
+    setReopenError('');
+    setReopenModalOpen(true);
+  };
+
   const handleConfirmReopen = async () => {
     if (!reopenReason.trim()) {
       setReopenError(lang === 'ar' ? 'سبب إعادة فتح الشحنة إجباري' : 'Reopen reason is required');
@@ -693,6 +1619,8 @@ export default function DataEntryTab({
       setReopenModalOpen(false);
       setReopenTarget(null);
       setReopenReason('');
+      clearTabPagesCache();
+      fetchServerPage(page, debouncedSearchTerm, filters, currentDir);
       if (onRefreshDelivered) {
         onRefreshDelivered(true);
       }
@@ -941,6 +1869,68 @@ export default function DataEntryTab({
     events.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
     setStatusHistoryList(events);
     setIsLoadingStatusHistory(false);
+  };
+
+  // Helper to open Status History modal for a raw Operation object (from Delivered or Deleted archives)
+  const openStatusHistoryForOp = (op) => {
+    if (!op) return;
+    const isImport = op.operationType === 'Import' || op.operationType === 1;
+    const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
+    const fakeRow = {
+      _operationId: op.id,
+      id: op.id,
+      shipNo: op.shipmentNumber,
+      client: op.clientName,
+      status: op.status || (currentDir === 'Deleted' ? 'Deleted' : 'Delivered'),
+      deliveredAtUtc: op.deliveredAtUtc,
+      deliveredByName: op.deliveredByName,
+      reopenedAtUtc: op.reopenedAtUtc,
+      reopenedByName: op.reopenedByName,
+      reopenReason: op.reopenReason,
+      createdAtUtc: op.createdAtUtc,
+      _createdAtUtc: op.createdAtUtc,
+      _createdByName: op.createdByName,
+      oper: op.createdByName,
+    };
+    openStatusHistoryModal(op.shipmentNumber || refNum || op.id, [fakeRow]);
+  };
+
+  // Unified tab switcher that resets active search term when switching views and enables 0ms instant switch
+  const handleTabClick = (tabKey) => {
+    setPage(1);
+    if (currentDir !== tabKey) {
+      setSearchTerm('');
+      if (['Import', 'Export', 'Delivered', 'Deleted'].includes(tabKey)) {
+        // Instant pre-population from in-memory cache if available (0ms switch!)
+        const targetFilters = tabKey === 'Import' ? { ...filters, clearanceType: '', customs: '' } : filters;
+        const targetCacheKey = `${tabKey}_1__${serializeFilters(targetFilters, tabKey)}`;
+        const cached = tabPagesCacheRef.current[targetCacheKey];
+        if (cached) {
+          setServerPageRows(cached.rows);
+          setServerPageOperations(cached.operations || []);
+          setServerTotalCount(cached.totalCount);
+          setServerTotalContainers(cached.totalContainers);
+          setServerTotalPages(cached.totalPages);
+          setIsPageLoading(false);
+        } else {
+          // Clean state: immediately display expected count from counts prop instead of old tab's counts!
+          setServerPageRows([]);
+          setServerPageOperations([]);
+          const currentTabSize = (tabKey === 'Delivered' || tabKey === 'Deleted') ? 20 : pageSize;
+          let expectedCount = 0;
+          if (tabKey === 'Import') expectedCount = counts?.activeImportCount ?? 0;
+          else if (tabKey === 'Export') expectedCount = counts?.activeExportCount ?? 0;
+          else if (tabKey === 'Delivered') expectedCount = counts?.deliveredCount ?? 0;
+          else if (tabKey === 'Deleted') expectedCount = counts?.inactiveCount ?? 0;
+
+          setServerTotalCount(expectedCount);
+          setServerTotalContainers(0);
+          setServerTotalPages(Math.max(1, Math.ceil(expectedCount / currentTabSize)));
+          setIsPageLoading(true);
+        }
+      }
+    }
+    if (onChangeDir) onChangeDir(tabKey);
   };
 
   // Helper to format Operation / entered date time: 27-OCT-2026 · 14:47 (Converts to User Local Time)
@@ -1687,67 +2677,14 @@ export default function DataEntryTab({
     };
   }, [entry, highlightedShipRef, filteredShipments, pageSize, page]);
 
-  // Filtered deleted operations for the archive tab
-  const filteredDeletedOperations = useMemo(() => {
-    if (!Array.isArray(deletedOperations)) return [];
-    const q = searchTerm ? searchTerm.toLowerCase().trim() : '';
-    const from = filters.dateFrom ? filters.dateFrom.slice(0, 10) : null;
-    const to = filters.dateTo ? filters.dateTo.slice(0, 10) : null;
+  // Server-paged operations with graceful fallback to props
+  const activeDeliveredOperations = serverPageOperations.length > 0 || isPageLoading || searchTerm
+    ? serverPageOperations
+    : (deliveredOperations || []);
 
-    return deletedOperations.filter((op) => {
-      if (q) {
-        const isImport = op.operationType === 'Import' || op.operationType === 1;
-        const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
-        const hay = [
-          op.shipmentNumber,
-          refNum,
-          op.clientName,
-          op.shippingLineName,
-          op.certificateNumber,
-          op.deletedByName,
-          op.createdByName,
-        ].filter(Boolean).join(' ').toLowerCase();
-        if (!hay.includes(q)) return false;
-      }
-
-      if (filters.client) {
-        const c = filters.client.toLowerCase();
-        if (!op.clientName || !op.clientName.toLowerCase().includes(c)) return false;
-      }
-
-      if (filters.line) {
-        const l = filters.line.toLowerCase();
-        if (!op.shippingLineName || !op.shippingLineName.toLowerCase().includes(l)) return false;
-      }
-
-      if (filters.createdBy) {
-        const cr = filters.createdBy.toLowerCase();
-        if (!op.createdByName || !op.createdByName.toLowerCase().includes(cr)) return false;
-      }
-
-      if (from || to) {
-        let rowDate = null;
-        if (filters.dateType === 'created') rowDate = op.createdAtUtc;
-        else rowDate = op.deletedAtUtc || op.createdAtUtc;
-
-        if (!rowDate) return false;
-        let d = String(rowDate).slice(0, 10);
-        if (String(rowDate).includes('T')) {
-          const parsed = new Date(rowDate);
-          if (!isNaN(parsed.getTime())) {
-            const year = parsed.getFullYear();
-            const month = String(parsed.getMonth() + 1).padStart(2, '0');
-            const day = String(parsed.getDate()).padStart(2, '0');
-            d = `${year}-${month}-${day}`;
-          }
-        }
-        if (from && d < from) return false;
-        if (to && d > to) return false;
-      }
-
-      return true;
-    });
-  }, [deletedOperations, searchTerm, filters]);
+  const activeDeletedOperations = serverPageOperations.length > 0 || isPageLoading || searchTerm
+    ? serverPageOperations
+    : (deletedOperations || []);
 
   const totalPages = isServerSide ? serverTotalPages : (Math.ceil(totalShipments / pageSize) || 1);
 
@@ -1785,7 +2722,11 @@ export default function DataEntryTab({
       {/* 1. Compact New Operation Form */}
       {currentDir !== 'FCL' && (
         formOpen ? (
-          <form onSubmit={handleFormSubmit} className="opcard">
+          <form
+            onSubmit={handleFormSubmit}
+            className={`opcard ${lang === 'ar' ? 'opcard-ar' : ''}`}
+            dir={lang === 'ar' ? 'rtl' : 'ltr'}
+          >
             <div className="ophead">
               <div>
                 <span className="opref">OPS-2026-0185</span>
@@ -1805,11 +2746,11 @@ export default function DataEntryTab({
               </button>
             </div>
 
-            <div className="opgrid">
+            <div className={`opgrid ${lang === 'ar' ? 'opgrid-ar' : ''}`}>
               {currentDir === 'Export' ? (
                 <>
                   {/* 1. Clearance Type (g1) */}
-                  <div className="opf g1">
+                  <div className={`opf g1 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'نوع الإفراج' : 'Clearance Type'} <i>{lang === 'ar' ? 'اختيار' : 'Text'}</i></label>
                     <select
                       value={newOp.clrType}
@@ -1821,7 +2762,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 2. BOOKING NO. (g1) */}
-                  <div className="opf g1">
+                  <div className={`opf g1 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'رقم البوكينج' : 'BOOKING NO.'} <i>{lang === 'ar' ? 'رقم / معرف' : 'Number / ID'}</i> *</label>
                     <input
                       type="text"
@@ -1833,7 +2774,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 3. CLEINT (g1) */}
-                  <div className="opf g1">
+                  <div className={`opf g1 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'العميل' : 'CLEINT'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i> *</label>
                     <SearchableSelect
                       value={newOp.clientId || newOp.client}
@@ -1851,7 +2792,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 4. Shipping Line (g2) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
                     <SearchableSelect
                       value={newOp.shippingLineId || newOp.line}
@@ -1869,7 +2810,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 5. POL (g2) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'ميناء الشحن (POL)' : 'POL'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
                     <SearchableSelect
                       value={newOp.portId || newOp.port}
@@ -1887,7 +2828,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 6. POW (g2 optional) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'ميناء الوصول (POW)' : 'POW'} <i>{lang === 'ar' ? 'اختياري' : 'Text (optional)'}</i></label>
                     <SearchableSelect
                       value={newOp.powId || newOp.pow}
@@ -1906,7 +2847,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 7. CUT OFF (g3 optional) */}
-                  <div className="opf g3">
+                  <div className={`opf g3 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'تاريخ Cut Off' : 'CUT OFF'} <i>{lang === 'ar' ? '(اختياري)' : '((optional))'}</i></label>
                     <input
                       type="date"
@@ -1919,7 +2860,7 @@ export default function DataEntryTab({
                 <>
                   {/* IMPORT FIELDS */}
                   {/* 1. CLEINT (g1) */}
-                  <div className="opf g1">
+                  <div className={`opf g1 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'العميل' : 'CLEINT'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i> *</label>
                     <SearchableSelect
                       value={newOp.clientId || newOp.client}
@@ -1937,7 +2878,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 2. M/BL Number (g1) */}
-                  <div className="opf g1">
+                  <div className={`opf g1 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'رقم البوليصة (M/BL)' : 'M/BL Number'} <i>{lang === 'ar' ? 'رقم / معرف' : 'Number / ID'}</i> *</label>
                     <input
                       type="text"
@@ -1949,7 +2890,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 3. Shipping Line (g2) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
                     <SearchableSelect
                       value={newOp.shippingLineId || newOp.line}
@@ -1967,7 +2908,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 4. destination (g2) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'مكان التعتيق / الوجهة' : 'destination'} <i>{lang === 'ar' ? 'اختيار' : 'Select'}</i></label>
                     <SearchableSelect
                       value={newOp.dest}
@@ -1979,7 +2920,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 5. POD (g2) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'ميناء الوصول (POD)' : 'POD'} <i>{lang === 'ar' ? 'نص' : 'Text'}</i></label>
                     <SearchableSelect
                       value={newOp.portId || newOp.port}
@@ -1997,7 +2938,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 6. Free Time Till (g2) */}
-                  <div className="opf g2">
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'نهاية فترة السماح' : 'free time till'} <i>{lang === 'ar' ? 'تاريخ' : 'Date'}</i></label>
                     <input
                       type="date"
@@ -2007,7 +2948,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 7. Required Offloading Date (g3) */}
-                  <div className="opf g3">
+                  <div className={`opf g3 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'تاريخ التعتيق المطلوب' : 'Required Offloading Date'}</label>
                     <input
                       type="date"
@@ -2017,7 +2958,7 @@ export default function DataEntryTab({
                   </div>
 
                   {/* 8. Required Offloading Time (g3) */}
-                  <div className="opf g3">
+                  <div className={`opf g3 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'وقت التعتيق المطلوب' : 'Required Offloading Time'}</label>
                     <input
                       type="time"
@@ -2092,7 +3033,7 @@ export default function DataEntryTab({
         <div className="etabs flex items-center gap-1.5 flex-wrap">
           <button
             type="button"
-            onClick={() => { onChangeDir && onChangeDir('Import'); setPage(1); }}
+            onClick={() => handleTabClick('Import')}
             className={`etab ${currentDir === 'Import' ? 'on' : ''}`}
           >
             <span className="ico">↓</span>
@@ -2102,7 +3043,7 @@ export default function DataEntryTab({
 
           <button
             type="button"
-            onClick={() => { onChangeDir && onChangeDir('Export'); setPage(1); }}
+            onClick={() => handleTabClick('Export')}
             className={`etab ${currentDir === 'Export' ? 'on' : ''}`}
           >
             <span className="ico">↑</span>
@@ -2112,41 +3053,28 @@ export default function DataEntryTab({
 
           <button
             type="button"
-            onClick={() => { onChangeDir && onChangeDir('Delivered'); setPage(1); }}
-            className={`etab ${isDeliveredTab ? 'on' : ''}`}
+            onClick={() => handleTabClick('Delivered')}
+            className={`etab ${isDeliveredTab ? 'on' : ''} border-emerald-200 hover:border-emerald-300 text-emerald-800 bg-emerald-50/70`}
+            title={lang === 'ar' ? 'سجل العمليات والشحنات المسلّمة' : 'Delivered Shipments Archive'}
           >
-            <span className="ico">🔒</span>
+            <CheckCircle2 size={13} className="text-emerald-600" />
             <span>{lang === 'ar' ? 'الشحنات المسلّمة' : 'Delivered shipments'}</span>
-            <span className="cnt">{counts?.deliveredCount ?? deliveredCount}</span>
-          </button>
-
-          {/* FCL Recommendations Button (Placed between Delivered and Inactive) */}
-          <button
-            type="button"
-            onClick={() => { onChangeDir && onChangeDir('FCL'); setPage(1); }}
-            className={`etab ${currentDir === 'FCL' ? 'on bg-blue-600 text-white border-blue-600 shadow-sm' : 'border-blue-200 hover:border-blue-300 text-blue-700 bg-blue-50/70'}`}
-            title={lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}
-          >
-            <ArrowRightLeft size={13} className={currentDir === 'FCL' ? 'text-white' : 'text-blue-600'} />
-            <span>{lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}</span>
-            <span className={`cnt ${currentDir === 'FCL' ? 'bg-blue-700 text-white border-blue-700' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
-              {fclRecommendedCount}
-            </span>
+            <span className="cnt bg-emerald-100 text-emerald-800 border-emerald-200">{counts?.deliveredCount ?? (currentDir === 'Delivered' ? serverTotalCount : deliveredOperations.length)}</span>
           </button>
 
           {/* Deleted Button (View soft-deleted shipments) */}
           <button
             type="button"
-            onClick={() => { onChangeDir && onChangeDir('Deleted'); setPage(1); }}
+            onClick={() => handleTabClick('Deleted')}
             className={`etab ${currentDir === 'Deleted' ? 'on' : ''} border-rose-200 hover:border-rose-300 text-rose-700 bg-rose-50/70`}
             title={lang === 'ar' ? 'عرض العمليات غير النشطة' : 'View Inactive Shipments'}
           >
             <Trash2 size={13} className="text-rose-600" />
             <span>{lang === 'ar' ? 'غير النشطة' : 'Inactive'}</span>
-            <span className="cnt bg-rose-100 text-rose-700 border-rose-200">{counts?.inactiveCount ?? deletedOperations.length}</span>
+            <span className="cnt bg-rose-100 text-rose-700 border-rose-200">{counts?.inactiveCount ?? (currentDir === 'Deleted' ? serverTotalCount : deletedOperations.length)}</span>
           </button>
 
-          {/* Upload Report Button (Relocated into Section 5) */}
+          {/* Upload Report Button */}
           {canUploadReport && (
             <button
               type="button"
@@ -2157,6 +3085,20 @@ export default function DataEntryTab({
               <span>{lang === 'ar' ? 'رفع التقرير' : 'Upload Report'}</span>
             </button>
           )}
+
+          {/* FCL Recommendations Button */}
+          <button
+            type="button"
+            onClick={() => handleTabClick('FCL')}
+            className={`etab ${currentDir === 'FCL' ? 'on bg-blue-600 text-white border-blue-600 shadow-sm' : 'border-blue-200 hover:border-blue-300 text-blue-700 bg-blue-50/70'}`}
+            title={lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}
+          >
+            <ArrowRightLeft size={13} className={currentDir === 'FCL' ? 'text-white' : 'text-blue-600'} />
+            <span>{lang === 'ar' ? 'ترشيحات FCL' : 'FCL Recommendations'}</span>
+            <span className={`cnt ${currentDir === 'FCL' ? 'bg-blue-700 text-white border-blue-700' : 'bg-blue-100 text-blue-700 border-blue-200'}`}>
+              {fclRecommendedCount}
+            </span>
+          </button>
         </div>
 
         <div className="espacer" />
@@ -2545,7 +3487,13 @@ export default function DataEntryTab({
                     {lang === 'ar' ? 'سجل العمليات والشحنات غير النشطة' : 'Inactive Operations Archive'}
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
-                    {filteredDeletedOperations.length} {lang === 'ar' ? 'شحنة غير نشطة' : 'inactive'}
+                    {searchTerm
+                      ? (lang === 'ar'
+                        ? `${serverTotalCount} من أصل ${counts?.inactiveCount ?? serverTotalCount} شحنة غير نشطة`
+                        : `${serverTotalCount} of ${counts?.inactiveCount ?? serverTotalCount} inactive`)
+                      : (lang === 'ar'
+                        ? `${serverTotalCount} شحنة غير نشطة`
+                        : `${serverTotalCount} inactive`)}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">
@@ -2559,16 +3507,20 @@ export default function DataEntryTab({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={onRefreshDeleted}
-                disabled={isLoadingDeleted}
+                onClick={() => {
+                  clearTabPagesCache();
+                  fetchServerPage(page, debouncedSearchTerm, filters, 'Deleted');
+                  if (onRefreshDeleted) onRefreshDeleted(true);
+                }}
+                disabled={isPageLoading || isLoadingDeleted}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw size={13} className={isLoadingDeleted ? 'animate-spin text-rose-600' : 'text-slate-500'} />
+                <RefreshCw size={13} className={isPageLoading || isLoadingDeleted ? 'animate-spin text-rose-600' : 'text-slate-500'} />
                 <span>{lang === 'ar' ? 'تحديث' : 'Refresh'}</span>
               </button>
               <button
                 type="button"
-                onClick={() => { onChangeDir && onChangeDir('Import'); setPage(1); }}
+                onClick={() => handleTabClick('Import')}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition cursor-pointer shadow-xs"
               >
                 <ChevronLeft size={14} />
@@ -2577,15 +3529,72 @@ export default function DataEntryTab({
             </div>
           </div>
 
-          {/* Deleted Operations Table or Empty State */}
-          {isLoadingDeleted && deletedOperations.length === 0 ? (
-            <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
-              <Loader2 size={28} className="animate-spin text-rose-600 mx-auto mb-2" />
-              <p className="text-xs text-slate-500 font-medium">
-                {lang === 'ar' ? 'جاري تحميل العمليات غير النشطة...' : 'Loading inactive operations...'}
-              </p>
+          {/* Active Search Filter Banner for Inactive */}
+          {searchTerm && (
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Search size={14} className="text-amber-600 shrink-0" />
+                <span>
+                  {lang === 'ar'
+                    ? `تصفية البحث نشطة: "${searchTerm}" (إجمالي النتائج: ${serverTotalCount} شحنة غير نشطة)`
+                    : `Search filter active: "${searchTerm}" (${serverTotalCount} total inactive)`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setSearchTerm(''); setPage(1); }}
+                className="px-3 py-1 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                <X size={12} />
+                <span>{lang === 'ar' ? 'إلغاء البحث وعرض كل الشحنات غير النشطة' : 'Clear search & show all'}</span>
+              </button>
             </div>
-          ) : filteredDeletedOperations.length === 0 ? (
+          )}
+
+          {/* Deleted Operations Table or Empty State */}
+          {isPageLoading && activeDeletedOperations.length === 0 ? (
+            <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-xs">
+              <table className="w-full text-start border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                    <th className="py-3 px-3 text-start"># / {lang === 'ar' ? 'رقم الشحنة' : 'Shipment No'}</th>
+                    <th className="py-3 px-3 text-start">{lang === 'ar' ? 'النوع' : 'Type'}</th>
+                    <th className="py-3 px-3 text-start">{lang === 'ar' ? 'البوليصة / البوكينج' : 'BL / Booking'}</th>
+                    <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والخط' : 'Client & Line'}</th>
+                    <th className="py-3 px-3 text-start">{lang === 'ar' ? 'الحاويات' : 'Containers'}</th>
+                    <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-950 border-x border-rose-100">
+                      {lang === 'ar' ? 'تم الإيقاف بواسطة' : 'Inactive By'}
+                    </th>
+                    <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-950">
+                      {lang === 'ar' ? 'تاريخ وساعة الإيقاف' : 'Inactive At'}
+                    </th>
+                    <th className="py-3 px-3 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={`del_skel_${idx}`} className="border-b border-slate-100">
+                      <td className="py-3 px-3"><div className="h-4 w-16 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3"><div className="h-5 w-14 bg-slate-200/70 rounded-full animate-pulse" /></td>
+                      <td className="py-3 px-3"><div className="h-4 w-24 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3 space-y-1">
+                        <div className="h-3.5 w-28 bg-slate-200/70 rounded-md animate-pulse" />
+                        <div className="h-3 w-16 bg-slate-100 rounded-md animate-pulse" />
+                      </td>
+                      <td className="py-3 px-3"><div className="h-4 w-20 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3 bg-rose-50/20 border-x border-rose-100">
+                        <div className="h-6 w-20 bg-rose-100/60 rounded-xl animate-pulse" />
+                      </td>
+                      <td className="py-3 px-3 bg-rose-50/20"><div className="h-4 w-28 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3 text-center">
+                        <div className="h-7 w-20 bg-slate-200/50 rounded-xl mx-auto animate-pulse" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : activeDeletedOperations.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-rose-200 bg-rose-50/30 p-12 text-center space-y-3">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
                 <Trash2 size={24} />
@@ -2600,6 +3609,224 @@ export default function DataEntryTab({
               </p>
             </div>
           ) : (
+            <div className="space-y-3">
+              <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-xs">
+                <table className="w-full text-start border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-3 text-start"># / {lang === 'ar' ? 'رقم الشحنة' : 'Shipment No'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'النوع' : 'Type'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'البوليصة / البوكينج' : 'BL / Booking'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والخط' : 'Client & Line'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'الحاويات' : 'Containers'}</th>
+                      <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-900 border-x border-rose-100">
+                        {lang === 'ar' ? 'تم الإيقاف بواسطة' : 'Inactive By'}
+                      </th>
+                      <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-900">
+                        {lang === 'ar' ? 'تاريخ وساعة الإيقاف' : 'Inactive At'}
+                      </th>
+                      <th className="py-3 px-3 text-center">
+                        {lang === 'ar' ? 'التفاصيل الكاملة' : 'Full Details'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activeDeletedOperations.map((op, idx) => {
+                      const isImport = op.operationType === 'Import' || op.operationType === 1;
+                      const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
+                      return (
+                        <tr key={op.id || idx} className="hover:bg-rose-50/20 transition-colors">
+                          <td className="py-3 px-3 font-semibold text-slate-800">
+                            {op.shipmentNumber || `#${(page - 1) * 20 + idx + 1}`}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
+                                ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                }`}
+                            >
+                              {isImport ? 'Import' : 'Export'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-medium text-slate-900">
+                            {refNum || '—'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-slate-800">{op.clientName || '—'}</div>
+                            <div className="text-[11px] text-slate-500">{op.shippingLineName || '—'}</div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-slate-700">
+                                {op.numberOfContainers || (op.containers?.length || 0)} {lang === 'ar' ? 'حاوية' : 'cntrs'}
+                              </span>
+                              {(op.containers || []).slice(0, 3).map((c, cIdx) => (
+                                <span key={cIdx} className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600 font-mono">
+                                  {c.containerNumber || '—'}
+                                </span>
+                              ))}
+                              {(op.containers?.length || 0) > 3 && (
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  +{(op.containers?.length || 0) - 3}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 bg-rose-50/30 border-x border-rose-100">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-rose-200 text-rose-800 font-bold shadow-2xs">
+                              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                              <span>{op.deletedByName || (lang === 'ar' ? 'مستخدم' : 'User')}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 bg-rose-50/30 font-medium text-slate-700">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-800">
+                                {fmtUpdateDateTime(op.deletedAtUtc)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeletedDetails(op)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                                title={lang === 'ar' ? 'عرض تفاصيل العملية المحذوفة بالكامل' : 'View Full Operation Details'}
+                              >
+                                <Eye size={13} className="text-sky-400" />
+                                <span>{lang === 'ar' ? 'عرض التفاصيل' : 'Details'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openStatusHistoryForOp(op)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                                title={lang === 'ar' ? 'سجل وتاريخ تغيرات الحالة (Status History)' : 'Status History Timeline'}
+                              >
+                                <History size={12} className="text-sky-600" />
+                                <span>{lang === 'ar' ? 'السجل' : 'History'}</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Inactive Pagination Controls */}
+              {serverTotalPages > 1 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs">
+                  <span className="text-slate-500">
+                    {lang === 'ar'
+                      ? `الصفحة ${page} من ${serverTotalPages} (${serverTotalCount} شحنة غير نشطة)`
+                      : `Page ${page} of ${serverTotalPages} (${serverTotalCount} inactive)`}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium"
+                    >
+                      {lang === 'ar' ? 'السابق' : 'Previous'}
+                    </button>
+                    <span className="px-2 py-1 font-bold text-slate-800">{page}</span>
+                    <button
+                      type="button"
+                      disabled={page >= serverTotalPages}
+                      onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium"
+                    >
+                      {lang === 'ar' ? 'التالي' : 'Next'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : currentDir === 'Delivered' ? (
+        <div className="space-y-4 my-2">
+          {/* Top Bar of Delivered Operations */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-white border border-emerald-200/80 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                <CheckCircle2 size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-slate-900">
+                    {lang === 'ar' ? 'سجل العمليات والشحنات المسلّمة' : 'Delivered Operations Archive'}
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
+                    {searchTerm
+                      ? (lang === 'ar'
+                        ? `${serverTotalCount} من أصل ${counts?.deliveredCount ?? serverTotalCount} شحنة مسلّمة`
+                        : `${serverTotalCount} of ${counts?.deliveredCount ?? serverTotalCount} delivered`)
+                      : (lang === 'ar'
+                        ? `${serverTotalCount} شحنة مسلّمة`
+                        : `${serverTotalCount} delivered`)}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  {lang === 'ar'
+                    ? 'يتم أرشفة جميع العمليات المسلّمة هنا مع توثيق تفاصيل وتاريخ وساعة التسليم بدقة'
+                    : 'All delivered operations are securely archived here with details and exact timestamp'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  clearTabPagesCache();
+                  fetchServerPage(page, debouncedSearchTerm, filters, 'Delivered');
+                  if (onRefreshDelivered) onRefreshDelivered(true);
+                }}
+                disabled={isPageLoading || isLoadingDelivered}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw size={13} className={isPageLoading || isLoadingDelivered ? 'animate-spin text-emerald-600' : 'text-slate-500'} />
+                <span>{lang === 'ar' ? 'تحديث' : 'Refresh'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleTabClick('Import')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition cursor-pointer shadow-xs"
+              >
+                <ChevronLeft size={14} />
+                <span>{lang === 'ar' ? 'العودة للشحنات النشطة' : 'Back to Active Shipments'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Active Search Filter Banner for Delivered */}
+          {searchTerm && (
+            <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-2xs">
+              <div className="flex items-center gap-2">
+                <Search size={14} className="text-amber-600 shrink-0" />
+                <span>
+                  {lang === 'ar'
+                    ? `تصفية البحث نشطة: "${searchTerm}" (إجمالي النتائج: ${serverTotalCount} شحنة مسلّمة)`
+                    : `Search filter active: "${searchTerm}" (${serverTotalCount} total delivered)`}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setSearchTerm(''); setPage(1); }}
+                className="px-3 py-1 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
+              >
+                <X size={12} />
+                <span>{lang === 'ar' ? 'إلغاء البحث وعرض كل الشحنات المسلّمة' : 'Clear search & show all'}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Delivered Operations Table or Empty State */}
+          {isPageLoading && activeDeliveredOperations.length === 0 ? (
             <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-xs">
               <table className="w-full text-start border-collapse text-xs">
                 <thead>
@@ -2609,89 +3836,213 @@ export default function DataEntryTab({
                     <th className="py-3 px-3 text-start">{lang === 'ar' ? 'البوليصة / البوكينج' : 'BL / Booking'}</th>
                     <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والخط' : 'Client & Line'}</th>
                     <th className="py-3 px-3 text-start">{lang === 'ar' ? 'الحاويات' : 'Containers'}</th>
-                    <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-900 border-x border-rose-100">
-                      {lang === 'ar' ? 'تم الإيقاف بواسطة' : 'Inactive By'}
+                    <th className="py-3 px-3 text-start bg-emerald-50/60 text-emerald-950 border-x border-emerald-100">
+                      {lang === 'ar' ? 'تم التسليم بواسطة' : 'Delivered By'}
                     </th>
-                    <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-900">
-                      {lang === 'ar' ? 'تاريخ وساعة الإيقاف' : 'Inactive At'}
+                    <th className="py-3 px-3 text-start bg-emerald-50/60 text-emerald-950">
+                      {lang === 'ar' ? 'تاريخ وساعة التسليم' : 'Delivered At'}
                     </th>
-                    <th className="py-3 px-3 text-center">
-                      {lang === 'ar' ? 'التفاصيل الكاملة' : 'Full Details'}
-                    </th>
+                    <th className="py-3 px-3 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filteredDeletedOperations.map((op, idx) => {
-                    const isImport = op.operationType === 'Import' || op.operationType === 1;
-                    const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
-                    return (
-                      <tr key={op.id || idx} className="hover:bg-rose-50/20 transition-colors">
-                        <td className="py-3 px-3 font-semibold text-slate-800">
-                          {op.shipmentNumber || `#${idx + 1}`}
-                        </td>
-                        <td className="py-3 px-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
-                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                              : 'bg-purple-50 text-purple-700 border border-purple-200'
-                              }`}
-                          >
-                            {isImport ? 'Import' : 'Export'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 font-medium text-slate-900">
-                          {refNum || '—'}
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="font-semibold text-slate-800">{op.clientName || '—'}</div>
-                          <div className="text-[11px] text-slate-500">{op.shippingLineName || '—'}</div>
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-semibold text-slate-700">
-                              {op.numberOfContainers || (op.containers?.length || 0)} {lang === 'ar' ? 'حاوية' : 'cntrs'}
-                            </span>
-                            {(op.containers || []).slice(0, 3).map((c, cIdx) => (
-                              <span key={cIdx} className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600 font-mono">
-                                {c.containerNumber || '—'}
-                              </span>
-                            ))}
-                            {(op.containers?.length || 0) > 3 && (
-                              <span className="text-[10px] text-slate-400 font-medium">
-                                +{(op.containers?.length || 0) - 3}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 bg-rose-50/30 border-x border-rose-100">
-                          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-rose-200 text-rose-800 font-bold shadow-2xs">
-                            <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                            <span>{op.deletedByName || (lang === 'ar' ? 'مستخدم' : 'User')}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 bg-rose-50/30 font-medium text-slate-700">
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-800">
-                              {fmtUpdateDateTime(op.deletedAtUtc)}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDeletedDetails(op)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
-                            title={lang === 'ar' ? 'عرض تفاصيل العملية المحذوفة بالكامل' : 'View Full Operation Details'}
-                          >
-                            <Eye size={13} className="text-sky-400" />
-                            <span>{lang === 'ar' ? 'عرض التفاصيل' : 'Details'}</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <tr key={`del_skel_${idx}`} className="border-b border-slate-100">
+                      <td className="py-3 px-3"><div className="h-4 w-16 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3"><div className="h-5 w-14 bg-slate-200/70 rounded-full animate-pulse" /></td>
+                      <td className="py-3 px-3"><div className="h-4 w-24 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3 space-y-1">
+                        <div className="h-3.5 w-28 bg-slate-200/70 rounded-md animate-pulse" />
+                        <div className="h-3 w-16 bg-slate-100 rounded-md animate-pulse" />
+                      </td>
+                      <td className="py-3 px-3"><div className="h-4 w-20 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3 bg-emerald-50/20 border-x border-emerald-100">
+                        <div className="h-6 w-20 bg-emerald-100/60 rounded-xl animate-pulse" />
+                      </td>
+                      <td className="py-3 px-3 bg-emerald-50/20"><div className="h-4 w-28 bg-slate-200/70 rounded-md animate-pulse" /></td>
+                      <td className="py-3 px-3 text-center">
+                        <div className="h-7 w-24 bg-slate-200/50 rounded-xl mx-auto animate-pulse" />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
+            </div>
+          ) : activeDeliveredOperations.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-emerald-200 bg-emerald-50/30 p-12 text-center space-y-3">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                <CheckCircle2 size={24} />
+              </div>
+              <h4 className="text-sm font-bold text-slate-800">
+                {lang === 'ar' ? 'لا توجد شحنات مسلّمة مطابقة' : 'No Matching Delivered Shipments'}
+              </h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {searchTerm
+                  ? (lang === 'ar'
+                    ? `لم يتم العثور على أي شحنات مسلّمة تطابق البحث "${searchTerm}".`
+                    : `No delivered operations matched search "${searchTerm}".`)
+                  : (lang === 'ar'
+                    ? 'لم يتم العثور على أي شحنات مسلّمة مسجلة في الأرشيف.'
+                    : 'No delivered operations found in the archive.')}
+              </p>
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => { setSearchTerm(''); setPage(1); }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  <X size={12} />
+                  <span>{lang === 'ar' ? 'إلغاء البحث وعرض كل الشحنات المسلّمة' : 'Clear search & show all'}</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-xs">
+                <table className="w-full text-start border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                      <th className="py-3 px-3 text-start"># / {lang === 'ar' ? 'رقم الشحنة' : 'Shipment No'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'النوع' : 'Type'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'البوليصة / البوكينج' : 'BL / Booking'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والخط' : 'Client & Line'}</th>
+                      <th className="py-3 px-3 text-start">{lang === 'ar' ? 'الحاويات' : 'Containers'}</th>
+                      <th className="py-3 px-3 text-start bg-emerald-50/60 text-emerald-950 border-x border-emerald-100">
+                        {lang === 'ar' ? 'تم التسليم بواسطة' : 'Delivered By'}
+                      </th>
+                      <th className="py-3 px-3 text-start bg-emerald-50/60 text-emerald-950">
+                        {lang === 'ar' ? 'تاريخ وساعة التسليم' : 'Delivered At'}
+                      </th>
+                      <th className="py-3 px-3 text-center">
+                        {lang === 'ar' ? 'الإجراءات' : 'Actions'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activeDeliveredOperations.map((op, idx) => {
+                      const isImport = op.operationType === 'Import' || op.operationType === 1;
+                      const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
+                      return (
+                        <tr key={op.id || idx} className="hover:bg-emerald-50/20 transition-colors">
+                          <td className="py-3 px-3 font-semibold text-slate-800">
+                            {op.shipmentNumber || `#${(page - 1) * 20 + idx + 1}`}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
+                                ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                                : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                }`}
+                            >
+                              {isImport ? 'Import' : 'Export'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 font-medium text-slate-900">
+                            {refNum || '—'}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="font-semibold text-slate-800">{op.clientName || '—'}</div>
+                            <div className="text-[11px] text-slate-500">{op.shippingLineName || '—'}</div>
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-semibold text-slate-700">
+                                {op.numberOfContainers || (op.containers?.length || 0)} {lang === 'ar' ? 'حاوية' : 'cntrs'}
+                              </span>
+                              {(op.containers || []).slice(0, 3).map((c, cIdx) => (
+                                <span key={cIdx} className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-600 font-mono">
+                                  {c.containerNumber || '—'}
+                                </span>
+                              ))}
+                              {(op.containers?.length || 0) > 3 && (
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  +{(op.containers?.length || 0) - 3}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 bg-emerald-50/30 border-x border-emerald-100">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-emerald-200 text-emerald-800 font-bold shadow-2xs">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                              <span>{op.deliveredByName || (lang === 'ar' ? 'مستخدم' : 'User')}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 bg-emerald-50/30 font-medium text-slate-700">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-800">
+                                {fmtUpdateDateTime(op.deliveredAtUtc)}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeliveredDetails(op)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                                title={lang === 'ar' ? 'عرض تفاصيل العملية المسلّمة بالكامل' : 'View Full Operation Details'}
+                              >
+                                <Eye size={13} className="text-sky-400" />
+                                <span>{lang === 'ar' ? 'عرض التفاصيل' : 'Details'}</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => openStatusHistoryForOp(op)}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                                title={lang === 'ar' ? 'سجل وتاريخ تغيرات الحالة (Status History)' : 'Status History Timeline'}
+                              >
+                                <History size={12} className="text-sky-600" />
+                                <span>{lang === 'ar' ? 'السجل' : 'History'}</span>
+                              </button>
+                              {canTakeOver && (
+                                <button
+                                  type="button"
+                                  onClick={() => openReopenModalForOp(op)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                                  title={lang === 'ar' ? 'إعادة فتح العملية للتعديل' : 'Reopen Operation'}
+                                >
+                                  <RotateCcw size={12} className="text-amber-700" />
+                                  <span>{lang === 'ar' ? 'إعادة فتح' : 'Reopen'}</span>
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Delivered Pagination Controls */}
+              {serverTotalPages > 1 && (
+                <div className="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs">
+                  <span className="text-slate-500">
+                    {lang === 'ar'
+                      ? `الصفحة ${page} من ${serverTotalPages} (${serverTotalCount} شحنة مسلّمة)`
+                      : `Page ${page} of ${serverTotalPages} (${serverTotalCount} delivered)`}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium"
+                    >
+                      {lang === 'ar' ? 'السابق' : 'Previous'}
+                    </button>
+                    <span className="px-2 py-1 font-bold text-slate-800">{page}</span>
+                    <button
+                      type="button"
+                      disabled={page >= serverTotalPages}
+                      onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium"
+                    >
+                      {lang === 'ar' ? 'التالي' : 'Next'}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -2754,16 +4105,16 @@ export default function DataEntryTab({
                     return (
                       <th
                         key={c.k}
-                        className={`grp-${c.g}`}
-                        style={{ width: `${c.w}px`, minWidth: `${c.w}px` }}
+                        className={`grp-${c.g} text-center`}
+                        style={{ width: `${c.w}px`, minWidth: `${c.w}px`, textAlign: 'center' }}
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-[11.5px] leading-tight">{c.h}</span>
+                        <div className="flex items-center justify-center gap-1 w-full text-center">
+                          <span className="font-bold text-[11.5px] leading-tight text-center">{c.h}</span>
                           {c.locked && (
-                            <span className="text-[11px] opacity-75 select-none" title="Append-only column (لا يمكن تعديل السجلات السابقة)">🔒</span>
+                            <span className="text-[11px] opacity-75 select-none shrink-0" title="Append-only column (لا يمكن تعديل السجلات السابقة)">🔒</span>
                           )}
                         </div>
-                        <div className="text-[9.5px] opacity-75 font-medium leading-tight">{c.ar}</div>
+                        <div className="text-[9.5px] opacity-75 font-medium leading-tight text-center mt-0.5">{c.ar}</div>
                       </th>
                     );
                   })}
@@ -2771,14 +4122,43 @@ export default function DataEntryTab({
               </thead>
               <tbody>
                 {(isLoading || isPageLoading || (isDeliveredTab && isLoadingDelivered)) ? (
-                  <tr>
-                    <td colSpan={cols.length} className="text-center py-16 text-slate-500">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <RefreshCw size={24} className="animate-spin text-sky-600" />
-                        <span className="text-xs font-medium">جاري تحميل العمليات من قاعدة البيانات...</span>
-                      </div>
-                    </td>
-                  </tr>
+                  Array.from({ length: 8 }).map((_, rIdx) => {
+                    const isEvenShipment = Math.floor(rIdx / 2) % 2 === 0;
+                    return (
+                      <tr
+                        key={`skel_row_${rIdx}`}
+                        className={`border-b border-slate-100 ${isEvenShipment ? 'bg-white' : 'bg-slate-50/40'}`}
+                      >
+                        {cols.map((c, cIdx) => {
+                          const widthClass = c.k === 'sel' ? 'w-4'
+                            : c.k === 'vol' ? 'w-8'
+                              : c.k === 'shipNo' ? 'w-20'
+                                : c.k === 'client' ? 'w-28'
+                                  : c.k === 'bl' || c.k === 'booking' ? 'w-24'
+                                    : c.k === 'line' ? 'w-24'
+                                      : c.k === 'cntr' ? 'w-28'
+                                        : c.k === 'status' ? 'w-20'
+                                          : 'w-16';
+
+                          return (
+                            <td
+                              key={`skel_${rIdx}_${c.k || cIdx}`}
+                              className="py-2.5 px-2 text-center"
+                              style={{ width: `${c.w}px`, minWidth: `${c.w}px` }}
+                            >
+                              <div
+                                className={`h-4.5 rounded-lg bg-slate-200/70 animate-pulse mx-auto ${widthClass}`}
+                                style={{
+                                  animationDelay: `${(rIdx * 50) + (cIdx * 10)}ms`,
+                                  opacity: 0.6 + ((rIdx % 3) * 0.15),
+                                }}
+                              />
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
                 ) : paginatedShipments.length === 0 ? (
                   <tr>
                     <td colSpan={cols.length} className="text-center py-12 text-slate-400">
@@ -2829,18 +4209,27 @@ export default function DataEntryTab({
                             let isReadOnly = !isShipmentEditing || isDelivered || isSavingThisShipment;
                             let isDisabled = !isShipmentEditing || isDelivered || isSavingThisShipment;
                             let inputPlaceholder = '';
+
+                            const valStr = val !== null && val !== undefined ? String(val).trim() : '';
+                            const nonEditableLabel = lang === 'ar' ? 'حقل غير قابل للتعديل' : 'Non-editable field';
+                            const nonEditableTitle = valStr ? `${valStr} (${nonEditableLabel})` : nonEditableLabel;
+
                             let cellTitle = isDelivered
-                              ? 'العملية مسلّمة ولا يمكن تعديلها (Delivered)'
+                              ? (valStr
+                                ? `${valStr} (${lang === 'ar' ? 'العملية مسلّمة - Delivered' : 'Delivered'})`
+                                : (lang === 'ar' ? 'العملية مسلّمة ولا يمكن تعديلها (Delivered)' : 'Delivered shipment'))
                               : !isShipmentEditing
-                                ? 'انقر على زر "تعديل" لتعديل هذه الشحنة'
-                                : '';
+                                ? (valStr
+                                  ? `${valStr} (${lang === 'ar' ? 'انقر على "تعديل" لتعديل هذه الشحنة' : 'Click "Edit" to edit'})`
+                                  : (lang === 'ar' ? 'انقر على زر "تعديل" لتعديل هذه الشحنة' : 'Click "Edit" to edit'))
+                                : valStr;
 
                             if (currentDir === 'Export') {
                               // Booking No., Client, Shipping Line, POL are strictly non-editable
                               if (['booking', 'client', 'line', 'pol', 'vol', 'clrType', 'oper'].includes(c.k)) {
                                 isReadOnly = true;
                                 isDisabled = true;
-                                cellTitle = 'حقل غير قابل للتعديل';
+                                cellTitle = nonEditableTitle;
                               }
 
                               // Clearance Type rules:
@@ -2851,7 +4240,8 @@ export default function DataEntryTab({
                                   isReadOnly = true;
                                   isDisabled = true;
                                   inputPlaceholder = 'غير مسموح للكتابة (BOSLA)';
-                                  cellTitle = 'غير مسموح بالكتابة في رقم الشهادة لأن نوع التخليص بوصلة';
+                                  const boslaMsg = lang === 'ar' ? 'غير مسموح بالكتابة في رقم الشهادة لأن نوع التخليص بوصلة' : 'Not allowed to edit Certificate Number for BOSLA';
+                                  cellTitle = valStr ? `${valStr} (${boslaMsg})` : boslaMsg;
                                 }
                               } else if (clr === 'CERT') {
                                 // If CERT: Customs is NOT allowed to be edited
@@ -2859,7 +4249,8 @@ export default function DataEntryTab({
                                   isReadOnly = true;
                                   isDisabled = true;
                                   inputPlaceholder = 'غير مسموح للكتابة (CERT)';
-                                  cellTitle = 'غير مسموح بالكتابة في الجمارك لأن نوع التخليص شهادة (CERT)';
+                                  const certMsg = lang === 'ar' ? 'غير مسموح بالكتابة في الجمارك لأن نوع التخليص شهادة (CERT)' : 'Not allowed to edit Customs for CERT';
+                                  cellTitle = valStr ? `${valStr} (${certMsg})` : certMsg;
                                 }
                               }
 
@@ -2867,6 +4258,11 @@ export default function DataEntryTab({
                               if (c.k === 'shipNo') {
                                 isReadOnly = !isShipmentEditing || isDelivered || isSavingThisShipment;
                                 isDisabled = !isShipmentEditing || isDelivered || isSavingThisShipment;
+                                if (isReadOnly && !isDelivered) {
+                                  cellTitle = valStr
+                                    ? `${valStr} (${lang === 'ar' ? 'انقر على "تعديل" لتعديل هذه الشحنة' : 'Click "Edit" to edit'})`
+                                    : (lang === 'ar' ? 'انقر على زر "تعديل" لتعديل هذه الشحنة' : 'Click "Edit" to edit');
+                                }
                               }
                             } else {
                               // Import direction immutable columns
@@ -2885,7 +4281,7 @@ export default function DataEntryTab({
                               if (isImmutableCol) {
                                 isReadOnly = true;
                                 isDisabled = true;
-                                cellTitle = 'حقل غير قابل للتعديل';
+                                cellTitle = nonEditableTitle;
                               }
                             }
 
@@ -3009,6 +4405,32 @@ export default function DataEntryTab({
                                               : (lang === 'ar' ? 'حفظ' : 'Save')}
                                           </span>
                                         </button>
+                                        {availableDrafts[shipRef] && (
+                                          <div className="inline-flex items-center justify-between w-full rounded-lg bg-amber-50 text-amber-900 border border-amber-300 shadow-2xs overflow-hidden">
+                                            <button
+                                              type="button"
+                                              disabled={isSavingThisShipment}
+                                              onClick={() => handleRestoreDraft(shipRef)}
+                                              className="inline-flex items-center justify-center gap-1 flex-1 py-1 px-1.5 text-[10px] font-bold hover:bg-amber-100 transition disabled:opacity-50 cursor-pointer"
+                                              title={lang === 'ar' ? 'استرجاع التعديلات التي تم حفظها كمسودة سابقة' : 'Restore saved draft edits'}
+                                            >
+                                              <FileSpreadsheet size={11} className="text-amber-600 shrink-0" />
+                                              <span className="truncate">{lang === 'ar' ? 'استرجاع المسودة' : 'Restore Draft'}</span>
+                                            </button>
+                                            <button
+                                              type="button"
+                                              disabled={isSavingThisShipment}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDiscardDraft(shipRef);
+                                              }}
+                                              className="p-1 text-amber-700 hover:text-rose-700 hover:bg-rose-100 transition cursor-pointer border-s border-amber-200"
+                                              title={lang === 'ar' ? 'تجاهل وحذف المسودة' : 'Discard draft'}
+                                            >
+                                              <X size={11} />
+                                            </button>
+                                          </div>
+                                        )}
                                         <button
                                           type="button"
                                           disabled={isSavingThisShipment}
@@ -3050,26 +4472,73 @@ export default function DataEntryTab({
                                           <span>{lang === 'ar' ? 'مُسلّم' : 'Delivered'}</span>
                                         </div>
                                       )
+                                    ) : (shipRows[0]?._lockedByUserId && String(shipRows[0]._lockedByUserId).toLowerCase() !== String(user?.id || user?.userId || "").toLowerCase() && isLockActive(shipRows[0]._lockedAtUtc, 10)) ? (
+                                      <div className="flex flex-col items-center gap-1.5 w-full">
+                                        <button
+                                          type="button"
+                                          disabled={checkingLock[shipRef]}
+                                          onClick={() => handleCheckAndEditShipment(shipRef, shipRows)}
+                                          className="group inline-flex flex-col items-center justify-center gap-0.5 w-full px-2 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 hover:border-amber-400 shadow-2xs text-center transition cursor-pointer disabled:opacity-60"
+                                          title={lang === "ar" ? "الشحنة مقفولة حالياً. انقر هنا للتحقق مما إذا كان زميلك قد انتهى والبدء في التعديل فوراً دون رفرش" : "Locked. Click to check if lock is free and start editing immediately"}
+                                        >
+                                          <div className="flex items-center gap-1 font-bold text-amber-800">
+                                            {checkingLock[shipRef] ? (
+                                              <RefreshCw size={12} className="animate-spin text-amber-600" />
+                                            ) : (
+                                              <Lock size={12} className="text-amber-600 group-hover:scale-110 transition" />
+                                            )}
+                                            <span>
+                                              {checkingLock[shipRef]
+                                                ? (lang === "ar" ? "جاري الفحص..." : "Checking...")
+                                                : (lang === "ar" ? "قيد التعديل" : "Locked")}
+                                            </span>
+                                          </div>
+                                          <span className="text-[10px] text-amber-700 truncate max-w-[90px] font-medium">
+                                            {(shipRows[0] || r)._lockedByName || (lang === "ar" ? "مستخدم آخر" : "Other User")}
+                                          </span>
+                                          <span className="text-[9px] text-amber-600/90 font-normal underline decoration-dotted mt-0.5">
+                                            {lang === "ar" ? "انقر للتحقق والبدء" : "Click to check and edit"}
+                                          </span>
+                                        </button>
+
+                                        {canTakeOver && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleTakeOverShipment(shipRef, shipRows)}
+                                            className="inline-flex items-center justify-center gap-1 w-full px-2 py-1 rounded-lg text-[11px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 hover:border-indigo-300 shadow-2xs transition cursor-pointer"
+                                            title={lang === "ar" ? "سحب القفل للبدء في التعديل بصفتك مدير" : "Take over lock as manager"}
+                                          >
+                                            <Unlock size={11} className="text-indigo-600" />
+                                            <span>{lang === "ar" ? "فك القفل" : "Take Over"}</span>
+                                          </button>
+                                        )}
+                                      </div>
                                     ) : (
                                       <div className="flex flex-col items-center gap-1.5 w-full">
                                         <button
                                           type="button"
+                                          disabled={openingEdit[shipRef]}
                                           onClick={() => startEditingShipment(shipRef, shipRows)}
-                                          className="inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 shadow-sm transition cursor-pointer"
-                                          title={lang === 'ar' ? 'فتح وضع التعديل لهذه الشحنة' : 'Edit shipment'}
+                                          className={`inline-flex items-center justify-center gap-1.5 w-full px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-300 hover:bg-sky-100 hover:border-sky-400 shadow-sm transition cursor-pointer ${openingEdit[shipRef] ? 'opacity-60 cursor-not-allowed' : ''
+                                            }`}
+                                          title={lang === "ar" ? "فتح وضع التعديل لهذه الشحنة" : "Edit shipment"}
                                         >
-                                          <Edit3 size={13} />
-                                          <span>{lang === 'ar' ? 'تعديل' : 'Edit'}</span>
+                                          {openingEdit[shipRef] ? (
+                                            <Loader2 size={13} className="animate-spin text-sky-600" />
+                                          ) : (
+                                            <Edit3 size={13} />
+                                          )}
+                                          <span>{lang === "ar" ? "تعديل" : "Edit"}</span>
                                         </button>
                                         {canDelete && (
                                           <button
                                             type="button"
                                             onClick={() => openDeleteModal(shipRef, shipRows)}
                                             className="inline-flex items-center justify-center gap-1 w-full px-2 py-1 rounded-lg text-[11px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 shadow-2xs transition cursor-pointer"
-                                            title={lang === 'ar' ? 'حذف هذه الشحنة ونقلها للمحذوفات' : 'Delete shipment'}
+                                            title={lang === "ar" ? "حذف هذه الشحنة ونقلها للمحذوفات" : "Delete shipment"}
                                           >
                                             <Trash2 size={12} className="text-rose-600" />
-                                            <span>{lang === 'ar' ? 'حذف' : 'Delete'}</span>
+                                            <span>{lang === "ar" ? "حذف" : "Delete"}</span>
                                           </button>
                                         )}
                                       </div>
@@ -3538,12 +5007,14 @@ export default function DataEntryTab({
                               );
                             }
 
-                            // 8. Column: Transporter (trucker - Dropdown list from DB lookups)
+                            // 8. Column: Transporter (trucker - Dropdown list from DB lookups with merge/unmerge support)
                             if (c.k === 'trucker') {
+                              const truckerTitle = val ? `${val} (${lang === 'ar' ? 'مقاول النقل' : 'Transporter'})` : (lang === 'ar' ? 'مقاول النقل' : 'Transporter');
                               return (
                                 <td
                                   key={c.k}
                                   rowSpan={isMergedCol ? rowSpan : 1}
+                                  title={truckerTitle}
                                   style={{
                                     width: `${c.w}px`,
                                     minWidth: `${c.w}px`,
@@ -3552,7 +5023,8 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    className={`cbox grp-${c.g} relative`}
+                                    title={truckerTitle}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -3561,19 +5033,56 @@ export default function DataEntryTab({
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
+                                      paddingLeft: '6px',
+                                      paddingRight: canUnmerge && isFirstRow ? '32px' : '6px',
                                     }}
                                   >
+                                    {canUnmerge && isFirstRow && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleUnmerge(shipRef, c.k);
+                                        }}
+                                        className="unmerge-btn"
+                                        title={isMergedCol ? (lang === 'ar' ? 'فصل الخانات حسب عدد الحاويات (Unmerge)' : 'Unmerge across containers') : (lang === 'ar' ? 'دمج الخانات (Merge)' : 'Merge across containers')}
+                                      >
+                                        {isMergedCol ? (
+                                          /* Unmerge icon: Overlapping rectangles (Image 2) */
+                                          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                            <rect x="2" y="2" width="8" height="8" rx="1.5" />
+                                            <rect x="6" y="6" width="8" height="8" rx="1.5" />
+                                          </svg>
+                                        ) : (
+                                          /* Merge icon: 2x2 grid (Image 3) */
+                                          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                            <rect x="2" y="2" width="12" height="12" rx="1.5" />
+                                            <line x1="8" y1="2" x2="8" y2="14" />
+                                            <line x1="2" y1="8" x2="14" y2="8" />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    )}
+
                                     <SearchableSelect
                                       compact={true}
                                       value={val}
-                                      disabled={isDisabled}
+                                      disabled={isDisabled || isReadOnly}
                                       placeholder={lang === 'ar' ? '-- اختر المقاول --' : 'Select Transporter'}
                                       options={transporterOptions}
                                       onChange={(selectedName, opt) => {
-                                        onUpdateCell && onUpdateCell(currentDir, r._rowId, 'trucker', selectedName);
                                         const match = opt?.item || (lookups.transporters || []).find((t) => t.name === selectedName || t.id === selectedName);
-                                        if (match) {
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'truckerId', match.id);
+                                        const truckerId = match ? match.id : null;
+                                        if (isMergedCol) {
+                                          handleMergedColChange(shipRows, 'trucker', selectedName);
+                                          if (truckerId !== null && truckerId !== undefined) {
+                                            handleMergedColChange(shipRows, 'truckerId', truckerId);
+                                          }
+                                        } else {
+                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'trucker', selectedName);
+                                          if (truckerId !== null && truckerId !== undefined) {
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'truckerId', truckerId);
+                                          }
                                         }
                                       }}
                                     />
@@ -3808,10 +5317,14 @@ export default function DataEntryTab({
                             }
 
                             // 9. Generic Cell (including missDoc with merge/unmerge)
+                            const isStrictlyMerged = isMergedCol && !canUnmerge && rowSpan > 1;
+                            const cellHeight = isStrictlyMerged ? Math.round(rowSpan * 24) : 34;
+
                             return (
                               <td
                                 key={c.k}
                                 rowSpan={isMergedCol ? rowSpan : 1}
+                                title={cellTitle}
                                 style={{
                                   width: `${c.w}px`,
                                   minWidth: `${c.w}px`,
@@ -3821,16 +5334,19 @@ export default function DataEntryTab({
                               >
                                 <div
                                   className={`cbox grp-${c.g} relative`}
+                                  title={cellTitle}
                                   style={{
                                     width: '100%',
                                     minWidth: `${c.w - 12}px`,
-                                    height: '34px',
-                                    minHeight: '34px',
+                                    height: `${cellHeight}px`,
+                                    minHeight: `${cellHeight}px`,
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     paddingLeft: '6px',
                                     paddingRight: canUnmerge && isFirstRow ? '32px' : '6px',
+                                    borderRadius: isStrictlyMerged ? '14px' : '11px',
+                                    transition: 'height 0.2s ease, min-height 0.2s ease',
                                   }}
                                 >
                                   {canUnmerge && isFirstRow && (
@@ -3860,36 +5376,54 @@ export default function DataEntryTab({
                                     </button>
                                   )}
 
-                                  <input
-                                    type={c.t === 'date' ? 'date' : c.t === 'time' ? 'time' : 'text'}
-                                    value={c.t === 'date' && val ? String(val).slice(0, 10) : val}
-                                    readOnly={isReadOnly}
-                                    disabled={isDisabled}
-                                    placeholder={inputPlaceholder}
-                                    onChange={(e) => {
-                                      if (isReadOnly) return;
-                                      if (isMergedCol) {
-                                        handleMergedColChange(shipRows, c.k, e.target.value);
-                                      } else {
-                                        onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, e.target.value);
-                                      }
-                                    }}
-                                    title={cellTitle}
-                                    style={{
-                                      width: '100%',
-                                      minWidth: `${c.w - 24}px`,
-                                      textAlign: isMergedCol ? 'center' : 'start',
-                                      fontWeight: isMergedCol ? '600' : 'normal',
-                                      cursor: isReadOnly ? 'default' : 'text',
-                                      backgroundColor: isReadOnly ? 'transparent' : (isShipmentEditing ? '#ffffff' : 'transparent'),
-                                      borderRadius: isReadOnly ? '0px' : '6px',
-                                      padding: isReadOnly ? '2px 4px' : '4px 8px',
-                                      border: isReadOnly ? '1px solid transparent' : '1px solid #bae6fd',
-                                      boxShadow: !isReadOnly && isShipmentEditing ? '0 1px 2px rgba(14, 165, 233, 0.15)' : 'none',
-                                      color: isReadOnly ? '#334155' : '#0f172a',
-                                      opacity: isReadOnly ? 0.82 : 1,
-                                    }}
-                                  />
+                                  {isReadOnly ? (
+                                    <span
+                                      dir="auto"
+                                      className="truncate block w-full select-text text-xs leading-normal"
+                                      title={cellTitle}
+                                      style={{
+                                        textAlign: isMergedCol ? 'center' : 'start',
+                                        fontWeight: isMergedCol ? '600' : 'normal',
+                                        color: '#334155',
+                                        padding: '2px 4px',
+                                      }}
+                                    >
+                                      {c.t === 'date' && val
+                                        ? String(val).slice(0, 10)
+                                        : (val !== '' && val !== null && val !== undefined ? String(val) : '—')}
+                                    </span>
+                                  ) : (
+                                    <input
+                                      type={c.t === 'date' ? 'date' : c.t === 'time' ? 'time' : 'text'}
+                                      dir="auto"
+                                      value={c.t === 'date' && val ? String(val).slice(0, 10) : val}
+                                      readOnly={isReadOnly}
+                                      disabled={isDisabled}
+                                      placeholder={inputPlaceholder}
+                                      onChange={(e) => {
+                                        if (isReadOnly) return;
+                                        if (isMergedCol) {
+                                          handleMergedColChange(shipRows, c.k, e.target.value);
+                                        } else {
+                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, e.target.value);
+                                        }
+                                      }}
+                                      title={cellTitle}
+                                      style={{
+                                        width: '100%',
+                                        minWidth: `${c.w - 24}px`,
+                                        textAlign: isMergedCol ? 'center' : 'start',
+                                        fontWeight: isMergedCol ? '600' : 'normal',
+                                        cursor: 'text',
+                                        backgroundColor: '#ffffff',
+                                        borderRadius: '6px',
+                                        padding: '4px 8px',
+                                        border: '1px solid #bae6fd',
+                                        boxShadow: '0 1px 2px rgba(14, 165, 233, 0.15)',
+                                        color: '#0f172a',
+                                      }}
+                                    />
+                                  )}
                                 </div>
                               </td>
                             );
@@ -4261,6 +5795,107 @@ export default function DataEntryTab({
         </div>
       )}
 
+      {/* Concurrency / Lock Conflict / Session Timeout Modal (Safely Preserves All User Edits) */}
+      {conflictModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg border border-slate-100 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                  <Lock size={20} />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-800">
+                    {lang === 'ar' ? 'تعارض في القفل أو انتهاء المهلة' : 'Lock Conflict or Session Timeout'}
+                  </h3>
+                  <span className="text-xs text-slate-500 font-medium">
+                    {conflictModal.shipRef}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleDiscardConflictAndRefresh}
+                className="text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                title={lang === 'ar' ? 'إغلاق وتحديث الشاشة' : 'Close and refresh'}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-2.5">
+                <CheckCircle2 size={18} className="text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-900">
+                  <span className="font-bold">{lang === 'ar' ? 'بياناتك محفوظة بأمان:' : 'Your input is safe:'}</span>
+                  <p className="mt-0.5 text-emerald-800">
+                    {lang === 'ar'
+                      ? 'جميع التعديلات التي قمت بكتابتها تم حفظ نسخة احتياطية منها كمسودة في متصفحك تلقائياً، وما زالت معروضة في شاشتك دون مسح أي حرف.'
+                      : 'All edits you typed have been safely backed up as a local draft in your browser and remain intact in your screen.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900">
+                <span className="font-bold">{lang === 'ar' ? 'سبب التنبيه:' : 'Reason:'} </span>
+                <span>{conflictModal.errMsg || (lang === 'ar' ? 'انتهت مهلة التعديل (10 دقائق) أو قام مستخدم آخر بالقفل.' : 'Session timeout (10 min) or another user has locked the shipment.')}</span>
+              </div>
+
+              <p className="text-xs text-slate-600 leading-relaxed">
+                {conflictModal.conflictType === 'LOCKED_BY_OTHER' || conflictModal.conflictType === 'MODIFIED_BY_OTHER'
+                  ? (lang === 'ar'
+                    ? 'تم حفظ جميع التعديلات التي كتبتها كمسودة احتياطية في متصفحك. يمكنك نسخ بياناتك كجدول إكسل، أو إلغاء التعديل وتحديث الشاشة لرؤية ما تم حفظه:'
+                    : 'Your input has been safely backed up as a draft. You can copy as Excel table, or discard and refresh to view the latest saved data:')
+                  : (lang === 'ar'
+                    ? 'انتهت مهلة التعديل فقط دون أي تغييرات من مستخدم آخر. يمكنك تجديد القفل والحفظ فوراً، أو نسخ بياناتك كجدول إكسل:'
+                    : 'Session timed out without other changes. You can renew the lock and save now, or copy your changes as Excel table:')}
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50/90 border-t border-slate-100 flex flex-wrap items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={handleCopyConflictData}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-50 transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                title={lang === 'ar' ? 'نسخ كل التعديلات كجدول إكسل جاهز للصق (Ctrl+V)' : 'Copy edited data as Excel-ready table (Ctrl+V)'}
+              >
+                <FileSpreadsheet size={14} className="text-emerald-600" />
+                <span>{lang === 'ar' ? 'نسخ كجدول إكسل' : 'Copy as Excel Table'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDiscardConflictAndRefresh}
+                className="px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition cursor-pointer"
+              >
+                {conflictModal.conflictType === 'MODIFIED_BY_OTHER' || conflictModal.conflictType === 'LOCKED_BY_OTHER'
+                  ? (lang === 'ar' ? 'إلغاء وتحديث لرؤية الجديد' : 'Discard & View Latest')
+                  : (lang === 'ar' ? 'إلغاء واسترجاع من السيرفر' : 'Discard & Refresh')}
+              </button>
+
+              {conflictModal.conflictType !== 'LOCKED_BY_OTHER' && conflictModal.conflictType !== 'MODIFIED_BY_OTHER' && (
+                <button
+                  type="button"
+                  disabled={isRetryingSave}
+                  onClick={handleRetryLockAndSave}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  {isRetryingSave ? (
+                    <RefreshCw size={13} className="animate-spin" />
+                  ) : (
+                    <Save size={13} />
+                  )}
+                  <span>{lang === 'ar' ? 'تجديد القفل وحفظ الآن' : 'Re-acquire & Save Now'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 7. Containers Count Validation Modal (Keeps entered form inputs completely intact) */}
       {cntrErrorModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
@@ -4326,7 +5961,7 @@ export default function DataEntryTab({
       {/* 8. Operation Status History & Audit Log Slide-over Drawer / Modal */}
       {statusHistoryOpen && statusHistoryTarget && (
         <div
-          className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+          className="fixed inset-0 z-[60] flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={() => setStatusHistoryOpen(false)}
         >
           <div
@@ -4583,9 +6218,20 @@ export default function DataEntryTab({
                     <strong className="text-rose-900">{op.deletedByName || (lang === 'ar' ? 'مستخدم' : 'User')}</strong>
                   </span>
                 </div>
-                <div className="text-slate-500 text-[11px]">
-                  <span>{lang === 'ar' ? 'تاريخ وساعة الإيقاف:' : 'Inactive At:'} </span>
-                  <strong className="text-slate-700">{fmtUpdateDateTime(op.deletedAtUtc)}</strong>
+                <div className="flex items-center gap-3">
+                  <div className="text-slate-500 text-[11px]">
+                    <span>{lang === 'ar' ? 'تاريخ وساعة الإيقاف:' : 'Inactive At:'} </span>
+                    <strong className="text-slate-700">{fmtUpdateDateTime(op.deletedAtUtc)}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openStatusHistoryForOp(op)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                    title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
+                  >
+                    <History size={12} className="text-sky-600" />
+                    <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
+                  </button>
                 </div>
               </div>
 
@@ -4707,11 +6353,20 @@ export default function DataEntryTab({
 
                 {/* 2. Containers Table */}
                 {isLoadingDeletedDetail ? (
-                  <div className="py-12 text-center bg-slate-50/80 rounded-2xl border border-slate-200">
-                    <Loader2 size={24} className="animate-spin text-rose-600 mx-auto mb-2.5" />
-                    <p className="text-xs text-slate-600 font-semibold">
-                      {lang === 'ar' ? 'جاري تحميل تفاصيل الحاويات والتحديثات...' : 'Loading container & trip details...'}
-                    </p>
+                  <div className="space-y-3">
+                    <div className="h-4 w-44 bg-slate-200/70 rounded-md animate-pulse mb-2" />
+                    <div className="rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 bg-white shadow-2xs">
+                      {Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={`cntr_del_skel_${idx}`} className="p-3.5 flex items-center justify-between gap-4">
+                          <div className="space-y-1.5 flex-1">
+                            <div className="h-4 w-32 bg-slate-200/70 rounded animate-pulse" />
+                            <div className="h-3 w-48 bg-slate-100 rounded animate-pulse" />
+                          </div>
+                          <div className="h-5 w-20 bg-slate-100 rounded-full animate-pulse" />
+                          <div className="h-4 w-28 bg-slate-200/60 rounded animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <>
@@ -4828,13 +6483,390 @@ export default function DataEntryTab({
                   <Lock size={12} className="text-slate-400" />
                   {lang === 'ar' ? 'أرشيف العمليات غير النشطة (Read-Only Archive)' : 'Read-Only Inactive Archive'}
                 </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openStatusHistoryForOp(op)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <History size={12} className="text-sky-700" />
+                    <span>{lang === 'ar' ? 'سجل وتاريخ الحالات' : 'Status History'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setViewDeletedDetailOp(null)}
+                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer"
+                  >
+                    {lang === 'ar' ? 'إغلاق' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Slide-over Full Details Drawer for Delivered Operations (Loaded On Demand via Lazy Load) */}
+      {viewDeliveredDetailOp && (() => {
+        const op = viewDeliveredDetailOp;
+        const isImport = op.operationType === 'Import' || op.operationType === 1;
+        const refNum = isImport ? op.importDetails?.mblNumber : op.exportDetails?.bookingNumber;
+        const portName = isImport
+          ? (op.importDetails?.podName || op.importDetails?.podCode || '—')
+          : (op.exportDetails?.polName || op.exportDetails?.polCode || '—');
+        const powName = !isImport ? (op.exportDetails?.powName || '—') : null;
+        const clearanceType = !isImport ? (op.exportDetails?.clearanceType || '—') : null;
+        const customs = !isImport ? (op.exportDetails?.customs || '—') : null;
+        const containers = op.containers || [];
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setViewDeliveredDetailOp(null)}
+          >
+            <div
+              className="w-full max-w-3xl h-full bg-white shadow-2xl flex flex-col border-s border-slate-200 animate-in slide-in-from-right duration-250 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50/50 via-white to-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-800">
+                        {lang === 'ar' ? 'التفاصيل الكاملة للعملية المسلّمة' : 'Delivered Operation Full Details'}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
+                          ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                          : 'bg-purple-50 text-purple-700 border border-purple-200'
+                          }`}
+                      >
+                        {isImport ? 'Import' : 'Export'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      {op.shipmentNumber || refNum || op.id}
+                    </p>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  onClick={() => setViewDeletedDetailOp(null)}
-                  className="px-5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer"
+                  onClick={() => setViewDeliveredDetailOp(null)}
+                  className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
                 >
-                  {lang === 'ar' ? 'إغلاق' : 'Close'}
+                  <X size={16} />
                 </button>
+              </div>
+
+              {/* Delivery Audit Banner */}
+              <div className="px-6 py-3 bg-emerald-50/70 border-b border-emerald-100 flex items-center justify-between gap-3 text-xs flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span className="text-slate-600">
+                    {lang === 'ar' ? 'تم التسليم بواسطة:' : 'Delivered By:'}{' '}
+                    <strong className="text-emerald-900">{op.deliveredByName || (lang === 'ar' ? 'مستخدم' : 'User')}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-slate-500 text-[11px]">
+                    <span>{lang === 'ar' ? 'تاريخ وساعة التسليم:' : 'Delivered At:'} </span>
+                    <strong className="text-slate-700">{fmtUpdateDateTime(op.deliveredAtUtc)}</strong>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openStatusHistoryForOp(op)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                    title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
+                  >
+                    <History size={12} className="text-sky-600" />
+                    <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                {/* 1. Operation Master Details Cards */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-3.5 bg-emerald-600 rounded-full"></span>
+                    <span>{lang === 'ar' ? 'بيانات الشحنة والعملية الأساسية' : 'Shipment & Master Info'}</span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'العميل' : 'Client'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={op.clientName}>
+                        {op.clientName || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={op.shippingLineName}>
+                        {op.shippingLineName || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'البوليصة / البوكينج' : 'BL / Booking'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">
+                        {refNum || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'رقم الشهادة' : 'Certificate No.'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">
+                        {op.certificateNumber || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? (isImport ? 'ميناء الوصول (POD)' : 'ميناء الشحن (POL)') : 'Port'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">
+                        {portName}
+                      </span>
+                    </div>
+
+                    {!isImport && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'ميناء العبور (POW)' : 'POW'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {powName}
+                        </span>
+                      </div>
+                    )}
+
+                    {!isImport && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'نوع التخليص' : 'Clearance Type'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {clearanceType}
+                        </span>
+                      </div>
+                    )}
+
+                    {!isImport && customs && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'الجمارك' : 'Customs'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {customs}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'تاريخ استلام الفواتير' : 'Invoices Rcv'}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-700 block">
+                        {op.invoicesReceivedDate ? String(op.invoicesReceivedDate).slice(0, 10) : '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'المنشئ وتاريخ الإنشاء' : 'Created By & At'}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-700 block truncate" title={`${op.createdByName || ''} - ${fmtEnteredDate(op.createdAtUtc)}`}>
+                        {op.createdByName || '—'} · {fmtEnteredDate(op.createdAtUtc)}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'الحالة' : 'Status'}
+                      </span>
+                      <span className="text-xs font-bold text-emerald-700 block">
+                        Delivered
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Containers Table */}
+                {isLoadingDeliveredDetail ? (
+                  <div className="space-y-3">
+                    <div className="h-4 w-44 bg-slate-200/70 rounded-md animate-pulse mb-2" />
+                    <div className="rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-100 bg-white shadow-2xs">
+                      {Array.from({ length: 3 }).map((_, idx) => (
+                        <div key={`cntr_deliv_skel_${idx}`} className="p-3.5 flex items-center justify-between gap-4">
+                          <div className="space-y-1.5 flex-1">
+                            <div className="h-4 w-32 bg-slate-200/70 rounded animate-pulse" />
+                            <div className="h-3 w-48 bg-slate-100 rounded animate-pulse" />
+                          </div>
+                          <div className="h-5 w-20 bg-slate-100 rounded-full animate-pulse" />
+                          <div className="h-4 w-28 bg-slate-200/60 rounded animate-pulse" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <div className="flex items-center justify-between mb-2.5">
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <span className="w-1.5 h-3.5 bg-emerald-600 rounded-full"></span>
+                          <span>{lang === 'ar' ? `تفاصيل الحاويات ورحلات النقل (${containers.length})` : `Containers & Trips (${containers.length})`}</span>
+                        </h4>
+                      </div>
+
+                      {containers.length === 0 ? (
+                        <div className="p-6 rounded-2xl bg-slate-50 text-center text-xs text-slate-400">
+                          {lang === 'ar' ? 'لا توجد حاويات مسجلة في هذه العملية' : 'No containers recorded in this operation'}
+                        </div>
+                      ) : (
+                        <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
+                          <table className="w-full text-xs text-start border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold text-[11px]">
+                                <th className="py-2.5 px-3 text-start">#</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'رقم الحاوية والنوع' : 'Container & Type'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مكان التحميل / التعتيق' : 'Destination'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'السيارة والسائق' : 'Car & Driver'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'تاريخ الوصول' : 'Actual Arrival'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من البوابة' : 'Gate Out'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'المستندات الناقصة' : 'Missing Docs'}</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {containers.map((c, cIdx) => (
+                                <tr key={c.id || cIdx} className="hover:bg-slate-50/60 transition-colors">
+                                  <td className="py-2.5 px-3 font-semibold text-slate-500">
+                                    {c.ordinal || cIdx + 1}
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <div className="font-bold text-slate-900 font-mono">
+                                      {c.containerNumber || '—'}
+                                    </div>
+                                    <div className="text-[10px] text-slate-500">
+                                      {c.containerType || '—'}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-700">
+                                    {c.destination || '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3 font-medium text-slate-700">
+                                    {c.transporterName || '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3">
+                                    <div className="font-semibold text-slate-800">
+                                      {c.carNumber || '—'}
+                                    </div>
+                                    <div className="text-[10.5px] text-slate-500">
+                                      {c.driverName || '—'} {c.driverMobileNumber ? `(${c.driverMobileNumber})` : ''}
+                                    </div>
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                    {c.actualArrivalDate ? `${String(c.actualArrivalDate).slice(0, 10)} ${c.actualArrivalTime || ''}` : '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                    {c.gateOutDate ? `${String(c.gateOutDate).slice(0, 10)} ${c.gateOutTime || ''}` : '—'}
+                                  </td>
+                                  <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                    {c.missingDocs ? (
+                                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold text-[10.5px]">
+                                        {c.missingDocs}
+                                      </span>
+                                    ) : '—'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 3. Container Updates Section if any container has updates */}
+                    {containers.some((c) => c.updates && c.updates.length > 0) && (
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                          <span className="w-1.5 h-3.5 bg-emerald-600 rounded-full"></span>
+                          <span>{lang === 'ar' ? 'سجل تحديثات الحاويات (Container Updates)' : 'Container Updates Log'}</span>
+                        </h4>
+                        <div className="space-y-2">
+                          {containers.flatMap((c) =>
+                            (c.updates || []).map((u, uIdx) => (
+                              <div key={u.id || `${c.id}_${uIdx}`} className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 text-xs flex items-start justify-between gap-3">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-mono font-bold text-slate-800">{c.containerNumber}</span>
+                                    <span className="text-[10.5px] text-slate-400">· {fmtUpdateDateTime(u.createdAtUtc)}</span>
+                                  </div>
+                                  <p className="text-slate-700 leading-relaxed">{u.details}</p>
+                                </div>
+                                <span className="text-[10.5px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200 shrink-0">
+                                  {u.createdByName || 'User'}
+                                </span>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                  <Lock size={12} className="text-slate-400" />
+                  {lang === 'ar' ? 'أرشيف العمليات المسلّمة (Delivered Archive)' : 'Delivered Archive'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openStatusHistoryForOp(op)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <History size={12} className="text-sky-700" />
+                    <span>{lang === 'ar' ? 'سجل وتاريخ الحالات' : 'Status History'}</span>
+                  </button>
+                  {canTakeOver && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetOp = op;
+                        setViewDeliveredDetailOp(null);
+                        openReopenModalForOp(targetOp);
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <RotateCcw size={12} className="text-amber-700" />
+                      <span>{lang === 'ar' ? 'إعادة فتح الشحنة' : 'Reopen Operation'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setViewDeliveredDetailOp(null)}
+                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer"
+                  >
+                    {lang === 'ar' ? 'إغلاق' : 'Close'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

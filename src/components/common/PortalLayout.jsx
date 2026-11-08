@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import ilsLogo from '../../assets/branding/ils-logo-horizontal.png';
 import UserMenu from '../navigation/UserMenu';
@@ -11,7 +11,24 @@ export default function PortalLayout({
     mainClassName = '',
 }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(() => {
+        try {
+            return localStorage.getItem('portal_desktop_sidebar_collapsed') === 'true';
+        } catch {
+            return false;
+        }
+    });
     const location = useLocation();
+
+    const toggleDesktopSidebar = () => {
+        setIsDesktopCollapsed((prev) => {
+            const next = !prev;
+            try {
+                localStorage.setItem('portal_desktop_sidebar_collapsed', String(next));
+            } catch {}
+            return next;
+        });
+    };
 
     useEffect(() => {
         setMobileMenuOpen(false);
@@ -35,7 +52,7 @@ export default function PortalLayout({
 
     const sidebarContent = (
         <>
-            <div className="flex h-20 shrink-0 items-center justify-center border-b border-slate-800 px-6">
+            <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-800 px-5">
                 <Link
                     to="/"
                     className="block"
@@ -44,9 +61,19 @@ export default function PortalLayout({
                     <img
                         src={ilsLogo}
                         alt="International Logistics System"
-                        className="h-12 w-auto object-contain"
+                        className="h-11 w-auto object-contain"
                     />
                 </Link>
+
+                {/* Desktop Collapse Button */}
+                <button
+                    type="button"
+                    onClick={toggleDesktopSidebar}
+                    className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                    title="طي القائمة الجانبية لتوسيع الشاشة (Collapse)"
+                >
+                    <ChevronLeft className="h-5 w-5" />
+                </button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto">
@@ -58,9 +85,25 @@ export default function PortalLayout({
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900">
             {/* Desktop Sidebar */}
-            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-800 bg-slate-900 md:flex">
+            <aside
+                className={`fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-800 bg-slate-900 transition-transform duration-300 ease-in-out md:flex ${
+                    isDesktopCollapsed ? '-translate-x-full' : 'translate-x-0'
+                }`}
+            >
                 {sidebarContent}
             </aside>
+
+            {/* Desktop Floating Open Button (when sidebar is collapsed) */}
+            {isDesktopCollapsed && (
+                <button
+                    type="button"
+                    onClick={toggleDesktopSidebar}
+                    className="fixed left-0 top-24 z-40 hidden md:flex items-center justify-center w-6 h-12 bg-slate-900 text-slate-300 hover:text-white rounded-r-xl shadow-lg border-y border-r border-slate-700 hover:w-8 transition-all cursor-pointer group"
+                    title="إظهار القائمة الجانبية (Expand Sidebar)"
+                >
+                    <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
+            )}
 
             {/* Mobile Sidebar */}
             {mobileMenuOpen && (
@@ -93,18 +136,38 @@ export default function PortalLayout({
             )}
 
             {/* Main Content */}
-            <div className="min-h-screen min-w-0 md:ml-64">
-                <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6 md:justify-end">
-                    <button
-                        type="button"
-                        aria-label="Open navigation menu"
-                        aria-controls="mobile-portal-sidebar"
-                        aria-expanded={mobileMenuOpen}
-                        onClick={() => setMobileMenuOpen(true)}
-                        className="shrink-0 rounded-lg p-2 text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 md:hidden"
-                    >
-                        <Menu className="h-5 w-5" />
-                    </button>
+            <div
+                className={`min-h-screen min-w-0 transition-all duration-300 ease-in-out ${
+                    isDesktopCollapsed ? 'md:ml-0' : 'md:ml-64'
+                }`}
+            >
+                <header className="sticky top-0 z-20 flex min-h-20 items-center justify-between gap-3 border-b border-slate-200 bg-white/95 px-4 py-3 shadow-sm backdrop-blur sm:px-6">
+                    <div className="flex items-center gap-3">
+                        {/* Mobile Menu Button */}
+                        <button
+                            type="button"
+                            aria-label="Open navigation menu"
+                            aria-controls="mobile-portal-sidebar"
+                            aria-expanded={mobileMenuOpen}
+                            onClick={() => setMobileMenuOpen(true)}
+                            className="shrink-0 rounded-lg p-2 text-slate-700 transition hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-300 md:hidden"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+
+                        {/* Desktop Expand Button when collapsed */}
+                        {isDesktopCollapsed && (
+                            <button
+                                type="button"
+                                onClick={toggleDesktopSidebar}
+                                className="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer shadow-2xs"
+                                title="إظهار القائمة الجانبية (Expand)"
+                            >
+                                <ChevronRight className="h-4 w-4 text-slate-500" />
+                                <span>القائمة الجانبية</span>
+                            </button>
+                        )}
+                    </div>
 
                     <div className="flex min-w-0 items-center justify-end gap-2">
                         {headerActions}

@@ -13,6 +13,8 @@ import {
     Ship,
     FileSpreadsheet,
     Database,
+    Truck,
+    Container,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -31,20 +33,31 @@ export const getInternalNavigation = (user) => [
         section: "Operations",
         items: [
             {
-                label: "Transport Dashboard",
-                path: "/transport/dashboard",
-                isVisible: (user) => Boolean(
-                    user?.isSuperAdmin ||
-                    user?.role === "SuperAdmin" ||
-                    user?.roleName === "Super Admin"
-                ),
-                icon: Ship,
+                label: "Trucking",
+                icon: Truck,
+                subItems: [
+                    {
+                        label: "Transport Dashboard",
+                        path: "/transport/dashboard",
+                        isVisible: (user) => Boolean(
+                            user?.isSuperAdmin ||
+                            user?.role === "SuperAdmin" ||
+                            user?.roleName === "Super Admin"
+                        ),
+                        icon: Ship,
+                    },
+                    {
+                        label: "Transport Data Entry",
+                        path: "/transport/entry",
+                        permission: "operations.view",
+                        icon: FileSpreadsheet,
+                    },
+                ],
             },
             {
-                label: "Transport Data Entry",
-                path: "/transport/entry",
-                permission: "operations.view",
-                icon: FileSpreadsheet,
+                label: "FTL",
+                icon: Container,
+                badge: "Coming Soon",
             },
         ],
     },
