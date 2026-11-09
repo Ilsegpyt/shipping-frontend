@@ -25,8 +25,8 @@ export const COLS = {
     { k: 'reqTime', h: 'Req Offload Time', ar: 'وقت التعتيق المطلوب', t: 'time', g: 'g3', op: true, w: 145, uniq: true },
     { k: 'arrDate', h: 'Actual Arrive Date', ar: 'تاريخ الوصول الفعلي', t: 'date', g: 'g3', w: 165, uniq: false },
     { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 145, uniq: false },
-    { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 165 },
-    { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 145 },
+    { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من بوابة العميل', t: 'date', g: 'g3', uniq: false, w: 165 },
+    { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من بوابة العميل', t: 'time', g: 'g3', uniq: false, w: 145 },
     { k: 'size', h: 'CNTR Type', ar: 'نوع الحاوية', t: 'list', g: 'g4', uniq: false, w: 170, src: 'size' },
     { k: 'cntr', h: 'CNTR #', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 165 },
     { k: 'updates', h: 'Latest Updates', ar: 'آخر التحديثات', t: 'updates', g: 'g4', uniq: false, w: 200, locked: true },
@@ -61,8 +61,8 @@ export const COLS = {
     { k: 'reqTime', h: 'Req Loading Time', ar: 'وقت التحميل المطلوب', t: 'time', g: 'g3', w: 175, uniq: false },
     { k: 'arrDate', h: 'Actual Arrive Date', ar: 'تاريخ الوصول الفعلي', t: 'date', g: 'g3', w: 165, uniq: false },
     { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 145, uniq: false },
-    { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 165 },
-    { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 145 },
+    { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من بوابة العميل', t: 'date', g: 'g3', uniq: false, w: 165 },
+    { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من بوابة العميل', t: 'time', g: 'g3', uniq: false, w: 145 },
     { k: 'size', h: 'CNTR Type', ar: 'نوع الحاوية', t: 'list', g: 'g4', uniq: false, w: 170, src: 'size' },
     { k: 'cntr', h: 'CNTR No#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 165 },
     { k: 'updates', h: 'Latest Updates', ar: 'آخر التحديثات', t: 'updates', g: 'g4', uniq: false, w: 200, locked: true },
@@ -91,8 +91,8 @@ export const COLS = {
     { k: 'reqDate', h: 'Req Date', ar: 'التاريخ المطلوب', t: 'date', g: 'g3', op: true, w: 165, uniq: false },
     { k: 'arrDate', h: 'Actual Arrive Date', ar: 'تاريخ الوصول الفعلي', t: 'date', g: 'g3', w: 165, uniq: false },
     { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 145, uniq: false },
-    { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 165 },
-    { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 145 },
+    { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من بوابة العميل', t: 'date', g: 'g3', uniq: false, w: 165 },
+    { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من بوابة العميل', t: 'time', g: 'g3', uniq: false, w: 145 },
     { k: 'size', h: 'CNTR Type', ar: 'نوع الحاوية', t: 'list', g: 'g4', uniq: false, w: 170, src: 'size' },
     { k: 'cntr', h: 'CNTR #', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 165 },
     { k: 'updates', h: 'Latest Updates', ar: 'آخر التحديثات', t: 'updates', g: 'g4', uniq: false, w: 200, locked: true },
@@ -147,3 +147,44 @@ export const FCL_RULES = [
   { id: 'size', num: 5, labelEn: 'Same container type', labelAr: 'نفس نوع ومقاس الحاوية' },
   { id: 'dest', num: 6, labelEn: 'Same destination / site', labelAr: 'نفس مكان التعتيق / موقع التحميل' },
 ];
+
+// Priority Egyptian Ports pinned at the top of port dropdowns
+export const PRIORITY_PORT_CODES = [
+  'EGADA', // Al Adabiyah
+  'EGAIS', // Ain Sukhna
+  'EGALY', // El Iskandariya (Alexandria)
+  'EGEDK', // El Dekheila
+  'EGPSE', // Port Said East
+  'EGPSW', // Port Said West
+  'EGSOK', // Sokhna Port
+];
+
+export const getPortPriorityRank = (p) => {
+  if (!p) return 9999;
+  const code = (p.code || '').trim().toUpperCase();
+  const codeIdx = PRIORITY_PORT_CODES.indexOf(code);
+  if (codeIdx !== -1) return codeIdx;
+
+  const name = (p.name || '').trim().toLowerCase();
+  if (name.includes('adabiy')) return 0;
+  if (name.includes('ain sukhna') || name.includes('ain sokhna')) return 1;
+  if (name.includes('iskandariya') || name.includes('alexandria')) return 2;
+  if (name.includes('dekheila')) return 3;
+  if (name.includes('port said east') || name.includes('said east')) return 4;
+  if (name.includes('port said west') || name.includes('said west')) return 5;
+  if (name.includes('sokhna') || name.includes('sukhna')) return 6;
+
+  return 9999;
+};
+
+export const sortPortsWithPriority = (ports = []) => {
+  if (!Array.isArray(ports)) return [];
+  return [...ports].sort((a, b) => {
+    const rankA = getPortPriorityRank(a);
+    const rankB = getPortPriorityRank(b);
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
+    return (a.name || '').localeCompare(b.name || '');
+  });
+};

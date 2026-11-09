@@ -33,7 +33,7 @@ import {
 } from 'lucide-react';
 import FclTab from './FclTab';
 import SearchableSelect from '../../../../../components/common/SearchableSelect';
-import { COLS, CONTAINER_TYPES } from '../constants';
+import { COLS, CONTAINER_TYPES, sortPortsWithPriority } from '../constants';
 import { fmtDay } from '../tptEngine';
 import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
@@ -363,7 +363,8 @@ export default function DataEntryTab({
   }, [lookups.shippingLines]);
 
   const portOptions = useMemo(() => {
-    return (lookups.ports || []).map((p) => ({
+    const sorted = sortPortsWithPriority(lookups.ports || []);
+    return sorted.map((p) => ({
       value: p.id,
       label: p.code ? `${p.name} (${p.code})` : p.name,
       sublabel: p.code,
@@ -3382,7 +3383,7 @@ export default function DataEntryTab({
                   <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created Date'}</option>
                   <option value="reqDate">{lang === 'ar' ? 'تاريخ التحميل/التعتيق' : 'Req Date'}</option>
                   <option value="arrDate">{lang === 'ar' ? 'الوصول الفعلي' : 'Actual Arrival'}</option>
-                  <option value="gateOut">{lang === 'ar' ? 'خروج البوابة (Gate Out)' : 'Gate Out'}</option>
+                  <option value="gateOut">{lang === 'ar' ? 'خروج بوابة العميل (Gate Out)' : 'Gate Out'}</option>
                   <option value="freeOrCut">{lang === 'ar' ? 'المهلة / Cut Off' : 'Free Time / Cut Off'}</option>
                   <option value="delivered">{lang === 'ar' ? 'تاريخ التسليم' : 'Delivered Date'}</option>
                   <option value="checkout">{lang === 'ar' ? 'سحب الميناء' : 'Port Checkout'}</option>
@@ -5165,6 +5166,7 @@ export default function DataEntryTab({
                                     <input
                                       type="text"
                                       list="vehicles-lookup-datalist"
+                                      autoComplete="off"
                                       value={val}
                                       readOnly={isReadOnly}
                                       disabled={isDisabled}
@@ -5217,6 +5219,7 @@ export default function DataEntryTab({
                                     <input
                                       type="text"
                                       list="drivers-lookup-datalist"
+                                      autoComplete="off"
                                       value={val}
                                       readOnly={isReadOnly}
                                       disabled={isDisabled}
@@ -6393,7 +6396,7 @@ export default function DataEntryTab({
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</th>
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'السيارة والسائق' : 'Car & Driver'}</th>
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'تاريخ الوصول' : 'Actual Arrival'}</th>
-                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من البوابة' : 'Gate Out'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من بوابة العميل' : 'Gate Out'}</th>
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'المستندات الناقصة' : 'Missing Docs'}</th>
                               </tr>
                             </thead>
@@ -6746,7 +6749,7 @@ export default function DataEntryTab({
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</th>
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'السيارة والسائق' : 'Car & Driver'}</th>
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'تاريخ الوصول' : 'Actual Arrival'}</th>
-                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من البوابة' : 'Gate Out'}</th>
+                                <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من بوابة العميل' : 'Gate Out'}</th>
                                 <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'المستندات الناقصة' : 'Missing Docs'}</th>
                               </tr>
                             </thead>
@@ -6875,19 +6878,49 @@ export default function DataEntryTab({
 
       {/* Datalists for Vehicles and Drivers lookups */}
       <datalist id="vehicles-lookup-datalist">
-        {(lookups.vehicles || []).map((v) => (
-          <option key={v.id} value={v.carNumber}>
-            {v.carNumber}
-          </option>
-        ))}
+        {Array.from(
+          new Set(
+            (lookups.vehicles || [])
+              .map((v) => (v.carNumber || '').trim())
+              .filter((cn) => {
+                if (!cn || cn.length < 2) return false;
+                // Exclude junk like single repeated letters: eeee, rrrrrrr, فففف, ههه
+                if (cn.split('').every((c) => c === cn[0])) return false;
+                const low = cn.toLowerCase();
+                if (['test', 'تجربة', 'تجربه', 'null', 'undefined', 'asd', 'asdf'].includes(low)) return false;
+                return true;
+              })
+          )
+        )
+          .sort((a, b) => a.localeCompare(b, 'ar', { numeric: true }))
+          .map((carNum) => (
+            <option key={carNum} value={carNum}>
+              {carNum}
+            </option>
+          ))}
       </datalist>
 
       <datalist id="drivers-lookup-datalist">
-        {(lookups.drivers || []).map((d) => (
-          <option key={d.id} value={d.name}>
-            {d.name} {d.mobileNumber ? `(${d.mobileNumber})` : ''}
-          </option>
-        ))}
+        {Array.from(
+          new Map(
+            (lookups.drivers || [])
+              .filter((d) => {
+                const name = (d.name || '').trim();
+                if (!name || name.length < 2) return false;
+                if (name.split('').every((c) => c === name[0])) return false;
+                const low = name.toLowerCase();
+                if (['test', 'تجربة', 'تجربه', 'null', 'undefined', 'asd', 'asdf'].includes(low)) return false;
+                return true;
+              })
+              .map((d) => [d.name.trim(), d])
+          ).values()
+        )
+          .sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ar'))
+          .map((d) => (
+            <option key={d.id || d.name} value={d.name.trim()}>
+              {d.name.trim()} {d.mobileNumber ? `(${d.mobileNumber.trim()})` : ''}
+            </option>
+          ))}
       </datalist>
 
       {/* Internal Toast Fallback */}

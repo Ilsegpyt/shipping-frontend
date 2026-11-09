@@ -1008,7 +1008,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
               <option value="load">{lang === 'ar' ? 'تاريخ النشاط (Activity date)' : 'Activity date'}</option>
               <option value="reqDate">{lang === 'ar' ? 'تاريخ التعتيق المطلوب (Required offloading date)' : 'Required offloading date'}</option>
               <option value="arrDate">{lang === 'ar' ? 'تاريخ الوصول الفعلي (Actual Arrival Date)' : 'Actual Arrival Date'}</option>
-              <option value="gateOut">{lang === 'ar' ? 'تاريخ الخروج من البوابة (Get-out date)' : 'Get-out date'}</option>
+              <option value="gateOut">{lang === 'ar' ? 'تاريخ الخروج من بوابة العميل (Get-out date)' : 'Get-out date'}</option>
               <option value="free">{lang === 'ar' ? 'نهاية فترة السماح (Free-time end)' : 'Free-time end'}</option>
               <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء (Creation date)' : 'Creation date'}</option>
             </select>
