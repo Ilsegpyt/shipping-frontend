@@ -35,7 +35,7 @@ import {
 import FclTab from './FclTab';
 import SearchableSelect from '../../../../../components/common/SearchableSelect';
 import { COLS, CONTAINER_TYPES, sortPortsWithPriority } from '../constants';
-import { fmtDay, fmtTime12, fixDate, normTime, computeBayata } from '../tptEngine';
+import { fmtDay, fmtTime12, fixDate, normTime } from '../tptEngine';
 import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
 import { addContainerUpdate, getOperationById, getOperationStatusAudits, getPagedOperations, lockOperation, unlockOperation, takeOverOperation } from '../../../../../services/operationsService';
@@ -390,7 +390,6 @@ export default function DataEntryTab({
     dateType: 'created',
     dateFrom: '',
     dateTo: '',
-    bayata: '',
   });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -434,7 +433,6 @@ export default function DataEntryTab({
     const clean = {};
     Object.keys(f || {}).forEach((k) => {
       if (dir === 'Import' && (k === 'clearanceType' || k === 'customs')) return;
-      if (dir !== 'Import' && dir !== 'Export' && k === 'bayata') return;
       const v = f[k];
       if (v !== '' && v !== null && v !== undefined) {
         clean[k] = v;
@@ -735,15 +733,6 @@ export default function DataEntryTab({
 
     return () => clearInterval(interval);
   }, [editingShipments]);
-
-  // Live ticker: updates every 60 seconds so Bayata/Otla and active durations stay live without manual refresh
-  const [, setLiveTick] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setLiveTick((t) => t + 1);
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   const hasShipmentEdits = (currentRows, snapshotRows) => {
     if (!currentRows || !snapshotRows) return false;
@@ -1431,14 +1420,15 @@ export default function DataEntryTab({
       // Determine merge eligibility for each column in Excel:
       // A column is merged in Excel IF:
       // 1. Shipment has more than 1 container (shipRows.length > 1)
-      // 2. Column is a merged column (c.uniq === true)
-      // 3. User hasn't explicitly unmerged it (unmergedCols[`${shipRef}_${c.k}`] !== true)
-      // 4. AND all rows have identical values (if values differ across rows, keep separate rows so no data is lost!)
+      // 2. Column is merged (for canUnmerge: only if user explicitly merged it; otherwise c.uniq === true)
+      // 3. AND all rows have identical values (if values differ across rows, keep separate rows so no data is lost!)
       const colMergeInfo = activeCols.map((col) => {
         const distinctVals = new Set(shipRows.map((r) => getCellVal(r, col)));
         const hasMultipleDifferentValues = distinctVals.size > 1;
-        const isUnmergedByUser = shipRef && unmergedCols[`${shipRef}_${col.k}`] === true;
-        const shouldMerge = shipRows.length > 1 && col.uniq === true && !isUnmergedByUser && !hasMultipleDifferentValues;
+        const isMergedColForExcel = col.canUnmerge
+          ? (mergedCols[`${shipRef}_${col.k}`] === true)
+          : (col.uniq === true);
+        const shouldMerge = shipRows.length > 1 && isMergedColForExcel && !hasMultipleDifferentValues;
 
         return {
           col,
@@ -1606,8 +1596,8 @@ export default function DataEntryTab({
     }
   };
 
-  // Toggleable Unmerge / Merge state for dest, missDoc, and status per shipment
-  const [unmergedCols, setUnmergedCols] = useState({});
+  // Toggleable Merge state for canUnmerge columns (defaults to unmerged per container by default)
+  const [mergedCols, setMergedCols] = useState({});
 
   // Auto-focus and scroll to edited or created row after save/refresh
   const pendingScrollRef = useRef(null);
@@ -2216,7 +2206,7 @@ export default function DataEntryTab({
   };
 
   const toggleUnmerge = (shipRef, colKey) => {
-    setUnmergedCols((prev) => ({
+    setMergedCols((prev) => ({
       ...prev,
       [`${shipRef}_${colKey}`]: !prev[`${shipRef}_${colKey}`],
     }));
@@ -2408,20 +2398,6 @@ export default function DataEntryTab({
     [entry.Export]
   );
 
-  const { dueBayataCount, dueOtlaCount, pendingBayataCount } = useMemo(() => {
-    const list = currentDir === 'Import' ? activeImportRows : currentDir === 'Export' ? activeExportRows : [];
-    if (!Array.isArray(list)) return { dueBayataCount: 0, dueOtlaCount: 0, pendingBayataCount: 0 };
-    let dueB = 0;
-    let dueO = 0;
-    let pending = 0;
-    for (let i = 0; i < list.length; i++) {
-      const b = computeBayata(list[i]);
-      if (b?.status === 'bayata') dueB++;
-      else if (b?.status === 'otla') dueO++;
-      else if (b?.status === 'pending_gateout' || b?.status === 'pending_otla') pending++;
-    }
-    return { dueBayataCount: dueB, dueOtlaCount: dueO, pendingBayataCount: pending };
-  }, [currentDir, activeImportRows, activeExportRows]);
   const deliveredRows = useMemo(() => {
     if (Array.isArray(deliveredOperations) && deliveredOperations.length > 0) {
       if (deliveredOperations[0]?._rowId || deliveredOperations[0]?._operationId) {
@@ -2640,7 +2616,6 @@ export default function DataEntryTab({
     if (currentDir === 'Export' && filters.customs) count++;
     if (filters.status) count++;
     if (filters.dateFrom || filters.dateTo) count++;
-    if ((currentDir === 'Import' || currentDir === 'Export') && filters.bayata) count++;
     return count;
   }, [filters, currentDir]);
 
@@ -2662,7 +2637,6 @@ export default function DataEntryTab({
       dateType: 'created',
       dateFrom: '',
       dateTo: '',
-      bayata: '',
     });
     setPage(1);
   };
@@ -2672,38 +2646,6 @@ export default function DataEntryTab({
     const q = searchTerm ? searchTerm.toLowerCase().trim() : '';
 
     return groupedShipments.filter((shipRows) => {
-      // 0. Bayata & Otla Filter in Import & Export
-      if ((currentDir === 'Import' || currentDir === 'Export') && filters.bayata) {
-        if (filters.bayata === 'bayata_only') {
-          const hasBayata = shipRows.some((r) => computeBayata(r)?.status === 'bayata');
-          if (!hasBayata) return false;
-        } else if (filters.bayata === 'otla_only') {
-          const hasOtla = shipRows.some((r) => computeBayata(r)?.status === 'otla');
-          if (!hasOtla) return false;
-        } else if (filters.bayata === 'due_any') {
-          const hasDue = shipRows.some((r) => {
-            const s = computeBayata(r)?.status;
-            return s === 'bayata' || s === 'otla';
-          });
-          if (!hasDue) return false;
-        } else if (filters.bayata === 'pending_only') {
-          const hasPending = shipRows.some((r) => {
-            const s = computeBayata(r)?.status;
-            return s === 'pending_gateout' || s === 'pending_otla';
-          });
-          if (!hasPending) return false;
-        } else if (filters.bayata === 'clean_only') {
-          const allClean = shipRows.every((r) => {
-            const b = computeBayata(r);
-            return !b || b.status === 'on_time' || b.status === 'in_progress' || b.status === 'early_arrival';
-          });
-          if (!allClean) return false;
-        } else if (filters.bayata === 'disqualified_only') {
-          const hasDisq = shipRows.some((r) => computeBayata(r)?.status === 'disqualified');
-          if (!hasDisq) return false;
-        }
-      }
-
       // 1. Live text search across all identifier columns (Ctrl + K)
       if (q) {
         const matchesSearch = shipRows.some((r) => {
@@ -3653,50 +3595,6 @@ export default function DataEntryTab({
                 ))}
               </select>
 
-              {/* Bayata & Otla Filter (Import & Export) */}
-              {(currentDir === 'Import' || currentDir === 'Export') && (
-                <select
-                  value={filters.bayata || ''}
-                  onChange={(e) => {
-                    setFilters({ ...filters, bayata: e.target.value });
-                    setPage(1);
-                  }}
-                  className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[165px] max-w-[210px] font-medium transition ${filters.bayata
-                      ? 'border-purple-500 bg-purple-50 text-purple-900 font-bold shadow-2xs'
-                      : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
-                    }`}
-                  title={lang === 'ar' ? 'فلترة البياتات والعطلات' : 'Filter Bayata & Otla'}
-                >
-                  <option value="">{lang === 'ar' ? 'البياتات والعطلات: الكل' : 'Bayata & Otla: All'}</option>
-                  <option value="bayata_only">
-                    {lang === 'ar'
-                      ? `بياتة فقط ${dueBayataCount > 0 ? `(${dueBayataCount})` : ''}`
-                      : `Bayata Only ${dueBayataCount > 0 ? `(${dueBayataCount})` : ''}`}
-                  </option>
-                  <option value="otla_only">
-                    {lang === 'ar'
-                      ? `عطلة فقط ${dueOtlaCount > 0 ? `(${dueOtlaCount})` : ''}`
-                      : `Otla Only ${dueOtlaCount > 0 ? `(${dueOtlaCount})` : ''}`}
-                  </option>
-                  <option value="due_any">
-                    {lang === 'ar'
-                      ? `مستحق (بياتة أو عطلة) ${dueBayataCount + dueOtlaCount > 0 ? `(${dueBayataCount + dueOtlaCount})` : ''}`
-                      : `Due (Bayata / Otla) ${dueBayataCount + dueOtlaCount > 0 ? `(${dueBayataCount + dueOtlaCount})` : ''}`}
-                  </option>
-                  <option value="pending_only">
-                    {lang === 'ar'
-                      ? `معلقة تجاوزت المهلة ${pendingBayataCount > 0 ? `(${pendingBayataCount})` : ''}`
-                      : `Pending Overdue ${pendingBayataCount > 0 ? `(${pendingBayataCount})` : ''}`}
-                  </option>
-                  <option value="clean_only">
-                    {lang === 'ar' ? 'في المهلة (بدون بياتة/عطلة)' : 'On Time (Clean)'}
-                  </option>
-                  <option value="disqualified_only">
-                    {lang === 'ar' ? 'غير مستحق (تأخر بالوصول)' : 'Disqualified (Late Arrival)'}
-                  </option>
-                </select>
-              )}
-
               {/* Export-Only Filters: Clearance Type & Customs */}
               {currentDir === 'Export' && (
                 <>
@@ -4588,8 +4486,7 @@ export default function DataEntryTab({
                         >
                           {cols.map((c) => {
                             const canUnmerge = c.canUnmerge === true;
-                            const isUnmerged = unmergedCols[`${shipRef}_${c.k}`] === true;
-                            const isMergedCol = canUnmerge ? !isUnmerged : (c.uniq === true);
+                            const isMergedCol = canUnmerge ? (mergedCols[`${shipRef}_${c.k}`] === true) : (c.uniq === true);
 
                             // If merged, only render on first row with rowSpan
                             if (isMergedCol && !isFirstRow) {
@@ -5308,140 +5205,6 @@ export default function DataEntryTab({
                                         }
                                       }}
                                     />
-                                  </div>
-                                </td>
-                              );
-                            }
-
-                            // Column: Bayata (Computed status & days)
-                            if (c.k === 'bayata') {
-                              const info = computeBayata(r);
-
-                              return (
-                                <td
-                                  key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
-                                  style={{
-                                    width: `${c.w}px`,
-                                    minWidth: `${c.w}px`,
-                                    verticalAlign: 'middle',
-                                    padding: '4px 0',
-                                  }}
-                                >
-                                  <div
-                                    className={`cbox grp-${c.g}`}
-                                    style={{
-                                      width: '100%',
-                                      minWidth: `${c.w - 12}px`,
-                                      height: '34px',
-                                      minHeight: '34px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      padding: '0 4px',
-                                    }}
-                                  >
-                                    {!info || info.status === 'pending_arrival' ? (
-                                      <span className="text-[11px] text-slate-400 select-none italic">—</span>
-                                    ) : info.status === 'invalid' ? (
-                                      <div
-                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs w-full text-center"
-                                        title={lang === 'ar' ? 'تاريخ أو وقت الخروج يسبق الوصول!' : 'Gate out is earlier than arrival!'}
-                                      >
-                                        <AlertTriangle size={11} className="text-rose-600 shrink-0" />
-                                        <span className="truncate">{lang === 'ar' ? 'خطأ بالتواريخ' : 'Invalid Dates'}</span>
-                                      </div>
-                                    ) : info.status === 'bayata' ? (
-                                      <div
-                                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs w-full text-center"
-                                        title={
-                                          lang === 'ar'
-                                            ? `مستحق بياتة: ${info.days} يوم (إجمالي التواجد: ${info.diffHours} ساعة)`
-                                            : `Bayata due: ${info.days} day(s) (Total time: ${info.diffHours} hrs)`
-                                        }
-                                      >
-                                        <Clock size={12} className="text-purple-700 shrink-0" />
-                                        <span className="truncate">{lang === 'ar' ? `${info.days} بياتة` : `${info.days} Bayata`}</span>
-                                      </div>
-                                    ) : info.status === 'otla' ? (
-                                      <div
-                                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs w-full text-center"
-                                        title={
-                                          lang === 'ar'
-                                            ? `مستحق عطلة: تجاوز 10 ساعات (إجمالي التواجد: ${info.diffHours} ساعة)`
-                                            : `Otla due: Over 10 hours (Total: ${info.diffHours} hrs)`
-                                        }
-                                      >
-                                        <Clock size={12} className="text-amber-700 shrink-0" />
-                                        <span className="truncate">{lang === 'ar' ? '1 عطلة' : '1 Otla'}</span>
-                                      </div>
-                                    ) : info.status === 'pending_gateout' ? (
-                                      <div
-                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-orange-100 text-orange-900 border border-orange-300 shadow-2xs w-full text-center"
-                                        title={
-                                          lang === 'ar'
-                                            ? `تجاوز 24 ساعة بدون خروج! (محتمل ${info.days} بياتة، يرجى متابعة السائق)`
-                                            : `Over 24 hours without gate out! (Est. ${info.days} bayata, follow up with driver)`
-                                        }
-                                      >
-                                        <AlertTriangle size={11} className="text-orange-600 shrink-0" />
-                                        <span className="truncate">{lang === 'ar' ? `تجاوز 24س (${info.days}ب)` : `Over 24h (${info.days}B)`}</span>
-                                      </div>
-                                    ) : info.status === 'pending_otla' ? (
-                                      <div
-                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-yellow-100 text-yellow-900 border border-yellow-300 shadow-2xs w-full text-center"
-                                        title={
-                                          lang === 'ar'
-                                            ? `تجاوز 10 ساعات بدون خروج! (عطلة جارية - إجمالي التواجد: ${info.diffHours}س)`
-                                            : `Over 10 hours without gate out! (Pending Otla - Total: ${info.diffHours}h)`
-                                        }
-                                      >
-                                        <Clock size={11} className="text-yellow-700 shrink-0" />
-                                        <span className="truncate">{lang === 'ar' ? 'تجاوز 10س (عطلة جارية)' : 'Over 10h (Otla Est.)'}</span>
-                                      </div>
-                                    ) : info.status === 'early_arrival' ? (
-                                      <span
-                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 text-sky-800 border border-sky-200 truncate w-full text-center"
-                                        title={
-                                          lang === 'ar'
-                                            ? 'السائق وصل مبكراً وبانتظار حلول ميعاد العميل لبدء العداد'
-                                            : 'Driver arrived early, awaiting requested time'
-                                        }
-                                      >
-                                        <Clock size={10} className="text-sky-600 shrink-0" />
-                                        <span className="truncate">{lang === 'ar' ? 'وصول مبكر' : 'Early Arrival'}</span>
-                                      </span>
-                                    ) : info.status === 'disqualified' ? (
-                                      <span
-                                        className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200 truncate w-full text-center"
-                                        title={
-                                          lang === 'ar'
-                                            ? `غير مستحق للبياتة أو العطلة لتأخر السائق في الوصول (${info.lateHours} ساعة تأخير)`
-                                            : `Not eligible due to late arrival (${info.lateHours} hrs late)`
-                                        }
-                                      >
-                                        {lang === 'ar' ? 'غير مستحق (تأخر بالوصول)' : 'Late Arrival'}
-                                      </span>
-                                    ) : info.status === 'on_time' ? (
-                                      <span
-                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 truncate"
-                                        title={lang === 'ar' ? `خرج خلال المهلة المسموحة (${info.diffHours} ساعة)` : `Left within free time (${info.diffHours} hrs)`}
-                                      >
-                                        <CheckCircle size={10} className="text-emerald-600 shrink-0" />
-                                        <span>{lang === 'ar' ? 'في المهلة' : 'On Time'}</span>
-                                      </span>
-                                    ) : (
-                                      <span
-                                        className="text-[10px] text-slate-500 font-medium truncate"
-                                        title={
-                                          lang === 'ar'
-                                            ? `${currentDir === 'Export' ? 'جاري التحميل' : 'جاري التعتيق'} (مضى ${info.diffHours} ساعة)`
-                                            : `In progress (${info.diffHours} hrs)`
-                                        }
-                                      >
-                                        {lang === 'ar' ? (currentDir === 'Export' ? 'جاري التحميل' : 'جاري التعتيق') : 'In Progress'}
-                                      </span>
-                                    )}
                                   </div>
                                 </td>
                               );
