@@ -6,6 +6,7 @@ import {
   CheckCircle,
   Search,
   CheckCircle2,
+  Calendar,
   ChevronLeft,
   ChevronRight,
   Mail,
@@ -34,7 +35,7 @@ import {
 import FclTab from './FclTab';
 import SearchableSelect from '../../../../../components/common/SearchableSelect';
 import { COLS, CONTAINER_TYPES, sortPortsWithPriority } from '../constants';
-import { fmtDay } from '../tptEngine';
+import { fmtDay, fmtTime12, fixDate, normTime, computeBayata } from '../tptEngine';
 import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
 import { addContainerUpdate, getOperationById, getOperationStatusAudits, getPagedOperations, lockOperation, unlockOperation, takeOverOperation } from '../../../../../services/operationsService';
@@ -84,6 +85,253 @@ const fmtTimeOnly = (dateStr) => {
   const mins = String(d.getMinutes()).padStart(2, '0');
   return `${hrs}:${mins}`;
 };
+
+
+// Fast, ergonomic keyboard-driven Date Input with click picker
+const FastDateInput = React.memo(function FastDateInput({
+  value,
+  onChange,
+  disabled,
+  readOnly,
+  placeholder,
+  isMergedCol,
+  minWidth = 110,
+  cellTitle,
+}) {
+  const [typed, setTyped] = useState(() => (value ? fmtDay(value) : ''));
+  const [isFocused, setIsFocused] = useState(false);
+  const hiddenDateRef = useRef(null);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTyped(value ? fmtDay(value) : '');
+    }
+  }, [value, isFocused]);
+
+  const commit = (raw) => {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) {
+      onChange('');
+      setTyped('');
+      return;
+    }
+    const parsed = fixDate(trimmed);
+    if (parsed) {
+      onChange(parsed);
+      setTyped(fmtDay(parsed));
+    } else {
+      setTyped(value ? fmtDay(value) : '');
+    }
+  };
+
+  const handleTypedChange = (e) => {
+    const v = e.target.value;
+    setTyped(v);
+    if (v && v.trim().length >= 8) {
+      const parsed = fixDate(v.trim());
+      if (parsed) {
+        onChange(parsed);
+      }
+    }
+  };
+
+  return (
+    <div className="relative flex items-center w-full" style={{ minWidth: `${minWidth}px` }}>
+      <input
+        type="text"
+        dir="ltr"
+        value={typed}
+        disabled={disabled}
+        readOnly={readOnly}
+        placeholder={placeholder || 'DD-MMM-YYYY'}
+        title={cellTitle || 'اكتب التاريخ مثل 1/11 أو اضغط أيقونة التقويم'}
+        onFocus={() => setIsFocused(true)}
+        onChange={handleTypedChange}
+        onBlur={(e) => {
+          setIsFocused(false);
+          commit(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+        style={{
+          width: '100%',
+          textAlign: isMergedCol ? 'center' : 'start',
+          fontWeight: isMergedCol ? '600' : 'normal',
+          backgroundColor: '#ffffff',
+          borderRadius: '6px',
+          padding: '4px 22px 4px 6px',
+          border: '1px solid #bae6fd',
+          boxShadow: '0 1px 2px rgba(14, 165, 233, 0.15)',
+          color: '#0f172a',
+          fontSize: '11px',
+        }}
+      />
+      {!readOnly && !disabled && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => {
+            if (hiddenDateRef.current) {
+              try {
+                if (hiddenDateRef.current.showPicker) {
+                  hiddenDateRef.current.showPicker();
+                } else {
+                  hiddenDateRef.current.focus();
+                }
+              } catch {
+                hiddenDateRef.current.focus();
+              }
+            }
+          }}
+          className="absolute right-1 text-slate-400 hover:text-sky-600 p-0.5 cursor-pointer transition"
+          title="Open calendar"
+        >
+          <Calendar size={12} />
+        </button>
+      )}
+      <input
+        ref={hiddenDateRef}
+        type="date"
+        tabIndex={-1}
+        value={value ? String(value).slice(0, 10) : ''}
+        onChange={(e) => {
+          if (e.target.value) {
+            onChange(e.target.value);
+            setTyped(fmtDay(e.target.value));
+          }
+        }}
+        className="sr-only"
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+      />
+    </div>
+  );
+});
+
+// Fast, ergonomic keyboard-driven Time Input with click picker
+const FastTimeInput = React.memo(function FastTimeInput({
+  value,
+  onChange,
+  disabled,
+  readOnly,
+  placeholder,
+  isMergedCol,
+  minWidth = 90,
+  cellTitle,
+}) {
+  const [typed, setTyped] = useState(() => (value ? fmtTime12(value) : ''));
+  const [isFocused, setIsFocused] = useState(false);
+  const hiddenTimeRef = useRef(null);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setTyped(value ? fmtTime12(value) : '');
+    }
+  }, [value, isFocused]);
+
+  const commit = (raw) => {
+    const trimmed = (raw || '').trim();
+    if (!trimmed) {
+      onChange('');
+      setTyped('');
+      return;
+    }
+    const normalized = normTime(trimmed);
+    if (normalized) {
+      onChange(normalized);
+      setTyped(fmtTime12(normalized));
+    } else {
+      setTyped(value ? fmtTime12(value) : '');
+    }
+  };
+
+  const handleTypedTimeChange = (e) => {
+    const v = e.target.value;
+    setTyped(v);
+    if (v && v.trim().length >= 4) {
+      const norm = normTime(v.trim());
+      if (norm) {
+        onChange(norm);
+      }
+    }
+  };
+
+  return (
+    <div className="relative flex items-center w-full" style={{ minWidth: `${minWidth}px` }}>
+      <input
+        type="text"
+        dir="ltr"
+        value={typed}
+        disabled={disabled}
+        readOnly={readOnly}
+        placeholder={placeholder || 'HH:mm (e.g. 8 or 10p)'}
+        title={cellTitle || 'اكتب الوقت مثل 8 أو 10p أو اضغط أيقونة الساعة'}
+        onFocus={() => setIsFocused(true)}
+        onChange={handleTypedTimeChange}
+        onBlur={(e) => {
+          setIsFocused(false);
+          commit(e.target.value);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur();
+          }
+        }}
+        style={{
+          width: '100%',
+          textAlign: isMergedCol ? 'center' : 'start',
+          fontWeight: isMergedCol ? '600' : 'normal',
+          backgroundColor: '#ffffff',
+          borderRadius: '6px',
+          padding: '4px 22px 4px 6px',
+          border: '1px solid #bae6fd',
+          boxShadow: '0 1px 2px rgba(14, 165, 233, 0.15)',
+          color: '#0f172a',
+          fontSize: '11px',
+        }}
+      />
+      {!readOnly && !disabled && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => {
+            if (hiddenTimeRef.current) {
+              try {
+                if (hiddenTimeRef.current.showPicker) {
+                  hiddenTimeRef.current.showPicker();
+                } else {
+                  hiddenTimeRef.current.focus();
+                }
+              } catch {
+                hiddenTimeRef.current.focus();
+              }
+            }
+          }}
+          className="absolute right-1 text-slate-400 hover:text-sky-600 p-0.5 cursor-pointer transition"
+          title="Open time picker"
+        >
+          <Clock size={12} />
+        </button>
+      )}
+      <input
+        ref={hiddenTimeRef}
+        type="time"
+        tabIndex={-1}
+        value={value ? normTime(value) : ''}
+        onChange={(e) => {
+          if (e.target.value) {
+            onChange(e.target.value);
+            setTyped(fmtTime12(e.target.value));
+          }
+        }}
+        className="sr-only"
+        style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
+      />
+    </div>
+  );
+});
 
 export default function DataEntryTab({
   entry = { Import: [], Export: [] },
@@ -142,6 +390,7 @@ export default function DataEntryTab({
     dateType: 'created',
     dateFrom: '',
     dateTo: '',
+    bayata: '',
   });
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -185,6 +434,7 @@ export default function DataEntryTab({
     const clean = {};
     Object.keys(f || {}).forEach((k) => {
       if (dir === 'Import' && (k === 'clearanceType' || k === 'customs')) return;
+      if (dir !== 'Import' && dir !== 'Export' && k === 'bayata') return;
       const v = f[k];
       if (v !== '' && v !== null && v !== undefined) {
         clean[k] = v;
@@ -485,6 +735,15 @@ export default function DataEntryTab({
 
     return () => clearInterval(interval);
   }, [editingShipments]);
+
+  // Live ticker: updates every 60 seconds so Bayata/Otla and active durations stay live without manual refresh
+  const [, setLiveTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setLiveTick((t) => t + 1);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   const hasShipmentEdits = (currentRows, snapshotRows) => {
     if (!currentRows || !snapshotRows) return false;
@@ -2143,10 +2402,26 @@ export default function DataEntryTab({
     () => (entry.Import || []).filter((r) => r.status !== 'Delivered'),
     [entry.Import]
   );
+
   const activeExportRows = useMemo(
     () => (entry.Export || []).filter((r) => r.status !== 'Delivered'),
     [entry.Export]
   );
+
+  const { dueBayataCount, dueOtlaCount, pendingBayataCount } = useMemo(() => {
+    const list = currentDir === 'Import' ? activeImportRows : currentDir === 'Export' ? activeExportRows : [];
+    if (!Array.isArray(list)) return { dueBayataCount: 0, dueOtlaCount: 0, pendingBayataCount: 0 };
+    let dueB = 0;
+    let dueO = 0;
+    let pending = 0;
+    for (let i = 0; i < list.length; i++) {
+      const b = computeBayata(list[i]);
+      if (b?.status === 'bayata') dueB++;
+      else if (b?.status === 'otla') dueO++;
+      else if (b?.status === 'pending_gateout' || b?.status === 'pending_otla') pending++;
+    }
+    return { dueBayataCount: dueB, dueOtlaCount: dueO, pendingBayataCount: pending };
+  }, [currentDir, activeImportRows, activeExportRows]);
   const deliveredRows = useMemo(() => {
     if (Array.isArray(deliveredOperations) && deliveredOperations.length > 0) {
       if (deliveredOperations[0]?._rowId || deliveredOperations[0]?._operationId) {
@@ -2301,21 +2576,45 @@ export default function DataEntryTab({
     return Array.from(map.values());
   }, [rows]);
 
-  // Extract unique Creators (Created By) and Customs dynamically from loaded operations
+  // Extract unique Creators (Created By) dynamically from all available operations and lookups
   const uniqueCreators = useMemo(() => {
     const set = new Set();
+    const addName = (val) => {
+      if (val && typeof val === 'string') {
+        const trimmed = val.trim();
+        // Ignore GUIDs or empty strings
+        if (trimmed && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+          set.add(trimmed);
+        }
+      }
+    };
+
+    // 1. From entry (Import / Export)
     Object.values(entry || {}).forEach((dirRows) => {
       if (Array.isArray(dirRows)) {
-        dirRows.forEach((r) => {
-          const name = r.oper || r.createdBy || r._createdByName;
-          if (name && typeof name === 'string' && name.trim()) {
-            set.add(name.trim());
-          }
-        });
+        dirRows.forEach((r) => addName(r.oper || r.createdBy || r._createdByName || r.createdByName));
       }
     });
+
+    // 2. From serverPageRows & serverPageOperations
+    (serverPageRows || []).forEach((r) => addName(r.oper || r.createdBy || r._createdByName || r.createdByName));
+    (serverPageOperations || []).forEach((op) => addName(op.createdByName || op.CreatedByName));
+
+    // 3. From deliveredRows & deliveredOperations
+    (deliveredRows || []).forEach((r) => addName(r.oper || r.createdBy || r._createdByName || r.createdByName));
+    (deliveredOperations || []).forEach((op) => addName(op.createdByName || op.CreatedByName || op.oper || op.createdBy));
+
+    // 4. From lookups (if available)
+    if (Array.isArray(lookups?.users)) {
+      lookups.users.forEach((u) => addName(u.fullName || u.name || u.userName));
+    }
+
+    if (filters.createdBy) {
+      addName(filters.createdBy);
+    }
+
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [entry]);
+  }, [entry, serverPageRows, serverPageOperations, deliveredRows, deliveredOperations, lookups?.users, filters.createdBy]);
 
   const uniqueCustoms = useMemo(() => {
     const set = new Set();
@@ -2341,6 +2640,7 @@ export default function DataEntryTab({
     if (currentDir === 'Export' && filters.customs) count++;
     if (filters.status) count++;
     if (filters.dateFrom || filters.dateTo) count++;
+    if ((currentDir === 'Import' || currentDir === 'Export') && filters.bayata) count++;
     return count;
   }, [filters, currentDir]);
 
@@ -2362,6 +2662,7 @@ export default function DataEntryTab({
       dateType: 'created',
       dateFrom: '',
       dateTo: '',
+      bayata: '',
     });
     setPage(1);
   };
@@ -2371,6 +2672,38 @@ export default function DataEntryTab({
     const q = searchTerm ? searchTerm.toLowerCase().trim() : '';
 
     return groupedShipments.filter((shipRows) => {
+      // 0. Bayata & Otla Filter in Import & Export
+      if ((currentDir === 'Import' || currentDir === 'Export') && filters.bayata) {
+        if (filters.bayata === 'bayata_only') {
+          const hasBayata = shipRows.some((r) => computeBayata(r)?.status === 'bayata');
+          if (!hasBayata) return false;
+        } else if (filters.bayata === 'otla_only') {
+          const hasOtla = shipRows.some((r) => computeBayata(r)?.status === 'otla');
+          if (!hasOtla) return false;
+        } else if (filters.bayata === 'due_any') {
+          const hasDue = shipRows.some((r) => {
+            const s = computeBayata(r)?.status;
+            return s === 'bayata' || s === 'otla';
+          });
+          if (!hasDue) return false;
+        } else if (filters.bayata === 'pending_only') {
+          const hasPending = shipRows.some((r) => {
+            const s = computeBayata(r)?.status;
+            return s === 'pending_gateout' || s === 'pending_otla';
+          });
+          if (!hasPending) return false;
+        } else if (filters.bayata === 'clean_only') {
+          const allClean = shipRows.every((r) => {
+            const b = computeBayata(r);
+            return !b || b.status === 'on_time' || b.status === 'in_progress' || b.status === 'early_arrival';
+          });
+          if (!allClean) return false;
+        } else if (filters.bayata === 'disqualified_only') {
+          const hasDisq = shipRows.some((r) => computeBayata(r)?.status === 'disqualified');
+          if (!hasDisq) return false;
+        }
+      }
+
       // 1. Live text search across all identifier columns (Ctrl + K)
       if (q) {
         const matchesSearch = shipRows.some((r) => {
@@ -2475,26 +2808,36 @@ export default function DataEntryTab({
         if (!clrMatch) return false;
       }
 
-      // 9. Missing Docs Filter
+      // 9. Missing Docs Filter (Active missing doc = text is entered AND receive date is NOT entered yet)
       if (filters.missingDocs) {
+        const isActivelyMissing = (r) => {
+          const doc = String(r.missDoc || r.missingDocs || r.MissingDocs || '').trim().toLowerCase();
+          const isDocEmpty = !doc || /^[-—_.\s]+$/.test(doc) || doc === 'none' || doc === 'لا يوجد' || doc === 'مكتمل' || doc === 'لايوجد' || doc === 'null' || doc === 'undefined';
+          if (isDocEmpty) return false;
+          // If a receive date is already recorded, the document was received and is NO LONGER missing
+          const rcv = r.missRcv || r.missingDocsReceivedDate || r.MissingDocsReceivedDate;
+          if (rcv && String(rcv).trim() && !/^[-—_.\s]+$/.test(String(rcv).trim())) {
+            return false;
+          }
+          return true;
+        };
+
         if (filters.missingDocs === 'yes') {
-          const hasMissing = shipRows.some((r) => r.missDoc && r.missDoc.trim().length > 0);
+          const hasMissing = shipRows.some(isActivelyMissing);
           if (!hasMissing) return false;
         } else if (filters.missingDocs === 'no') {
-          const allClean = shipRows.every((r) => !r.missDoc || r.missDoc.trim().length === 0);
+          const allClean = shipRows.every((r) => !isActivelyMissing(r));
           if (!allClean) return false;
         }
       }
 
       // 10. Created By (المُدخل) Filter
       if (filters.createdBy) {
-        const targetCreator = filters.createdBy.toLowerCase();
-        const creatorMatch = shipRows.some(
-          (r) =>
-            (r.oper && r.oper.toLowerCase() === targetCreator) ||
-            (r.createdBy && r.createdBy.toLowerCase() === targetCreator) ||
-            (r._createdByName && r._createdByName.toLowerCase() === targetCreator)
-        );
+        const targetCreator = filters.createdBy.toLowerCase().trim();
+        const creatorMatch = shipRows.some((r) => {
+          const name = (r.oper || r.createdBy || r._createdByName || r.createdByName || '').toLowerCase().trim();
+          return name === targetCreator || name.includes(targetCreator);
+        });
         if (!creatorMatch) return false;
       }
 
@@ -2527,7 +2870,7 @@ export default function DataEntryTab({
           else if (filters.dateType === 'reqDate') rowDate = r.reqDate;
           else if (filters.dateType === 'arrDate') rowDate = r.arrDate;
           else if (filters.dateType === 'gateOut') rowDate = r.gateOut;
-          else if (filters.dateType === 'freeOrCut') rowDate = r.free || r.freeOrCut || r.cutOff;
+          else if (filters.dateType === 'freeOrCut') rowDate = r.free || r.cut || r.freeOrCut || r.cutOff;
           else if (filters.dateType === 'delivered') rowDate = r.deliveredAtUtc || r.deliveredAt;
           else if (filters.dateType === 'checkout') rowDate = r.checkout;
           else if (filters.dateType === 'invRcv') rowDate = r.invRcv;
@@ -2544,6 +2887,9 @@ export default function DataEntryTab({
               const day = String(parsed.getDate()).padStart(2, '0');
               d = `${year}-${month}-${day}`;
             }
+          } else if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            const parsed = fixDate(rowDate);
+            if (parsed) d = parsed;
           }
 
           if (from && d < from) return false;
@@ -2850,10 +3196,10 @@ export default function DataEntryTab({
                   {/* 7. CUT OFF (g3 optional) */}
                   <div className={`opf g3 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'تاريخ Cut Off' : 'CUT OFF'} <i>{lang === 'ar' ? '(اختياري)' : '((optional))'}</i></label>
-                    <input
-                      type="date"
+                    <FastDateInput
                       value={newOp.freeOrCut}
-                      onChange={(e) => setNewOp({ ...newOp, freeOrCut: e.target.value })}
+                      onChange={(d) => setNewOp({ ...newOp, freeOrCut: d })}
+                      placeholder="DD-MMM-YYYY (e.g. 1/11)"
                     />
                   </div>
                 </>
@@ -2941,30 +3287,30 @@ export default function DataEntryTab({
                   {/* 6. Free Time Till (g2) */}
                   <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'نهاية فترة السماح' : 'free time till'} <i>{lang === 'ar' ? 'تاريخ' : 'Date'}</i></label>
-                    <input
-                      type="date"
+                    <FastDateInput
                       value={newOp.freeOrCut}
-                      onChange={(e) => setNewOp({ ...newOp, freeOrCut: e.target.value })}
+                      onChange={(d) => setNewOp({ ...newOp, freeOrCut: d })}
+                      placeholder="DD-MMM-YYYY (e.g. 1/11)"
                     />
                   </div>
 
                   {/* 7. Required Offloading Date (g3) */}
                   <div className={`opf g3 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'تاريخ التعتيق المطلوب' : 'Required Offloading Date'}</label>
-                    <input
-                      type="date"
+                    <FastDateInput
                       value={newOp.reqDate}
-                      onChange={(e) => setNewOp({ ...newOp, reqDate: e.target.value })}
+                      onChange={(d) => setNewOp({ ...newOp, reqDate: d })}
+                      placeholder="DD-MMM-YYYY (e.g. 1/11)"
                     />
                   </div>
 
                   {/* 8. Required Offloading Time (g3) */}
                   <div className={`opf g3 ${lang === 'ar' ? 'opf-ar' : ''}`}>
                     <label>{lang === 'ar' ? 'وقت التعتيق المطلوب' : 'Required Offloading Time'}</label>
-                    <input
-                      type="time"
+                    <FastTimeInput
                       value={newOp.reqTime}
-                      onChange={(e) => setNewOp({ ...newOp, reqTime: e.target.value })}
+                      onChange={(t) => setNewOp({ ...newOp, reqTime: t })}
+                      placeholder="HH:mm (e.g. 8 or 10p)"
                     />
                   </div>
                 </>
@@ -3222,12 +3568,12 @@ export default function DataEntryTab({
             </div>
 
             {/* Row 2: All Filters on a Single Unified Horizontal Row */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-100">
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100 overflow-x-auto no-scrollbar pb-1">
               {/* Client Filter */}
               <select
                 value={filters.client}
                 onChange={(e) => { setFilters({ ...filters, client: e.target.value }); setPage(1); }}
-                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[135px]"
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 min-w-[145px] max-w-[170px]"
               >
                 <option value="">{lang === 'ar' ? 'العميل: الكل' : 'Client: All'}</option>
                 {(lookups.customers || []).map((c) => (
@@ -3238,9 +3584,9 @@ export default function DataEntryTab({
               </select>
 
               {/* Shipping Line Filter (SearchableSelect) */}
-              <div className="shrink-0 w-[130px]">
+              <div className="shrink-0 min-w-[145px] max-w-[170px] w-[155px]">
                 <SearchableSelect
-                  compact={true}
+                  variant="filter"
                   value={filters.line}
                   placeholder={lang === 'ar' ? 'الخط: الكل' : 'Line: All'}
                   options={shippingLineFilterOptions}
@@ -3253,9 +3599,9 @@ export default function DataEntryTab({
               </div>
 
               {/* Port Filter (High-speed searchable) */}
-              <div className="shrink-0 w-[130px]">
+              <div className="shrink-0 min-w-[145px] max-w-[170px] w-[155px]">
                 <SearchableSelect
-                  compact={true}
+                  variant="filter"
                   value={filters.port}
                   placeholder={lang === 'ar' ? 'الميناء: الكل' : 'Port: All'}
                   options={portOptions}
@@ -3271,7 +3617,7 @@ export default function DataEntryTab({
               <select
                 value={filters.transporter}
                 onChange={(e) => { setFilters({ ...filters, transporter: e.target.value }); setPage(1); }}
-                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 min-w-[145px] max-w-[170px]"
               >
                 <option value="">{lang === 'ar' ? 'المقاول: الكل' : 'Transporter: All'}</option>
                 {(lookups.transporters || []).map((t) => (
@@ -3285,7 +3631,7 @@ export default function DataEntryTab({
               <select
                 value={filters.containerType}
                 onChange={(e) => { setFilters({ ...filters, containerType: e.target.value }); setPage(1); }}
-                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 min-w-[135px] max-w-[160px]"
               >
                 <option value="">{lang === 'ar' ? 'نوع الحاوية: الكل' : 'CNTR Type: All'}</option>
                 {CONTAINER_TYPES.map((t) => (
@@ -3299,13 +3645,57 @@ export default function DataEntryTab({
               <select
                 value={filters.destination}
                 onChange={(e) => { setFilters({ ...filters, destination: e.target.value }); setPage(1); }}
-                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[130px]"
+                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 min-w-[135px] max-w-[160px]"
               >
                 <option value="">{lang === 'ar' ? 'الوجهة: الكل' : 'Destination: All'}</option>
                 {(lookups.destinations || []).map((d) => (typeof d === 'string' ? d : d.name || d.label || d.value)).map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
+
+              {/* Bayata & Otla Filter (Import & Export) */}
+              {(currentDir === 'Import' || currentDir === 'Export') && (
+                <select
+                  value={filters.bayata || ''}
+                  onChange={(e) => {
+                    setFilters({ ...filters, bayata: e.target.value });
+                    setPage(1);
+                  }}
+                  className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[165px] max-w-[210px] font-medium transition ${filters.bayata
+                      ? 'border-purple-500 bg-purple-50 text-purple-900 font-bold shadow-2xs'
+                      : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
+                    }`}
+                  title={lang === 'ar' ? 'فلترة البياتات والعطلات' : 'Filter Bayata & Otla'}
+                >
+                  <option value="">{lang === 'ar' ? 'البياتات والعطلات: الكل' : 'Bayata & Otla: All'}</option>
+                  <option value="bayata_only">
+                    {lang === 'ar'
+                      ? `بياتة فقط ${dueBayataCount > 0 ? `(${dueBayataCount})` : ''}`
+                      : `Bayata Only ${dueBayataCount > 0 ? `(${dueBayataCount})` : ''}`}
+                  </option>
+                  <option value="otla_only">
+                    {lang === 'ar'
+                      ? `عطلة فقط ${dueOtlaCount > 0 ? `(${dueOtlaCount})` : ''}`
+                      : `Otla Only ${dueOtlaCount > 0 ? `(${dueOtlaCount})` : ''}`}
+                  </option>
+                  <option value="due_any">
+                    {lang === 'ar'
+                      ? `مستحق (بياتة أو عطلة) ${dueBayataCount + dueOtlaCount > 0 ? `(${dueBayataCount + dueOtlaCount})` : ''}`
+                      : `Due (Bayata / Otla) ${dueBayataCount + dueOtlaCount > 0 ? `(${dueBayataCount + dueOtlaCount})` : ''}`}
+                  </option>
+                  <option value="pending_only">
+                    {lang === 'ar'
+                      ? `معلقة تجاوزت المهلة ${pendingBayataCount > 0 ? `(${pendingBayataCount})` : ''}`
+                      : `Pending Overdue ${pendingBayataCount > 0 ? `(${pendingBayataCount})` : ''}`}
+                  </option>
+                  <option value="clean_only">
+                    {lang === 'ar' ? 'في المهلة (بدون بياتة/عطلة)' : 'On Time (Clean)'}
+                  </option>
+                  <option value="disqualified_only">
+                    {lang === 'ar' ? 'غير مستحق (تأخر بالوصول)' : 'Disqualified (Late Arrival)'}
+                  </option>
+                </select>
+              )}
 
               {/* Export-Only Filters: Clearance Type & Customs */}
               {currentDir === 'Export' && (
@@ -3342,33 +3732,41 @@ export default function DataEntryTab({
               {/* Missing Docs Filter */}
               <select
                 value={filters.missingDocs}
-                onChange={(e) => { setFilters({ ...filters, missingDocs: e.target.value }); setPage(1); }}
-                className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 cursor-pointer shrink-0 max-w-[110px]"
+                onChange={(e) => {
+                  setFilters({ ...filters, missingDocs: e.target.value });
+                  setPage(1);
+                }}
+                className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[125px] max-w-[145px] font-medium transition ${filters.missingDocs
+                    ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold shadow-2xs'
+                    : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
+                  }`}
+                title={lang === 'ar' ? 'فلترة حسب المستندات الناقصة' : 'Filter by Missing Docs'}
               >
                 <option value="">{lang === 'ar' ? 'المستندات: الكل' : 'Docs: All'}</option>
                 <option value="yes">{lang === 'ar' ? 'يوجد نواقص' : 'Has Missing'}</option>
                 <option value="no">{lang === 'ar' ? 'مكتملة (Clean)' : 'Clean'}</option>
               </select>
 
-              {/* Created By Filter (المُدخل) */}
-              <div className="relative shrink-0 max-w-[130px]">
-                <input
-                  type="text"
-                  value={filters.createdBy}
-                  onChange={(e) => { setFilters({ ...filters, createdBy: e.target.value }); setPage(1); }}
-                  placeholder={lang === 'ar' ? 'المُدخل: الكل' : 'Created By: All'}
-                  className="text-xs rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-slate-700 outline-none focus:border-sky-500 w-full"
-                />
-                {filters.createdBy && (
-                  <button
-                    type="button"
-                    onClick={() => { setFilters({ ...filters, createdBy: '' }); setPage(1); }}
-                    className="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-slate-600"
-                  >
-                    <X size={11} />
-                  </button>
-                )}
-              </div>
+              {/* Created By Filter (المُدخل - Dropdown) */}
+              <select
+                value={filters.createdBy}
+                onChange={(e) => {
+                  setFilters({ ...filters, createdBy: e.target.value });
+                  setPage(1);
+                }}
+                className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[135px] max-w-[165px] font-medium transition ${filters.createdBy
+                    ? 'border-sky-500 bg-sky-50 text-sky-900 font-bold shadow-2xs'
+                    : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
+                  }`}
+                title={lang === 'ar' ? 'فلترة حسب المُدخل' : 'Filter by Created By'}
+              >
+                <option value="">{lang === 'ar' ? 'المُدخل: الكل' : 'Created By: All'}</option>
+                {uniqueCreators.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
 
               {/* Date Range Controls */}
               <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-xl border border-slate-200 shrink-0 text-xs">
@@ -4199,6 +4597,17 @@ export default function DataEntryTab({
                             }
 
                             let val = r[c.k] ?? '';
+                            if (isMergedCol && (!val || /^[-—\s]+$/.test(String(val).trim()))) {
+                              const found = shipRows.find(
+                                (row) => row[c.k] && String(row[c.k]).trim() && !/^[-—\s]+$/.test(String(row[c.k]).trim())
+                              );
+                              if (found) {
+                                val = found[c.k];
+                              }
+                            }
+                            if (c.k === 'missDoc' && val && /^[-—\s]+$/.test(String(val).trim())) {
+                              val = '';
+                            }
                             if (c.k === 'bl' && !val && r.booking) val = r.booking;
                             if (c.k === 'reopenReason' && !val && r.reopenReason) val = r.reopenReason;
                             if (c.k === 'reopenedAt' && !val) val = r.reopenedAt || (r.reopenedAtUtc ? String(r.reopenedAtUtc).slice(0, 10) : '');
@@ -4815,10 +5224,12 @@ export default function DataEntryTab({
                                       compact={true}
                                       value={selectedPodVal}
                                       disabled={isDisabled}
+                                      allowCustom={true}
+                                      title={cellTitle}
                                       placeholder="Select POD"
                                       options={portOptions}
                                       onChange={(nextPort, opt) => {
-                                        const match = opt?.item || (lookups.ports || []).find(
+                                        const match = opt?.raw || opt?.item || (lookups.ports || []).find(
                                           (p) => (p.name || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
                                             (p.code || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
                                             p.id === nextPort
@@ -4876,10 +5287,12 @@ export default function DataEntryTab({
                                       compact={true}
                                       value={selectedPowVal}
                                       disabled={isDisabled}
+                                      allowCustom={true}
+                                      title={cellTitle}
                                       placeholder={lang === 'ar' ? '-- اختياري --' : 'None (Optional)'}
                                       options={portOptions}
                                       onChange={(nextPow, opt) => {
-                                        const pObj = opt?.item || (lookups.ports || []).find(
+                                        const pObj = opt?.raw || opt?.item || (lookups.ports || []).find(
                                           (p) => (p.name || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
                                             (p.code || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
                                             p.id === nextPow
@@ -4895,6 +5308,140 @@ export default function DataEntryTab({
                                         }
                                       }}
                                     />
+                                  </div>
+                                </td>
+                              );
+                            }
+
+                            // Column: Bayata (Computed status & days)
+                            if (c.k === 'bayata') {
+                              const info = computeBayata(r);
+
+                              return (
+                                <td
+                                  key={c.k}
+                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  style={{
+                                    width: `${c.w}px`,
+                                    minWidth: `${c.w}px`,
+                                    verticalAlign: 'middle',
+                                    padding: '4px 0',
+                                  }}
+                                >
+                                  <div
+                                    className={`cbox grp-${c.g}`}
+                                    style={{
+                                      width: '100%',
+                                      minWidth: `${c.w - 12}px`,
+                                      height: '34px',
+                                      minHeight: '34px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      padding: '0 4px',
+                                    }}
+                                  >
+                                    {!info || info.status === 'pending_arrival' ? (
+                                      <span className="text-[11px] text-slate-400 select-none italic">—</span>
+                                    ) : info.status === 'invalid' ? (
+                                      <div
+                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-300 shadow-2xs w-full text-center"
+                                        title={lang === 'ar' ? 'تاريخ أو وقت الخروج يسبق الوصول!' : 'Gate out is earlier than arrival!'}
+                                      >
+                                        <AlertTriangle size={11} className="text-rose-600 shrink-0" />
+                                        <span className="truncate">{lang === 'ar' ? 'خطأ بالتواريخ' : 'Invalid Dates'}</span>
+                                      </div>
+                                    ) : info.status === 'bayata' ? (
+                                      <div
+                                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-purple-100 text-purple-900 border border-purple-300 shadow-2xs w-full text-center"
+                                        title={
+                                          lang === 'ar'
+                                            ? `مستحق بياتة: ${info.days} يوم (إجمالي التواجد: ${info.diffHours} ساعة)`
+                                            : `Bayata due: ${info.days} day(s) (Total time: ${info.diffHours} hrs)`
+                                        }
+                                      >
+                                        <Clock size={12} className="text-purple-700 shrink-0" />
+                                        <span className="truncate">{lang === 'ar' ? `${info.days} بياتة` : `${info.days} Bayata`}</span>
+                                      </div>
+                                    ) : info.status === 'otla' ? (
+                                      <div
+                                        className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-2xs w-full text-center"
+                                        title={
+                                          lang === 'ar'
+                                            ? `مستحق عطلة: تجاوز 10 ساعات (إجمالي التواجد: ${info.diffHours} ساعة)`
+                                            : `Otla due: Over 10 hours (Total: ${info.diffHours} hrs)`
+                                        }
+                                      >
+                                        <Clock size={12} className="text-amber-700 shrink-0" />
+                                        <span className="truncate">{lang === 'ar' ? '1 عطلة' : '1 Otla'}</span>
+                                      </div>
+                                    ) : info.status === 'pending_gateout' ? (
+                                      <div
+                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-orange-100 text-orange-900 border border-orange-300 shadow-2xs w-full text-center"
+                                        title={
+                                          lang === 'ar'
+                                            ? `تجاوز 24 ساعة بدون خروج! (محتمل ${info.days} بياتة، يرجى متابعة السائق)`
+                                            : `Over 24 hours without gate out! (Est. ${info.days} bayata, follow up with driver)`
+                                        }
+                                      >
+                                        <AlertTriangle size={11} className="text-orange-600 shrink-0" />
+                                        <span className="truncate">{lang === 'ar' ? `تجاوز 24س (${info.days}ب)` : `Over 24h (${info.days}B)`}</span>
+                                      </div>
+                                    ) : info.status === 'pending_otla' ? (
+                                      <div
+                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-yellow-100 text-yellow-900 border border-yellow-300 shadow-2xs w-full text-center"
+                                        title={
+                                          lang === 'ar'
+                                            ? `تجاوز 10 ساعات بدون خروج! (عطلة جارية - إجمالي التواجد: ${info.diffHours}س)`
+                                            : `Over 10 hours without gate out! (Pending Otla - Total: ${info.diffHours}h)`
+                                        }
+                                      >
+                                        <Clock size={11} className="text-yellow-700 shrink-0" />
+                                        <span className="truncate">{lang === 'ar' ? 'تجاوز 10س (عطلة جارية)' : 'Over 10h (Otla Est.)'}</span>
+                                      </div>
+                                    ) : info.status === 'early_arrival' ? (
+                                      <span
+                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-sky-50 text-sky-800 border border-sky-200 truncate w-full text-center"
+                                        title={
+                                          lang === 'ar'
+                                            ? 'السائق وصل مبكراً وبانتظار حلول ميعاد العميل لبدء العداد'
+                                            : 'Driver arrived early, awaiting requested time'
+                                        }
+                                      >
+                                        <Clock size={10} className="text-sky-600 shrink-0" />
+                                        <span className="truncate">{lang === 'ar' ? 'وصول مبكر' : 'Early Arrival'}</span>
+                                      </span>
+                                    ) : info.status === 'disqualified' ? (
+                                      <span
+                                        className="inline-flex items-center justify-center px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-500 border border-slate-200 truncate w-full text-center"
+                                        title={
+                                          lang === 'ar'
+                                            ? `غير مستحق للبياتة أو العطلة لتأخر السائق في الوصول (${info.lateHours} ساعة تأخير)`
+                                            : `Not eligible due to late arrival (${info.lateHours} hrs late)`
+                                        }
+                                      >
+                                        {lang === 'ar' ? 'غير مستحق (تأخر بالوصول)' : 'Late Arrival'}
+                                      </span>
+                                    ) : info.status === 'on_time' ? (
+                                      <span
+                                        className="inline-flex items-center justify-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 truncate"
+                                        title={lang === 'ar' ? `خرج خلال المهلة المسموحة (${info.diffHours} ساعة)` : `Left within free time (${info.diffHours} hrs)`}
+                                      >
+                                        <CheckCircle size={10} className="text-emerald-600 shrink-0" />
+                                        <span>{lang === 'ar' ? 'في المهلة' : 'On Time'}</span>
+                                      </span>
+                                    ) : (
+                                      <span
+                                        className="text-[10px] text-slate-500 font-medium truncate"
+                                        title={
+                                          lang === 'ar'
+                                            ? `${currentDir === 'Export' ? 'جاري التحميل' : 'جاري التعتيق'} (مضى ${info.diffHours} ساعة)`
+                                            : `In progress (${info.diffHours} hrs)`
+                                        }
+                                      >
+                                        {lang === 'ar' ? (currentDir === 'Export' ? 'جاري التحميل' : 'جاري التعتيق') : 'In Progress'}
+                                      </span>
+                                    )}
                                   </div>
                                 </td>
                               );
@@ -5391,15 +5938,53 @@ export default function DataEntryTab({
                                         padding: '2px 4px',
                                       }}
                                     >
-                                      {c.t === 'date' && val
-                                        ? String(val).slice(0, 10)
-                                        : (val !== '' && val !== null && val !== undefined ? String(val) : '—')}
+                                      {c.t === 'date'
+                                        ? (val ? fmtDay(val) : '—')
+                                        : c.t === 'time'
+                                          ? (val ? fmtTime12(val) : '—')
+                                          : (val !== '' && val !== null && val !== undefined ? String(val) : '—')}
                                     </span>
+                                  ) : c.t === 'date' ? (
+                                    <FastDateInput
+                                      value={val}
+                                      onChange={(nextVal) => {
+                                        if (isReadOnly) return;
+                                        if (isMergedCol) {
+                                          handleMergedColChange(shipRows, c.k, nextVal);
+                                        } else {
+                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, nextVal);
+                                        }
+                                      }}
+                                      disabled={isDisabled}
+                                      readOnly={isReadOnly}
+                                      placeholder={inputPlaceholder}
+                                      isMergedCol={isMergedCol}
+                                      minWidth={c.w - 24}
+                                      cellTitle={cellTitle}
+                                    />
+                                  ) : c.t === 'time' ? (
+                                    <FastTimeInput
+                                      value={val}
+                                      onChange={(nextVal) => {
+                                        if (isReadOnly) return;
+                                        if (isMergedCol) {
+                                          handleMergedColChange(shipRows, c.k, nextVal);
+                                        } else {
+                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, nextVal);
+                                        }
+                                      }}
+                                      disabled={isDisabled}
+                                      readOnly={isReadOnly}
+                                      placeholder={inputPlaceholder}
+                                      isMergedCol={isMergedCol}
+                                      minWidth={c.w - 24}
+                                      cellTitle={cellTitle}
+                                    />
                                   ) : (
                                     <input
-                                      type={c.t === 'date' ? 'date' : c.t === 'time' ? 'time' : 'text'}
+                                      type="text"
                                       dir="auto"
-                                      value={c.t === 'date' && val ? String(val).slice(0, 10) : val}
+                                      value={val !== null && val !== undefined ? val : ''}
                                       readOnly={isReadOnly}
                                       disabled={isDisabled}
                                       placeholder={inputPlaceholder}

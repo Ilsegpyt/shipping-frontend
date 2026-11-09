@@ -32,7 +32,7 @@ export const toGuidOrNull = (val) => {
 export const extractErrorMessage = (err) => extractApiErrorMessage(err);
 
 import { INITIAL_ENTRY, INITIAL_SHIPS } from './mockData';
-import { enrich, exportToExcel } from './tptEngine';
+import { enrich, exportToExcel, safeTimeOnly } from './tptEngine';
 import { fclCandidates } from './fclEngine';
 import {
   getAllOperations,
@@ -47,6 +47,7 @@ import {
   getOperationsCounts,
   getCachedLookups,
   clearLookupsCache,
+  createPort,
   getAllFclApprovals,
   approveFclSuggestion,
   unapproveFclSuggestion,
@@ -923,7 +924,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             podId: isImp ? portId : null,
             freeTimeTill: isImp ? (first.free || new Date().toISOString().slice(0, 10)) : null,
             requiredOffloadingDate: isImp ? (first.reqDate || new Date().toISOString().slice(0, 10)) : null,
-            requiredOffloadingTime: isImp ? (first.reqTime ? (first.reqTime.length === 5 ? `${first.reqTime}:00` : first.reqTime) : '08:00:00') : null,
+            requiredOffloadingTime: isImp ? (safeTimeOnly(first.reqTime) || '08:00:00') : null,
             clearanceType: isImp ? null : (String(first.clrType || 'CERT').toUpperCase() === 'BOSLA' ? 1 : 2),
             bookingNumber: isImp ? null : refCode.trim(),
             polId: isImp ? null : portId,
@@ -1036,6 +1037,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         invoicesReceivedDate: first.invRcv
           ? (first.invRcv.includes('T') ? first.invRcv : `${first.invRcv.slice(0, 10)}T00:00:00Z`)
           : null,
+        requiredOffloadingDate: first.reqDate ? first.reqDate.slice(0, 10) : null,
+        requiredOffloadingTime: safeTimeOnly(first.reqTime),
+        requiredOffloadingDate: first.reqDate ? first.reqDate.slice(0, 10) : null,
+        requiredOffloadingTime: first.reqTime ? (first.reqTime.length === 5 ? `${first.reqTime}:00` : first.reqTime.slice(0, 8)) : null,
         containers: updatedRows.map((r) => {
           const cntrId = toGuidOrNull(r._containerId);
           if (!cntrId) {
@@ -1071,9 +1076,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           return {
             containerId: cntrId,
             actualArrivalDate: r.arrDate ? r.arrDate.slice(0, 10) : null,
-            actualArrivalTime: r.arrTime ? (r.arrTime.length === 5 ? `${r.arrTime}:00` : r.arrTime.slice(0, 8)) : null,
+            actualArrivalTime: safeTimeOnly(r.arrTime),
             gateOutDate: r.gateOut ? r.gateOut.slice(0, 10) : null,
-            gateOutTime: r.gateOutT ? (r.gateOutT.length === 5 ? `${r.gateOutT}:00` : r.gateOutT.slice(0, 8)) : null,
+            gateOutTime: safeTimeOnly(r.gateOutT),
             containerType: normalizeContainerType(r.size) || null,
             containerNumber: r.cntr?.trim() || null,
             transporterId: resolvedTruckerId,
@@ -1137,6 +1142,14 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         );
         if (pMatch) resolvedPodId = pMatch.id;
       }
+      if (!resolvedPodId && first.pod && first.pod.trim()) {
+        try {
+          const newPort = await createPort({ name: first.pod.trim() });
+          if (newPort?.id) resolvedPodId = newPort.id;
+        } catch (e) {
+          console.warn('Auto-create POD port:', e);
+        }
+      }
 
       let resolvedPowId = toGuidOrNull(first.powId);
       if (!resolvedPowId && first.pow && lookups.ports?.length > 0) {
@@ -1146,6 +1159,14 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             p.id === first.pow
         );
         if (pMatch) resolvedPowId = pMatch.id;
+      }
+      if (!resolvedPowId && first.pow && first.pow.trim()) {
+        try {
+          const newPort = await createPort({ name: first.pow.trim() });
+          if (newPort?.id) resolvedPowId = newPort.id;
+        } catch (e) {
+          console.warn('Auto-create POW port:', e);
+        }
       }
 
       let resolvedPolId = toGuidOrNull(first.polId);
@@ -1208,12 +1229,12 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             containerType: normalizeContainerType(r.size) || null,
             containerNumber: cntrNum ? cntrNum.slice(0, 11) : null,
             requiredLoadingDate: r.reqDate ? r.reqDate.slice(0, 10) : null,
-            requiredLoadingTime: r.reqTime ? (r.reqTime.length === 5 ? `${r.reqTime}:00` : r.reqTime.slice(0, 8)) : null,
+            requiredLoadingTime: safeTimeOnly(r.reqTime),
             destination: r.dest?.trim() || null,
             actualArrivalDate: r.arrDate ? r.arrDate.slice(0, 10) : null,
-            actualArrivalTime: r.arrTime ? (r.arrTime.length === 5 ? `${r.arrTime}:00` : r.arrTime.slice(0, 8)) : null,
+            actualArrivalTime: safeTimeOnly(r.arrTime),
             gateOutDate: r.gateOut ? r.gateOut.slice(0, 10) : null,
-            gateOutTime: r.gateOutT ? (r.gateOutT.length === 5 ? `${r.gateOutT}:00` : r.gateOutT.slice(0, 8)) : null,
+            gateOutTime: safeTimeOnly(r.gateOutT),
             transporterId: resolvedTruckerId,
             vehicleId: resolvedVehicleId,
             carNumber: r.car?.trim() || null,

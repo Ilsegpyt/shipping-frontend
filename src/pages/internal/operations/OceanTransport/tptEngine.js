@@ -8,7 +8,7 @@ export const fmtDay = (d) => {
   const p = fixDate(d);
   if (!p) return String(d);
   const [y, m, dd] = p.split('-');
-  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${dd}-${months[+m - 1] || m}-${y}`;
 };
 
@@ -55,6 +55,16 @@ export const fixDate = (v) => {
     if (mo) return `${y}-${mo}-${d}`;
   }
 
+  // Format with month name without year: '4/Jan' or '04-Nov' (defaults to current year)
+  const mNamedShort = s.match(/^(\d{1,2})[\s/-]+([A-Za-z]{3,})$/);
+  if (mNamedShort) {
+    const d = mNamedShort[1].padStart(2, '0');
+    const mon = mNamedShort[2].toLowerCase().slice(0, 3);
+    const mo = monthsMap[mon];
+    const y = new Date().getFullYear();
+    if (mo) return `${y}-${mo}-${d}`;
+  }
+
   // Format: 'YYYY-MM-DD'
   const mIso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (mIso) return `${mIso[1]}-${mIso[2]}-${mIso[3]}`;
@@ -69,6 +79,15 @@ export const fixDate = (v) => {
     if (mo <= 12) return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
   }
 
+  // Format: 'DD/MM' or 'D/M' (defaults to current year)
+  const mShort = s.match(/^(\d{1,2})[/-](\d{1,2})$/);
+  if (mShort) {
+    const d = +mShort[1];
+    const mo = +mShort[2];
+    const y = new Date().getFullYear();
+    if (mo <= 12 && d <= 31) return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  }
+
   return null;
 };
 
@@ -81,15 +100,49 @@ export const normTime = (v) => {
   if (v instanceof Date) {
     return String(v.getHours()).padStart(2, '0') + ':' + String(v.getMinutes()).padStart(2, '0');
   }
-  const m = String(v).trim().match(/^(\d{1,2})[:.](\d{2})\s*([AaPp][Mm]?)?/);
-  if (!m) return '';
-  let h = +m[1];
-  const mi = +m[2];
-  const ap = (m[3] || '').toLowerCase();
+  const str = String(v).trim();
+  let m = str.match(/^(\d{1,2})[:.](\d{2})\s*([AaPp][Mm]?)?/);
+  let h = 0;
+  let mi = 0;
+  let ap = '';
+  if (m) {
+    h = +m[1];
+    mi = +m[2];
+    ap = (m[3] || '').toLowerCase();
+  } else {
+    // Standalone hour: '8', '8am', '10pm', '22'
+    const mSingle = str.match(/^(\d{1,2})\s*([AaPp][Mm]?)?$/);
+    if (mSingle) {
+      h = +mSingle[1];
+      mi = 0;
+      ap = (mSingle[2] || '').toLowerCase();
+    } else {
+      return '';
+    }
+  }
   if (ap.startsWith('p') && h < 12) h += 12;
   if (ap.startsWith('a') && h === 12) h = 0;
   if (h > 23 || mi > 59) return '';
   return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
+};
+
+export const fmtTime12 = (v) => {
+  if (v === null || v === undefined || v === '') return '';
+  const nt = normTime(v);
+  if (!nt) return String(v);
+  const parts = nt.split(':');
+  let h = parseInt(parts[0], 10);
+  const m = parts[1] || '00';
+  if (isNaN(h)) return String(v);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  return `${String(h).padStart(2, '0')}:${m} ${ap}`;
+};
+
+export const safeTimeOnly = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  const nt = normTime(v);
+  return nt ? (nt.length === 5 ? nt + ':00' : nt.slice(0, 8)) : null;
 };
 
 export const enrich = (rows) => {
@@ -154,6 +207,10 @@ export const exportToExcel = (entry, ships, direction = 'Import') => {
     // Data rows
     rows.forEach((r) => {
       sheetData.push(cols.map((c) => {
+        if (c.k === 'bayata') {
+          const b = computeBayata(r);
+          return b ? b.labelAr : '';
+        }
         const val = r[c.k] ?? '';
         if (c.t === 'date') return fmtDay(val);
         if (c.t === 'time') return normTime(val) || val;
@@ -861,4 +918,220 @@ export const exportValidationReport = (issues = [], fileName = 'TPT_Validation_R
 
   XLSX.utils.book_append_sheet(wb, ws, 'تقرير التدقيق والفحص');
   XLSX.writeFile(wb, fileName);
+};
+
+/**
+ * Safely parse a date and time value into a JavaScript Date object (in local timezone).
+ * Supports standard dates, Excel parsed dates, 24-hour time "14:30", and 12-hour time "02:30 PM".
+ */
+export const parseDateTimeSafe = (dateVal, timeVal) => {
+  if (!dateVal) return null;
+  const dStr = fixDate(dateVal);
+  if (!dStr) return null;
+
+  let hours = 8;
+  let minutes = 0;
+
+  if (timeVal !== null && timeVal !== undefined) {
+    const tTrim = String(timeVal).trim();
+    if (tTrim) {
+      // 12-hour format: '08:30 AM' or '8:30pm'
+      const match12 = tTrim.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+      if (match12) {
+        hours = parseInt(match12[1], 10);
+        minutes = parseInt(match12[2], 10);
+        const meridiem = (match12[3] || '').toUpperCase();
+        if (meridiem === 'PM' && hours < 12) hours += 12;
+        if (meridiem === 'AM' && hours === 12) hours = 0;
+      } else {
+        // Direct 24h 'HH:mm'
+        const parts = tTrim.split(':');
+        if (parts.length >= 2) {
+          hours = parseInt(parts[0], 10) || 0;
+          minutes = parseInt(parts[1], 10) || 0;
+        }
+      }
+    }
+  }
+
+  const [y, m, d] = dStr.split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d, hours, minutes, 0, 0);
+};
+
+/**
+ * Compute Bayata (Overnight / Demurrage at client site) for Import operations:
+ * Rules:
+ * 1. Required Offload Date + Time is client baseline.
+ * 2. Grace period for driver arrival: max 2 hours after requested offloading time.
+ * 3. If driver arrived > 2 hours late => Disqualified (0 bayata).
+ * 4. Countdown baseline:
+ *    - If arrived early (before reqDt) => start countdown from reqDt.
+ *    - If arrived in range [reqDt, reqDt + 2h] => start countdown from arrDt.
+ * 5. Free unloading window at client site: 24 hours.
+ * 6. After 24 hours: any fractional day beyond 24h counts as full bayata day (Math.ceil((diffHours - 24) / 24)).
+ * 7. If Gate Out is not yet recorded and > 24 hours elapsed => Pending / Warning status for operations.
+ */
+export const computeBayata = (r) => {
+  if (!r) return null;
+
+  const reqDt = parseDateTimeSafe(r.reqDate, r.reqTime);
+  const arrDt = parseDateTimeSafe(r.arrDate, r.arrTime);
+
+  if (!reqDt || !arrDt) {
+    return {
+      status: 'pending_arrival',
+      labelAr: 'بانتظار الوصول',
+      labelEn: 'Awaiting Arrival',
+      days: 0,
+      otla: 0,
+    };
+  }
+
+  // Grace Period: 2 hours after requested time
+  const maxAllowedArrival = new Date(reqDt.getTime() + 2 * 60 * 60 * 1000);
+
+  // If driver arrived after maxAllowedArrival (> 2 hours late): Disqualified
+  if (arrDt > maxAllowedArrival) {
+    const lateHours = Math.round(((arrDt.getTime() - reqDt.getTime()) / (1000 * 60 * 60)) * 10) / 10;
+    return {
+      status: 'disqualified',
+      labelAr: 'غير مستحق (تأخر في الوصول)',
+      labelEn: 'Disqualified (Arrived Late)',
+      lateHours,
+      days: 0,
+      otla: 0,
+    };
+  }
+
+  // Fair Countdown Baseline:
+  // - If driver arrived early (arrDt < reqDt): countdown starts strictly from reqDt (client appointment).
+  // - If driver arrived in range [reqDt, reqDt + 2h]: countdown starts from driver arrival (arrDt).
+  const countdownStart = arrDt < reqDt ? reqDt : arrDt;
+
+  // Case 1: Gate Out recorded
+  const gateOutDt = parseDateTimeSafe(r.gateOut, r.gateOutT);
+  if (gateOutDt) {
+    // If gate out was mistakenly entered before arrival
+    if (gateOutDt < arrDt) {
+      return {
+        status: 'invalid',
+        labelAr: 'تاريخ الخروج يسبق الوصول',
+        labelEn: 'Invalid (Gate Out < Arrive)',
+        days: 0,
+        otla: 0,
+      };
+    }
+
+    // If driver left before or at countdownStart (e.g. arrived early and left before appointment)
+    if (gateOutDt <= countdownStart) {
+      return {
+        status: 'on_time',
+        labelAr: 'في المهلة',
+        labelEn: 'On Time',
+        diffHours: 0,
+        days: 0,
+        otla: 0,
+      };
+    }
+
+    const diffMs = gateOutDt.getTime() - countdownStart.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    // Rule 1: <= 10 hours => On Time (في المهلة)
+    if (diffHours <= 10) {
+      return {
+        status: 'on_time',
+        labelAr: 'في المهلة',
+        labelEn: 'On Time',
+        diffHours: Math.max(0, Math.round(diffHours * 10) / 10),
+        days: 0,
+        otla: 0,
+      };
+    }
+
+    // Rule 2: > 10 hours and <= 24 hours => 1 Otla (1 عطلة)
+    if (diffHours <= 24) {
+      return {
+        status: 'otla',
+        labelAr: '1 عطلة',
+        labelEn: '1 Otla',
+        diffHours: Math.round(diffHours * 10) / 10,
+        days: 0,
+        otla: 1,
+      };
+    }
+
+    // Rule 3: > 24 hours => Bayata (تُلغى العطلة تماماً وتحل البياتة محلها)
+    // Any fraction beyond 24 hours counts as full day bayata:
+    // 24.01h - 48.00h => 1 bayata
+    // 48.01h - 72.00h => 2 bayata
+    const extraHours = diffHours - 24;
+    const bayataDays = Math.ceil(extraHours / 24);
+
+    return {
+      status: 'bayata',
+      labelAr: `${bayataDays} بياتة`,
+      labelEn: `${bayataDays} Bayata`,
+      diffHours: Math.round(diffHours * 10) / 10,
+      days: bayataDays,
+      otla: 0,
+    };
+  }
+
+  // Case 2: Gate Out NOT recorded yet -> Check against current time
+  const now = new Date();
+
+  // Driver ONLY gets 'early_arrival' if actual arrival was strictly earlier than the requested appointment AND requested appointment hasn't arrived yet
+  if (arrDt < reqDt && now < reqDt) {
+    return {
+      status: 'early_arrival',
+      labelAr: 'وصول مبكر (بانتظار الميعاد)',
+      labelEn: 'Early Arrival (Awaiting Req Time)',
+      diffHours: 0,
+      days: 0,
+      otla: 0,
+      isPending: false,
+    };
+  }
+
+  const diffMs = Math.max(0, now.getTime() - countdownStart.getTime());
+  const diffHours = diffMs / (1000 * 60 * 60);
+
+  // If elapsed time > 24 hours => Pending Bayata
+  if (diffHours > 24) {
+    const extraHours = diffHours - 24;
+    const estDays = Math.ceil(extraHours / 24);
+    return {
+      status: 'pending_gateout',
+      labelAr: `تجاوز 24س (${estDays} بياتة جارية)`,
+      labelEn: `Over 24h (${estDays} Est. Bayata)`,
+      diffHours: Math.round(diffHours * 10) / 10,
+      days: estDays,
+      otla: 0,
+      isPending: true,
+    };
+  }
+
+  // If elapsed time > 10 hours => Pending Otla
+  if (diffHours > 10) {
+    return {
+      status: 'pending_otla',
+      labelAr: 'تجاوز 10س (عطلة جارية)',
+      labelEn: 'Over 10h (Pending Otla)',
+      diffHours: Math.round(diffHours * 10) / 10,
+      days: 0,
+      otla: 1,
+      isPending: true,
+    };
+  }
+
+  return {
+    status: 'in_progress',
+    labelAr: 'جاري العمل',
+    labelEn: 'In Progress',
+    diffHours: Math.round(diffHours * 10) / 10,
+    days: 0,
+    otla: 0,
+  };
 };

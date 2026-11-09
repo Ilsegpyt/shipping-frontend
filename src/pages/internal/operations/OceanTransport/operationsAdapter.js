@@ -7,7 +7,7 @@ export function normalizeContainerType(type) {
   if (!type) return '';
   const found = CONTAINER_TYPES.find(
     (c) => c.value.toLowerCase() === String(type).toLowerCase() ||
-           c.label.toLowerCase() === String(type).toLowerCase()
+      c.label.toLowerCase() === String(type).toLowerCase()
   );
   if (found) return found.value;
   const s = String(type).toLowerCase().trim();
@@ -27,6 +27,15 @@ export function normalizeContainerType(type) {
   if (s.includes('20')) return 'DryStandard20';
   if (s.includes('40')) return 'DryStandard40';
   return '';
+}
+
+export function cleanDocValue(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^[-—_.\s]+$/.test(s) || s.toLowerCase() === 'none' || s === 'لا يوجد' || s === 'مكتمل' || s === 'لايوجد' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') {
+    return '';
+  }
+  return s;
 }
 
 export function mapBackendOperationsToFrontend(operations = []) {
@@ -59,15 +68,15 @@ export function mapBackendOperationsToFrontend(operations = []) {
     const containers = Array.isArray(op.containers) && op.containers.length > 0
       ? op.containers
       : [
-          // Fallback if an operation has 0 containers in the DB
-          {
-            id: `${op.id}_dummy_0`,
-            ordinal: 1,
-            containerNumber: '',
-            containerType: '',
-            destination: isImport ? op.importDetails?.destination || '' : '',
-          },
-        ];
+        // Fallback if an operation has 0 containers in the DB
+        {
+          id: `${op.id}_dummy_0`,
+          ordinal: 1,
+          containerNumber: '',
+          containerType: '',
+          destination: isImport ? op.importDetails?.destination || '' : '',
+        },
+      ];
 
     const rowIndices = [];
 
@@ -89,14 +98,14 @@ export function mapBackendOperationsToFrontend(operations = []) {
         ordinal: cntr.ordinal || (idx + 1),
         _operationType: isImport ? 'Import' : 'Export',
         operationType: isImport ? 'Import' : 'Export',
-        _createdAtUtc: op.createdAtUtc || '',
-        _createdByName: op.createdByName || '',
-        createdBy: op.createdByName || '',
-        createdAt: op.createdAtUtc || '',
-        created: op.createdAtUtc || '',
-        shipNo: op.shipmentNumber || '',
-        vol: String(op.numberOfContainers || containers.length),
-        oper: op.createdByName || '',
+        _createdAtUtc: op.createdAtUtc || op.CreatedAtUtc || '',
+        _createdByName: op.createdByName || op.CreatedByName || '',
+        createdBy: op.createdByName || op.CreatedByName || '',
+        createdAt: op.createdAtUtc || op.CreatedAtUtc || '',
+        created: op.createdAtUtc || op.CreatedAtUtc || '',
+        shipNo: op.shipmentNumber || op.ShipmentNumber || '',
+        vol: String(op.numberOfContainers || op.NumberOfContainers || containers.length),
+        oper: op.createdByName || op.CreatedByName || '',
         cert: op.certificateNumber || '',
         client: op.clientName || '',
         clientId: op.clientId,
@@ -114,9 +123,9 @@ export function mapBackendOperationsToFrontend(operations = []) {
         driverId: cntr.driverId || null,
         mob: cntr.driverMobileNumber || '',
         checkout: cntr.checkOutFromThePort ? cntr.checkOutFromThePort.slice(0, 10) : '',
-        invRcv: op.invoicesReceivedDate ? op.invoicesReceivedDate.slice(0, 10) : '',
-        missDoc: cntr.missingDocs || '',
-        missRcv: cntr.missingDocsReceivedDate ? String(cntr.missingDocsReceivedDate).slice(0, 10) : '',
+        invRcv: op.invoicesReceivedDate ? String(op.invoicesReceivedDate).slice(0, 10) : (op.InvoicesReceivedDate ? String(op.InvoicesReceivedDate).slice(0, 10) : ''),
+        missDoc: cleanDocValue(cntr.missingDocs || cntr.MissingDocs || op.missingDocs || op.MissingDocs),
+        missRcv: (cntr.missingDocsReceivedDate || cntr.MissingDocsReceivedDate) ? String(cntr.missingDocsReceivedDate || cntr.MissingDocsReceivedDate).slice(0, 10) : '',
         status: op.status || 'Open',
         reopenReason: op.reopenReason || op.ReopenReason || '',
         reopenedAt: op.reopenedAtUtc ? String(op.reopenedAtUtc).slice(0, 10) : (op.ReopenedAtUtc ? String(op.ReopenedAtUtc).slice(0, 10) : ''),
