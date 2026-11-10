@@ -87,16 +87,20 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
   // Detect mode from URL: if path contains 'entry', start on entry mode, else dashboard
   const isEntryPath = location.pathname.includes('/entry');
+  const isDashboardPath = location.pathname.includes('/dashboard') || (!isEntryPath && defaultView === 'dashboard');
   const [viewMode, setViewMode] = useState(() => {
-    if (!canViewDashboard || isEntryPath || defaultView === 'entry') return 'entry';
-    return 'dashboard';
+    if (isEntryPath || defaultView === 'entry') return 'entry';
+    if (canViewDashboard && isDashboardPath) return 'dashboard';
+    return isDashboardPath ? 'dashboard' : 'entry';
   });
 
   useEffect(() => {
     if (!canViewDashboard && viewMode === 'dashboard') {
       setViewMode('entry');
+    } else if (canViewDashboard && isDashboardPath && viewMode !== 'dashboard') {
+      setViewMode('dashboard');
     }
-  }, [canViewDashboard, viewMode]); // 'dashboard' | 'entry'
+  }, [canViewDashboard, isDashboardPath, viewMode]); // 'dashboard' | 'entry'
 
   // Within dashboard: 'Import' | 'Export'
   const [dashTab, setDashTab] = useState(() => {
@@ -314,10 +318,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   // Ultra-fast refresh for Counts (< 20ms) and Active Operations (only if on Dashboard view)
   const refreshActiveOperations = async () => {
     try {
-      const tasks = [getOperationsCounts()];
-      if (viewMode === 'dashboard') {
-        tasks.push(getAllOperations(true));
-      }
+      const isDash = viewMode === 'dashboard' || location.pathname.includes('/dashboard');
+      const tasks = [
+        getOperationsCounts(),
+        isDash ? getAllOperations(false) : Promise.resolve(null),
+      ];
       const results = await Promise.allSettled(tasks);
       const countsResult = results[0];
       const opsResult = results[1];
@@ -342,13 +347,13 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         clearLookupsCache();
       }
 
+      const isDash = viewMode === 'dashboard' || location.pathname.includes('/dashboard') || defaultView === 'dashboard';
+
       const tasks = [
         getCachedLookups(forceRefresh),
         getOperationsCounts(),
+        isDash ? getAllOperations(false) : Promise.resolve(null),
       ];
-      if (viewMode === 'dashboard') {
-        tasks.push(getAllOperations(true));
-      }
 
       const results = await Promise.allSettled(tasks);
       const lookupsResult = results[0];
@@ -408,6 +413,16 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       setViewMode('dashboard');
     }
   }, [location.pathname]);
+
+  // Ensure active operations are loaded when entering Dashboard view
+  useEffect(() => {
+    if (viewMode === 'dashboard') {
+      const hasOps = (entry.Import && entry.Import.length > 0) || (entry.Export && entry.Export.length > 0);
+      if (!hasOps) {
+        refreshActiveOperations();
+      }
+    }
+  }, [viewMode]);
 
   const toastTimeoutRef = useRef(null);
 
@@ -1729,7 +1744,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       if (!entry.Import || entry.Import.length === 0) {
         setIsLoadingData(true);
         try {
-          const ops = await getAllOperations(true);
+          const ops = await getAllOperations(false);
           if (Array.isArray(ops)) {
             processOperationsResult(ops);
           }
@@ -1754,10 +1769,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-                  {lang === 'ar' ? 'داشبورد النقل البري وترشيحات FCL' : 'Transport Operations Dashboard'}
+                  {lang === 'ar' ? 'لوحة تحليلات النقل البري' : 'Transport Operations Dashboard'}
                 </h1>
                 <span className="rounded-md bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-200">
-                  Analytics & FCL
+                  {lang === 'ar' ? 'تحليلات النقل' : 'Analytics & FCL'}
                 </span>
               </div>
               <p className="mt-0.5 text-xs text-slate-500">
@@ -1776,7 +1791,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
               className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-800"
             >
               <FileEdit size={15} />
-              {lang === 'ar' ? 'شاشة الإدخال (Data Entry)' : 'Data Entry Grid'}
+              {lang === 'ar' ? 'شاشة الإدخال' : 'Data Entry Grid'}
             </button>
 
             {/* Export Excel */}
@@ -1786,7 +1801,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
               className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
             >
               <FileSpreadsheet size={15} className="text-emerald-600" />
-              {lang === 'ar' ? 'حفظ كاكسيل' : 'Save as Excel'}
+              {lang === 'ar' ? 'تصدير إكسيل' : 'Save as Excel'}
             </button>
 
             {/* Language Toggle */}
@@ -1816,7 +1831,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
                 }`}
             >
               <ArrowDownCircle size={16} />
-              <span>{lang === 'ar' ? 'الوارد (Import)' : 'Import Trips'}</span>
+              <span>{lang === 'ar' ? 'الوارد' : 'Import'}</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${dashTab === 'Import' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
                   }`}
@@ -1834,7 +1849,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
                 }`}
             >
               <ArrowUpCircle size={16} />
-              <span>{lang === 'ar' ? 'الصادر (Export)' : 'Export Trips'}</span>
+              <span>{lang === 'ar' ? 'الصادر' : 'Export'}</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${dashTab === 'Export' ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 text-slate-600'
                   }`}
@@ -1845,11 +1860,18 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           </div>
 
           {/* Tab Sub-View */}
-          <AnalyticsTab
-            data={enrichedData.filter((r) => r.dir === dashTab)}
-            lang={lang}
-            direction={dashTab}
-          />
+          {isLoadingData && (!entry.Import?.length && !entry.Export?.length) ? (
+            <div className="flex flex-col items-center justify-center py-24 text-slate-500">
+              <div className="h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800 mb-3" />
+              <p className="text-sm font-semibold">{lang === 'ar' ? 'جاري تحميل مؤشرات الداشبورد...' : 'Loading dashboard analytics...'}</p>
+            </div>
+          ) : (
+            <AnalyticsTab
+              data={enrichedData.filter((r) => r.dir === dashTab)}
+              lang={lang}
+              direction={dashTab}
+            />
+          )}
         </div>
       )}
 

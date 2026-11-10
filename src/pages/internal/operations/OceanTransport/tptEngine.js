@@ -161,11 +161,30 @@ export const enrich = (rows) => {
 
   return rows.map((r) => {
     const o = { ...r };
-    o.status = String(o.status || '').trim().toLowerCase() === 'delivered' ? 'Delivered' : (o.status || 'Open');
+    const isDeliv =
+      String(o.status || '').trim().toLowerCase() === 'delivered' ||
+      Boolean(o.deliveredAt && String(o.deliveredAt).trim() && String(o.deliveredAt).trim() !== '-') ||
+      Boolean(o.arrDate && String(o.arrDate).trim() && String(o.arrDate).trim() !== '-' && String(o.arrDate).trim().toLowerCase() !== 'null');
+    o.status = isDeliv ? 'Delivered' : 'Open';
+
+    // Export POW fallback rule: POW defaults to POL if omitted
+    if (o.dir === 'Export' && !o.pow && o.pol) {
+      o.pow = o.pol;
+    }
+
     o.load = o.load || o.arrDate || o.reqDate || o.gateOut || null;
     o.freeDays = (o.free && o.load) ? days(o.free, o.load) : null;
     if (o.freeDays !== null && (o.freeDays < -60 || o.freeDays > 90)) o.freeDays = null;
     o.risk = o.freeDays === null ? null : (o.freeDays < 0 ? 'Late' : 'OK');
+
+    // Risk Buckets: 0 (Overdue <0), 1 (Due today =0), 2 (Urgent 1-2), 3 (Warning 3-5), 4 (Safe 6+)
+    if (o.freeDays === null) o.riskBucket = null;
+    else if (o.freeDays < 0) o.riskBucket = 0;
+    else if (o.freeDays === 0) o.riskBucket = 1;
+    else if (o.freeDays <= 2) o.riskBucket = 2;
+    else if (o.freeDays <= 5) o.riskBucket = 3;
+    else o.riskBucket = 4;
+
     o.cutDays = (o.cut && o.load) ? days(o.cut, o.load) : null;
     if (o.cutDays !== null && (o.cutDays < -60 || o.cutDays > 90)) o.cutDays = null;
 

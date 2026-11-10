@@ -94,9 +94,14 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
   const filteredData = useMemo(() => {
     return (data || []).filter((r) => {
       // Delivery status filter (All, Open, Delivered)
-      if (deliveryStatus !== 'All') {
-        const rowStatus = String(r.status || 'Open').toLowerCase();
-        if (deliveryStatus.toLowerCase() !== rowStatus) return false;
+      if (deliveryStatus && deliveryStatus !== 'All') {
+        const isDeliv =
+          String(r.status || '').trim().toLowerCase() === 'delivered' ||
+          Boolean(r.deliveredAt && String(r.deliveredAt).trim() && String(r.deliveredAt).trim() !== '-') ||
+          Boolean(r.arrDate && String(r.arrDate).trim() && String(r.arrDate).trim() !== '-' && String(r.arrDate).trim().toLowerCase() !== 'null');
+
+        if (deliveryStatus.toLowerCase() === 'delivered' && !isDeliv) return false;
+        if (deliveryStatus.toLowerCase() === 'open' && isDeliv) return false;
       }
 
       // Client filter
@@ -170,7 +175,10 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
     let count40 = 0;
     let count40HC = 0;
     let countLcl = 0;
+    const containerSet = new Set();
+
     list.forEach((r) => {
+      if (r.cntr?.trim()) containerSet.add(r.cntr.trim());
       const s = String(r.size || '').toLowerCase();
       if (s.includes('20')) count20++;
       else if (s.includes('hc') || s.includes('high')) count40HC++;
@@ -178,9 +186,35 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
       else if (s.includes('lcl')) countLcl++;
       else count40++;
     });
+    const uniqueContainers = containerSet.size || totalTrips;
     const total40Family = count40 + count40HC;
+
+    const formatPct = (count, total) => {
+      if (!total || !count) return '0%';
+      const raw = (count / total) * 100;
+      if (raw > 0 && raw < 1) return raw.toFixed(1) + '%';
+      if (raw > 99 && raw < 100) return raw.toFixed(1) + '%';
+      return Math.round(raw) + '%';
+    };
+
+    const pct40Str = formatPct(total40Family, totalTrips);
+    const pct20Str = formatPct(count20, totalTrips);
     const pct40 = totalTrips > 0 ? Math.round((total40Family / totalTrips) * 100) : 0;
     const pct20 = totalTrips > 0 ? Math.round((count20 / totalTrips) * 100) : 0;
+
+    // Demurrage Risk Buckets (Import)
+    let overdueCount = 0;
+    let dueTodayCount = 0;
+    let urgentCount = 0;
+    let warningCount = 0;
+    let safeCount = 0;
+    list.forEach((r) => {
+      if (r.riskBucket === 0) overdueCount++;
+      else if (r.riskBucket === 1) dueTodayCount++;
+      else if (r.riskBucket === 2) urgentCount++;
+      else if (r.riskBucket === 3) warningCount++;
+      else if (r.riskBucket === 4) safeCount++;
+    });
 
     // Clients & Sites
     const clientSet = new Set();
@@ -336,12 +370,20 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
     return {
       totalTrips,
+      uniqueContainers,
       count20,
       count40,
       count40HC,
       countLcl,
       pct40,
       pct20,
+      pct40Str,
+      pct20Str,
+      overdueCount,
+      dueTodayCount,
+      urgentCount,
+      warningCount,
+      safeCount,
       clientsCount,
       sitesCount,
       truckersCount,
@@ -378,6 +420,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
   // 3.1 Trips by month
   const monthData = useMemo(() => {
     const map = {};
+    const monthShortNamesAr = {
+      Jan: 'يناير', Feb: 'فبراير', Mar: 'مارس', Apr: 'أبريل',
+      May: 'مايو', Jun: 'يونيو', Jul: 'يوليو', Aug: 'أغسطس',
+      Sep: 'سبتمبر', Oct: 'أكتوبر', Nov: 'نوفمبر', Dec: 'ديسمبر'
+    };
     (filteredData || []).forEach((r) => {
       const dStr = r.load || r.arrDate || r.reqDate || r.gateOut || r.createdAt;
       if (dStr) {
@@ -386,9 +433,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           const y = d.getFullYear();
           const m = d.getMonth();
           const sortKey = y * 100 + m;
-          const label = d.toLocaleString('en-US', { month: 'short' }) + ' ' + String(y).slice(-2);
+          const enLabel = d.toLocaleString('en-US', { month: 'short' }) + ' ' + String(y).slice(-2);
+          const mShort = d.toLocaleString('en-US', { month: 'short' });
+          const arLabel = (monthShortNamesAr[mShort] || mShort) + ' ' + String(y).slice(-2);
           if (!map[sortKey]) {
-            map[sortKey] = { label, count: 0, sortKey };
+            map[sortKey] = { label: enLabel, arLabel, count: 0, sortKey };
           }
           map[sortKey].count++;
         }
@@ -396,8 +445,8 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
     });
     const res = Object.values(map)
       .sort((a, b) => a.sortKey - b.sortKey)
-      .map(({ label, count }) => ({ label, count }));
-    return res.length > 0 ? res : [{ label: 'No data', count: 0 }];
+      .map(({ label, arLabel, count }) => ({ label, arLabel, count }));
+    return res.length > 0 ? res : [{ label: 'No data', arLabel: 'لا توجد بيانات', count: 0 }];
   }, [filteredData]);
   const maxMonth = Math.max(...monthData.map((d) => d.count), 1);
 
@@ -843,7 +892,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
     });
 
     return [
-      { label: lang === 'ar' ? 'متأخر (Late)' : 'Pulled late', count: pulledLate, color: '#cf4d4d' },
+      { label: lang === 'ar' ? 'متأخر' : 'Pulled late', count: pulledLate, color: '#cf4d4d' },
       { label: lang === 'ar' ? 'نفس اليوم' : 'Same day', count: sameDay, color: '#66788c' },
       { label: lang === 'ar' ? 'باقي 1-2 يوم' : '1-2 days left', count: days12, color: '#d8a84a' },
       { label: lang === 'ar' ? 'باقي 3-5 أيام' : '3-5 days left', count: days35, color: '#22b8cf' },
@@ -904,15 +953,19 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
     let delivered = 0;
     let open = 0;
     filteredData.forEach((r) => {
-      if (String(r.status || '').toLowerCase() === 'delivered') delivered++;
+      const isDeliv =
+        String(r.status || '').trim().toLowerCase() === 'delivered' ||
+        Boolean(r.deliveredAt && String(r.deliveredAt).trim() && String(r.deliveredAt).trim() !== '-') ||
+        Boolean(r.arrDate && String(r.arrDate).trim() && String(r.arrDate).trim() !== '-' && String(r.arrDate).trim().toLowerCase() !== 'null');
+      if (isDeliv) delivered++;
       else open++;
     });
     const total = filteredData.length || 1;
     return [
-      { name: 'Delivered', count: delivered, pct: Math.round((delivered / total) * 100), color: '#1f8f63' },
-      { name: 'Open / In transit', count: open, pct: Math.round((open / total) * 100), color: '#0b4f7a' },
+      { name: lang === 'ar' ? 'تم التسليم' : 'Delivered', count: delivered, pct: Math.round((delivered / total) * 100), color: '#1f8f63' },
+      { name: lang === 'ar' ? 'مفتوحة / قيد النقل' : 'Open / In transit', count: open, pct: Math.round((open / total) * 100), color: '#0b4f7a' },
     ];
-  }, [filteredData]);
+  }, [filteredData, lang]);
 
   // 3.11 Required vs actual arrival (OFF_BUCKETS)
   const offDelayBuckets = useMemo(() => {
@@ -1003,14 +1056,14 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
       <div className="rail">
         <div className="rrow">
           <div className="fld">
-            <label>{lang === 'ar' ? 'أساس التاريخ (Date basis)' : 'Date basis'}</label>
+            <label>{lang === 'ar' ? 'أساس التاريخ' : 'Date basis'}</label>
             <select value={dateBasis} onChange={(e) => setDateBasis(e.target.value)}>
-              <option value="load">{lang === 'ar' ? 'تاريخ النشاط (Activity date)' : 'Activity date'}</option>
-              <option value="reqDate">{lang === 'ar' ? 'تاريخ التعتيق المطلوب (Required offloading date)' : 'Required offloading date'}</option>
-              <option value="arrDate">{lang === 'ar' ? 'تاريخ الوصول الفعلي (Actual Arrival Date)' : 'Actual Arrival Date'}</option>
-              <option value="gateOut">{lang === 'ar' ? 'تاريخ الخروج من بوابة العميل (Get-out date)' : 'Get-out date'}</option>
-              <option value="free">{lang === 'ar' ? 'نهاية فترة السماح (Free-time end)' : 'Free-time end'}</option>
-              <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء (Creation date)' : 'Creation date'}</option>
+              <option value="load">{lang === 'ar' ? 'تاريخ النشاط' : 'Activity date'}</option>
+              <option value="reqDate">{lang === 'ar' ? 'تاريخ التعتيق المطلوب' : 'Required offloading date'}</option>
+              <option value="arrDate">{lang === 'ar' ? 'تاريخ الوصول الفعلي' : 'Actual arrival date'}</option>
+              <option value="gateOut">{lang === 'ar' ? 'تاريخ الخروج من البوابة' : 'Gate-out date'}</option>
+              <option value="free">{lang === 'ar' ? 'نهاية فترة السماح' : 'Free-time end'}</option>
+              <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Creation date'}</option>
             </select>
           </div>
 
@@ -1026,11 +1079,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
           {/* Delivery status (Open / Delivered) added right next to To */}
           <div className="fld">
-            <label>{lang === 'ar' ? 'حالة الشحنة (Delivery status)' : 'Delivery status'}</label>
+            <label>{lang === 'ar' ? 'حالة الشحنة' : 'Delivery status'}</label>
             <select value={deliveryStatus} onChange={(e) => setDeliveryStatus(e.target.value)}>
-              <option value="All">{lang === 'ar' ? 'كل الشحنات (All)' : 'All'}</option>
-              <option value="Open">Open</option>
-              <option value="Delivered">Delivered</option>
+              <option value="All">{lang === 'ar' ? 'كل الشحنات' : 'All'}</option>
+              <option value="Open">{lang === 'ar' ? 'مفتوحة / قيد النقل' : 'Open / In transit'}</option>
+              <option value="Delivered">{lang === 'ar' ? 'تم التسليم' : 'Delivered'}</option>
             </select>
           </div>
 
@@ -1089,7 +1142,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
         <div className="rrow">
           <div className="fld">
-            <label>{lang === 'ar' ? 'العميل (Client)' : 'Client'}</label>
+            <label>{lang === 'ar' ? 'العميل' : 'Client'}</label>
             <select value={fClient} onChange={(e) => setFClient(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل العملاء' : 'All clients'}</option>
               {(options.clients || []).map((c) => (
@@ -1099,7 +1152,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           </div>
 
           <div className="fld">
-            <label>{lang === 'ar' ? 'مقاول النقل (Transporter)' : 'Transporter'}</label>
+            <label>{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</label>
             <select value={fTrucker} onChange={(e) => setFTrucker(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل المقاولين' : 'All transporters'}</option>
               {(options.truckers || []).map((t) => (
@@ -1112,8 +1165,8 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="fld">
             <label>
               {isImport
-                ? (lang === 'ar' ? 'مكان التعتيق (Offloading site)' : 'Offloading site')
-                : (lang === 'ar' ? 'مكان التحميل (Loading site)' : 'Loading site')}
+                ? (lang === 'ar' ? 'مكان التعتيق' : 'Offloading site')
+                : (lang === 'ar' ? 'مكان التحميل' : 'Loading site')}
             </label>
             <select value={fDest} onChange={(e) => setFDest(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الأماكن' : 'All sites'}</option>
@@ -1125,7 +1178,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
           {/* Container filter (New) */}
           <div className="fld">
-            <label>{lang === 'ar' ? 'نوع الحاوية (Container)' : 'Container'}</label>
+            <label>{lang === 'ar' ? 'نوع الحاوية' : 'Container'}</label>
             <select value={fSize} onChange={(e) => setFSize(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل المقاسات' : 'All containers'}</option>
               {(options.sizes.length > 0 ? options.sizes : ["20'", "40'", "40' HC", "LCL"]).map((s) => (
@@ -1136,7 +1189,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
           {/* Operations staff filter (New) */}
           <div className="fld">
-            <label>{lang === 'ar' ? 'فريق العمليات (Operations staff)' : 'Operations staff'}</label>
+            <label>{lang === 'ar' ? 'فريق العمليات' : 'Operations staff'}</label>
             <select value={fOper} onChange={(e) => setFOper(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الفريق' : 'All staff'}</option>
               {(options.opers || []).map((o) => (
@@ -1146,7 +1199,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           </div>
 
           <div className="fld">
-            <label>{lang === 'ar' ? 'الخط الملاحي (Shipping line)' : 'Shipping line'}</label>
+            <label>{lang === 'ar' ? 'الخط الملاحي' : 'Shipping line'}</label>
             <select value={fLine} onChange={(e) => setFLine(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الخطوط' : 'All lines'}</option>
               {(options.lines || []).map((l) => (
@@ -1158,7 +1211,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           {/* Export: POL filter instead of Demurrage */}
           {!isImport && (
             <div className="fld">
-              <label>{lang === 'ar' ? 'ميناء الشحن (POL)' : 'POL'}</label>
+              <label>{lang === 'ar' ? 'ميناء الشحن (POL)' : 'Port of Loading (POL)'}</label>
               <select value={fPol} onChange={(e) => setFPol(e.target.value)}>
                 <option value="">{lang === 'ar' ? 'كل الموانئ' : 'All POL'}</option>
                 {(options.pols || []).map((p) => (
@@ -1169,7 +1222,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           )}
 
           <div className="fld">
-            <label>{lang === 'ar' ? 'ميناء الوصول (POD)' : 'POD'}</label>
+            <label>{lang === 'ar' ? 'ميناء الوصول (POD)' : 'Port of Discharge (POD)'}</label>
             <select value={fPort} onChange={(e) => setFPort(e.target.value)}>
               <option value="">{lang === 'ar' ? 'كل الموانئ' : 'All ports'}</option>
               {(options.pods || []).map((p) => (
@@ -1181,11 +1234,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           {/* Import: Demurrage with Pulled after free time / Within free time */}
           {isImport && (
             <div className="fld">
-              <label>{lang === 'ar' ? 'غرامات الأرضيات (Demurrage)' : 'Demurrage'}</label>
+              <label>{lang === 'ar' ? 'غرامات الأرضيات' : 'Demurrage'}</label>
               <select value={fRisk} onChange={(e) => setFRisk(e.target.value)}>
                 <option value="">{lang === 'ar' ? 'كل الشحنات' : 'All demurrage'}</option>
-                <option value="Late">Pulled after free time</option>
-                <option value="OK">Within free time</option>
+                <option value="Late">{lang === 'ar' ? 'سُحبت بعد فترة السماح' : 'Pulled after free time'}</option>
+                <option value="OK">{lang === 'ar' ? 'ضمن فترة السماح' : 'Within free time'}</option>
               </select>
             </div>
           )}
@@ -1197,87 +1250,95 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         {isImport ? (
           <>
             {/* Import KPI Cards */}
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'إجمالي عدد رحلات الشاحنات المنفذة لنقل الحاويات' : 'Total container truck haulage trips completed'}>
               <div className="k-top"><span className="k-ico">🚛</span><span className="k-label">{lang === 'ar' ? 'رحلات النقل' : 'Truck trips'}</span></div>
               <div className="k-val">{metrics.totalTrips}</div>
-              <div className="k-sub">{metrics.totalTrips} {lang === 'ar' ? 'رحلة وارد' : 'import trips'}</div>
+              <div className="k-sub">
+                {lang === 'ar'
+                  ? `${metrics.totalTrips} رحلة نقل شاحنات`
+                  : `${metrics.totalTrips} truck haulage trips`}
+              </div>
               <div className="spark"><i></i><i></i><i></i><i></i><i></i></div>
             </div>
 
-            <div className="kpi aqua">
+            <div className="kpi aqua" title={lang === 'ar' ? 'إجمالي الحاويات المنقولة: 702 حاوية مقاس 40 قدم (99.6%) و 3 حاويات مقاس 20 قدم (0.4%)' : 'Total containers moved: 702 units of 40ft (99.6%) and 3 units of 20ft (0.4%)'}>
               <div className="k-top"><span className="k-ico">📦</span><span className="k-label">{lang === 'ar' ? 'الحاويات' : 'Containers'}</span></div>
               <div className="k-val">{metrics.totalTrips}</div>
-              <div className="k-sub">{metrics.count40 + metrics.count40HC} × 40' ({metrics.pct40}%) · {metrics.count20} × 20' ({metrics.pct20}%)</div>
+              <div className="k-sub">
+                {lang === 'ar'
+                  ? `${metrics.count40 + metrics.count40HC} حاوية (40 قدم) · ${metrics.count20} حاويات (20 قدم)`
+                  : `${metrics.count40 + metrics.count40HC} × 40ft (${metrics.pct40Str}) · ${metrics.count20} × 20ft (${metrics.pct20Str})`}
+              </div>
               <div className="spark"><i></i><i></i><i></i><i></i><i></i></div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'عدد العملاء ومواقع التعتيق التي تم توصيل الحاويات إليها' : 'Active client accounts across all delivery destination sites'}>
               <div className="k-top"><span className="k-ico">🏭</span><span className="k-label">{lang === 'ar' ? 'العملاء' : 'Clients served'}</span></div>
               <div className="k-val">{metrics.clientsCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'عبر ' + metrics.sitesCount + ' موقع' : 'across ' + metrics.sitesCount + ' sites'}</div>
+              <div className="k-sub">{lang === 'ar' ? `موزعين عبر ${metrics.sitesCount} موقع تعتيق` : `across ${metrics.sitesCount} offloading sites`}</div>
             </div>
 
-            <div className="kpi sand">
+            <div className="kpi sand" title={lang === 'ar' ? 'مؤشر تركز الأعمال: يوضح حصة أكبر 3 مقاولي نقل من إجمالي حجم النقل' : 'Fleet concentration: share of total trips moved by the top 3 truckers'}>
               <div className="k-top"><span className="k-ico">🤝</span><span className="k-label">{lang === 'ar' ? 'المقاولون' : 'Truckers used'}</span></div>
               <div className="k-val">{metrics.truckersCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'أكبر 3 ينقلون ' + metrics.top3TruckersPct + '%' : 'top 3 carry ' + metrics.top3TruckersPct + '% of trips'}</div>
+              <div className="k-sub">{lang === 'ar' ? `أكبر 3 ينقلون ${metrics.top3TruckersPct}% (معدل التركز)` : `top 3 carry ${metrics.top3TruckersPct}% of trips`}</div>
             </div>
 
-            <div className="kpi bad">
+            <div className="kpi bad" title={lang === 'ar' ? 'نسبة وعدد الحاويات التي تم سحبها بعد انتهاء فترة السماح بالميناء مما يعرضها لغرامات أرضيات' : 'Demurrage risk: containers pulled after free time expired'}>
               <div className="k-top"><span className="k-ico">⚠️</span><span className="k-label">{lang === 'ar' ? 'مخاطر الأرضيات' : 'Demurrage risk'}</span></div>
               <div className="k-val text-rose-600">{metrics.demurragePct}%</div>
               <div className="k-sub">{metrics.demurrageLateCount} {lang === 'ar' ? 'رحلة متأخرة عن السماح' : 'trips with late free time'}</div>
             </div>
 
-            <div className="kpi good">
+            <div className="kpi good" title={lang === 'ar' ? 'متوسط عدد الأيام المتبقية في فترة السماح عند تاريخ سحب الحاوية' : 'Average days of shipping line free time remaining on date of pull'}>
               <div className="k-top"><span className="k-ico">🕓</span><span className="k-label">{lang === 'ar' ? 'فترة السماح المتبقية' : 'Free time left'}</span></div>
               <div className="k-val text-emerald-700">{metrics.freeDaysAvg} d</div>
-              <div className="k-sub">{lang === 'ar' ? 'متوسط الأيام المتبقية في السماح' : 'avg days between activity date and free time end'}</div>
+              <div className="k-sub">{lang === 'ar' ? 'متوسط الأيام المتبقية قبل الغرامة' : 'avg days buffer before demurrage'}</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'عدد مسؤولي التشغيل وحصة الموظف الأكثر نشاطاً من الملفات' : 'Operations staff members and share handled by primary coordinator'}>
               <div className="k-top"><span className="k-ico">👥</span><span className="k-label">{lang === 'ar' ? 'فريق العمليات' : 'Operations staff'}</span></div>
               <div className="k-val">{metrics.opStaffCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'أكثرهم نشاطاً يدير ' + metrics.busiestStaffPct + '%' : 'busiest handles ' + metrics.busiestStaffPct + '% of trips'}</div>
+              <div className="k-sub">{lang === 'ar' ? `أكثرهم نشاطاً يدير ${metrics.busiestStaffPct}%` : `busiest handles ${metrics.busiestStaffPct}% of trips`}</div>
             </div>
 
-            <div className="kpi warn">
+            <div className="kpi warn" title={lang === 'ar' ? 'عدد السيارات المسجلة ومتوسط عدد الرحلات المنفذة لكل سيارة' : 'Number of distinct trucks utilized and average trips completed per truck'}>
               <div className="k-top"><span className="k-ico">🚚</span><span className="k-label">{lang === 'ar' ? 'السيارات المستخدمة' : 'Trucks used'}</span></div>
               <div className="k-val text-amber-600">{metrics.trucksCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'متوسط ' + metrics.avgTripsPerTruck + ' رحلة لكل سيارة' : metrics.avgTripsPerTruck + ' trips per truck on average'}</div>
+              <div className="k-sub">{lang === 'ar' ? `متوسط ${metrics.avgTripsPerTruck} رحلة لكل سيارة` : `${metrics.avgTripsPerTruck} trips per truck on average`}</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'إجمالي عدد الشحنات (البوالص) ومتوسط عدد الحاويات لكل بوليصة' : 'Unique shipment operations (M/BL) and average container volume per file'}>
               <div className="k-top"><span className="k-ico">📄</span><span className="k-label">{lang === 'ar' ? 'الشحنات' : 'Shipments'}</span></div>
               <div className="k-val">{metrics.shipmentsCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'متوسط ' + metrics.avgTripsPerShipment + ' رحلة لكل شحنة' : metrics.avgTripsPerShipment + ' trips per shipment on avg'}</div>
+              <div className="k-sub">{lang === 'ar' ? `متوسط ${metrics.avgTripsPerShipment} حاوية لكل شحنة` : `${metrics.avgTripsPerShipment} trips per shipment on avg`}</div>
             </div>
 
-            <div className="kpi good">
+            <div className="kpi good" title={lang === 'ar' ? 'نسبة الشاحنات التي وصلت لموقع العميل في أو قبل الوقت والتاريخ المطلوب' : 'Percentage of trucks that arrived at or before the requested offload time'}>
               <div className="k-top"><span className="k-ico">🎯</span><span className="k-label">{lang === 'ar' ? 'الوصول في الموعد' : 'Arrived on time'}</span></div>
               <div className="k-val text-emerald-700">{metrics.arrivedOnTimePct !== null ? metrics.arrivedOnTimePct + '%' : '–'}</div>
-              <div className="k-sub">{metrics.arrivedTotalCount > 0 ? (lang === 'ar' ? 'من إجمالي ' + metrics.arrivedTotalCount + ' تم وصولها' : 'from ' + metrics.arrivedTotalCount + ' arrived') : (lang === 'ar' ? 'لا توجد تواريخ وصول مسجلة بعد' : 'no actual arrive dates yet')}</div>
+              <div className="k-sub">{metrics.arrivedTotalCount > 0 ? (lang === 'ar' ? `من إجمالي ${metrics.arrivedTotalCount} تم وصولها` : `from ${metrics.arrivedTotalCount} arrived`) : (lang === 'ar' ? 'لا توجد تواريخ وصول مسجلة بعد' : 'no actual arrive dates yet')}</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'متوسط ساعات التأخير للشاحنات التي وصلت بعد الموعد المحدد' : 'Average delay in hours for trucks that arrived after the requested time'}>
               <div className="k-top"><span className="k-ico">⏱️</span><span className="k-label">{lang === 'ar' ? 'تأخير الوصول' : 'Arrival delay'}</span></div>
               <div className="k-val">{metrics.avgDelayHours !== null ? metrics.avgDelayHours + ' h' : '–'}</div>
-              <div className="k-sub">{metrics.delayCount > 0 ? (lang === 'ar' ? metrics.delayCount + ' رحلة متأخرة' : metrics.delayCount + ' delayed trips') : (lang === 'ar' ? 'لا يوجد تأخير مسجل' : 'no actual arrive delay yet')}</div>
+              <div className="k-sub">{metrics.delayCount > 0 ? (lang === 'ar' ? `${metrics.delayCount} رحلة متأخرة` : `${metrics.delayCount} delayed trips`) : (lang === 'ar' ? 'لا يوجد تأخير مسجل' : 'no actual arrive delay yet')}</div>
             </div>
 
-            <div className="kpi aqua">
+            <div className="kpi aqua" title={lang === 'ar' ? 'متوسط زمن النقل البري بالساعات من خروج بوابة الميناء حتى الوصول لموقع العميل' : 'Average road transit time in hours from port gate-out to client site arrival'}>
               <div className="k-top"><span className="k-ico">🛣️</span><span className="k-label">{lang === 'ar' ? 'زمن النقل' : 'Gate → site transit'}</span></div>
               <div className="k-val">{metrics.avgTransitHours !== null ? metrics.avgTransitHours + ' h' : '–'}</div>
-              <div className="k-sub">{metrics.transitPairsCount > 0 ? (lang === 'ar' ? 'متوسط ' + metrics.transitPairsCount + ' رحلة' : 'across ' + metrics.transitPairsCount + ' trips') : (lang === 'ar' ? 'في انتظار اكتمال التواريخ' : 'no gate out + arrive pairs yet')}</div>
+              <div className="k-sub">{metrics.transitPairsCount > 0 ? (lang === 'ar' ? `متوسط ${metrics.transitPairsCount} رحلة` : `across ${metrics.transitPairsCount} trips`) : (lang === 'ar' ? 'في انتظار اكتمال التواريخ' : 'no gate out + arrive pairs yet')}</div>
             </div>
 
-            <div className="kpi aqua">
+            <div className="kpi aqua" title={lang === 'ar' ? 'عدد مواقع التعتيق وموقع التعتيق الأكثر نشاطاً مع نسبته' : 'Distinct offloading sites and highest volume site share'}>
               <div className="k-top"><span className="k-ico">📍</span><span className="k-label">{lang === 'ar' ? 'وجهات التعتيق' : 'Destinations'}</span></div>
               <div className="k-val">{metrics.destCount}</div>
               <div className="k-sub">{metrics.topDestName} ({metrics.topDestPct}%)</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'عدد موانئ الوصول البحرية وميناء الوصول الأكثر استقبالاً للحاويات' : 'Destination seaports and primary arrival port volume share'}>
               <div className="k-top"><span className="k-ico">⚓</span><span className="k-label">{lang === 'ar' ? 'ميناء الوصول' : 'Ports (POD)'}</span></div>
               <div className="k-val">{metrics.portsCount}</div>
               <div className="k-sub">{metrics.topPodName} ({metrics.topPodPct}%)</div>
@@ -1286,90 +1347,98 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         ) : (
           <>
             {/* Export KPI Cards */}
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'إجمالي عدد رحلات الشاحنات المنفذة لنقل حاويات الصادر' : 'Total export container haulage trips completed'}>
               <div className="k-top"><span className="k-ico">🚛</span><span className="k-label">{lang === 'ar' ? 'رحلات النقل' : 'Truck trips'}</span></div>
               <div className="k-val">{metrics.totalTrips}</div>
-              <div className="k-sub">{metrics.totalTrips} {lang === 'ar' ? 'رحلة صادر' : 'export trips'}</div>
+              <div className="k-sub">
+                {lang === 'ar'
+                  ? `${metrics.totalTrips} رحلة نقل شاحنات`
+                  : `${metrics.totalTrips} truck haulage trips`}
+              </div>
               <div className="spark"><i></i><i></i><i></i><i></i><i></i></div>
             </div>
 
-            <div className="kpi aqua">
+            <div className="kpi aqua" title={lang === 'ar' ? 'إجمالي الحاويات المنقولة وتوزيع مقاساتها بين 40 قدم و 20 قدم' : 'Total containers moved: breakdown between 40ft and 20ft units'}>
               <div className="k-top"><span className="k-ico">📦</span><span className="k-label">{lang === 'ar' ? 'الحاويات' : 'Containers'}</span></div>
               <div className="k-val">{metrics.totalTrips}</div>
-              <div className="k-sub">{metrics.count40 + metrics.count40HC} × 40' ({metrics.pct40}%) · {metrics.count20} × 20' ({metrics.pct20}%)</div>
+              <div className="k-sub">
+                {lang === 'ar'
+                  ? `${metrics.count40 + metrics.count40HC} حاوية (40 قدم) · ${metrics.count20} حاويات (20 قدم)`
+                  : `${metrics.count40 + metrics.count40HC} × 40ft (${metrics.pct40Str}) · ${metrics.count20} × 20ft (${metrics.pct20Str})`}
+              </div>
               <div className="spark"><i></i><i></i><i></i><i></i><i></i></div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'عدد العملاء ومواقع التحميل التي تم تحميل الحاويات منها' : 'Active client accounts across all export loading sites'}>
               <div className="k-top"><span className="k-ico">🏭</span><span className="k-label">{lang === 'ar' ? 'العملاء' : 'Clients served'}</span></div>
               <div className="k-val">{metrics.clientsCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'عبر ' + metrics.sitesCount + ' موقع' : 'across ' + metrics.sitesCount + ' sites'}</div>
+              <div className="k-sub">{lang === 'ar' ? `موزعين عبر ${metrics.sitesCount} موقع تحميل` : `across ${metrics.sitesCount} loading sites`}</div>
             </div>
 
-            <div className="kpi sand">
+            <div className="kpi sand" title={lang === 'ar' ? 'مؤشر تركز الأعمال: يوضح حصة أكبر 3 مقاولي نقل من إجمالي حجم النقل' : 'Fleet concentration: share of total trips moved by the top 3 truckers'}>
               <div className="k-top"><span className="k-ico">🤝</span><span className="k-label">{lang === 'ar' ? 'المقاولون' : 'Truckers used'}</span></div>
               <div className="k-val">{metrics.truckersCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'أكبر 3 ينقلون ' + metrics.top3TruckersPct + '%' : 'top 3 carry ' + metrics.top3TruckersPct + '% of trips'}</div>
+              <div className="k-sub">{lang === 'ar' ? `أكبر 3 ينقلون ${metrics.top3TruckersPct}% (معدل التركز)` : `top 3 carry ${metrics.top3TruckersPct}% of trips`}</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'عدد مسؤولي التشغيل وحصة الموظف الأكثر إدارة للملفات' : 'Operations staff members and share handled by primary coordinator'}>
               <div className="k-top"><span className="k-ico">👥</span><span className="k-label">{lang === 'ar' ? 'فريق العمليات' : 'Operations staff'}</span></div>
               <div className="k-val">{metrics.opStaffCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'أكثرهم نشاطاً يدير ' + metrics.busiestStaffPct + '%' : 'busiest handles ' + metrics.busiestStaffPct + '% of trips'}</div>
+              <div className="k-sub">{lang === 'ar' ? `أكثرهم نشاطاً يدير ${metrics.busiestStaffPct}%` : `busiest handles ${metrics.busiestStaffPct}% of trips`}</div>
             </div>
 
-            <div className="kpi warn">
+            <div className="kpi warn" title={lang === 'ar' ? 'عدد السيارات المسجلة ومتوسط عدد الرحلات المنفذة لكل سيارة' : 'Number of distinct trucks utilized and average trips completed per truck'}>
               <div className="k-top"><span className="k-ico">🚚</span><span className="k-label">{lang === 'ar' ? 'السيارات المستخدمة' : 'Trucks used'}</span></div>
               <div className="k-val text-amber-600">{metrics.trucksCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'متوسط ' + metrics.avgTripsPerTruck + ' رحلة لكل سيارة' : metrics.avgTripsPerTruck + ' trips per truck on average'}</div>
+              <div className="k-sub">{lang === 'ar' ? `متوسط ${metrics.avgTripsPerTruck} رحلة لكل سيارة` : `${metrics.avgTripsPerTruck} trips per truck on average`}</div>
             </div>
 
-            <div className="kpi bad">
+            <div className="kpi bad" title={lang === 'ar' ? 'متوسط الأيام المتبقية قبل موعد الـ Cut-off لتسليم الحاويات بالميناء' : 'Average days buffer before port cut-off deadline'}>
               <div className="k-top"><span className="k-ico">⏰</span><span className="k-label">{lang === 'ar' ? 'مهلة Cut-off' : 'Cut-off buffer'}</span></div>
               <div className="k-val text-rose-600">{metrics.cutoffBufferAvg} d</div>
-              <div className="k-sub">{metrics.cutoffCount > 0 ? (lang === 'ar' ? metrics.cutoffLateCount + ' من ' + metrics.cutoffCount + ' بعد الـ Cut-off' : metrics.cutoffLateCount + ' of ' + metrics.cutoffCount + ' after the cut-off') : (lang === 'ar' ? 'لا توجد تواريخ Cut-off مسجلة' : 'no cut-off dates yet')}</div>
+              <div className="k-sub">{metrics.cutoffCount > 0 ? (lang === 'ar' ? `${metrics.cutoffLateCount} من ${metrics.cutoffCount} بعد الـ Cut-off` : `${metrics.cutoffLateCount} of ${metrics.cutoffCount} after the cut-off`) : (lang === 'ar' ? 'لا توجد تواريخ Cut-off مسجلة' : 'no cut-off dates yet')}</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'إجمالي عدد حجوزات الصادر (Bookings) ومتوسط عدد الحاويات لكل حجز' : 'Unique export bookings and average container volume per booking'}>
               <div className="k-top"><span className="k-ico">📄</span><span className="k-label">{lang === 'ar' ? 'الشحنات' : 'Shipments'}</span></div>
               <div className="k-val">{metrics.shipmentsCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'متوسط ' + metrics.avgTripsPerShipment + ' رحلة لكل شحنة' : metrics.avgTripsPerShipment + ' trips per shipment on avg'}</div>
+              <div className="k-sub">{lang === 'ar' ? `متوسط ${metrics.avgTripsPerShipment} حاوية لكل حجز` : `${metrics.avgTripsPerShipment} trips per shipment on avg`}</div>
             </div>
 
-            <div className="kpi good">
+            <div className="kpi good" title={lang === 'ar' ? 'نسبة الشاحنات التي وصلت لموقع التحميل في أو قبل الوقت والتاريخ المطلوب' : 'Percentage of trucks that arrived at or before the requested loading time'}>
               <div className="k-top"><span className="k-ico">🎯</span><span className="k-label">{lang === 'ar' ? 'الوصول في الموعد' : 'Arrived on time'}</span></div>
               <div className="k-val text-emerald-700">{metrics.arrivedOnTimePct !== null ? metrics.arrivedOnTimePct + '%' : '–'}</div>
-              <div className="k-sub">{metrics.arrivedTotalCount > 0 ? (lang === 'ar' ? 'من إجمالي ' + metrics.arrivedTotalCount + ' تم وصولها' : 'from ' + metrics.arrivedTotalCount + ' arrived') : (lang === 'ar' ? 'لا توجد تواريخ وصول مسجلة بعد' : 'no actual arrive dates yet')}</div>
+              <div className="k-sub">{metrics.arrivedTotalCount > 0 ? (lang === 'ar' ? `من إجمالي ${metrics.arrivedTotalCount} تم وصولها` : `from ${metrics.arrivedTotalCount} arrived`) : (lang === 'ar' ? 'لا توجد تواريخ وصول مسجلة بعد' : 'no actual arrive dates yet')}</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'متوسط ساعات التأخير للشاحنات التي وصلت بعد موعد التحميل المطلوب' : 'Average delay in hours for trucks that arrived after requested loading time'}>
               <div className="k-top"><span className="k-ico">⏱️</span><span className="k-label">{lang === 'ar' ? 'تأخير الوصول' : 'Arrival delay'}</span></div>
               <div className="k-val">{metrics.avgDelayHours !== null ? metrics.avgDelayHours + ' h' : '–'}</div>
-              <div className="k-sub">{metrics.delayCount > 0 ? (lang === 'ar' ? metrics.delayCount + ' رحلة متأخرة' : metrics.delayCount + ' delayed trips') : (lang === 'ar' ? 'لا يوجد تأخير مسجل' : 'no actual arrive delay yet')}</div>
+              <div className="k-sub">{metrics.delayCount > 0 ? (lang === 'ar' ? `${metrics.delayCount} رحلة متأخرة` : `${metrics.delayCount} delayed trips`) : (lang === 'ar' ? 'لا يوجد تأخير مسجل' : 'no actual arrive delay yet')}</div>
             </div>
 
-            <div className="kpi aqua">
+            <div className="kpi aqua" title={lang === 'ar' ? 'متوسط زمن النقل البري بالساعات من خروج الميناء حتى موقع التحميل' : 'Average road transit time in hours from gate-out to loading site'}>
               <div className="k-top"><span className="k-ico">🛣️</span><span className="k-label">{lang === 'ar' ? 'زمن النقل' : 'Gate → site transit'}</span></div>
               <div className="k-val">{metrics.avgTransitHours !== null ? metrics.avgTransitHours + ' h' : '–'}</div>
-              <div className="k-sub">{metrics.transitPairsCount > 0 ? (lang === 'ar' ? 'متوسط ' + metrics.transitPairsCount + ' رحلة' : 'across ' + metrics.transitPairsCount + ' trips') : (lang === 'ar' ? 'في انتظار اكتمال التواريخ' : 'no gate out + arrive pairs yet')}</div>
+              <div className="k-sub">{metrics.transitPairsCount > 0 ? (lang === 'ar' ? `متوسط ${metrics.transitPairsCount} رحلة` : `across ${metrics.transitPairsCount} trips`) : (lang === 'ar' ? 'في انتظار اكتمال التواريخ' : 'no gate out + arrive pairs yet')}</div>
             </div>
 
-            <div className="kpi aqua">
-              <div className="k-top"><span className="k-ico">📍</span><span className="k-label">{lang === 'ar' ? 'الوجهات' : 'Destinations'}</span></div>
+            <div className="kpi aqua" title={lang === 'ar' ? 'عدد مواقع التحميل وموقع التحميل الأكثر نشاطاً ونسبته' : 'Distinct loading locations and highest volume site share'}>
+              <div className="k-top"><span className="k-ico">📍</span><span className="k-label">{lang === 'ar' ? 'مواقع التحميل' : 'Destinations'}</span></div>
               <div className="k-val">{metrics.destCount}</div>
               <div className="k-sub">{metrics.topDestName} ({metrics.topDestPct}%)</div>
             </div>
 
-            <div className="kpi">
+            <div className="kpi" title={lang === 'ar' ? 'عدد موانئ الوصول البحرية وميناء الوصول الأكثر شحناً إليه' : 'Destination seaports and primary arrival port volume share'}>
               <div className="k-top"><span className="k-ico">⚓</span><span className="k-label">{lang === 'ar' ? 'ميناء الوصول' : 'Ports (POD)'}</span></div>
               <div className="k-val">{metrics.portsCount}</div>
               <div className="k-sub">{metrics.topPodName} ({metrics.topPodPct}%)</div>
             </div>
 
-            <div className="kpi aqua">
+            <div className="kpi aqua" title={lang === 'ar' ? 'عدد المسارات من ميناء الشحن (POL) إلى ميناء الوصول (POD)' : 'Distinct POL → POD shipping corridors'}>
               <div className="k-top"><span className="k-ico">🛣️</span><span className="k-label">{lang === 'ar' ? 'المسارات' : 'Routes'}</span></div>
               <div className="k-val">{metrics.routesCount}</div>
-              <div className="k-sub">{lang === 'ar' ? 'إلى ' + metrics.portsCount + ' موانئ وصول' : 'to ' + metrics.portsCount + ' destination ports'}</div>
+              <div className="k-sub">{lang === 'ar' ? `إلى ${metrics.portsCount} موانئ وصول` : `to ${metrics.portsCount} destination ports`}</div>
             </div>
           </>
         )}
@@ -1451,7 +1520,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
                         style={{ height: `${barHeightPct}%` }}
                       />
                       <span className="absolute -bottom-5 text-xs font-semibold text-slate-500 whitespace-nowrap">
-                        {m.label}
+                        {lang === 'ar' ? (m.arLabel || m.label) : m.label}
                       </span>
                     </div>
                   );
@@ -1465,9 +1534,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-4 overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-            Shipping lines
+            {lang === 'ar' ? 'الخطوط الملاحية' : 'Shipping lines'}
           </h4>
-          <p className="text-[11px] text-slate-400 mb-4">Line of the containers moved</p>
+          <p className="text-[11px] text-slate-400 mb-4">
+            {lang === 'ar' ? 'الخط الناقل للحاويات المنقولة' : 'Line of the containers moved'}
+          </p>
 
           <div className="space-y-2">
             {lineData.map((l) => (
@@ -1562,9 +1633,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-            Trips by client
+            {lang === 'ar' ? 'الرحلات حسب العميل' : 'Trips by client'}
           </h4>
-          <p className="text-[11px] text-slate-400 mb-4">Volume share — click a client to focus</p>
+          <p className="text-[11px] text-slate-400 mb-4">
+            {lang === 'ar' ? 'حصة الأحجام — اضغط على عميل للتركيز' : 'Volume share — click a client to focus'}
+          </p>
 
           <div className="space-y-2.5">
             {clientData.map((c, i) => (
@@ -1589,9 +1662,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-            Trips by trucker
+            {lang === 'ar' ? 'الرحلات حسب مقاول النقل' : 'Trips by trucker'}
           </h4>
-          <p className="text-[11px] text-slate-400 mb-4">Who moves our containers — click to focus</p>
+          <p className="text-[11px] text-slate-400 mb-4">
+            {lang === 'ar' ? 'من ينقل حاوياتنا — اضغط للتركيز' : 'Who moves our containers — click to focus'}
+          </p>
 
           <div className="space-y-2.5">
             {truckerData.map((t, i) => (
@@ -1621,9 +1696,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-rose-600"></span>
-              Demurrage risk by client
+              {lang === 'ar' ? 'مخاطر غرامات الأرضيات حسب العميل' : 'Demurrage risk by client'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">% of trips pulled after the free time end</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'نسبة الرحلات المسحوبة بعد انتهاء فترة السماح' : '% of trips pulled after the free time end'}
+            </p>
 
             <div className="h-36 flex items-end gap-6 border-b border-slate-200 pb-2 px-4">
               {riskByClientData.map((item) => (
@@ -1643,9 +1720,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-600"></span>
-              Free-time usage
+              {lang === 'ar' ? 'استغلال فترة السماح' : 'Free-time usage'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Days left before demurrage when the container was pulled</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'الأيام المتبقية قبل الغرامات عند سحب الحاوية' : 'Days left before demurrage when the container was pulled'}
+            </p>
 
             <div className="h-36 flex items-end gap-8 border-b border-slate-200 pb-2 px-6">
               {freeUsageData.map((item) => (
@@ -1668,9 +1747,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-cyan-600"></span>
-              Loading sites
+              {lang === 'ar' ? 'مواقع التحميل' : 'Loading sites'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Origin locations for export shipments</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'أماكن الانطلاق لشحنات الصادر' : 'Origin locations for export shipments'}
+            </p>
 
             <div className="space-y-2.5">
               {loadingSitesData.map((s) => (
@@ -1692,9 +1773,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-              Export routes
+              {lang === 'ar' ? 'مسارات الصادر' : 'Export routes'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Top corridors from POL to POD</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'أهم الممرات الملاحية من ميناء الشحن إلى ميناء الوصول' : 'Top corridors from POL to POD'}
+            </p>
 
             <div className="space-y-2.5">
               {exportRoutesData.map((r) => (
@@ -1722,9 +1805,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-8 overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-cyan-600"></span>
-              Offloading sites
+              {lang === 'ar' ? 'مواقع التعتيق / التسليم' : 'Offloading sites'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Container delivery locations</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'أماكن تسليم وتعتيق الحاويات' : 'Container delivery locations'}
+            </p>
 
             <div className="space-y-2">
               {siteData.map((s) => (
@@ -1746,9 +1831,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-4 overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-              Destination ports (POD)
+              {lang === 'ar' ? 'موانئ الوصول (POD)' : 'Destination ports (POD)'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Trips by destination port</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'الرحلات حسب ميناء الوصول البحري' : 'Trips by destination port'}
+            </p>
 
             <div className="h-44 flex items-end justify-center gap-12 border-b border-slate-200 pb-2 px-4">
               {portData.map((p) => (
@@ -1771,9 +1858,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-7 overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-              Destination ports (POD)
+              {lang === 'ar' ? 'موانئ الوصول (POD)' : 'Destination ports (POD)'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Trips by destination seaport</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'الرحلات حسب الميناء البحري للوصول' : 'Trips by destination seaport'}
+            </p>
 
             <div className="h-40 flex items-end justify-between border-b border-slate-200 pb-2 px-4 gap-2">
               {portData.map((p) => (
@@ -1793,9 +1882,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-5 overflow-hidden">
             <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full bg-emerald-600"></span>
-              Delivery status
+              {lang === 'ar' ? 'حالة تسليم الشحنات' : 'Delivery status'}
             </h4>
-            <p className="text-[11px] text-slate-400 mb-4">Workflow status of export shipments</p>
+            <p className="text-[11px] text-slate-400 mb-4">
+              {lang === 'ar' ? 'مراحل ومسار تسليم شحنات الصادر' : 'Workflow status of export shipments'}
+            </p>
 
             <div className="flex flex-col items-center justify-center pt-2">
               <div className="relative h-28 w-28 flex items-center justify-center">
@@ -1811,10 +1902,10 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
               <div className="flex items-center gap-6 mt-4 text-xs font-semibold">
                 <span className="flex items-center gap-1.5 text-emerald-700">
-                  <i className="h-2.5 w-2.5 rounded-full bg-emerald-600"></i> Delivered ({exportStatusData[0]?.pct || 0}%)
+                  <i className="h-2.5 w-2.5 rounded-full bg-emerald-600"></i> {lang === 'ar' ? 'تم التسليم' : 'Delivered'} ({exportStatusData[0]?.pct || 0}%)
                 </span>
                 <span className="flex items-center gap-1.5 text-sky-800">
-                  <i className="h-2.5 w-2.5 rounded-full bg-[#0b4f7a]"></i> Open ({exportStatusData[1]?.pct || 0}%)
+                  <i className="h-2.5 w-2.5 rounded-full bg-[#0b4f7a]"></i> {lang === 'ar' ? 'مفتوحة / قيد النقل' : 'Open / In transit'} ({exportStatusData[1]?.pct || 0}%)
                 </span>
               </div>
             </div>
@@ -1828,7 +1919,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-7 overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-            Required vs actual arrival
+            {lang === 'ar' ? 'الوصول المطلوب مقابل الفعلي' : 'Required vs actual arrival'}
           </h4>
           <p className="text-[11px] text-slate-400 mb-4">
             {isImport
@@ -1857,9 +1948,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-5 overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-emerald-600"></span>
-            Arrival performance
+            {lang === 'ar' ? 'كفاءة ودقة مواعيد الوصول' : 'Arrival performance'}
           </h4>
-          <p className="text-[11px] text-slate-400 mb-4">Actual arrive against the required date & time</p>
+          <p className="text-[11px] text-slate-400 mb-4">
+            {lang === 'ar' ? 'دقة الوصول الفعلي مقارنة بالموعد المحدد' : 'Actual arrival against the required date & time'}
+          </p>
 
           <div className="h-36 flex flex-col items-center justify-center">
             <div className="relative h-24 w-24 flex items-center justify-center">
@@ -1889,9 +1982,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
         <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-rose-600"></span>
-          Delay share by trucker
+          {lang === 'ar' ? 'نسبة التأخير لكل مقاول نقل' : 'Delay share by trucker'}
         </h4>
-        <p className="text-[11px] text-slate-400 mb-4">% of each trucker's trips that arrived late — min 3 trips</p>
+        <p className="text-[11px] text-slate-400 mb-4">
+          {lang === 'ar' ? 'نسبة الرحلات المتأخرة لكل مقاول نقل — حد أدنى رحلة واحدة' : "% of each trucker's trips that arrived late — min 3 trips"}
+        </p>
 
         <div className={`h-36 flex items-end border-b border-slate-200 pb-2 px-6 gap-6 ${delayTruckerData.length <= 4 ? 'justify-center gap-16' : 'justify-between'}`}>
           {delayTruckerData.map((d) => (
@@ -1916,9 +2011,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-4 overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-blue-600"></span>
-            Container mix
+            {lang === 'ar' ? 'توزيع مقاسات الحاويات' : 'Container mix'}
           </h4>
-          <p className="text-[11px] text-slate-400 mb-4">20' vs 40' vs LCL</p>
+          <p className="text-[11px] text-slate-400 mb-4">
+            {lang === 'ar' ? "مقارنة مقاسات 20' مقابل 40' مقابل LCL" : "20' vs 40' vs LCL"}
+          </p>
 
           <div className="flex flex-col items-center justify-center pt-2">
             <div className="relative h-32 w-32 flex items-center justify-center">
@@ -1936,7 +2033,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
             <div className="flex items-center gap-4 mt-4 text-xs font-semibold text-slate-600">
               <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#0b4f7a]"></i> 40' ({metrics.pct40}%)</span>
               <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#22b8cf]"></i> 20' ({metrics.pct20}%)</span>
-              <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#8fd9e6]"></i> LCL ({Math.max(0, 100 - metrics.pct40 - metrics.pct20)}%)</span>
+              <span className="flex items-center gap-1"><i className="h-2.5 w-2.5 rounded-full bg-[#8fd9e6]"></i> {lang === 'ar' ? 'بضائع مجزأة (LCL)' : 'LCL'} ({Math.max(0, 100 - metrics.pct40 - metrics.pct20)}%)</span>
             </div>
           </div>
         </div>
@@ -1945,9 +2042,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-8 overflow-hidden">
           <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-            Workload by operations staff
+            {lang === 'ar' ? 'توزيع العمل على فريق العمليات' : 'Workload by operations staff'}
           </h4>
-          <p className="text-[11px] text-slate-400 mb-4">Trips handled per team member</p>
+          <p className="text-[11px] text-slate-400 mb-4">
+            {lang === 'ar' ? 'الرحلات المدارة لكل عضو في الفريق' : 'Trips handled per team member'}
+          </p>
 
           <div className="h-40 flex items-end justify-center gap-14 border-b border-slate-200 pb-2 px-8">
             {staffData.map((st) => (
@@ -1968,9 +2067,11 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
         <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-teal-600"></span>
-          Trucker coverage
+          {lang === 'ar' ? 'تغطية مقاولي النقل للعملاء' : 'Trucker coverage'}
         </h4>
-        <p className="text-[11px] text-slate-400 mb-4">Clients served by each trucker</p>
+        <p className="text-[11px] text-slate-400 mb-4">
+          {lang === 'ar' ? 'عدد العملاء الذين يخدمهم كل مقاول نقل' : 'Clients served by each trucker'}
+        </p>
 
         <div className={`h-36 flex items-end border-b border-slate-200 pb-2 px-8 gap-6 ${truckerCoverageData.length <= 4 ? 'justify-center gap-20' : 'justify-between'}`}>
           {truckerCoverageData.map((tc) => (

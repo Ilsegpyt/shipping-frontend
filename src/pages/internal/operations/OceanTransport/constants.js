@@ -148,15 +148,28 @@ export const FCL_RULES = [
   { id: 'dest', num: 6, labelEn: 'Same destination / site', labelAr: 'نفس مكان التعتيق / موقع التحميل' },
 ];
 
-// Priority Egyptian Ports pinned at the top of port dropdowns
+// Priority Egyptian Ports pinned at the top of port dropdowns in exact requested order:
+// 1. Sokhna (EGAIS, EGSOK, EGSKN)
+// 2. Al Adabiyah (EGADA)
+// 3. Alexandria (EGALY)
+// 4. Dekheila (EGEDK)
+// 5. Abu Kir (EGAKI, EGAMO)
+// 6. Port Said East (EGPSE)
+// 7. Port Said (EGPSD, EGPSW)
+// 8. Damietta (EGDAM)
 export const PRIORITY_PORT_CODES = [
-  'EGADA', // Al Adabiyah
   'EGAIS', // Ain Sukhna
-  'EGALY', // El Iskandariya (Alexandria)
-  'EGEDK', // El Dekheila
-  'EGPSE', // Port Said East
-  'EGPSW', // Port Said West
   'EGSOK', // Sokhna Port
+  'EGSKN', // Sumed Ain Sukhna
+  'EGADA', // Al Adabiyah
+  'EGALY', // Alexandria
+  'EGEDK', // Dekheila
+  'EGAKI', // Abu Kir
+  'EGAMO', // Abukir (Mersa El Amonia)
+  'EGPSE', // Port Said East (Esat Tafreaa)
+  'EGPSD', // Port Said
+  'EGPSW', // Port Said West
+  'EGDAM', // Damietta
 ];
 
 export const getPortPriorityRank = (p) => {
@@ -166,13 +179,23 @@ export const getPortPriorityRank = (p) => {
   if (codeIdx !== -1) return codeIdx;
 
   const name = (p.name || '').trim().toLowerCase();
-  if (name.includes('adabiy')) return 0;
-  if (name.includes('ain sukhna') || name.includes('ain sokhna')) return 1;
-  if (name.includes('iskandariya') || name.includes('alexandria')) return 2;
-  if (name.includes('dekheila')) return 3;
-  if (name.includes('port said east') || name.includes('said east')) return 4;
-  if (name.includes('port said west') || name.includes('said west')) return 5;
-  if (name.includes('sokhna') || name.includes('sukhna')) return 6;
+  // 1. Sokhna
+  if (name.includes('ain sukhna') || name.includes('ain sokhna')) return 0;
+  if (name.includes('sokhna port') || name.includes('sokhna') || name.includes('sukhna')) return 1;
+  // 2. Adabiya
+  if (name.includes('adabiy')) return 3;
+  // 3. Alexandria
+  if (name.includes('iskandariya') || name.includes('alexandria')) return 4;
+  // 4. Dekheila
+  if (name.includes('dekheila') || name.includes('dekhela')) return 5;
+  // 5. Abu Kir
+  if (name.includes('abu kir') || name.includes('abukir') || name.includes('abou kir')) return 6;
+  // 6. Port Said East
+  if (name.includes('port said east') || name.includes('said east') || name.includes('tafreaa')) return 8;
+  // 7. Port Said
+  if (name.includes('port said')) return 9;
+  // 8. Damietta
+  if (name.includes('damietta') || name.includes('damiat')) return 11;
 
   return 9999;
 };

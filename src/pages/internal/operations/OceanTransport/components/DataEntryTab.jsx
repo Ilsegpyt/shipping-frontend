@@ -612,13 +612,26 @@ export default function DataEntryTab({
 
   const portOptions = useMemo(() => {
     const sorted = sortPortsWithPriority(lookups.ports || []);
-    return sorted.map((p) => ({
-      value: p.id,
-      label: p.code ? `${p.name} (${p.code})` : p.name,
-      sublabel: p.code,
-      searchStr: `${p.name || ''} ${p.code || ''}`,
-      item: p,
-    }));
+    return sorted.map((p) => {
+      const code = (p.code || '').toUpperCase();
+      let alias = '';
+      if (code === 'EGAIS' || code === 'EGSOK' || code === 'EGSKN') alias = 'sokhna sukhna السخنة السخنه';
+      else if (code === 'EGADA') alias = 'adabiya adabiyah الأدبية الادبية الادبيه الأدبيه';
+      else if (code === 'EGALY') alias = 'alexandria iskandariya إسكندرية اسكندرية اسكندريه الإسكندرية';
+      else if (code === 'EGEDK') alias = 'dekheila dekhela الدخيلة الدخيله';
+      else if (code === 'EGAKI' || code === 'EGAMO') alias = 'abu kir abukir أبوقير ابو قير ابوقير';
+      else if (code === 'EGPSE') alias = 'port said east east port said tafreaa بورسعيد شرق شرق بورسعيد تفريعة';
+      else if (code === 'EGPSD' || code === 'EGPSW') alias = 'port said port said west بورسعيد بورسعيد غرب';
+      else if (code === 'EGDAM') alias = 'damietta دمياط';
+
+      return {
+        value: p.id,
+        label: p.code ? `${p.name} (${p.code})` : p.name,
+        sublabel: p.code,
+        searchStr: `${p.name || ''} ${p.code || ''} ${alias}`.trim(),
+        item: p,
+      };
+    });
   }, [lookups.ports]);
 
   const destinationOptions = useMemo(() => {
@@ -3635,8 +3648,8 @@ export default function DataEntryTab({
                   setPage(1);
                 }}
                 className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[125px] max-w-[145px] font-medium transition ${filters.missingDocs
-                    ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold shadow-2xs'
-                    : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
+                  ? 'border-amber-500 bg-amber-50 text-amber-900 font-bold shadow-2xs'
+                  : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
                   }`}
                 title={lang === 'ar' ? 'فلترة حسب المستندات الناقصة' : 'Filter by Missing Docs'}
               >
@@ -3653,8 +3666,8 @@ export default function DataEntryTab({
                   setPage(1);
                 }}
                 className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[135px] max-w-[165px] font-medium transition ${filters.createdBy
-                    ? 'border-sky-500 bg-sky-50 text-sky-900 font-bold shadow-2xs'
-                    : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
+                  ? 'border-sky-500 bg-sky-50 text-sky-900 font-bold shadow-2xs'
+                  : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
                   }`}
                 title={lang === 'ar' ? 'فلترة حسب المُدخل' : 'Filter by Created By'}
               >

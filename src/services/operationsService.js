@@ -47,7 +47,7 @@ export const createOperationDestination = async (name) => {
 /**
  * Operations Lookups 5-Hour Unified Cache
  */
-const LOOKUPS_CACHE_KEY = 'operations_lookups_cache_v5h_eg_ports';
+const LOOKUPS_CACHE_KEY = 'operations_lookups_cache_v6_clean_ports';
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 
 let memoryLookupsCache = null;

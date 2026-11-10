@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronDown, X, Search } from 'lucide-react';
 
@@ -27,7 +27,7 @@ export default function SearchableSelect({
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 220, openUpwards: false });
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 220, openUpwards: false, isCalculated: false });
   const containerRef = useRef(null);
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
@@ -110,30 +110,35 @@ export default function SearchableSelect({
   }, []);
 
   // Update dropdown portal positioning relative to viewport
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const updatePos = () => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        const dropWidth = Math.max(rect.width, 220);
-        let left = rect.left;
-        if (left + dropWidth > window.innerWidth - 8) {
-          left = Math.max(8, window.innerWidth - dropWidth - 8);
-        }
-        if (left < 8) left = 8;
-
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const openUpwards = spaceBelow < 280 && rect.top > 280;
-
-        setCoords({
-          top: openUpwards ? rect.top - 4 : rect.bottom + 4,
-          left,
-          width: dropWidth,
-          openUpwards,
-        });
+  const updatePos = useCallback(() => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const dropWidth = Math.max(rect.width, 220);
+      let left = rect.left;
+      if (left + dropWidth > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - dropWidth - 8);
       }
-    };
+      if (left < 8) left = 8;
+
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < 280 && rect.top > 280;
+
+      const newCoords = {
+        top: openUpwards ? rect.top - 4 : rect.bottom + 4,
+        left,
+        width: dropWidth,
+        openUpwards,
+        isCalculated: true,
+      };
+      setCoords(newCoords);
+      return newCoords;
+    }
+    return null;
+  }, []);
+
+  // Update dropdown portal positioning relative to viewport before paint
+  useLayoutEffect(() => {
+    if (!isOpen) return;
 
     updatePos();
     window.addEventListener('scroll', updatePos, true);
@@ -142,7 +147,7 @@ export default function SearchableSelect({
       window.removeEventListener('scroll', updatePos, true);
       window.removeEventListener('resize', updatePos);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePos]);
 
   // Reset query and highlight when opening/closing
   useEffect(() => {
@@ -154,6 +159,16 @@ export default function SearchableSelect({
       }, 50);
     }
   }, [isOpen]);
+
+  const toggleOpen = () => {
+    if (disabled) return;
+    if (!isOpen) {
+      updatePos();
+      setIsOpen(true);
+    } else {
+      setIsOpen(false);
+    }
+  };
 
   const handleSelect = (opt) => {
     if (disabled) return;
@@ -179,6 +194,7 @@ export default function SearchableSelect({
     if (!isOpen) {
       if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
+        updatePos();
         setIsOpen(true);
       }
       return;
@@ -232,13 +248,13 @@ export default function SearchableSelect({
       {/* Trigger Box */}
       <div
         tabIndex={disabled ? -1 : 0}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={toggleOpen}
         title={title || displayLabel || placeholder}
         className={`flex items-center justify-between w-full transition select-none ${disabled ? 'cursor-not-allowed opacity-75' : 'cursor-pointer'} ${variant === 'filter'
-            ? 'h-[32px] min-h-[32px] px-2.5 py-1 text-xs font-normal bg-white rounded-xl border border-slate-300 hover:border-slate-400 focus:border-sky-500 text-slate-700 shadow-2xs'
-            : compact
-              ? 'h-[34px] min-h-[34px] px-2 text-xs font-semibold bg-transparent rounded border border-transparent hover:border-sky-300 focus:border-sky-500 focus:bg-white text-slate-700'
-              : 'h-[44px] min-h-[44px] px-3.5 py-2 text-[14px] bg-white border border-slate-300 rounded-xl shadow-2xs hover:border-slate-400 focus:outline-hidden focus:border-sky-500 focus:ring-2 focus:ring-sky-100 text-slate-800'
+          ? 'h-[32px] min-h-[32px] px-2.5 py-1 text-xs font-normal bg-white rounded-xl border border-slate-300 hover:border-slate-400 focus:border-sky-500 text-slate-700 shadow-2xs'
+          : compact
+            ? 'h-[34px] min-h-[34px] px-2 text-xs font-semibold bg-transparent rounded border border-transparent hover:border-sky-300 focus:border-sky-500 focus:bg-white text-slate-700'
+            : 'h-[44px] min-h-[44px] px-3.5 py-2 text-[14px] bg-white border border-slate-300 rounded-xl shadow-2xs hover:border-slate-400 focus:outline-hidden focus:border-sky-500 focus:ring-2 focus:ring-sky-100 text-slate-800'
           } ${isOpen ? 'border-sky-500 ring-2 ring-sky-100' : ''}`}
       >
         <span className={`truncate me-2 ${!displayLabel ? (variant === 'filter' ? 'text-slate-600 font-normal' : 'text-slate-400 font-normal') : 'font-medium text-slate-800'}`}>
@@ -268,13 +284,15 @@ export default function SearchableSelect({
         createPortal(
           <div
             ref={dropdownRef}
-            className={`fixed z-[99999] bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in duration-100 text-start ${coords.openUpwards ? '-translate-y-full' : ''
+            className={`fixed z-[99999] bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden text-start transition-opacity duration-75 ${coords.openUpwards ? '-translate-y-full' : ''
               }`}
             style={{
               top: `${coords.top}px`,
               left: `${coords.left}px`,
               width: `${coords.width}px`,
               minWidth: '220px',
+              visibility: coords.isCalculated ? 'visible' : 'hidden',
+              opacity: coords.isCalculated ? 1 : 0,
             }}
           >
             {/* Search Input Bar */}
@@ -331,10 +349,10 @@ export default function SearchableSelect({
                       onClick={() => handleSelect(opt)}
                       onMouseEnter={() => setHighlightIndex(idx)}
                       className={`px-3.5 py-2.5 cursor-pointer flex items-center justify-between transition ${isSelected
-                          ? 'bg-sky-50 text-sky-800 font-bold'
-                          : isHighlighted
-                            ? 'bg-slate-100 text-slate-900'
-                            : 'text-slate-700 hover:bg-slate-50'
+                        ? 'bg-sky-50 text-sky-800 font-bold'
+                        : isHighlighted
+                          ? 'bg-slate-100 text-slate-900'
+                          : 'text-slate-700 hover:bg-slate-50'
                         }`}
                     >
                       <span className="truncate text-start">{opt.label}</span>
