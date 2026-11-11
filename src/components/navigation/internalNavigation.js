@@ -57,7 +57,18 @@ export const getInternalNavigation = (user) => [
             {
                 label: "FTL",
                 icon: Container,
-                badge: "Coming Soon",
+                subItems: [
+                    {
+                        label: "FTL Dashboard",
+                        path: "/ftl/dashboard",
+                        icon: LayoutDashboard,
+                    },
+                    {
+                        label: "FTL Data Entry",
+                        path: "/ftl/entry",
+                        icon: FileSpreadsheet,
+                    },
+                ],
             },
         ],
     },

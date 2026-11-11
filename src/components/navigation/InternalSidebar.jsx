@@ -11,6 +11,7 @@ export default function InternalSidebar() {
 
     const [openSubGroups, setOpenSubGroups] = useState(() => ({
         Trucking: true,
+        FTL: true,
     }));
 
     useEffect(() => {

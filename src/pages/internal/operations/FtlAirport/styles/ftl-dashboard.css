@@ -1,0 +1,7400 @@
+/* =============================================================================
+   FTL Airport Dashboard styles
+   Taken from FTL_Airport_Dashboard.html and scoped under .ftl-root so they do not
+   leak into the host application (html/body/:root selectors now target .ftl-root).
+   ============================================================================= */
+.ftl-root {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  min-height: 100%;
+  text-align: start
+}
+
+/* Dashboard print/PDF export: only the export pages are printed, not the host page. */
+@media print {
+  body.ftl-printing>*:not(.ftl-print-host) {
+    display: none !important
+  }
+
+  body.ftl-printing {
+    background: #fff !important
+  }
+}
+
+.ftl-print-host {
+  display: none
+}
+
+@media print {
+  .ftl-print-host {
+    display: block
+  }
+}
+
+/* =========================================================
+   IDENTITY — Transport (road haulage) team
+   Asphalt slate → amber. Road/dash motif. Teal accent for containers.
+   ========================================================= */
+.ftl-root {
+  color-scheme: light;
+  --brand-1: #062a4a;
+  --brand-2: #0b4f7a;
+  --brand-3: #0e7c86;
+  --aqua: #22b8cf;
+  --sand: #d8a84a;
+  --navy: #0b4f7a;
+  --sea: #0e7c86;
+  --sky: #22b8cf;
+  --ink: #12263a;
+  --steel: #66788c;
+  --mist: #edf3f6;
+  --line: #d8e3ea;
+  --paper: #f4f8fa;
+  --card: #ffffff;
+  --good: #1f8f63;
+  --warn: #dd9a1f;
+  --bad: #cf4d4d;
+  --disp: 'Sora', sans-serif;
+  --body: 'Inter', sans-serif;
+}
+
+.ftl-root[data-theme="dark"] {
+  color-scheme: dark
+}
+
+.ftl-root[data-theme="dark"] {
+  color-scheme: dark
+}
+
+.ftl-root[data-theme="dark"] {
+  --ink: #e6eef4;
+  --steel: #8fa3b4;
+  --mist: #152433;
+  --line: #243646;
+  --paper: #0a1420;
+  --card: #12202e;
+  --good: #3dbd8a;
+  --warn: #e6b04a;
+  --bad: #e57373;
+  --navy: #7cc4dc;
+  --sea: #3fb3c3;
+  --sky: #5ed0e3
+}
+
+.ftl-root * {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box
+}
+
+.ftl-root {
+  font-family: var(--body);
+  color: var(--ink);
+  font-size: 14px;
+  background: radial-gradient(1000px 500px at 90% -10%, rgba(34, 184, 207, .09), transparent 60%),
+    radial-gradient(800px 500px at -10% 30%, rgba(14, 124, 134, .06), transparent 55%), var(--paper)
+}
+
+.ftl-root[data-theme="dark"] {
+  background: radial-gradient(1000px 500px at 90% -10%, rgba(34, 184, 207, .10), transparent 60%),
+    radial-gradient(800px 500px at -10% 30%, rgba(63, 179, 195, .05), transparent 55%), #0a1420
+}
+
+.ftl-root button {
+  font-family: inherit;
+  cursor: pointer
+}
+
+.ftl-root[dir="rtl"] {
+  font-family: 'Tajawal', sans-serif
+}
+
+.ftl-root[dir="rtl"] .disp {
+  font-family: 'Tajawal', sans-serif;
+  font-weight: 700
+}
+
+/* ===== header ===== */
+.ftl-root header {
+  display: none !important
+}
+
+.ftl-root[data-theme="dark"] header {
+  background: radial-gradient(900px 300px at 12% -60%, rgba(34, 184, 207, .22), transparent 60%),
+    linear-gradient(100deg, #040f1c, #0a2438 48%, #0b4750 135%)
+}
+
+.ftl-root header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .45;
+  background-image: radial-gradient(rgba(255, 255, 255, .12) 1px, transparent 1.5px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(90deg, transparent 30%, #000 75%)
+}
+
+.ftl-root #waves {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 26px;
+  opacity: .33;
+  pointer-events: none
+}
+
+.ftl-root .logo img {
+  height: 48px;
+  display: block;
+  filter: drop-shadow(0 3px 10px rgba(2, 8, 14, .6)) drop-shadow(0 0 18px rgba(34, 184, 207, .3))
+}
+
+.ftl-root .h-title {
+  font-family: var(--disp);
+  font-weight: 800;
+  font-size: 18.5px;
+  white-space: nowrap;
+  letter-spacing: .01em;
+  position: relative;
+  background: linear-gradient(90deg, #fff, #bff0f7);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent
+}
+
+.ftl-root .h-sub {
+  font-size: 12px;
+  color: #a9dce6;
+  margin-top: 2px
+}
+
+.ftl-root .spacer {
+  flex: 1
+}
+
+.ftl-root .hbtn {
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid rgba(255, 255, 255, .28);
+  color: #fff;
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  font-size: 12.5px;
+  backdrop-filter: blur(6px);
+  transition: background .2s, transform .15s
+}
+
+.ftl-root .hbtn:hover {
+  background: rgba(255, 255, 255, .22);
+  transform: translateY(-1px)
+}
+
+.ftl-root .hbtn.primary {
+  background: #fff;
+  color: #0b4f7a;
+  border-color: #fff;
+  box-shadow: 0 6px 16px rgba(4, 26, 50, .35)
+}
+
+.ftl-root .hbtn.primary:hover {
+  background: #e6f6f9
+}
+
+.ftl-root .tag {
+  font-size: 11.5px;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, .1);
+  border-radius: 20px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, .22);
+  position: relative;
+  z-index: 2
+}
+
+.ftl-root #fileInput {
+  display: none
+}
+
+.ftl-root .clickable-cell {
+  cursor: pointer;
+  position: relative;
+  transition: all .15s ease
+}
+
+.ftl-root .clickable-cell:hover {
+  background: rgba(34, 184, 207, .12) !important;
+  color: #0b4f7a !important
+}
+
+.ftl-root .clickable-cell-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background .15s
+}
+
+.ftl-root .clickable-cell-badge:hover {
+  background: rgba(11, 79, 122, .15)
+}
+
+/* Inactive and Delivered Tab Badges */
+.ftl-root .ebtn.ebtn-delivered {
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  border: 1px solid #a7f3d0 !important;
+  font-weight: 700
+}
+
+.ftl-root .ebtn.ebtn-delivered:hover {
+  background: #d1fae5 !important
+}
+
+.ftl-root .ebtn.ebtn-inactive {
+  background: #fff1f2 !important;
+  color: #be123c !important;
+  border: 1px solid #fecdd3 !important;
+  font-weight: 700
+}
+
+.ftl-root .ebtn.ebtn-inactive:hover {
+  background: #ffe4e6 !important
+}
+
+/* Manifest & Breakdown Modals */
+.ftl-root .modal {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, .75) !important;
+  backdrop-filter: blur(6px) !important;
+  z-index: 10000 !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 30px 20px !important;
+  overflow-y: auto !important;
+}
+
+.ftl-root .modal.open {
+  display: flex !important;
+}
+
+.ftl-root .manifest-box {
+  max-width: 1200px !important;
+  width: 95% !important;
+  margin: auto;
+  border-radius: 22px;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 35px 90px rgba(0, 0, 0, .5);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  animation: ftlModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ftlModalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.ftl-root .manifest-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 32px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.ftl-root .manifest-header.truck-theme {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #b45309 100%) !important;
+  border-bottom: 3px solid #f59e0b;
+}
+
+.ftl-root .manifest-header.shipment-theme {
+  background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #0d9488 100%) !important;
+  border-bottom: 3px solid #10b981;
+}
+
+.ftl-root .manifest-header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ftl-root .manifest-header h3 {
+  font-size: 21px;
+  font-weight: 800;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+  letter-spacing: -.01em;
+}
+
+.ftl-root .manifest-header .manifest-subtitle {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, .82);
+  font-weight: 500;
+}
+
+.ftl-root .manifest-header-pills {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ftl-root .egypt-plate-badge {
+  background: #fff;
+  color: #0f172a;
+  border: 2px solid #0f172a;
+  border-radius: 10px;
+  padding: 4px 16px;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ftl-root .egypt-plate-badge .plate-egypt {
+  font-size: 12px;
+  color: #0284c7;
+  font-weight: 900;
+  border-inline-end: 2px solid #cbd5e1;
+  padding-inline-end: 8px;
+}
+
+.ftl-root .air-ship-badge {
+  background: rgba(255, 255, 255, .2);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, .35);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ftl-root .manifest-header .close-btn {
+  background: rgba(255, 255, 255, .2);
+  border: none;
+  color: #fff;
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+}
+
+.ftl-root .manifest-header .close-btn:hover {
+  background: rgba(255, 255, 255, .38);
+  transform: rotate(90deg);
+}
+
+.ftl-root .manifest-body {
+  padding: 26px 32px;
+  overflow-y: auto;
+  flex: 1;
+  background: #f8fafc;
+}
+
+.ftl-root .manifest-hero-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 768px) {
+  .ftl-root .manifest-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ftl-root .manifest-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 18px 22px;
+  min-height: 130px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ftl-root .manifest-card.truck-hero-card {
+  border-top: 5px solid #f59e0b;
+}
+
+.ftl-root .manifest-card.shipment-hero-card {
+  border-top: 5px solid #10b981;
+}
+
+.ftl-root .card-top-label {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.ftl-root .card-main-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.ftl-root .card-sub-val {
+  font-size: 13.5px;
+  color: #475569;
+  font-weight: 500;
+}
+
+.ftl-root .driver-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  color: #0369a1;
+  padding: 5px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 13.5px;
+  transition: background .2s;
+}
+
+.ftl-root .driver-call-btn:hover {
+  background: #e0f2fe;
+}
+
+.ftl-root .hero-huge-metric {
+  font-size: 32px;
+  font-weight: 900;
+  display: block;
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+
+.ftl-root .hero-huge-metric.amber {
+  color: #d97706;
+}
+
+.ftl-root .hero-huge-metric.emerald {
+  color: #059669;
+}
+
+.ftl-root .hero-huge-metric small {
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.ftl-root .shipment-progress-bar {
+  height: 9px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 6px 0 4px;
+}
+
+.ftl-root .shipment-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  border-radius: 999px;
+  transition: width .3s ease;
+}
+
+.ftl-root .shipment-progress-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ftl-root .manifest-table-wrap {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, .04);
+}
+
+.ftl-root .manifest-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: start;
+}
+
+.ftl-root .manifest-table th {
+  padding: 12px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  border-bottom: 1px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.ftl-root .manifest-table.truck-theme th {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.ftl-root .manifest-table.shipment-theme th {
+  background: #f0fdf4;
+  color: #065f46;
+}
+
+.ftl-root .manifest-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.ftl-root .manifest-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ftl-root .manifest-table tr:hover td {
+  background: #f8fafc;
+}
+
+.ftl-root .manifest-tag-full {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ftl-root .manifest-tag-partial {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ftl-root .mini-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ftl-root .mini-bar-track {
+  flex: 1;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 50px;
+  max-width: 80px;
+}
+
+.ftl-root .mini-bar-fill {
+  height: 100%;
+  background: #059669;
+  border-radius: 999px;
+}
+
+.ftl-root .mini-bar-text {
+  font-weight: 800;
+  color: #047857;
+  font-size: 12px;
+}
+
+/* Operation Package Reconciliation Pills in Table */
+.ftl-root .op-recon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  margin-top: 6px;
+  width: fit-content;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+.ftl-root .op-recon-pill.balanced {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.ftl-root .op-recon-pill.partial {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.ftl-root .op-recon-pill.overload {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  animation: pulseRecon 1.8s infinite;
+}
+
+.ftl-root .op-recon-pill.unloaded {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+@keyframes pulseRecon {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+/* Footer notice inside manifest */
+.ftl-root .manifest-recon-footer {
+  margin-top: 16px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #334155;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
+}
+
+.ftl-root .manifest-recon-title {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ftl-root .manifest-recon-stat {
+  font-weight: 700;
+}
+
+/* Inactive Archive Modal */
+.ftl-root .inactive-box {
+  max-width: 920px;
+  width: 95%
+}
+
+.ftl-root .inactive-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px
+}
+
+.ftl-root .inactive-title h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #991b1b;
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.ftl-root .vdiv {
+  width: 1px;
+  height: 42px;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .45), transparent);
+  margin: 0 4px;
+  position: relative;
+  z-index: 2
+}
+
+.ftl-root .h-kicker {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 9.5px;
+  line-height: 1;
+  letter-spacing: .32em;
+  font-weight: 700;
+  color: #9fe3ef;
+  margin-bottom: 3px;
+  position: relative;
+  z-index: 2
+}
+
+.ftl-root .h-kicker .glyph {
+  width: 44px;
+  height: 22px;
+  color: #bff0f7;
+  flex-shrink: 0;
+  display: block;
+  filter: drop-shadow(0 1px 3px rgba(2, 14, 28, .5))
+}
+
+.ftl-root[dir="rtl"] .h-kicker {
+  letter-spacing: .08em;
+  font-size: 11px
+}
+
+/* hero on upload page */
+.ftl-root .drop .hero {
+  width: 230px;
+  margin: 0 auto 6px;
+  position: relative
+}
+
+.ftl-root .drop .hero .ship {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 18px rgba(51, 65, 79, .25))
+}
+
+.ftl-root .drop .hero .ship-body,
+.ftl-root .drop .hero .wheels {
+  animation: jiggle 1.6s ease-in-out infinite
+}
+
+.ftl-root .drop .hero .wave2 {
+  animation: dash 1.1s linear infinite
+}
+
+@keyframes jiggle {
+
+  0%,
+  100% {
+    transform: translateY(0)
+  }
+
+  50% {
+    transform: translateY(-1.4px)
+  }
+}
+
+@keyframes dash {
+  0% {
+    transform: translateX(0)
+  }
+
+  100% {
+    transform: translateX(-38px)
+  }
+}
+
+.ftl-root .e-kicker {
+  font-size: 10.5px;
+  letter-spacing: .3em;
+  font-weight: 700;
+  color: var(--sea);
+  margin-bottom: 8px
+}
+
+.ftl-root[dir="rtl"] .e-kicker {
+  letter-spacing: .08em;
+  font-size: 12px
+}
+
+@media print {
+
+  .ftl-root .vdiv,
+  .ftl-root .hero {
+    display: none
+  }
+}
+
+/* ===== layout ===== */
+.ftl-root .wrap {
+  display: flex;
+  align-items: flex-start
+}
+
+.ftl-root main {
+  flex: 1;
+  min-width: 0;
+  padding: 20px 22px 60px
+}
+
+.ftl-root aside {
+  width: 264px;
+  flex-shrink: 0;
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  position: sticky;
+  top: 78px;
+  height: calc(100vh - 78px);
+  overflow-y: auto;
+  transition: width .25s
+}
+
+.ftl-root aside.closed {
+  width: 0;
+  overflow: hidden;
+  border: none
+}
+
+.ftl-root[dir="rtl"] aside {
+  border-left: none;
+  border-right: 1px solid var(--line)
+}
+
+.ftl-root[data-theme="dark"] aside {
+  background: #0f1b28
+}
+
+/* ===== entry grid ===== */
+.ftl-root #entryView {
+  padding-top: 4px
+}
+
+.ftl-root .ebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px
+}
+
+.ftl-root .etabs {
+  display: flex;
+  gap: 6px
+}
+
+.ftl-root .etab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--steel)
+}
+
+.ftl-root .etab.on {
+  color: var(--ink);
+  border-color: var(--aqua);
+  box-shadow: inset 0 -2.5px 0 var(--aqua)
+}
+
+.ftl-root .etab .ico {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  background: var(--mist)
+}
+
+.ftl-root .etab.on .ico {
+  background: color-mix(in srgb, var(--aqua) 22%, transparent);
+  color: var(--brand-3)
+}
+
+.ftl-root .etab .cnt {
+  font-size: 11.5px;
+  background: var(--mist);
+  border-radius: 20px;
+  padding: 2px 8px
+}
+
+.ftl-root .espacer {
+  flex: 1
+}
+
+.ftl-root .estatus {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  align-items: center;
+  margin-inline-end: 6px;
+  flex-wrap: wrap
+}
+
+.ftl-root .estatus span {
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-weight: 600
+}
+
+.ftl-root .s-ok {
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good)
+}
+
+.ftl-root .s-err {
+  background: color-mix(in srgb, var(--bad) 14%, transparent);
+  color: var(--bad)
+}
+
+.ftl-root .s-warn {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: #8a5f14
+}
+
+.ftl-root[data-theme="dark"] .s-warn {
+  color: var(--warn)
+}
+
+.ftl-root .eadd {
+  display: flex;
+  align-items: center;
+  gap: 0
+}
+
+.ftl-root .eadd input {
+  width: 64px;
+  padding: 9px 8px;
+  border: 1px solid var(--line);
+  border-inline-end: none;
+  border-radius: 10px 0 0 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: center
+}
+
+.ftl-root[dir="rtl"] .eadd input {
+  border-radius: 0 10px 10px 0;
+  border-inline-end: 1px solid var(--line);
+  border-inline-start: none
+}
+
+.ftl-root .eadd .ebtn {
+  border-radius: 0 10px 10px 0
+}
+
+.ftl-root[dir="rtl"] .eadd .ebtn {
+  border-radius: 10px 0 0 10px
+}
+
+.ftl-root .ebtn {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 600
+}
+
+.ftl-root .ebtn:hover {
+  border-color: var(--aqua)
+}
+
+.ftl-root .ebtn.go {
+  background: var(--brand-2);
+  color: #fff;
+  border-color: var(--brand-2)
+}
+
+.ftl-root .ebtn.go:hover {
+  background: var(--brand-3)
+}
+
+.ftl-root .ebtn.go:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+.ftl-root .ehint {
+  font-size: 12px;
+  color: var(--steel);
+  margin-bottom: 10px;
+  line-height: 1.6
+}
+
+.ftl-root .egrid {
+  overflow: auto;
+  max-height: calc(100vh - 300px);
+  padding: 4px 2px 10px
+}
+
+.ftl-root #eTable {
+  border-collapse: separate;
+  border-spacing: 7px 0;
+  font-size: 12.6px;
+  white-space: nowrap
+}
+
+.ftl-root #eTable th {
+  background: transparent;
+  color: var(--steel);
+  font-weight: 600;
+  padding: 4px 12px 8px;
+  text-align: start;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  font-size: 11.4px;
+  letter-spacing: .02em
+}
+
+.ftl-root #eTable th .req {
+  color: var(--bad);
+  margin-inline-start: 3px
+}
+
+.ftl-root #eTable td {
+  padding: 5px 0;
+  border: none;
+  background: transparent !important
+}
+
+/* every cell is its own little card */
+.ftl-root #eTable .cbox {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: 0 1px 2px rgba(6, 42, 74, .05), 0 6px 14px -10px rgba(6, 42, 74, .18);
+  transition: border-color .15s, box-shadow .15s, transform .12s
+}
+
+.ftl-root #eTable .cbox:focus-within {
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 22%, transparent);
+  transform: translateY(-1px)
+}
+
+.ftl-root #eTable td input,
+.ftl-root #eTable td .cell-sel {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 12.6px;
+  color: var(--ink);
+  outline: none;
+  border-radius: 11px;
+  min-width: 92px
+}
+
+.ftl-root #eTable td .cell-sel {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--steel) 50%), linear-gradient(135deg, var(--steel) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-inline-end: 28px
+}
+
+.ftl-root[dir="rtl"] #eTable td .cell-sel {
+  background-position: 15px 52%, 20px 52%;
+  padding-inline-end: 12px;
+  padding-inline-start: 28px
+}
+
+.ftl-root #eTable td input[type="date"],
+.ftl-root #eTable td input[type="time"] {
+  font-size: 12.2px
+}
+
+/* group tints live on the card */
+.ftl-root #eTable .cbox.grp-g1 {
+  background: color-mix(in srgb, #0b4f7a 5%, var(--card))
+}
+
+.ftl-root #eTable .cbox.grp-g2 {
+  background: color-mix(in srgb, #0e7c86 5%, var(--card))
+}
+
+.ftl-root #eTable .cbox.grp-g3 {
+  background: color-mix(in srgb, #22b8cf 7%, var(--card))
+}
+
+.ftl-root #eTable .cbox.grp-g4 {
+  background: color-mix(in srgb, #d8a84a 9%, var(--card))
+}
+
+.ftl-root #eTable .cbox.grp-g5 {
+  background: color-mix(in srgb, #7a5ea8 7%, var(--card))
+}
+
+.ftl-root #eTable .cbox.grp-g6 {
+  background: color-mix(in srgb, #66788c 6%, var(--card))
+}
+
+.ftl-root #eTable th.grp-g1 {
+  color: #0b4f7a
+}
+
+.ftl-root #eTable th.grp-g2 {
+  color: #0e7c86
+}
+
+.ftl-root #eTable th.grp-g3 {
+  color: #1897ab
+}
+
+.ftl-root #eTable th.grp-g4 {
+  color: #a9832f
+}
+
+.ftl-root #eTable th.grp-g5 {
+  color: #6b5295
+}
+
+.ftl-root #eTable th.grp-g6 {
+  color: var(--steel)
+}
+
+.ftl-root[data-theme="dark"] #eTable th.grp-g1 {
+  color: #7cc4dc
+}
+
+.ftl-root[data-theme="dark"] #eTable th.grp-g2 {
+  color: #3fb3c3
+}
+
+.ftl-root[data-theme="dark"] #eTable th.grp-g3 {
+  color: #5ed0e3
+}
+
+.ftl-root[data-theme="dark"] #eTable th.grp-g4 {
+  color: #e6b04a
+}
+
+.ftl-root[data-theme="dark"] #eTable th.grp-g5 {
+  color: #b49ce0
+}
+
+.ftl-root #eTable .cbox.err {
+  border-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 8%, var(--card))
+}
+
+.ftl-root #eTable .cbox.warn {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 10%, var(--card))
+}
+
+/* row rhythm: roomy between shipments, tight inside one */
+.ftl-root #eTable tr.ship-start td {
+  padding-bottom: 1px
+}
+
+.ftl-root #eTable tr.ship-mid td {
+  padding-block: 1px
+}
+
+.ftl-root #eTable tr.ship-end td {
+  padding-top: 1px
+}
+
+.ftl-root #eTable tr.ship-start td:first-child .rnbox,
+.ftl-root #eTable tr.ship-mid td:first-child .rnbox,
+.ftl-root #eTable tr.ship-end td:first-child .rnbox {
+  border-inline-start: 3px solid var(--aqua)
+}
+
+.ftl-root #eTable td.rn,
+.ftl-root #eTable th.rn {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--paper);
+  text-align: center;
+  min-width: 40px
+}
+
+.ftl-root[dir="rtl"] #eTable td.rn,
+.ftl-root[dir="rtl"] #eTable th.rn {
+  left: auto;
+  right: 0
+}
+
+.ftl-root #eTable th.rn {
+  z-index: 4;
+  color: var(--steel)
+}
+
+.ftl-root #eTable .rnbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--mist);
+  color: var(--steel);
+  font-weight: 700;
+  font-size: 12px
+}
+
+.ftl-root #eTable td.del {
+  background: var(--paper) !important
+}
+
+.ftl-root #eTable td.del button {
+  background: none;
+  border: none;
+  color: var(--steel);
+  font-size: 17px;
+  padding: 6px 9px;
+  line-height: 1;
+  border-radius: 9px
+}
+
+.ftl-root #eTable td.del button:hover {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, transparent)
+}
+
+.ftl-root #eTable td.meta .cbox {
+  padding: 6px 10px;
+  font-size: 10.5px;
+  color: var(--steel);
+  text-align: center;
+  line-height: 1.45;
+  white-space: nowrap
+}
+
+.ftl-root .updbtn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11.4px;
+  color: var(--sea);
+  padding: 9px 8px;
+  text-align: center;
+  line-height: 1.35;
+  border-radius: 11px
+}
+
+.ftl-root .updbtn:hover {
+  background: color-mix(in srgb, var(--aqua) 10%, transparent)
+}
+
+.ftl-root .updn {
+  background: var(--aqua);
+  color: #06202a;
+  border-radius: 20px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700
+}
+
+@media print {
+  .ftl-root #entryView {
+    display: none !important
+  }
+}
+
+/* ===== empty state ===== */
+.ftl-root #emptyState {
+  display: flex;
+  justify-content: center;
+  padding: 60px 10px
+}
+
+.ftl-root .drop {
+  background: var(--card);
+  border: 2px dashed #b3c9d4;
+  border-radius: 22px;
+  max-width: 660px;
+  width: 100%;
+  padding: 52px 44px;
+  text-align: center;
+  transition: border-color .2s, background .2s
+}
+
+.ftl-root .drop.over {
+  border-color: var(--sea);
+  background: #eaf7f9
+}
+
+.ftl-root[data-theme="dark"] .drop {
+  border-color: #2c4658
+}
+
+.ftl-root[data-theme="dark"] .drop.over {
+  background: #0f2a33
+}
+
+.ftl-root .drop .ico {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-2), var(--aqua));
+  color: #fff;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+  box-shadow: 0 10px 26px rgba(14, 124, 134, .35)
+}
+
+.ftl-root .drop h2 {
+  font-family: var(--disp);
+  font-size: 21px;
+  margin-bottom: 10px
+}
+
+.ftl-root .drop p {
+  color: var(--steel);
+  line-height: 1.7;
+  margin-bottom: 22px
+}
+
+.ftl-root .drop .big {
+  padding: 13px 30px;
+  font-size: 14px;
+  background: var(--brand-2);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600
+}
+
+.ftl-root .drop .big:hover {
+  background: var(--brand-3)
+}
+
+.ftl-root .drop .cols {
+  margin-top: 26px;
+  font-size: 11.5px;
+  color: var(--steel);
+  line-height: 1.8;
+  border-top: 1px solid var(--mist);
+  padding-top: 16px;
+  text-align: start
+}
+
+.ftl-root .drop .cols b {
+  color: var(--ink)
+}
+
+/* ===== direction tabs ===== */
+.ftl-root .dtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap
+}
+
+.ftl-root .dtab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 0 0;
+  padding: 11px 20px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--steel);
+  position: relative;
+  transition: color .18s, background .18s;
+  box-shadow: 0 1px 2px rgba(4, 26, 50, .04)
+}
+
+.ftl-root .dtab:hover {
+  color: var(--ink)
+}
+
+.ftl-root .dtab::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  transition: background .18s
+}
+
+.ftl-root .dtab.on {
+  color: var(--ink);
+  background: var(--card)
+}
+
+.ftl-root .dtab.on::after {
+  background: linear-gradient(90deg, var(--brand-2), var(--aqua))
+}
+
+.ftl-root .dtab .ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: var(--mist);
+  color: var(--steel);
+  font-weight: 700
+}
+
+.ftl-root .dtab.on .ico {
+  background: color-mix(in srgb, var(--aqua) 22%, transparent);
+  color: var(--brand-3)
+}
+
+.ftl-root .dtab .cnt {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--steel);
+  background: var(--mist);
+  border-radius: 20px;
+  padding: 2px 9px
+}
+
+.ftl-root .dtab.on .cnt {
+  background: color-mix(in srgb, var(--aqua) 18%, transparent);
+  color: var(--brand-3)
+}
+
+.ftl-root[data-theme="dark"] .dtab.on .ico,
+.ftl-root[data-theme="dark"] .dtab.on .cnt {
+  color: var(--sky)
+}
+
+@media print {
+  .ftl-root .dtabs {
+    display: none
+  }
+}
+
+/* ===== filter rail ===== */
+.ftl-root .rail {
+  background: color-mix(in srgb, var(--card) 84%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 0 18px 18px 18px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(4, 26, 50, .05)
+}
+
+.ftl-root .rrow {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 14px;
+  align-items: flex-end;
+  overflow-x: auto;
+  padding-bottom: 2px
+}
+
+.ftl-root .rrow::-webkit-scrollbar {
+  height: 5px
+}
+
+.ftl-root .rrow::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px
+}
+
+.ftl-root .rsep {
+  height: 1px;
+  background: var(--line);
+  margin: 12px 0
+}
+
+.ftl-root .rrow .fld {
+  flex: 0 0 auto
+}
+
+.ftl-root .fld {
+  display: flex;
+  flex-direction: column;
+  gap: 5px
+}
+
+.ftl-root .fld label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--steel)
+}
+
+.ftl-root .fld select,
+.ftl-root .fld input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  background: var(--card);
+  min-width: 126px;
+  color: var(--ink)
+}
+
+.ftl-root[data-theme="dark"] .fld select,
+.ftl-root[data-theme="dark"] .fld input,
+.ftl-root[data-theme="dark"] .search {
+  background: #0d1824;
+  color: var(--ink)
+}
+
+.ftl-root .fld select:focus,
+.ftl-root .fld input:focus {
+  outline: 2px solid var(--aqua);
+  outline-offset: 1px;
+  border-color: var(--sea)
+}
+
+.ftl-root .presets {
+  display: flex;
+  gap: 6px
+}
+
+.ftl-root .chip {
+  border: 1px solid var(--line);
+  background: var(--mist);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink)
+}
+
+.ftl-root .chip.on {
+  background: var(--brand-2);
+  color: #fff;
+  border-color: var(--brand-2)
+}
+
+.ftl-root[data-theme="dark"] .chip.on {
+  background: var(--aqua);
+  border-color: var(--aqua);
+  color: #06202a
+}
+
+.ftl-root .rrow .reset {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--sea);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 8px 4px
+}
+
+.ftl-root .rrow .reset:hover {
+  text-decoration: underline
+}
+
+.ftl-root #activeNote {
+  font-size: 12px;
+  color: var(--steel);
+  margin: 0 2px 14px
+}
+
+/* ===== KPI band ===== */
+.ftl-root .kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px
+}
+
+.ftl-root .kpi {
+  --acc: var(--sea);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 15px 16px 34px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(4, 26, 50, .05), 0 10px 26px -14px rgba(4, 26, 50, .14);
+  transition: transform .2s, box-shadow .2s
+}
+
+.ftl-root .kpi:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(4, 26, 50, .06), 0 20px 40px -16px rgba(4, 26, 50, .25)
+}
+
+.ftl-root .kpi::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -34px;
+  top: -34px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--acc) 16%, transparent), transparent 70%)
+}
+
+.ftl-root .kpi.good {
+  --acc: var(--good)
+}
+
+.ftl-root .kpi.warn {
+  --acc: var(--warn)
+}
+
+.ftl-root .kpi.bad {
+  --acc: var(--bad)
+}
+
+.ftl-root .kpi.sand {
+  --acc: var(--sand)
+}
+
+.ftl-root .kpi.aqua {
+  --acc: var(--aqua)
+}
+
+.ftl-root .k-top {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.ftl-root .k-ico {
+  width: 27px;
+  height: 27px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  flex-shrink: 0
+}
+
+.ftl-root .k-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--steel)
+}
+
+.ftl-root .k-val {
+  font-family: var(--disp);
+  font-weight: 800;
+  font-size: 25px;
+  margin-top: 7px;
+  letter-spacing: -.015em
+}
+
+.ftl-root .k-sub {
+  font-size: 11px;
+  color: var(--steel);
+  margin-top: 3px
+}
+
+.ftl-root .spark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 0 14px;
+  opacity: .4
+}
+
+.ftl-root .spark i {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--acc), color-mix(in srgb, var(--acc) 40%, transparent));
+  min-height: 2px
+}
+
+/* ===== charts ===== */
+.ftl-root .grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px
+}
+
+.ftl-root .card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 20px 14px;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(4, 26, 50, .05), 0 10px 30px -12px rgba(4, 26, 50, .12);
+  transition: box-shadow .25s
+}
+
+.ftl-root .card:hover {
+  box-shadow: 0 2px 4px rgba(4, 26, 50, .06), 0 18px 44px -14px rgba(4, 26, 50, .2)
+}
+
+.ftl-root .card h3 {
+  font-family: var(--disp);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px
+}
+
+.ftl-root .card h3::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-inline-end: 9px;
+  background: linear-gradient(135deg, var(--sea), var(--aqua));
+  transform: rotate(45deg)
+}
+
+.ftl-root .card .sub {
+  font-size: 11.5px;
+  color: var(--steel);
+  margin-bottom: 10px
+}
+
+.ftl-root .ch {
+  position: relative;
+  height: 250px
+}
+
+.ftl-root .s12 {
+  grid-column: span 12
+}
+
+.ftl-root .s8 {
+  grid-column: span 8
+}
+
+.ftl-root .s7 {
+  grid-column: span 7
+}
+
+.ftl-root .s6 {
+  grid-column: span 6
+}
+
+.ftl-root .s5 {
+  grid-column: span 5
+}
+
+.ftl-root .s4 {
+  grid-column: span 4
+}
+
+.ftl-root .insights {
+  background: radial-gradient(500px 260px at 110% -30%, rgba(34, 184, 207, .35), transparent 60%), linear-gradient(135deg, var(--brand-1), var(--brand-3));
+  color: #fff;
+  border: none
+}
+
+.ftl-root .insights h3 {
+  color: #fff
+}
+
+.ftl-root .insights h3::before {
+  background: linear-gradient(135deg, #bff0f7, #22b8cf)
+}
+
+.ftl-root .insights .sub {
+  color: rgba(255, 255, 255, .65)
+}
+
+.ftl-root .insights ul {
+  list-style: none;
+  margin-top: 4px
+}
+
+.ftl-root .insights li {
+  padding: 8px 0 8px 26px;
+  position: relative;
+  font-size: 13px;
+  line-height: 1.55;
+  border-bottom: 1px solid rgba(255, 255, 255, .12)
+}
+
+.ftl-root[dir="rtl"] .insights li {
+  padding: 8px 26px 8px 0
+}
+
+.ftl-root .insights li:last-child {
+  border: none
+}
+
+.ftl-root .insights li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--aqua);
+  box-shadow: 0 0 0 3px rgba(34, 184, 207, .25)
+}
+
+.ftl-root[dir="rtl"] .insights li::before {
+  left: auto;
+  right: 4px
+}
+
+.ftl-root .insights b {
+  color: #bff0f7
+}
+
+/* ===== table ===== */
+.ftl-root .tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px
+}
+
+.ftl-root .search {
+  flex: 1;
+  max-width: 340px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.8px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .tbl-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  max-height: 430px
+}
+
+.ftl-root table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.3px;
+  white-space: nowrap
+}
+
+.ftl-root th {
+  background: var(--mist);
+  text-align: start;
+  padding: 9px 12px;
+  font-weight: 600;
+  color: var(--steel);
+  position: sticky;
+  top: 0;
+  cursor: pointer;
+  user-select: none;
+  z-index: 1
+}
+
+.ftl-root th .arrow {
+  font-size: 9px;
+  color: var(--sea)
+}
+
+.ftl-root td {
+  padding: 8px 12px;
+  border-top: 1px solid var(--mist)
+}
+
+.ftl-root tr:hover td {
+  background: color-mix(in srgb, var(--aqua) 8%, transparent)
+}
+
+.ftl-root .st {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600
+}
+
+.ftl-root .st.rel {
+  background: #e2f4ea;
+  color: var(--good)
+}
+
+.ftl-root .st.arr {
+  background: #e6f5f8;
+  color: var(--sea)
+}
+
+.ftl-root .st.tra {
+  background: #e4effb;
+  color: #0b4f7a
+}
+
+.ftl-root .st.pen {
+  background: #f0f2f5;
+  color: var(--steel)
+}
+
+.ftl-root .st.late {
+  background: #fbe9e9;
+  color: var(--bad)
+}
+
+.ftl-root[data-theme="dark"] .st.rel {
+  background: #173427
+}
+
+.ftl-root[data-theme="dark"] .st.arr {
+  background: #10323a
+}
+
+.ftl-root[data-theme="dark"] .st.tra {
+  background: #16304a;
+  color: #7cc4dc
+}
+
+.ftl-root[data-theme="dark"] .st.pen {
+  background: #232d3c
+}
+
+.ftl-root[data-theme="dark"] .st.late {
+  background: #3a2024
+}
+
+.ftl-root .tfoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--steel)
+}
+
+.ftl-root .pg button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12px;
+  margin-inline-start: 6px
+}
+
+.ftl-root .pg button:disabled {
+  opacity: .4;
+  cursor: default
+}
+
+/* ===== fields panel ===== */
+.ftl-root .f-head {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between
+}
+
+.ftl-root .f-head b {
+  font-family: var(--disp);
+  font-size: 13.5px
+}
+
+.ftl-root .f-search {
+  margin: 10px 12px;
+  display: block;
+  width: calc(100% - 24px);
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .fgroup .g-title {
+  padding: 9px 16px 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--brand-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  letter-spacing: .02em
+}
+
+.ftl-root .fgroup .g-count {
+  margin-inline-start: auto;
+  font-weight: 600;
+  color: var(--steel);
+  background: var(--mist);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 10.5px
+}
+
+.ftl-root .fgroup+.fgroup .g-title {
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 12px
+}
+
+.ftl-root .fgroup .tri {
+  transition: transform .18s;
+  font-size: 9px
+}
+
+.ftl-root .fgroup.collapsed .tri {
+  transform: rotate(-90deg)
+}
+
+.ftl-root .fgroup.collapsed .field {
+  display: none
+}
+
+.ftl-root .field {
+  padding: 6px 16px 6px 26px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.8px;
+  cursor: pointer;
+  border-radius: 6px
+}
+
+.ftl-root[dir="rtl"] .field {
+  padding: 6px 26px 6px 16px
+}
+
+.ftl-root .field:hover {
+  background: var(--mist)
+}
+
+.ftl-root .ficon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0
+}
+
+.ftl-root .ficon.date {
+  background: #e2f2f7;
+  color: var(--navy)
+}
+
+.ftl-root .ficon.num {
+  background: #e6f6ee;
+  color: var(--good)
+}
+
+.ftl-root .ficon.txt {
+  background: #f0eefa;
+  color: #6650b8
+}
+
+.ftl-root .ficon.fx {
+  background: #fdf3e2;
+  color: #b07a12;
+  font-style: italic
+}
+
+.ftl-root[data-theme="dark"] .ficon.date {
+  background: #12303d;
+  color: #7cc4dc
+}
+
+.ftl-root[data-theme="dark"] .ficon.num {
+  background: #173427;
+  color: #3dbd8a
+}
+
+.ftl-root[data-theme="dark"] .ficon.txt {
+  background: #241f3a;
+  color: #a394e8
+}
+
+.ftl-root[data-theme="dark"] .ficon.fx {
+  background: #38301c;
+  color: #e6b04a
+}
+
+.ftl-root .field .fill {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  color: var(--steel)
+}
+
+.ftl-root .fpop {
+  position: fixed;
+  z-index: 200;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(4, 26, 50, .2);
+  padding: 14px 16px;
+  width: 250px;
+  display: none
+}
+
+.ftl-root .fpop h4 {
+  font-family: var(--disp);
+  font-size: 13px;
+  margin-bottom: 2px
+}
+
+.ftl-root .fpop .meta {
+  font-size: 11px;
+  color: var(--steel);
+  margin-bottom: 9px
+}
+
+.ftl-root .fpop .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3.5px 0;
+  border-bottom: 1px dashed var(--mist)
+}
+
+.ftl-root .fpop .row span:last-child {
+  font-weight: 600
+}
+
+/* ===== modals ===== */
+.ftl-root .modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .72);
+  backdrop-filter: blur(5px);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto
+}
+
+.ftl-root .modal.open {
+  display: flex !important
+}
+
+.ftl-root .box {
+  background: var(--card);
+  border-radius: 18px;
+  max-width: 780px;
+  width: 100%;
+  padding: 24px 28px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .4)
+}
+
+.ftl-root .box.wide {
+  max-width: 1240px
+}
+
+.ftl-root .box h2 {
+  font-family: var(--disp);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px
+}
+
+.ftl-root .box h2 button {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--steel)
+}
+
+.ftl-root .hgrp {
+  margin-top: 16px
+}
+
+.ftl-root .hgrp>b {
+  font-family: var(--disp);
+  font-size: 13px;
+  color: var(--sea);
+  display: block;
+  margin-bottom: 6px
+}
+
+.ftl-root .hrow {
+  display: flex;
+  gap: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 7px;
+  font-size: 12.8px;
+  line-height: 1.6;
+  align-items: baseline
+}
+
+.ftl-root .hrow b {
+  flex-shrink: 0;
+  min-width: 160px
+}
+
+.ftl-root .hrow span {
+  color: var(--steel)
+}
+
+.ftl-root .qfile {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden
+}
+
+.ftl-root .qf-head {
+  background: var(--mist);
+  padding: 11px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px
+}
+
+.ftl-root .qf-head .ok {
+  color: var(--good)
+}
+
+.ftl-root .qf-head .fail {
+  color: var(--bad)
+}
+
+.ftl-root .qf-head .skip {
+  color: var(--steel);
+  font-weight: 500
+}
+
+.ftl-root .qhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--mist);
+  border-bottom: 1px solid var(--line);
+  font-size: 12.6px
+}
+
+.ftl-root .qhead b {
+  font-family: var(--disp);
+  font-size: 13px;
+  color: var(--ink)
+}
+
+.ftl-root .qhead span {
+  font-size: 11.5px;
+  color: var(--steel);
+  font-weight: 600
+}
+
+.ftl-root .qitem {
+  padding: 11px 16px;
+  border-top: 1px solid var(--mist);
+  font-size: 12.8px;
+  line-height: 1.65;
+  display: flex;
+  gap: 10px
+}
+
+.ftl-root .qitem code,
+.ftl-root .hrow code {
+  background: var(--mist);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11.5px
+}
+
+.ftl-root .tagE,
+.ftl-root .tagW,
+.ftl-root .tagI {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 2px 8px;
+  height: fit-content;
+  margin-top: 1px
+}
+
+.ftl-root .tagE {
+  background: #fbe9e9;
+  color: var(--bad)
+}
+
+.ftl-root .tagW {
+  background: #fdf3e2;
+  color: #b07a12
+}
+
+.ftl-root .tagI {
+  background: #e6f5f8;
+  color: var(--sea)
+}
+
+.ftl-root[data-theme="dark"] .tagE {
+  background: #3a2024
+}
+
+.ftl-root[data-theme="dark"] .tagW {
+  background: #38301c
+}
+
+.ftl-root[data-theme="dark"] .tagI {
+  background: #10323a
+}
+
+/* raw data: excel-like tabs */
+.ftl-root .xtabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--line);
+  margin: 14px 0 10px
+}
+
+.ftl-root .xtab {
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--steel);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent
+}
+
+.ftl-root .xtab.on {
+  color: var(--sea);
+  background: var(--card);
+  border-color: var(--line);
+  margin-bottom: -2px;
+  border-bottom: 2px solid var(--card)
+}
+
+.ftl-root .xmeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--steel)
+}
+
+.ftl-root .xwrap {
+  overflow: auto;
+  max-height: 62vh;
+  border: 1px solid var(--line);
+  border-radius: 10px
+}
+
+.ftl-root .xwrap table {
+  font-size: 11.8px
+}
+
+.ftl-root .xwrap th {
+  position: sticky;
+  top: 0
+}
+
+.ftl-root .xwrap td:first-child,
+.ftl-root .xwrap th:first-child {
+  color: var(--steel);
+  background: var(--mist);
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  font-weight: 600
+}
+
+.ftl-root[dir="rtl"] .xwrap td:first-child,
+.ftl-root[dir="rtl"] .xwrap th:first-child {
+  left: auto;
+  right: 0
+}
+
+.ftl-root .toast {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #0b2338;
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 500;
+  transition: transform .3s;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+}
+
+.ftl-root .toast.show {
+  transform: translateX(-50%) translateY(0)
+}
+
+@media (max-width:1200px) {
+  .ftl-root .kpis {
+    grid-template-columns: repeat(2, 1fr)
+  }
+
+  .ftl-root .s8,
+  .ftl-root .s7 {
+    grid-column: span 12
+  }
+
+  .ftl-root .s6,
+  .ftl-root .s5,
+  .ftl-root .s4 {
+    grid-column: span 6
+  }
+}
+
+@media (max-width:800px) {
+
+  .ftl-root .s6,
+  .ftl-root .s5,
+  .ftl-root .s4 {
+    grid-column: span 12
+  }
+
+  .ftl-root .kpis {
+    grid-template-columns: 1fr
+  }
+
+  .ftl-root aside {
+    display: none
+  }
+}
+
+@media print {
+
+  .ftl-root header .hbtn,
+  .ftl-root header .tag,
+  .ftl-root aside,
+  .ftl-root .rail,
+  .ftl-root .tools,
+  .ftl-root .pg,
+  .ftl-root #activeNote {
+    display: none !important
+  }
+
+  .ftl-root {
+    background: #fff
+  }
+
+  .ftl-root .card,
+  .ftl-root .kpi {
+    box-shadow: none;
+    break-inside: avoid
+  }
+
+  .ftl-root main {
+    padding: 0
+  }
+
+  .ftl-root .ch {
+    height: 220px
+  }
+}
+
+/* insights as a compact tabular strip under the KPIs */
+.ftl-root #insCard {
+  margin-bottom: 18px;
+  padding-bottom: 14px
+}
+
+.ftl-root #insCard ul {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px 22px;
+  margin-top: 8px
+}
+
+.ftl-root #insCard li {
+  border-bottom: none;
+  padding: 7px 0 7px 22px;
+  font-size: 12.6px;
+  line-height: 1.5;
+  border-top: 1px solid rgba(255, 255, 255, .12)
+}
+
+.ftl-root[dir="rtl"] #insCard li {
+  padding: 7px 22px 7px 0
+}
+
+.ftl-root #insCard li::before {
+  top: 12px;
+  width: 8px;
+  height: 8px
+}
+
+@media (max-width:1200px) {
+  .ftl-root #insCard ul {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+/* export picker */
+.ftl-root .xhint {
+  font-size: 12.5px;
+  color: var(--steel);
+  margin: 6px 0 10px;
+  line-height: 1.6
+}
+
+.ftl-root .xsec {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-top: 10px
+}
+
+.ftl-root .xall {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  cursor: pointer
+}
+
+.ftl-root .xgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 16px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line)
+}
+
+.ftl-root .xgrid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 4px 2px;
+  cursor: pointer;
+  color: var(--ink)
+}
+
+.ftl-root .xfoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--steel)
+}
+
+.ftl-root .xgo {
+  background: var(--brand-2) !important;
+  color: #fff !important;
+  border-color: var(--brand-2) !important;
+  padding: 11px 22px !important
+}
+
+/* export document (print only) */
+.ftl-root #exportRoot {
+  display: none
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 11mm 12mm
+  }
+
+  .ftl-root>*:not(#exportRoot) {
+    display: none !important
+  }
+
+  .ftl-root {
+    background: #fff !important
+  }
+
+  .ftl-root #exportRoot {
+    display: block;
+    font-family: 'Inter', Arial, sans-serif;
+    color: #12263a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact
+  }
+
+  .ftl-root[dir="rtl"] #exportRoot {
+    font-family: 'Tajawal', Arial, sans-serif
+  }
+
+  .ftl-root .xp-cover {
+    height: 186mm;
+    border-radius: 6mm;
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    padding: 18mm 16mm;
+    break-after: page;
+    background: radial-gradient(900px 400px at 10% -30%, rgba(34, 184, 207, .45), transparent 60%), linear-gradient(115deg, #062a4a, #0b4f7a 50%, #0e7c86 120%)
+  }
+
+  .ftl-root .xp-cover .dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, transparent 1.6px);
+    background-size: 20px 20px;
+    mask-image: linear-gradient(90deg, transparent 40%, #000 90%)
+  }
+
+  .ftl-root .xp-cover .wave {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 34mm;
+    opacity: .35
+  }
+
+  .ftl-root .xp-cover .route {
+    position: absolute;
+    right: 16mm;
+    top: 20mm;
+    width: 110mm;
+    opacity: .7
+  }
+
+  .ftl-root .xp-cover .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8mm
+  }
+
+  .ftl-root .xp-cover .logo .ship {
+    width: 34mm;
+    height: auto;
+    display: block
+  }
+
+  .ftl-root .xp-cover .logo img {
+    height: 26mm;
+    display: block;
+    filter: drop-shadow(0 2mm 4mm rgba(2, 14, 28, .5))
+  }
+
+  .ftl-root .xp-cover .kicker {
+    margin-top: 18mm;
+    font-size: 11pt;
+    letter-spacing: .3em;
+    color: #9fe3ef;
+    text-transform: uppercase;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-cover h1 {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 34pt;
+    font-weight: 800;
+    margin: 3mm 0 2mm;
+    letter-spacing: -.01em
+  }
+
+  .ftl-root .xp-cover .sub {
+    font-size: 13pt;
+    color: #bfe9f1
+  }
+
+  .ftl-root .xp-cover .meta {
+    margin-top: 10mm;
+    display: flex;
+    gap: 14mm;
+    font-size: 10.5pt;
+    color: #dff4f8
+  }
+
+  .ftl-root .xp-cover .meta b {
+    display: block;
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 18pt;
+    color: #fff
+  }
+
+  .ftl-root .xp-cover .filters {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 14mm;
+    border-top: 1px solid rgba(255, 255, 255, .35);
+    padding-top: 5mm
+  }
+
+  .ftl-root .xp-cover .filters .lbl {
+    font-size: 9.5pt;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: #9fe3ef;
+    margin-bottom: 3mm;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-cover .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3mm
+  }
+
+  .ftl-root .xp-cover .chip2 {
+    background: rgba(255, 255, 255, .14);
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 20px;
+    padding: 2mm 5mm;
+    font-size: 10pt
+  }
+
+  .ftl-root .xp-cover .chip2 b {
+    color: #f5dfae;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #0e7c86;
+    padding-bottom: 3mm;
+    margin-bottom: 6mm
+  }
+
+  .ftl-root .xp-head .t {
+    font-family: 'Sora', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 13pt;
+    color: #0b4f7a
+  }
+
+  .ftl-root .xp-head .d {
+    font-size: 9pt;
+    color: #66788c
+  }
+
+  .ftl-root .xp-sec {
+    break-inside: avoid;
+    margin-bottom: 6mm
+  }
+
+  .ftl-root .xp-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4mm
+  }
+
+  .ftl-root .xp-kpi {
+    border: 1px solid #d8e3ea;
+    border-radius: 4mm;
+    padding: 4mm 5mm;
+    position: relative;
+    overflow: hidden;
+    background: #fff
+  }
+
+  .ftl-root .xp-kpi .lab {
+    font-size: 9pt;
+    color: #66788c;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-kpi .val {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 19pt;
+    font-weight: 800;
+    margin-top: 2mm;
+    color: #12263a
+  }
+
+  .ftl-root .xp-kpi .sb {
+    font-size: 8.5pt;
+    color: #66788c;
+    margin-top: 1mm
+  }
+
+  .ftl-root .xp-kpi::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1.5mm;
+    background: var(--xa, #0e7c86)
+  }
+
+  .ftl-root .xp-ins {
+    border: 1px solid #dde1e6;
+    border-radius: 4mm;
+    padding: 4mm 6mm;
+    background: linear-gradient(135deg, #f2f9fb, #fff)
+  }
+
+  .ftl-root .xp-ins h4 {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 11pt;
+    color: #0b4f7a;
+    margin-bottom: 2mm
+  }
+
+  .ftl-root .xp-ins ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5mm 8mm
+  }
+
+  .ftl-root .xp-ins li {
+    font-size: 9.5pt;
+    line-height: 1.5;
+    padding-left: 5mm;
+    position: relative
+  }
+
+  .ftl-root .xp-ins li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2.2mm;
+    width: 2.2mm;
+    height: 2.2mm;
+    border-radius: 50%;
+    background: #22b8cf
+  }
+
+  .ftl-root .xp-ins b {
+    color: #0b4f7a
+  }
+
+  .ftl-root .xp-charts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5mm
+  }
+
+  .ftl-root .xp-chart {
+    border: 1px solid #d8e3ea;
+    border-radius: 4mm;
+    padding: 4mm 5mm 3mm;
+    break-inside: avoid;
+    background: #fff
+  }
+
+  .ftl-root .xp-chart h4 {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 10.5pt;
+    color: #12263a;
+    margin-bottom: .5mm
+  }
+
+  .ftl-root .xp-chart .s {
+    font-size: 8.5pt;
+    color: #66788c;
+    margin-bottom: 2mm
+  }
+
+  .ftl-root .xp-chart img {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 58mm;
+    object-fit: contain
+  }
+
+  .ftl-root .xp-foot {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 8pt;
+    color: #8fa3b4;
+    display: flex;
+    justify-content: space-between
+  }
+}
+
+/* ===== operation card (compact) ===== */
+.ftl-root .opwrap {
+  margin-bottom: 10px
+}
+
+.ftl-root .opcard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px 12px;
+  box-shadow: 0 2px 10px rgba(4, 26, 50, .05)
+}
+
+.ftl-root .ophead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px
+}
+
+.ftl-root .opref {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--brand-3);
+  letter-spacing: .02em
+}
+
+.ftl-root .opsub {
+  font-size: 11px;
+  color: var(--steel);
+  margin-top: 1px
+}
+
+.ftl-root .opgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 7px 9px
+}
+
+.ftl-root .opcard.closed .opgrid,
+.ftl-root .opcard.closed .opfoot {
+  display: none
+}
+
+.ftl-root .opf {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-inline-start: 3px solid var(--gc, var(--line));
+  padding-inline-start: 7px;
+  border-radius: 2px
+}
+
+.ftl-root .opf label {
+  font-size: 10.6px;
+  font-weight: 700;
+  color: var(--steel);
+  letter-spacing: .01em;
+  line-height: 1.35;
+  min-height: 2.7em
+}
+
+.ftl-root .opf label em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--steel);
+  opacity: .8
+}
+
+.ftl-root .opf small.opopt {
+  font-size: 10px;
+  color: var(--steel);
+  margin-top: 1px
+}
+
+.ftl-root .opf input,
+.ftl-root .opf select {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.2px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(6, 42, 74, .04);
+  transition: border-color .15s, box-shadow .15s
+}
+
+.ftl-root .opf select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--steel) 50%), linear-gradient(135deg, var(--steel) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 52%, calc(100% - 8px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-inline-end: 26px
+}
+
+.ftl-root[dir="rtl"] .opf select {
+  background-position: 13px 52%, 18px 52%;
+  padding-inline-end: 9px;
+  padding-inline-start: 26px
+}
+
+.ftl-root .opf input:focus,
+.ftl-root .opf select:focus {
+  outline: none;
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 22%, transparent)
+}
+
+.ftl-root .opfoot {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap
+}
+
+.ftl-root .opcount {
+  display: flex;
+  flex-direction: column;
+  gap: 3px
+}
+
+.ftl-root .opcount label {
+  font-size: 10.6px;
+  font-weight: 700;
+  color: var(--steel)
+}
+
+.ftl-root .opcount input {
+  width: 90px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.4px;
+  text-align: center;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .ophint {
+  font-size: 11px;
+  color: var(--steel);
+  flex: 1;
+  line-height: 1.5
+}
+
+/* ===== system status strip ===== */
+.ftl-root .sysbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap
+}
+
+.ftl-root .sysbar .spacer {
+  flex: 1
+}
+
+.ftl-root .chipst {
+  font-size: 11.2px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 3px 10px;
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+  white-space: nowrap
+}
+
+.ftl-root .chipst.muted {
+  background: var(--mist);
+  color: var(--steel);
+  font-weight: 500
+}
+
+.ftl-root .chipst.dirty {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: #8a5f14
+}
+
+.ftl-root[data-theme="dark"] .chipst.dirty {
+  color: var(--warn)
+}
+
+/* ===== the table: big, keyboard-first, cards not cells ===== */
+.ftl-root .egrid {
+  overflow: auto;
+  max-height: calc(100vh - 215px);
+  padding: 0 2px 12px;
+  position: relative
+}
+
+.ftl-root #eTable {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.8px;
+  white-space: nowrap
+}
+
+.ftl-root #eTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--paper);
+  padding: 10px 5px 10px;
+  text-align: start
+}
+
+.ftl-root #eTable thead th span {
+  width: var(--w);
+  min-width: var(--w);
+  box-sizing: border-box;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.ftl-root #eTable thead th span {
+  display: block;
+  background: color-mix(in srgb, var(--gc) 28%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--gc) 55%, var(--line));
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 12.6px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: .01em;
+  line-height: 1.2
+}
+
+.ftl-root[data-theme="dark"] #eTable thead th span {
+  background: color-mix(in srgb, var(--gc) 32%, var(--card));
+  color: #f4f8fb
+}
+
+.ftl-root #eTable thead th .lk {
+  position: absolute;
+  inset-inline-end: 10px;
+  top: 14px;
+  font-size: 10px;
+  opacity: .65
+}
+
+.ftl-root #eTable thead th {
+  position: sticky
+}
+
+.ftl-root #eTable thead th.rn,
+.ftl-root #eTable thead th.meta,
+.ftl-root #eTable thead th.del {
+  --gc: #8fa3b4
+}
+
+.ftl-root #eTable td {
+  padding: 6px 5px;
+  border: none;
+  background: transparent;
+  vertical-align: top
+}
+
+.ftl-root #eTable td.c .cbox {
+  width: var(--w);
+  min-width: var(--w);
+  box-sizing: border-box
+}
+
+.ftl-root #eTable td.c {
+  outline: none;
+  cursor: default
+}
+
+.ftl-root #eTable .cbox {
+  display: flex;
+  align-items: center;
+  min-height: 38px;
+  background: color-mix(in srgb, var(--gc, #fff) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--gc, var(--line)) 32%, var(--line));
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(6, 42, 74, .05), 0 6px 14px -10px rgba(6, 42, 74, .16);
+  position: relative;
+  transition: border-color .12s, box-shadow .12s, transform .1s
+}
+
+.ftl-root #eTable td.c.cur .cbox {
+  border-color: var(--brand-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 26%, transparent);
+  transform: translateY(-1px)
+}
+
+.ftl-root #eTable td.c.locked .cbox {
+  background: color-mix(in srgb, var(--gc) 18%, var(--mist));
+  border-style: solid;
+  opacity: .92
+}
+
+.ftl-root #eTable td.c.locked .cv {
+  color: var(--steel)
+}
+
+.ftl-root #eTable td.c.dimmed .cbox {
+  background: repeating-linear-gradient(135deg, var(--mist) 0 6px, color-mix(in srgb, var(--mist) 60%, var(--card)) 6px 12px);
+  opacity: .55
+}
+
+.ftl-root #eTable td.c.merged {
+  height: 1px
+}
+
+.ftl-root #eTable td.c.merged .cbox {
+  height: calc(100% - 0px);
+  min-height: 38px;
+  align-items: center
+}
+
+.ftl-root #eTable td.c.merged .cbox::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--gc) 70%, var(--brand-2))
+}
+
+.ftl-root #eTable td.c.merged .cv {
+  padding-inline-start: 16px
+}
+
+.ftl-root #eTable .cv {
+  flex: 1;
+  padding: 9px 12px;
+  font-size: 12.8px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.ftl-root #eTable .cv .ph {
+  color: var(--steel);
+  opacity: .45
+}
+
+.ftl-root #eTable .ed {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: 12.8px;
+  color: var(--ink);
+  outline: none;
+  min-width: 80px
+}
+
+.ftl-root #eTable select.ed {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-inline-end: 26px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--steel) 50%), linear-gradient(135deg, var(--steel) 50%, transparent 50%);
+  background-position: calc(100% - 14px) 52%, calc(100% - 9px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat
+}
+
+/* merge / unmerge toggle sits in the corner of a mergeable cell */
+.ftl-root #eTable .mg {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: -6px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--sea);
+  font-size: 11px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(6, 42, 74, .18);
+  z-index: 2
+}
+
+.ftl-root #eTable td.c:hover .mg,
+.ftl-root #eTable td.c.cur .mg {
+  display: flex
+}
+
+.ftl-root #eTable td.c.merged .mg {
+  color: var(--brand-2)
+}
+
+/* shipment rhythm */
+.ftl-root #eTable tr.ship-start td,
+.ftl-root #eTable tr.ship-mid td {
+  padding-bottom: 2px
+}
+
+.ftl-root #eTable tr.ship-mid td,
+.ftl-root #eTable tr.ship-end td {
+  padding-top: 2px
+}
+
+.ftl-root #eTable tr.ship-start td:not([rowspan]) .cbox,
+.ftl-root #eTable tr.ship-mid td:not([rowspan]) .cbox {
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px
+}
+
+.ftl-root #eTable tr.ship-mid td:not([rowspan]) .cbox,
+.ftl-root #eTable tr.ship-end td:not([rowspan]) .cbox {
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px
+}
+
+.ftl-root #eTable td.rn {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--paper);
+  text-align: center;
+  min-width: 44px;
+  padding-inline: 4px 6px
+}
+
+.ftl-root[dir="rtl"] #eTable td.rn {
+  left: auto;
+  right: 0
+}
+
+.ftl-root #eTable thead th.rn {
+  z-index: 6;
+  left: 0
+}
+
+.ftl-root[dir="rtl"] #eTable thead th.rn {
+  left: auto;
+  right: 0
+}
+
+.ftl-root #eTable td.rn {
+  vertical-align: middle !important
+}
+
+.ftl-root #eTable .rnbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  min-height: 38px;
+  border-radius: 9px;
+  background: var(--brand-2);
+  color: #fff;
+  font-weight: 800;
+  font-size: 12.5px
+}
+
+.ftl-root #eTable td.del {
+  background: var(--paper)
+}
+
+.ftl-root #eTable td.del button {
+  background: none;
+  border: none;
+  color: var(--steel);
+  font-size: 17px;
+  padding: 8px 9px;
+  line-height: 1;
+  border-radius: 9px
+}
+
+.ftl-root #eTable td.del button:hover {
+  color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, transparent)
+}
+
+.ftl-root #eTable td.meta .cbox {
+  padding: 7px 10px;
+  font-size: 10.6px;
+  color: var(--steel);
+  text-align: center;
+  line-height: 1.45;
+  white-space: nowrap;
+  display: block;
+  --gc: #8fa3b4
+}
+
+.ftl-root #eTable td.meta {
+  vertical-align: middle !important
+}
+
+.ftl-root #eTable td.meta .cbox {
+  display: block;
+  min-height: 38px;
+  height: auto;
+}
+
+.ftl-root #eTable td.meta .cbox b {
+  color: var(--ink)
+}
+
+.ftl-root .eempty {
+  padding: 26px 10px;
+  text-align: center;
+  color: var(--steel);
+  font-size: 12.6px
+}
+
+/* latest updates cell */
+.ftl-root .updbtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  color: var(--ink);
+  padding: 6px 10px;
+  text-align: start;
+  border-radius: 10px;
+  min-height: 36px;
+  position: relative
+}
+
+.ftl-root .updbtn:hover {
+  background: color-mix(in srgb, var(--aqua) 10%, transparent)
+}
+
+.ftl-root .updbtn .updtxt {
+  font-size: 12.2px;
+  font-weight: 600;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block
+}
+
+.ftl-root .updbtn .updtxt.muted {
+  color: var(--steel);
+  font-weight: 500
+}
+
+.ftl-root .updbtn .updby {
+  display: block;
+  font-size: 10.4px;
+  color: var(--sea);
+  font-weight: 600
+}
+
+.ftl-root .updbtn>span:first-child {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0
+}
+
+.ftl-root .updn {
+  background: var(--aqua);
+  color: #06202a;
+  border-radius: 20px;
+  padding: 1px 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  flex-shrink: 0
+}
+
+.ftl-root .floattip {
+  display: none;
+  position: fixed;
+  z-index: 900;
+  background: var(--brand-1);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 13px;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px -10px rgba(0, 0, 0, .55);
+  min-width: 240px;
+  max-width: 420px;
+  pointer-events: none
+}
+
+.ftl-root .floattip b {
+  display: block;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #9fe3ef;
+  margin-bottom: 6px
+}
+
+.ftl-root .floattip .ftrow {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-top: 1px solid rgba(255, 255, 255, .12)
+}
+
+.ftl-root .floattip .ftrow span {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #22b8cf;
+  color: #06202a;
+  font-weight: 800;
+  font-size: 10.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px
+}
+
+.ftl-root .floattip .ftrow small {
+  display: block;
+  color: #a9dce6;
+  font-size: 10.5px;
+  margin-top: 2px
+}
+
+.ftl-root .updadd {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px
+}
+
+.ftl-root .updadd input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .updadd input:focus {
+  outline: none;
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 22%, transparent)
+}
+
+.ftl-root .updmeta {
+  font-size: 11.4px;
+  color: var(--steel);
+  margin: 8px 2px 12px
+}
+
+.ftl-root .updlist {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  list-style: none;
+  padding: 0;
+  margin: 0
+}
+
+.ftl-root .updrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 13px;
+  font-size: 12.8px;
+  background: var(--card)
+}
+
+.ftl-root .updrow .updn2 {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--brand-2);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px
+}
+
+.ftl-root .updrow>div {
+  flex: 1
+}
+
+.ftl-root .updrow .updtext {
+  font-weight: 600;
+  line-height: 1.45
+}
+
+.ftl-root .updrow .updsub {
+  font-size: 11px;
+  color: var(--steel);
+  margin-top: 3px
+}
+
+.ftl-root .updrow em {
+  font-style: normal;
+  background: color-mix(in srgb, var(--good) 15%, transparent);
+  color: var(--good);
+  border-radius: 20px;
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  align-self: center
+}
+
+.ftl-root .updnone {
+  color: var(--steel);
+  padding: 14px 2px;
+  font-size: 12.8px
+}
+
+@media print {
+  .ftl-root #entryView {
+    display: none !important
+  }
+}
+
+/* ===== empty state ===== */
+.ftl-root #emptyState {
+  display: flex;
+  justify-content: center;
+  padding: 60px 10px
+}
+
+.ftl-root .drop {
+  background: var(--card);
+  border: 2px dashed #b3c9d4;
+  border-radius: 22px;
+  max-width: 660px;
+  width: 100%;
+  padding: 52px 44px;
+  text-align: center;
+  transition: border-color .2s, background .2s
+}
+
+.ftl-root .drop.over {
+  border-color: var(--sea);
+  background: #eaf7f9
+}
+
+.ftl-root[data-theme="dark"] .drop {
+  border-color: #2c4658
+}
+
+.ftl-root[data-theme="dark"] .drop.over {
+  background: #0f2a33
+}
+
+.ftl-root .drop .ico {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--brand-2), var(--aqua));
+  color: #fff;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 18px;
+  box-shadow: 0 10px 26px rgba(14, 124, 134, .35)
+}
+
+.ftl-root .drop h2 {
+  font-family: var(--disp);
+  font-size: 21px;
+  margin-bottom: 10px
+}
+
+.ftl-root .drop p {
+  color: var(--steel);
+  line-height: 1.7;
+  margin-bottom: 22px
+}
+
+.ftl-root .drop .big {
+  padding: 13px 30px;
+  font-size: 14px;
+  background: var(--brand-2);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600
+}
+
+.ftl-root .drop .big:hover {
+  background: var(--brand-3)
+}
+
+.ftl-root .drop .cols {
+  margin-top: 26px;
+  font-size: 11.5px;
+  color: var(--steel);
+  line-height: 1.8;
+  border-top: 1px solid var(--mist);
+  padding-top: 16px;
+  text-align: start
+}
+
+.ftl-root .drop .cols b {
+  color: var(--ink)
+}
+
+/* ===== direction tabs ===== */
+.ftl-root .dtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap
+}
+
+.ftl-root .dtab {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px 14px 0 0;
+  padding: 11px 20px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--steel);
+  position: relative;
+  transition: color .18s, background .18s;
+  box-shadow: 0 1px 2px rgba(4, 26, 50, .04)
+}
+
+.ftl-root .dtab:hover {
+  color: var(--ink)
+}
+
+.ftl-root .dtab::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: transparent;
+  transition: background .18s
+}
+
+.ftl-root .dtab.on {
+  color: var(--ink);
+  background: var(--card)
+}
+
+.ftl-root .dtab.on::after {
+  background: linear-gradient(90deg, var(--brand-2), var(--aqua))
+}
+
+.ftl-root .dtab .ico {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  background: var(--mist);
+  color: var(--steel);
+  font-weight: 700
+}
+
+.ftl-root .dtab.on .ico {
+  background: color-mix(in srgb, var(--aqua) 22%, transparent);
+  color: var(--brand-3)
+}
+
+.ftl-root .dtab .cnt {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--steel);
+  background: var(--mist);
+  border-radius: 20px;
+  padding: 2px 9px
+}
+
+.ftl-root .dtab.on .cnt {
+  background: color-mix(in srgb, var(--aqua) 18%, transparent);
+  color: var(--brand-3)
+}
+
+.ftl-root[data-theme="dark"] .dtab.on .ico,
+.ftl-root[data-theme="dark"] .dtab.on .cnt {
+  color: var(--sky)
+}
+
+@media print {
+  .ftl-root .dtabs {
+    display: none
+  }
+}
+
+/* ===== filter rail ===== */
+.ftl-root .rail {
+  background: color-mix(in srgb, var(--card) 84%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 0 18px 18px 18px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(4, 26, 50, .05)
+}
+
+.ftl-root .rrow {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 14px;
+  align-items: flex-end;
+  overflow-x: auto;
+  padding-bottom: 2px
+}
+
+.ftl-root .rrow::-webkit-scrollbar {
+  height: 5px
+}
+
+.ftl-root .rrow::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px
+}
+
+.ftl-root .rsep {
+  height: 1px;
+  background: var(--line);
+  margin: 12px 0
+}
+
+.ftl-root .rrow .fld {
+  flex: 0 0 auto
+}
+
+.ftl-root .fld {
+  display: flex;
+  flex-direction: column;
+  gap: 5px
+}
+
+.ftl-root .fld label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--steel)
+}
+
+.ftl-root .fld select,
+.ftl-root .fld input {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-family: inherit;
+  background: var(--card);
+  min-width: 126px;
+  color: var(--ink)
+}
+
+.ftl-root[data-theme="dark"] .fld select,
+.ftl-root[data-theme="dark"] .fld input,
+.ftl-root[data-theme="dark"] .search {
+  background: #0d1824;
+  color: var(--ink)
+}
+
+.ftl-root .fld select:focus,
+.ftl-root .fld input:focus {
+  outline: 2px solid var(--aqua);
+  outline-offset: 1px;
+  border-color: var(--sea)
+}
+
+.ftl-root .presets {
+  display: flex;
+  gap: 6px
+}
+
+.ftl-root .chip {
+  border: 1px solid var(--line);
+  background: var(--mist);
+  border-radius: 16px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink)
+}
+
+.ftl-root .chip.on {
+  background: var(--brand-2);
+  color: #fff;
+  border-color: var(--brand-2)
+}
+
+.ftl-root[data-theme="dark"] .chip.on {
+  background: var(--aqua);
+  border-color: var(--aqua);
+  color: #06202a
+}
+
+.ftl-root .rrow .reset {
+  margin-inline-start: auto;
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: var(--sea);
+  font-weight: 600;
+  font-size: 12.5px;
+  padding: 8px 4px
+}
+
+.ftl-root .rrow .reset:hover {
+  text-decoration: underline
+}
+
+.ftl-root #activeNote {
+  font-size: 12px;
+  color: var(--steel);
+  margin: 0 2px 14px
+}
+
+/* ===== KPI band ===== */
+.ftl-root .kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 18px
+}
+
+.ftl-root .kpi {
+  --acc: var(--sea);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 15px 16px 34px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(4, 26, 50, .05), 0 10px 26px -14px rgba(4, 26, 50, .14);
+  transition: transform .2s, box-shadow .2s
+}
+
+.ftl-root .kpi:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgba(4, 26, 50, .06), 0 20px 40px -16px rgba(4, 26, 50, .25)
+}
+
+.ftl-root .kpi::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -34px;
+  top: -34px;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--acc) 16%, transparent), transparent 70%)
+}
+
+.ftl-root .kpi.good {
+  --acc: var(--good)
+}
+
+.ftl-root .kpi.warn {
+  --acc: var(--warn)
+}
+
+.ftl-root .kpi.bad {
+  --acc: var(--bad)
+}
+
+.ftl-root .kpi.sand {
+  --acc: var(--sand)
+}
+
+.ftl-root .kpi.aqua {
+  --acc: var(--aqua)
+}
+
+.ftl-root .k-top {
+  display: flex;
+  align-items: center;
+  gap: 8px
+}
+
+.ftl-root .k-ico {
+  width: 27px;
+  height: 27px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13.5px;
+  background: color-mix(in srgb, var(--acc) 14%, transparent);
+  flex-shrink: 0
+}
+
+.ftl-root .k-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--steel)
+}
+
+.ftl-root .k-val {
+  font-family: var(--disp);
+  font-weight: 800;
+  font-size: 25px;
+  margin-top: 7px;
+  letter-spacing: -.015em
+}
+
+.ftl-root .k-sub {
+  font-size: 11px;
+  color: var(--steel);
+  margin-top: 3px
+}
+
+.ftl-root .spark {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  padding: 0 14px;
+  opacity: .4
+}
+
+.ftl-root .spark i {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(180deg, var(--acc), color-mix(in srgb, var(--acc) 40%, transparent));
+  min-height: 2px
+}
+
+/* ===== charts ===== */
+.ftl-root .grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px
+}
+
+.ftl-root .card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 20px 14px;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(4, 26, 50, .05), 0 10px 30px -12px rgba(4, 26, 50, .12);
+  transition: box-shadow .25s
+}
+
+.ftl-root .card:hover {
+  box-shadow: 0 2px 4px rgba(4, 26, 50, .06), 0 18px 44px -14px rgba(4, 26, 50, .2)
+}
+
+.ftl-root .card h3 {
+  font-family: var(--disp);
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px
+}
+
+.ftl-root .card h3::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-inline-end: 9px;
+  background: linear-gradient(135deg, var(--sea), var(--aqua));
+  transform: rotate(45deg)
+}
+
+.ftl-root .card .sub {
+  font-size: 11.5px;
+  color: var(--steel);
+  margin-bottom: 10px
+}
+
+.ftl-root .ch {
+  position: relative;
+  height: 250px
+}
+
+.ftl-root .s12 {
+  grid-column: span 12
+}
+
+.ftl-root .s8 {
+  grid-column: span 8
+}
+
+.ftl-root .s7 {
+  grid-column: span 7
+}
+
+.ftl-root .s6 {
+  grid-column: span 6
+}
+
+.ftl-root .s5 {
+  grid-column: span 5
+}
+
+.ftl-root .s4 {
+  grid-column: span 4
+}
+
+.ftl-root .insights {
+  background: radial-gradient(500px 260px at 110% -30%, rgba(34, 184, 207, .35), transparent 60%), linear-gradient(135deg, var(--brand-1), var(--brand-3));
+  color: #fff;
+  border: none
+}
+
+.ftl-root .insights h3 {
+  color: #fff
+}
+
+.ftl-root .insights h3::before {
+  background: linear-gradient(135deg, #bff0f7, #22b8cf)
+}
+
+.ftl-root .insights .sub {
+  color: rgba(255, 255, 255, .65)
+}
+
+.ftl-root .insights ul {
+  list-style: none;
+  margin-top: 4px
+}
+
+.ftl-root .insights li {
+  padding: 8px 0 8px 26px;
+  position: relative;
+  font-size: 13px;
+  line-height: 1.55;
+  border-bottom: 1px solid rgba(255, 255, 255, .12)
+}
+
+.ftl-root[dir="rtl"] .insights li {
+  padding: 8px 26px 8px 0
+}
+
+.ftl-root .insights li:last-child {
+  border: none
+}
+
+.ftl-root .insights li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--aqua);
+  box-shadow: 0 0 0 3px rgba(34, 184, 207, .25)
+}
+
+.ftl-root[dir="rtl"] .insights li::before {
+  left: auto;
+  right: 4px
+}
+
+.ftl-root .insights b {
+  color: #bff0f7
+}
+
+/* ===== table ===== */
+.ftl-root .tools {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px
+}
+
+.ftl-root .search {
+  flex: 1;
+  max-width: 340px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 12.8px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .tbl-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  max-height: 430px
+}
+
+.ftl-root table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.3px;
+  white-space: nowrap
+}
+
+.ftl-root th {
+  background: var(--mist);
+  text-align: start;
+  padding: 9px 12px;
+  font-weight: 600;
+  color: var(--steel);
+  position: sticky;
+  top: 0;
+  cursor: pointer;
+  user-select: none;
+  z-index: 1
+}
+
+.ftl-root th .arrow {
+  font-size: 9px;
+  color: var(--sea)
+}
+
+.ftl-root td {
+  padding: 8px 12px;
+  border-top: 1px solid var(--mist)
+}
+
+.ftl-root tr:hover td {
+  background: color-mix(in srgb, var(--aqua) 8%, transparent)
+}
+
+.ftl-root .st {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600
+}
+
+.ftl-root .st.rel {
+  background: #e2f4ea;
+  color: var(--good)
+}
+
+.ftl-root .st.arr {
+  background: #e6f5f8;
+  color: var(--sea)
+}
+
+.ftl-root .st.tra {
+  background: #e4effb;
+  color: #0b4f7a
+}
+
+.ftl-root .st.pen {
+  background: #f0f2f5;
+  color: var(--steel)
+}
+
+.ftl-root .st.late {
+  background: #fbe9e9;
+  color: var(--bad)
+}
+
+.ftl-root[data-theme="dark"] .st.rel {
+  background: #173427
+}
+
+.ftl-root[data-theme="dark"] .st.arr {
+  background: #10323a
+}
+
+.ftl-root[data-theme="dark"] .st.tra {
+  background: #16304a;
+  color: #7cc4dc
+}
+
+.ftl-root[data-theme="dark"] .st.pen {
+  background: #232d3c
+}
+
+.ftl-root[data-theme="dark"] .st.late {
+  background: #3a2024
+}
+
+.ftl-root .tfoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--steel)
+}
+
+.ftl-root .pg button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 7px;
+  padding: 6px 12px;
+  font-size: 12px;
+  margin-inline-start: 6px
+}
+
+.ftl-root .pg button:disabled {
+  opacity: .4;
+  cursor: default
+}
+
+/* ===== fields panel ===== */
+.ftl-root .f-head {
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between
+}
+
+.ftl-root .f-head b {
+  font-family: var(--disp);
+  font-size: 13.5px
+}
+
+.ftl-root .f-search {
+  margin: 10px 12px;
+  display: block;
+  width: calc(100% - 24px);
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .fgroup .g-title {
+  padding: 9px 16px 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--brand-3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  letter-spacing: .02em
+}
+
+.ftl-root .fgroup .g-count {
+  margin-inline-start: auto;
+  font-weight: 600;
+  color: var(--steel);
+  background: var(--mist);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 10.5px
+}
+
+.ftl-root .fgroup+.fgroup .g-title {
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 12px
+}
+
+.ftl-root .fgroup .tri {
+  transition: transform .18s;
+  font-size: 9px
+}
+
+.ftl-root .fgroup.collapsed .tri {
+  transform: rotate(-90deg)
+}
+
+.ftl-root .fgroup.collapsed .field {
+  display: none
+}
+
+.ftl-root .field {
+  padding: 6px 16px 6px 26px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.8px;
+  cursor: pointer;
+  border-radius: 6px
+}
+
+.ftl-root[dir="rtl"] .field {
+  padding: 6px 26px 6px 16px
+}
+
+.ftl-root .field:hover {
+  background: var(--mist)
+}
+
+.ftl-root .ficon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0
+}
+
+.ftl-root .ficon.date {
+  background: #e2f2f7;
+  color: var(--navy)
+}
+
+.ftl-root .ficon.num {
+  background: #e6f6ee;
+  color: var(--good)
+}
+
+.ftl-root .ficon.txt {
+  background: #f0eefa;
+  color: #6650b8
+}
+
+.ftl-root .ficon.fx {
+  background: #fdf3e2;
+  color: #b07a12;
+  font-style: italic
+}
+
+.ftl-root[data-theme="dark"] .ficon.date {
+  background: #12303d;
+  color: #7cc4dc
+}
+
+.ftl-root[data-theme="dark"] .ficon.num {
+  background: #173427;
+  color: #3dbd8a
+}
+
+.ftl-root[data-theme="dark"] .ficon.txt {
+  background: #241f3a;
+  color: #a394e8
+}
+
+.ftl-root[data-theme="dark"] .ficon.fx {
+  background: #38301c;
+  color: #e6b04a
+}
+
+.ftl-root .field .fill {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  color: var(--steel)
+}
+
+.ftl-root .fpop {
+  position: fixed;
+  z-index: 200;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 18px 44px rgba(4, 26, 50, .2);
+  padding: 14px 16px;
+  width: 250px;
+  display: none
+}
+
+.ftl-root .fpop h4 {
+  font-family: var(--disp);
+  font-size: 13px;
+  margin-bottom: 2px
+}
+
+.ftl-root .fpop .meta {
+  font-size: 11px;
+  color: var(--steel);
+  margin-bottom: 9px
+}
+
+.ftl-root .fpop .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 3.5px 0;
+  border-bottom: 1px dashed var(--mist)
+}
+
+.ftl-root .fpop .row span:last-child {
+  font-weight: 600
+}
+
+/* ===== modals ===== */
+.ftl-root .modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .72);
+  backdrop-filter: blur(5px);
+  z-index: 10000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto
+}
+
+.ftl-root .modal.open {
+  display: flex !important
+}
+
+.ftl-root .box {
+  background: var(--card);
+  border-radius: 18px;
+  max-width: 780px;
+  width: 100%;
+  padding: 24px 28px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .4)
+}
+
+.ftl-root .box.wide {
+  max-width: 1240px
+}
+
+.ftl-root .box h2 {
+  font-family: var(--disp);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px
+}
+
+.ftl-root .box h2 button {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--steel)
+}
+
+.ftl-root .hgrp {
+  margin-top: 16px
+}
+
+.ftl-root .hgrp>b {
+  font-family: var(--disp);
+  font-size: 13px;
+  color: var(--sea);
+  display: block;
+  margin-bottom: 6px
+}
+
+.ftl-root .hrow {
+  display: flex;
+  gap: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 7px;
+  font-size: 12.8px;
+  line-height: 1.6;
+  align-items: baseline
+}
+
+.ftl-root .hrow b {
+  flex-shrink: 0;
+  min-width: 160px
+}
+
+.ftl-root .hrow span {
+  color: var(--steel)
+}
+
+.ftl-root .qfile {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden
+}
+
+.ftl-root .qf-head {
+  background: var(--mist);
+  padding: 11px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px
+}
+
+.ftl-root .qf-head .ok {
+  color: var(--good)
+}
+
+.ftl-root .qf-head .fail {
+  color: var(--bad)
+}
+
+.ftl-root .qf-head .skip {
+  color: var(--steel);
+  font-weight: 500
+}
+
+.ftl-root .qhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  background: var(--mist);
+  border-bottom: 1px solid var(--line);
+  font-size: 12.6px
+}
+
+.ftl-root .qhead b {
+  font-family: var(--disp);
+  font-size: 13px;
+  color: var(--ink)
+}
+
+.ftl-root .qhead span {
+  font-size: 11.5px;
+  color: var(--steel);
+  font-weight: 600
+}
+
+.ftl-root .qitem {
+  padding: 11px 16px;
+  border-top: 1px solid var(--mist);
+  font-size: 12.8px;
+  line-height: 1.65;
+  display: flex;
+  gap: 10px
+}
+
+.ftl-root .qitem code,
+.ftl-root .hrow code {
+  background: var(--mist);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11.5px
+}
+
+.ftl-root .tagE,
+.ftl-root .tagW,
+.ftl-root .tagI {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  border-radius: 5px;
+  padding: 2px 8px;
+  height: fit-content;
+  margin-top: 1px
+}
+
+.ftl-root .tagE {
+  background: #fbe9e9;
+  color: var(--bad)
+}
+
+.ftl-root .tagW {
+  background: #fdf3e2;
+  color: #b07a12
+}
+
+.ftl-root .tagI {
+  background: #e6f5f8;
+  color: var(--sea)
+}
+
+.ftl-root[data-theme="dark"] .tagE {
+  background: #3a2024
+}
+
+.ftl-root[data-theme="dark"] .tagW {
+  background: #38301c
+}
+
+.ftl-root[data-theme="dark"] .tagI {
+  background: #10323a
+}
+
+/* raw data: excel-like tabs */
+.ftl-root .xtabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 2px solid var(--line);
+  margin: 14px 0 10px
+}
+
+.ftl-root .xtab {
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--steel);
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: transparent
+}
+
+.ftl-root .xtab.on {
+  color: var(--sea);
+  background: var(--card);
+  border-color: var(--line);
+  margin-bottom: -2px;
+  border-bottom: 2px solid var(--card)
+}
+
+.ftl-root .xmeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--steel)
+}
+
+.ftl-root .xwrap {
+  overflow: auto;
+  max-height: 62vh;
+  border: 1px solid var(--line);
+  border-radius: 10px
+}
+
+.ftl-root .xwrap table {
+  font-size: 11.8px
+}
+
+.ftl-root .xwrap th {
+  position: sticky;
+  top: 0
+}
+
+.ftl-root .xwrap td:first-child,
+.ftl-root .xwrap th:first-child {
+  color: var(--steel);
+  background: var(--mist);
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  font-weight: 600
+}
+
+.ftl-root[dir="rtl"] .xwrap td:first-child,
+.ftl-root[dir="rtl"] .xwrap th:first-child {
+  left: auto;
+  right: 0
+}
+
+.ftl-root .toast {
+  position: fixed;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: #0b2338;
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: 10px;
+  font-size: 13px;
+  z-index: 500;
+  transition: transform .3s;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+}
+
+.ftl-root .toast.show {
+  transform: translateX(-50%) translateY(0)
+}
+
+@media (max-width:1200px) {
+  .ftl-root .kpis {
+    grid-template-columns: repeat(2, 1fr)
+  }
+
+  .ftl-root .s8,
+  .ftl-root .s7 {
+    grid-column: span 12
+  }
+
+  .ftl-root .s6,
+  .ftl-root .s5,
+  .ftl-root .s4 {
+    grid-column: span 6
+  }
+}
+
+@media (max-width:800px) {
+
+  .ftl-root .s6,
+  .ftl-root .s5,
+  .ftl-root .s4 {
+    grid-column: span 12
+  }
+
+  .ftl-root .kpis {
+    grid-template-columns: 1fr
+  }
+
+  .ftl-root aside {
+    display: none
+  }
+}
+
+@media print {
+
+  .ftl-root header .hbtn,
+  .ftl-root header .tag,
+  .ftl-root aside,
+  .ftl-root .rail,
+  .ftl-root .tools,
+  .ftl-root .pg,
+  .ftl-root #activeNote {
+    display: none !important
+  }
+
+  .ftl-root {
+    background: #fff
+  }
+
+  .ftl-root .card,
+  .ftl-root .kpi {
+    box-shadow: none;
+    break-inside: avoid
+  }
+
+  .ftl-root main {
+    padding: 0
+  }
+
+  .ftl-root .ch {
+    height: 220px
+  }
+}
+
+/* insights as a compact tabular strip under the KPIs */
+.ftl-root #insCard {
+  margin-bottom: 18px;
+  padding-bottom: 14px
+}
+
+.ftl-root #insCard ul {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px 22px;
+  margin-top: 8px
+}
+
+.ftl-root #insCard li {
+  border-bottom: none;
+  padding: 7px 0 7px 22px;
+  font-size: 12.6px;
+  line-height: 1.5;
+  border-top: 1px solid rgba(255, 255, 255, .12)
+}
+
+.ftl-root[dir="rtl"] #insCard li {
+  padding: 7px 22px 7px 0
+}
+
+.ftl-root #insCard li::before {
+  top: 12px;
+  width: 8px;
+  height: 8px
+}
+
+@media (max-width:1200px) {
+  .ftl-root #insCard ul {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+/* export picker */
+.ftl-root .xhint {
+  font-size: 12.5px;
+  color: var(--steel);
+  margin: 6px 0 10px;
+  line-height: 1.6
+}
+
+.ftl-root .xsec {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-top: 10px
+}
+
+.ftl-root .xall {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  cursor: pointer
+}
+
+.ftl-root .xgrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px 16px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line)
+}
+
+.ftl-root .xgrid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  padding: 4px 2px;
+  cursor: pointer;
+  color: var(--ink)
+}
+
+.ftl-root .xfoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  font-size: 12.5px;
+  color: var(--steel)
+}
+
+.ftl-root .xgo {
+  background: var(--brand-2) !important;
+  color: #fff !important;
+  border-color: var(--brand-2) !important;
+  padding: 11px 22px !important
+}
+
+/* export document (print only) */
+.ftl-root #exportRoot {
+  display: none
+}
+
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 11mm 12mm
+  }
+
+  .ftl-root>*:not(#exportRoot) {
+    display: none !important
+  }
+
+  .ftl-root {
+    background: #fff !important
+  }
+
+  .ftl-root #exportRoot {
+    display: block;
+    font-family: 'Inter', Arial, sans-serif;
+    color: #12263a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact
+  }
+
+  .ftl-root[dir="rtl"] #exportRoot {
+    font-family: 'Tajawal', Arial, sans-serif
+  }
+
+  .ftl-root .xp-cover {
+    height: 186mm;
+    border-radius: 6mm;
+    position: relative;
+    overflow: hidden;
+    color: #fff;
+    padding: 18mm 16mm;
+    break-after: page;
+    background: radial-gradient(900px 400px at 10% -30%, rgba(34, 184, 207, .45), transparent 60%), linear-gradient(115deg, #062a4a, #0b4f7a 50%, #0e7c86 120%)
+  }
+
+  .ftl-root .xp-cover .dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(255, 255, 255, .14) 1px, transparent 1.6px);
+    background-size: 20px 20px;
+    mask-image: linear-gradient(90deg, transparent 40%, #000 90%)
+  }
+
+  .ftl-root .xp-cover .wave {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 34mm;
+    opacity: .35
+  }
+
+  .ftl-root .xp-cover .route {
+    position: absolute;
+    right: 16mm;
+    top: 20mm;
+    width: 110mm;
+    opacity: .7
+  }
+
+  .ftl-root .xp-cover .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8mm
+  }
+
+  .ftl-root .xp-cover .logo .ship {
+    width: 34mm;
+    height: auto;
+    display: block
+  }
+
+  .ftl-root .xp-cover .logo img {
+    height: 26mm;
+    display: block;
+    filter: drop-shadow(0 2mm 4mm rgba(2, 14, 28, .5))
+  }
+
+  .ftl-root .xp-cover .kicker {
+    margin-top: 18mm;
+    font-size: 11pt;
+    letter-spacing: .3em;
+    color: #9fe3ef;
+    text-transform: uppercase;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-cover h1 {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 34pt;
+    font-weight: 800;
+    margin: 3mm 0 2mm;
+    letter-spacing: -.01em
+  }
+
+  .ftl-root .xp-cover .sub {
+    font-size: 13pt;
+    color: #bfe9f1
+  }
+
+  .ftl-root .xp-cover .meta {
+    margin-top: 10mm;
+    display: flex;
+    gap: 14mm;
+    font-size: 10.5pt;
+    color: #dff4f8
+  }
+
+  .ftl-root .xp-cover .meta b {
+    display: block;
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 18pt;
+    color: #fff
+  }
+
+  .ftl-root .xp-cover .filters {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 14mm;
+    border-top: 1px solid rgba(255, 255, 255, .35);
+    padding-top: 5mm
+  }
+
+  .ftl-root .xp-cover .filters .lbl {
+    font-size: 9.5pt;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: #9fe3ef;
+    margin-bottom: 3mm;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-cover .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3mm
+  }
+
+  .ftl-root .xp-cover .chip2 {
+    background: rgba(255, 255, 255, .14);
+    border: 1px solid rgba(255, 255, 255, .35);
+    border-radius: 20px;
+    padding: 2mm 5mm;
+    font-size: 10pt
+  }
+
+  .ftl-root .xp-cover .chip2 b {
+    color: #f5dfae;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #0e7c86;
+    padding-bottom: 3mm;
+    margin-bottom: 6mm
+  }
+
+  .ftl-root .xp-head .t {
+    font-family: 'Sora', Arial, sans-serif;
+    font-weight: 700;
+    font-size: 13pt;
+    color: #0b4f7a
+  }
+
+  .ftl-root .xp-head .d {
+    font-size: 9pt;
+    color: #66788c
+  }
+
+  .ftl-root .xp-sec {
+    break-inside: avoid;
+    margin-bottom: 6mm
+  }
+
+  .ftl-root .xp-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4mm
+  }
+
+  .ftl-root .xp-kpi {
+    border: 1px solid #d8e3ea;
+    border-radius: 4mm;
+    padding: 4mm 5mm;
+    position: relative;
+    overflow: hidden;
+    background: #fff
+  }
+
+  .ftl-root .xp-kpi .lab {
+    font-size: 9pt;
+    color: #66788c;
+    font-weight: 600
+  }
+
+  .ftl-root .xp-kpi .val {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 19pt;
+    font-weight: 800;
+    margin-top: 2mm;
+    color: #12263a
+  }
+
+  .ftl-root .xp-kpi .sb {
+    font-size: 8.5pt;
+    color: #66788c;
+    margin-top: 1mm
+  }
+
+  .ftl-root .xp-kpi::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 1.5mm;
+    background: var(--xa, #0e7c86)
+  }
+
+  .ftl-root .xp-ins {
+    border: 1px solid #dde1e6;
+    border-radius: 4mm;
+    padding: 4mm 6mm;
+    background: linear-gradient(135deg, #f2f9fb, #fff)
+  }
+
+  .ftl-root .xp-ins h4 {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 11pt;
+    color: #0b4f7a;
+    margin-bottom: 2mm
+  }
+
+  .ftl-root .xp-ins ul {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5mm 8mm
+  }
+
+  .ftl-root .xp-ins li {
+    font-size: 9.5pt;
+    line-height: 1.5;
+    padding-left: 5mm;
+    position: relative
+  }
+
+  .ftl-root .xp-ins li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2.2mm;
+    width: 2.2mm;
+    height: 2.2mm;
+    border-radius: 50%;
+    background: #22b8cf
+  }
+
+  .ftl-root .xp-ins b {
+    color: #0b4f7a
+  }
+
+  .ftl-root .xp-charts {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 5mm
+  }
+
+  .ftl-root .xp-chart {
+    border: 1px solid #d8e3ea;
+    border-radius: 4mm;
+    padding: 4mm 5mm 3mm;
+    break-inside: avoid;
+    background: #fff
+  }
+
+  .ftl-root .xp-chart h4 {
+    font-family: 'Sora', Arial, sans-serif;
+    font-size: 10.5pt;
+    color: #12263a;
+    margin-bottom: .5mm
+  }
+
+  .ftl-root .xp-chart .s {
+    font-size: 8.5pt;
+    color: #66788c;
+    margin-bottom: 2mm
+  }
+
+  .ftl-root .xp-chart img {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 58mm;
+    object-fit: contain
+  }
+
+  .ftl-root .xp-foot {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-size: 8pt;
+    color: #8fa3b4;
+    display: flex;
+    justify-content: space-between
+  }
+}
+
+/* ===== operation card (compact) ===== */
+.ftl-root .opwrap {
+  margin-bottom: 10px
+}
+
+.ftl-root .opcard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px 12px;
+  box-shadow: 0 2px 10px rgba(4, 26, 50, .05)
+}
+
+.ftl-root .ophead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px
+}
+
+.ftl-root .opref {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--brand-3);
+  letter-spacing: .02em
+}
+
+.ftl-root .opsub {
+  font-size: 11px;
+  color: var(--steel);
+  margin-top: 1px
+}
+
+.ftl-root .opgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 7px 9px
+}
+
+.ftl-root .opcard.closed .opgrid,
+.ftl-root .opcard.closed .opfoot {
+  display: none
+}
+
+.ftl-root .opf {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-inline-start: 3px solid var(--gc, var(--line));
+  padding-inline-start: 7px;
+  border-radius: 2px
+}
+
+.ftl-root .opf label {
+  font-size: 10.6px;
+  font-weight: 700;
+  color: var(--steel);
+  letter-spacing: .01em;
+  line-height: 1.35;
+  min-height: 2.7em
+}
+
+.ftl-root .opf label em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--steel);
+  opacity: .8
+}
+
+.ftl-root .opf small.opopt {
+  font-size: 10px;
+  color: var(--steel);
+  margin-top: 1px
+}
+
+.ftl-root .opf input,
+.ftl-root .opf select {
+  width: 100%;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.2px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(6, 42, 74, .04);
+  transition: border-color .15s, box-shadow .15s
+}
+
+.ftl-root .opf select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  background-image: linear-gradient(45deg, transparent 50%, var(--steel) 50%), linear-gradient(135deg, var(--steel) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 52%, calc(100% - 8px) 52%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-inline-end: 26px
+}
+
+.ftl-root[dir="rtl"] .opf select {
+  background-position: 13px 52%, 18px 52%;
+  padding-inline-end: 9px;
+  padding-inline-start: 26px
+}
+
+.ftl-root .opf input:focus,
+.ftl-root .opf select:focus {
+  outline: none;
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 22%, transparent)
+}
+
+.ftl-root .opfoot {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+  flex-wrap: wrap
+}
+
+.ftl-root .opcount {
+  display: flex;
+  flex-direction: column;
+  gap: 3px
+}
+
+.ftl-root .opcount label {
+  font-size: 10.6px;
+  font-weight: 700;
+  color: var(--steel)
+}
+
+.ftl-root .opcount input {
+  width: 90px;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  font-family: inherit;
+  font-size: 12.4px;
+  text-align: center;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .ophint {
+  font-size: 11px;
+  color: var(--steel);
+  flex: 1;
+  line-height: 1.5
+}
+
+/* ===== system status strip ===== */
+.ftl-root .sysbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap
+}
+
+.ftl-root .sysbar .spacer {
+  flex: 1
+}
+
+.ftl-root .chipst {
+  font-size: 11.2px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 3px 10px;
+  background: color-mix(in srgb, var(--good) 14%, transparent);
+  color: var(--good);
+  white-space: nowrap
+}
+
+.ftl-root .chipst.muted {
+  background: var(--mist);
+  color: var(--steel);
+  font-weight: 500
+}
+
+.ftl-root .chipst.dirty {
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  color: #8a5f14
+}
+
+.ftl-root[data-theme="dark"] .chipst.dirty {
+  color: var(--warn)
+}
+
+/* ===== column groups (pale tint per group) ===== */
+.ftl-root #eTable th.grp-g1,
+.ftl-root #eTable td.grp-g1 {
+  background: color-mix(in srgb, #0b4f7a 7%, transparent)
+}
+
+.ftl-root #eTable th.grp-g2,
+.ftl-root #eTable td.grp-g2 {
+  background: color-mix(in srgb, #0e7c86 7%, transparent)
+}
+
+.ftl-root #eTable th.grp-g3,
+.ftl-root #eTable td.grp-g3 {
+  background: color-mix(in srgb, #22b8cf 9%, transparent)
+}
+
+.ftl-root #eTable th.grp-g4,
+.ftl-root #eTable td.grp-g4 {
+  background: color-mix(in srgb, #d8a84a 11%, transparent)
+}
+
+.ftl-root #eTable th.grp-g5,
+.ftl-root #eTable td.grp-g5 {
+  background: color-mix(in srgb, #7a5ea8 9%, transparent)
+}
+
+.ftl-root #eTable th.grp-g6,
+.ftl-root #eTable td.grp-g6 {
+  background: color-mix(in srgb, #66788c 8%, transparent)
+}
+
+.ftl-root #eTable th[class*="grp-"] {
+  font-weight: 700
+}
+
+.ftl-root #eTable td.err {
+  background: color-mix(in srgb, var(--bad) 16%, transparent) !important
+}
+
+.ftl-root #eTable td.warn {
+  background: color-mix(in srgb, var(--warn) 18%, transparent) !important
+}
+
+.ftl-root .opf.grp-g1 label {
+  color: #0b4f7a
+}
+
+.ftl-root .opf.grp-g2 label {
+  color: #0e7c86
+}
+
+.ftl-root .opf.grp-g3 label {
+  color: #1897ab
+}
+
+.ftl-root .opf.grp-g4 label {
+  color: #a9832f
+}
+
+.ftl-root .opf.grp-g5 label {
+  color: #6b5295
+}
+
+.ftl-root .opf.grp-g6 label {
+  color: var(--steel)
+}
+
+.ftl-root[data-theme="dark"] .opf.grp-g1 label {
+  color: #7cc4dc
+}
+
+.ftl-root[data-theme="dark"] .opf.grp-g2 label {
+  color: #3fb3c3
+}
+
+.ftl-root[data-theme="dark"] .opf.grp-g3 label {
+  color: #5ed0e3
+}
+
+.ftl-root[data-theme="dark"] .opf.grp-g4 label {
+  color: #e6b04a
+}
+
+.ftl-root[data-theme="dark"] .opf.grp-g5 label {
+  color: #b49ce0
+}
+
+/* ===== one shipment = several trips: tighter rows, single number ===== */
+
+
+
+
+
+
+/* selects + pickers inside cells */
+.ftl-root #eTable td .cell-sel {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 7px 8px;
+  font-family: inherit;
+  font-size: 12.4px;
+  color: var(--ink);
+  outline: none;
+  min-width: 100px
+}
+
+.ftl-root #eTable td .cell-sel:focus {
+  box-shadow: inset 0 0 0 2px var(--aqua)
+}
+
+.ftl-root #eTable td input[type="date"],
+.ftl-root #eTable td input[type="time"] {
+  font-size: 12px
+}
+
+.ftl-root .updbtn {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--sea);
+  padding: 7px 6px;
+  text-align: center
+}
+
+.ftl-root .updbtn:hover {
+  text-decoration: underline
+}
+
+.ftl-root .updn {
+  background: var(--aqua);
+  color: #06202a;
+  border-radius: 20px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700
+}
+
+.ftl-root .updlist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px
+}
+
+.ftl-root .updrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 12.6px
+}
+
+.ftl-root .updrow b {
+  font-family: var(--disp);
+  font-size: 12.5px
+}
+
+.ftl-root .updrow span {
+  color: var(--steel);
+  margin-inline-start: auto
+}
+
+.ftl-root .updrow em {
+  font-style: normal;
+  background: color-mix(in srgb, var(--good) 15%, transparent);
+  color: var(--good);
+  border-radius: 20px;
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 700
+}
+
+.ftl-root .devsec {
+  margin-top: 16px
+}
+
+.ftl-root .devsec>b {
+  font-family: var(--disp);
+  font-size: 13px;
+  color: var(--sea);
+  display: block;
+  margin-bottom: 6px
+}
+
+.ftl-root .devsec p {
+  font-size: 12.8px;
+  color: var(--steel);
+  line-height: 1.65;
+  margin-bottom: 8px
+}
+
+.ftl-root .devcode {
+  background: #0b1a26;
+  color: #d7e7f0;
+  border-radius: 10px;
+  padding: 13px 15px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 11.6px;
+  line-height: 1.6;
+  overflow: auto;
+  max-height: 290px;
+  white-space: pre;
+  direction: ltr;
+  text-align: left
+}
+
+.ftl-root .devcode .k {
+  color: #8fd9e6
+}
+
+.ftl-root .devcode .s {
+  color: #e6b04a
+}
+
+.ftl-root .devcode .c {
+  color: #6b8a9c
+}
+
+.ftl-root .devcopy {
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  margin-top: 7px
+}
+
+.ftl-root .devtbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.3px;
+  margin-top: 6px
+}
+
+.ftl-root .devtbl th {
+  background: var(--mist);
+  color: var(--steel);
+  text-align: start;
+  padding: 7px 10px;
+  font-weight: 600
+}
+
+.ftl-root .devtbl td {
+  padding: 7px 10px;
+  border-top: 1px solid var(--mist);
+  vertical-align: top
+}
+
+.ftl-root .devtbl code {
+  background: var(--mist);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11.4px
+}
+
+.ftl-root .mkind {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--sea);
+  margin-bottom: 8px
+}
+
+.ftl-root .mtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px
+}
+
+.ftl-root .mtab {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--steel)
+}
+
+.ftl-root .mtab.on {
+  color: var(--ink);
+  border-color: var(--aqua);
+  box-shadow: inset 0 -2.5px 0 var(--aqua)
+}
+
+.ftl-root .mhow {
+  font-size: 11.6px;
+  color: var(--steel);
+  line-height: 1.6;
+  margin-top: 10px;
+  background: var(--mist);
+  border-radius: 10px;
+  padding: 10px 12px
+}
+
+.ftl-root select,
+.ftl-root option {
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root[data-theme="dark"] select option {
+  background: #12202e;
+  color: #e6eef4
+}
+
+/* Compact shipment search, selection and export controls */
+.ftl-root .triptools {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  margin: 0 0 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  flex-wrap: wrap
+}
+
+.ftl-root .tripsearch {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0
+}
+
+.ftl-root .field-error {
+  display: block;
+  color: var(--bad);
+  font-size: 10px;
+  line-height: 1.3;
+  max-width: 230px
+}
+
+.ftl-root .field-error[hidden] {
+  display: none
+}
+
+.ftl-root input[aria-invalid="true"] {
+  border-color: var(--bad) !important
+}
+
+.ftl-root .triprule {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper)
+}
+
+.ftl-root .triprule select,
+.ftl-root .triprule input {
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  height: 30px;
+  padding: 3px 7px;
+  max-width: 185px
+}
+
+.ftl-root .triprule .tripjoin {
+  width: 61px;
+  color: var(--brand-2);
+  font-weight: 700
+}
+
+.ftl-root .triprule .tripvalue {
+  width: 145px
+}
+
+.ftl-root .triprule .tripvalue-wrap {
+  display: contents
+}
+
+.ftl-root .triprule .datetime-control {
+  width: auto
+}
+
+.ftl-root .triprule .triptype {
+  font-size: 10px;
+  color: var(--steel);
+  white-space: nowrap
+}
+
+.ftl-root .triprule button,
+.ftl-root .tripadd,
+.ftl-root .tripclear {
+  border: 0;
+  background: transparent;
+  color: var(--sea);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  padding: 5px
+}
+
+.ftl-root .triprule button {
+  color: var(--steel);
+  font-size: 17px;
+  line-height: 1
+}
+
+.ftl-root .tripcount {
+  color: var(--steel);
+  font-size: 11px
+}
+
+.ftl-root .tripgrow {
+  flex: 1
+}
+
+.ftl-root .triptools .ebtn {
+  white-space: nowrap
+}
+
+.ftl-root .triptools .ebtn:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+.ftl-root .trip-page {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 7px;
+  margin: 0 2px 7px;
+  color: var(--steel);
+  font-size: 12px
+}
+
+.ftl-root .trip-page[hidden] {
+  display: none
+}
+
+.ftl-root .trip-page button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--navy);
+  border-radius: 7px;
+  min-width: 30px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1
+}
+
+.ftl-root .trip-page button:disabled {
+  opacity: .4;
+  cursor: default
+}
+
+.ftl-root .picklist {
+  max-height: 190px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px;
+  margin-top: 6px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px 12px
+}
+
+.ftl-root .picklist label {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--ink);
+  padding: 4px;
+  border-radius: 6px
+}
+
+.ftl-root .picklist label:hover {
+  background: var(--mist)
+}
+
+.ftl-root .picklist label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.ftl-root .pickhead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+  margin-top: 8px
+}
+
+.ftl-root .pickhead input[type="search"] {
+  flex: 1;
+  min-width: 80px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px
+}
+
+.ftl-root #eTable td.c .cv {
+  text-align: center;
+  color: color-mix(in srgb, var(--ink) 78%, var(--steel));
+  font-weight: 450
+}
+
+.ftl-root #eTable td.c.merged {
+  height: auto !important;
+  padding-block: 6px !important;
+  vertical-align: middle;
+  position: relative;
+  min-width: calc(var(--w) + 10px)
+}
+
+.ftl-root #eTable td.c.merged .cbox {
+  position: absolute;
+  inset-inline-start: 5px;
+  top: 50%;
+  translate: 0 -50%;
+  height: 40% !important;
+  min-height: 0 !important;
+  max-height: none;
+  border-radius: 12px;
+  justify-content: center
+}
+
+.ftl-root #eTable td.c.merged .cv {
+  padding: 4px 12px;
+  line-height: 1.25
+}
+
+.ftl-root #eTable td.c.merged .updbtn {
+  max-height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding-block: 2px
+}
+
+.ftl-root #eTable td.c.merged .cbox::before {
+  display: none
+}
+
+.ftl-root #eTable .ship-select {
+  position: absolute;
+  inset-inline-start: 7px;
+  top: 50%;
+  translate: 0 -50%;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--sea);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--sea);
+  font: 700 15px/1 Arial;
+  cursor: pointer;
+  z-index: 2
+}
+
+.ftl-root #eTable .ship-select[aria-pressed="true"] {
+  background: var(--sea);
+  color: white
+}
+
+.ftl-root #eTable .ship-select:focus-visible {
+  outline: 3px solid var(--aqua);
+  outline-offset: 2px
+}
+
+.ftl-root .tripsearch>.tripadd,
+.ftl-root .tripsearch>.tripclear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  line-height: 1;
+  padding: 0 9px;
+  margin: 0;
+  align-self: center;
+  box-sizing: border-box;
+  white-space: nowrap
+}
+
+.ftl-root #eTable td .cbox {
+  border-radius: 12px;
+  background-image: linear-gradient(165deg, rgba(255, 255, 255, .30), transparent 65%, rgba(6, 42, 74, .035));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -2px 3px rgba(6, 42, 74, .055), 0 2px 3px rgba(6, 42, 74, .10), 0 7px 12px -6px rgba(6, 42, 74, .18);
+  transition: border-color .16s, box-shadow .16s, transform .16s
+}
+
+.ftl-root #eTable td.c.locked .cbox {
+  border-style: solid;
+  opacity: 1
+}
+
+.ftl-root #eTable td.c:hover .cbox {
+  border-color: color-mix(in srgb, var(--gc) 55%, var(--sea));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .75), inset 0 -2px 3px rgba(6, 42, 74, .04), 0 3px 5px rgba(6, 42, 74, .12), 0 9px 16px -7px rgba(6, 42, 74, .22)
+}
+
+.ftl-root #eTable td.c.cur .cbox,
+.ftl-root #eTable td .cbox:focus-within {
+  border-color: var(--aqua);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 24%, transparent), inset 0 1px 0 rgba(255, 255, 255, .7), 0 5px 12px -5px rgba(6, 42, 74, .24);
+  transform: none
+}
+
+.ftl-root[data-theme="dark"] #eTable td .cbox {
+  background-image: linear-gradient(165deg, rgba(255, 255, 255, .055), transparent 65%, rgba(0, 0, 0, .12));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .09), inset 0 -2px 3px rgba(0, 0, 0, .14), 0 3px 8px rgba(0, 0, 0, .28)
+}
+
+@media(prefers-reduced-motion:reduce) {
+  .ftl-root #eTable td .cbox {
+    transition: none
+  }
+}
+
+.ftl-root #eTable tr.trip-selected td.c .cbox {
+  border-color: var(--aqua);
+  background: color-mix(in srgb, var(--aqua) 16%, var(--card))
+}
+
+.ftl-root #eTable tr.trip-selected .rnbox {
+  background: var(--sea);
+  color: #fff
+}
+
+.ftl-root #eTable .rnbox {
+  border: 0;
+  cursor: pointer;
+  width: 100%;
+  font: inherit;
+  font-weight: 800
+}
+
+.ftl-root #eTable .rnbox:focus-visible {
+  outline: 3px solid var(--aqua)
+}
+
+.ftl-root #eTable .dtype {
+  display: block;
+  font-size: 9px;
+  opacity: .72;
+  font-weight: 500;
+  margin-top: 1px;
+  letter-spacing: 0
+}
+
+.ftl-root .tripsort {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--steel);
+  white-space: nowrap
+}
+
+.ftl-root .tripsort select {
+  height: 32px;
+  max-width: 160px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 8px;
+  font: inherit
+}
+
+.ftl-root .datetime-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  width: 100%
+}
+
+.ftl-root .datetime-control input[type="text"] {
+  flex: 1;
+  min-width: 0;
+  font-variant-numeric: tabular-nums
+}
+
+.ftl-root .datetime-control .pickdate {
+  border: 0;
+  background: transparent;
+  color: var(--sea);
+  padding: 3px 5px;
+  cursor: pointer;
+  font-size: 16px;
+  flex-shrink: 0
+}
+
+.ftl-root .time-popover {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  box-shadow: 0 12px 32px rgba(6, 42, 74, .2)
+}
+
+.ftl-root .time-popover select {
+  width: auto;
+  min-width: 54px;
+  padding: 6px 5px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--ink);
+  font: inherit
+}
+
+.ftl-root .time-popover button {
+  border: 0;
+  border-radius: 7px;
+  background: var(--sea);
+  color: white;
+  padding: 7px 9px;
+  cursor: pointer;
+  font: inherit
+}
+
+.ftl-root .time-popover .time-sep {
+  font-weight: 700
+}
+
+.ftl-root .datetime-control .native-date {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+  inset-inline-end: 0
+}
+
+.ftl-root .opf .datetime-control {
+  position: relative
+}
+
+.ftl-root .opf .datetime-control input[type="text"] {
+  width: 100%
+}
+
+.ftl-root .opf .optype {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--steel);
+  margin-inline-start: 6px
+}
+
+.ftl-root #eTable td.c .datetime-control {
+  position: relative
+}
+
+.ftl-root #eTable td.c .datetime-control input.ed {
+  min-width: 0
+}
+
+@media(max-width:720px) {
+  .ftl-root .triptools {
+    align-items: flex-start
+  }
+
+  .ftl-root .tripsearch {
+    width: 100%
+  }
+
+  .ftl-root .triprule {
+    max-width: 100%
+  }
+
+  .ftl-root .picklist {
+    grid-template-columns: 1fr
+  }
+}
+
+/* Compact entry, generous table area, delivery workflow. */
+.ftl-root #entryView .opwrap {
+  margin-bottom: 5px
+}
+
+.ftl-root #entryView .opcard {
+  padding: 6px 10px
+}
+
+.ftl-root #entryView .ophead {
+  margin-bottom: 3px
+}
+
+.ftl-root #entryView .opgrid {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 3px 6px
+}
+
+.ftl-root #entryView .opf {
+  gap: 1px;
+  padding-inline-start: 5px
+}
+
+.ftl-root #entryView .opf label {
+  font-size: 9.5px;
+  min-height: 0;
+  line-height: 1.15
+}
+
+.ftl-root #entryView .opf input,
+.ftl-root #entryView .opf select {
+  padding: 3px 7px;
+  font-size: 11px;
+  border-radius: 6px;
+  height: 27px
+}
+
+.ftl-root #entryView .opfoot {
+  margin-top: 4px;
+  padding-top: 4px
+}
+
+.ftl-root #entryView .opcount input {
+  padding: 3px 6px
+}
+
+.ftl-root #entryView .opopt,
+.ftl-root #entryView .optype {
+  font-size: 9px
+}
+
+.ftl-root #entryView .egrid {
+  max-height: calc(100vh - 185px);
+  min-height: 45vh
+}
+
+.ftl-root #eTable td.select-last {
+  min-width: 48px;
+  text-align: center;
+  vertical-align: middle;
+  position: relative;
+  background: var(--paper)
+}
+
+.ftl-root #eTable td.select-last .ship-select {
+  position: static;
+  translate: none;
+  width: 25px;
+  height: 25px;
+  margin: auto
+}
+
+.ftl-root #eTable th.select-head {
+  min-width: 48px;
+  text-align: center
+}
+
+.ftl-root #eTable td.c[data-k="status"] .cbox {
+  justify-content: center
+}
+
+.ftl-root .status-pill {
+  border: 1px solid #8bc7e5;
+  background: #e5f4fc;
+  color: #145d83;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap
+}
+
+.ftl-root .status-pill.delivered {
+  border-color: #a3ddbb;
+  background: #e6f7ed;
+  color: #167044
+}
+
+.ftl-root .status-pill:focus-visible {
+  outline: 2px solid var(--aqua);
+  outline-offset: 2px
+}
+
+.ftl-root .delivered-box {
+  width: min(96vw, 1450px);
+  max-width: 96vw
+}
+
+.ftl-root .delivered-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center
+}
+
+.ftl-root .delivered-scroll {
+  overflow: auto;
+  max-height: 70vh
+}
+
+.ftl-root .delivered-scroll table {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 12px
+}
+
+.ftl-root .delivered-scroll td,
+.ftl-root .delivered-scroll th {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: start
+}
+
+.ftl-root .delivered-scroll th {
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 1
+}
+
+.ftl-root #fclPanel[hidden] {
+  display: none !important
+}
+
+.ftl-root .fcl-mode #dash>.rail,
+.ftl-root .fcl-mode #dash>.kpis,
+.ftl-root .fcl-mode #dash>.grid,
+.ftl-root .fcl-mode #dash>.insights,
+.ftl-root .fcl-mode #activeNote {
+  display: none !important
+}
+
+.ftl-root #fclPanel {
+  padding: 10px 0 30px
+}
+
+.ftl-root .fcl-intro {
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px
+}
+
+.ftl-root .fcl-intro h2 {
+  margin: 0 0 7px;
+  color: var(--brand-3)
+}
+
+.ftl-root .fcl-intro p {
+  margin: 0;
+  color: var(--steel);
+  line-height: 1.55
+}
+
+.ftl-root .fcl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 15px 0
+}
+
+.ftl-root .fcl-filters label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--steel);
+  display: grid;
+  gap: 4px
+}
+
+.ftl-root .fcl-filters select {
+  min-width: 140px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .fcl-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px
+}
+
+.ftl-root .fcl-metrics div {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 15px;
+  display: grid;
+  gap: 4px
+}
+
+.ftl-root .fcl-metrics strong {
+  font-size: 24px;
+  color: var(--brand-2)
+}
+
+.ftl-root .fcl-metrics span {
+  color: var(--steel);
+  font-size: 12px
+}
+
+.ftl-root .fcl-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(355px, 1fr));
+  gap: 12px
+}
+
+.ftl-root .fcl-card,
+.ftl-root .fcl-empty {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 16px
+}
+
+.ftl-root .fcl-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px
+}
+
+.ftl-root .fcl-card-head strong {
+  font-size: 18px;
+  color: var(--brand-2)
+}
+
+.ftl-root .fcl-card-head span {
+  font-size: 12px
+}
+
+.ftl-root .fcl-pair {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0
+}
+
+.ftl-root .fcl-pair div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  flex: 1
+}
+
+.ftl-root .fcl-pair small {
+  color: var(--steel)
+}
+
+.ftl-root .fcl-pair b {
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.ftl-root .fcl-pair div span {
+  font-size: 11px;
+  color: var(--steel)
+}
+
+.ftl-root .fcl-arrow {
+  color: var(--aqua)
+}
+
+.ftl-root .fcl-meter {
+  height: 6px;
+  border-radius: 5px;
+  background: var(--mist);
+  overflow: hidden
+}
+
+.ftl-root .fcl-meter i {
+  display: block;
+  height: 100%;
+  background: var(--aqua)
+}
+
+.ftl-root .fcl-card p {
+  font-size: 11px;
+  color: var(--steel);
+  margin: 8px 0 0
+}
+
+@media(max-width:700px) {
+  .ftl-root .fcl-metrics {
+    grid-template-columns: repeat(2, 1fr)
+  }
+
+  .ftl-root .fcl-cards {
+    grid-template-columns: 1fr
+  }
+}
+
+
+.ftl-root .dtab:disabled {
+  opacity: .38;
+  filter: grayscale(1);
+  cursor: not-allowed;
+  box-shadow: none
+}
+
+.ftl-root .dtab:disabled:hover {
+  color: var(--steel);
+  background: var(--mist)
+}
+
+.ftl-root .rail .rrow:last-child {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  overflow: visible;
+  gap: 12px 16px
+}
+
+.ftl-root .rail .rrow:first-child {
+  display: grid;
+  grid-template-columns: minmax(165px, 1.2fr) minmax(130px, 1fr) minmax(130px, 1fr) auto auto;
+  gap: 12px;
+  align-items: end;
+  overflow-x: auto
+}
+
+.ftl-root .rail .fld {
+  min-width: 0
+}
+
+.ftl-root .rail select,
+.ftl-root .rail input {
+  width: 100%;
+  min-width: 0;
+  height: 39px;
+  box-sizing: border-box
+}
+
+.ftl-root .rail select:disabled {
+  opacity: .5;
+  cursor: not-allowed
+}
+
+.ftl-root .rail .reset {
+  height: 39px;
+  white-space: nowrap
+}
+
+.ftl-root .rail .presets {
+  height: 39px;
+  align-items: center;
+  white-space: nowrap
+}
+
+.ftl-root #mBody input,
+.ftl-root #mBody textarea {
+  box-sizing: border-box;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 10px;
+  font: inherit
+}
+
+.ftl-root #mStatus {
+  margin-top: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap
+}
+
+.ftl-root #mGo:disabled {
+  opacity: .5;
+  cursor: not-allowed
+}
+
+@media(max-width:760px) {
+  .ftl-root .rail .rrow:last-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
+  .ftl-root .rail .rrow:first-child {
+    grid-template-columns: 165px 140px 140px auto auto
+  }
+}
+
+/* Compact entry, generous table area, delivery workflow. */
+.ftl-root #entryView .opwrap {
+  margin-bottom: 5px
+}
+
+.ftl-root #entryView .opcard {
+  padding: 6px 10px
+}
+
+.ftl-root #entryView .ophead {
+  margin-bottom: 3px
+}
+
+.ftl-root #entryView .opgrid {
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 3px 6px
+}
+
+.ftl-root #entryView .opf {
+  gap: 1px;
+  padding-inline-start: 5px
+}
+
+.ftl-root #entryView .opf label {
+  font-size: 9.5px;
+  min-height: 0;
+  line-height: 1.15
+}
+
+.ftl-root #entryView .opf input,
+.ftl-root #entryView .opf select {
+  padding: 3px 7px;
+  font-size: 11px;
+  border-radius: 6px;
+  height: 27px
+}
+
+.ftl-root #entryView .opfoot {
+  margin-top: 4px;
+  padding-top: 4px
+}
+
+.ftl-root #entryView .opcount input {
+  padding: 3px 6px
+}
+
+.ftl-root #entryView .opopt,
+.ftl-root #entryView .optype {
+  font-size: 9px
+}
+
+.ftl-root #entryView .egrid {
+  max-height: calc(100vh - 185px);
+  min-height: 45vh
+}
+
+.ftl-root #eTable td.select-last {
+  min-width: 48px;
+  text-align: center;
+  vertical-align: middle;
+  position: relative;
+  background: var(--paper)
+}
+
+.ftl-root #eTable td.select-last .ship-select {
+  position: static;
+  translate: none;
+  width: 25px;
+  height: 25px;
+  margin: auto
+}
+
+.ftl-root #eTable th.select-head {
+  min-width: 48px;
+  text-align: center
+}
+
+.ftl-root #eTable td.c[data-k="status"] .cbox {
+  justify-content: center
+}
+
+.ftl-root .status-pill {
+  border: 1px solid #8bc7e5;
+  background: #e5f4fc;
+  color: #145d83;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-weight: 750;
+  cursor: pointer;
+  white-space: nowrap
+}
+
+.ftl-root .status-pill.delivered {
+  border-color: #a3ddbb;
+  background: #e6f7ed;
+  color: #167044
+}
+
+.ftl-root .status-pill:focus-visible {
+  outline: 2px solid var(--aqua);
+  outline-offset: 2px
+}
+
+.ftl-root .delivered-box {
+  width: min(96vw, 1450px);
+  max-width: 96vw
+}
+
+.ftl-root .delivered-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center
+}
+
+.ftl-root .delivered-scroll {
+  overflow: auto;
+  max-height: 70vh
+}
+
+.ftl-root .delivered-scroll table {
+  border-collapse: collapse;
+  white-space: nowrap;
+  font-size: 12px
+}
+
+.ftl-root .delivered-scroll td,
+.ftl-root .delivered-scroll th {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  text-align: start
+}
+
+.ftl-root .delivered-scroll th {
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  z-index: 1
+}
+
+.ftl-root #fclPanel[hidden] {
+  display: none !important
+}
+
+.ftl-root .fcl-mode #dash>.rail,
+.ftl-root .fcl-mode #dash>.kpis,
+.ftl-root .fcl-mode #dash>.grid,
+.ftl-root .fcl-mode #dash>.insights,
+.ftl-root .fcl-mode #activeNote {
+  display: none !important
+}
+
+.ftl-root #fclPanel {
+  padding: 10px 0 30px
+}
+
+.ftl-root .fcl-intro {
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px
+}
+
+.ftl-root .fcl-intro h2 {
+  margin: 0 0 7px;
+  color: var(--brand-3)
+}
+
+.ftl-root .fcl-intro p {
+  margin: 0;
+  color: var(--steel);
+  line-height: 1.55
+}
+
+.ftl-root .fcl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 15px 0
+}
+
+.ftl-root .fcl-filters label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--steel);
+  display: grid;
+  gap: 4px
+}
+
+.ftl-root .fcl-filters select {
+  min-width: 140px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .fcl-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px
+}
+
+.ftl-root .fcl-metrics div {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 15px;
+  display: grid;
+  gap: 4px
+}
+
+.ftl-root .fcl-metrics strong {
+  font-size: 24px;
+  color: var(--brand-2)
+}
+
+.ftl-root .fcl-metrics span {
+  color: var(--steel);
+  font-size: 12px
+}
+
+.ftl-root .fcl-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(355px, 1fr));
+  gap: 12px
+}
+
+.ftl-root .fcl-card,
+.ftl-root .fcl-empty {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 16px
+}
+
+.ftl-root .fcl-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px
+}
+
+.ftl-root .fcl-card-head strong {
+  font-size: 18px;
+  color: var(--brand-2)
+}
+
+.ftl-root .fcl-card-head span {
+  font-size: 12px
+}
+
+.ftl-root .fcl-pair {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0
+}
+
+.ftl-root .fcl-pair div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  flex: 1
+}
+
+.ftl-root .fcl-pair small {
+  color: var(--steel)
+}
+
+.ftl-root .fcl-pair b {
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.ftl-root .fcl-pair div span {
+  font-size: 11px;
+  color: var(--steel)
+}
+
+.ftl-root .fcl-arrow {
+  color: var(--aqua)
+}
+
+.ftl-root .fcl-meter {
+  height: 6px;
+  border-radius: 5px;
+  background: var(--mist);
+  overflow: hidden
+}
+
+.ftl-root .fcl-meter i {
+  display: block;
+  height: 100%;
+  background: var(--aqua)
+}
+
+.ftl-root .fcl-card p {
+  font-size: 11px;
+  color: var(--steel);
+  margin: 8px 0 0
+}
+
+@media(max-width:700px) {
+  .ftl-root .fcl-metrics {
+    grid-template-columns: repeat(2, 1fr)
+  }
+
+  .ftl-root .fcl-cards {
+    grid-template-columns: 1fr
+  }
+}
+
+.ftl-root .delivered-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0
+}
+
+.ftl-root .delivered-actions[hidden] {
+  display: none
+}
+
+.ftl-root .delivered-actions select {
+  max-width: 260px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink)
+}
+
+.ftl-root .delivered-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0 8px
+}
+
+.ftl-root .delivered-tools .ebtn:disabled {
+  opacity: .45;
+  cursor: not-allowed
+}
+
+.ftl-root #deliveredTable {
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  white-space: nowrap;
+  width: max-content;
+  min-width: 100%
+}
+
+.ftl-root #deliveredTable th,
+.ftl-root #deliveredTable td {
+  border: 0;
+  padding: 4px 5px;
+  background: transparent;
+  text-align: center
+}
+
+.ftl-root #deliveredTable th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--card)
+}
+
+.ftl-root #deliveredTable th span {
+  display: block;
+  background: color-mix(in srgb, var(--gc) 28%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--gc) 55%, var(--line));
+  border-radius: 9px;
+  padding: 10px 12px;
+  font-size: 12px;
+  min-width: 115px
+}
+
+.ftl-root #deliveredTable td>span {
+  display: block;
+  background: color-mix(in srgb, var(--gc) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--gc) 32%, var(--line));
+  border-radius: 10px;
+  padding: 11px 13px;
+  min-height: 39px;
+  box-sizing: border-box
+}
+
+.ftl-root #deliveredTable .archive-select {
+  min-width: 60px;
+  background: var(--card)
+}
+
+.ftl-root #deliveredTable .archive-select input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--sea);
+  cursor: pointer
+}
+
+.ftl-root #entryView .sysbar {
+  margin-bottom: 3px
+}
+
+.ftl-root #entryView .triptools {
+  margin-bottom: 2px;
+  padding: 5px 8px
+}
+
+.ftl-root #entryView .trip-page {
+  height: 26px;
+  margin-bottom: 0
+}
+
+.ftl-root #entryView .egrid {
+  padding-top: 0
+}
+
+.ftl-root #eTable thead th.meta,
+.ftl-root #eTable thead th.select-head {
+  --gc: #8fa3b4;
+  text-align: center
+}
+
+.ftl-root #eTable thead th.meta span,
+.ftl-root #eTable thead th.select-head span {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center
+}
+
+.ftl-root #eTable td.meta,
+.ftl-root #eTable td.select-last {
+  vertical-align: middle !important
+}
+
+.ftl-root #eTable td.meta .cbox {
+  height: 46px;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 3px 7px;
+  line-height: 1.12;
+  font-size: 10.5px;
+  overflow: hidden
+}
+
+.ftl-root #eTable td.c:not(.merged) .cbox {
+  min-height: 46px
+}
+
+.ftl-root #eTable td.select-last .ship-select {
+  margin: auto
+}
+
+.ftl-root #eTable .status-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #8bc7e5;
+  background: #e5f4fc;
+  color: #145d83;
+  border-radius: 20px;
+  padding: 6px 27px 6px 12px;
+  font-family: inherit;
+  font-size: 12.8px;
+  font-weight: 750;
+  cursor: pointer;
+  min-width: 96px;
+  text-align: center;
+  background-image: linear-gradient(45deg, transparent 50%, #145d83 50%), linear-gradient(135deg, #145d83 50%, transparent 50%);
+  background-position: calc(100% - 15px) 50%, calc(100% - 10px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat
+}
+
+.ftl-root #eTable .status-select:focus-visible {
+  outline: 2px solid var(--aqua);
+  outline-offset: 2px
+}
+
+.ftl-root #deliveredTable .status-pill.delivered {
+  display: inline-block;
+  cursor: default;
+  padding: 5px 10px
+}
+
+.ftl-root #entryView .ebar {
+  gap: 5px;
+  margin-bottom: 4px
+}
+
+.ftl-root #entryView .etabs {
+  gap: 4px
+}
+
+.ftl-root #entryView .etab {
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 9px
+}
+
+.ftl-root #entryView .etab .ico {
+  width: 18px;
+  height: 18px
+}
+
+.ftl-root #entryView .etab .cnt {
+  padding: 1px 6px
+}
+
+.ftl-root #entryView .ebar .ebtn {
+  padding: 6px 10px;
+  border-radius: 9px
+}
+
+.ftl-root #entryView .estatus {
+  gap: 5px;
+  margin-inline-end: 3px
+}
+
+.ftl-root #entryView .estatus span {
+  padding: 3px 8px
+}
+
+.ftl-root #entryView .sysbar {
+  gap: 5px;
+  margin-bottom: 4px
+}
+
+.ftl-root #entryView .chipst {
+  padding: 2px 8px
+}
+
+.ftl-root #entryView .triptools {
+  gap: 6px;
+  padding: 4px 6px;
+  margin-bottom: 2px;
+  border-radius: 10px
+}
+
+.ftl-root #entryView .triprule {
+  padding: 2px 4px;
+  gap: 4px
+}
+
+.ftl-root #entryView .triprule select,
+.ftl-root #entryView .triprule input {
+  height: 27px
+}
+
+.ftl-root #entryView .triptools .ebtn {
+  padding: 6px 10px
+}
+
+.ftl-root #entryView .trip-page {
+  height: 24px
+}
+
+.ftl-root #entryView .trip-page button {
+  height: 24px;
+  min-width: 27px
+}
+
+.ftl-root #entryView .egrid {
+  max-height: calc(100vh - 100px);
+  min-height: 60vh
+}
+
+/* FTL Airport: clean rows without dashed separator */
+.ftl-root #eTable tr.truck-start>td.c {
+  border-top: none !important;
+}
+
+.ftl-root .trksep,
+.ftl-root .trksep-line {
+  display: none !important;
+}
+
+/* Operation separation spacing */
+.ftl-root #eTable tr.op-separator-row {
+  height: 20px !important;
+  pointer-events: none;
+}
+
+.ftl-root #eTable tr.op-separator-row td {
+  height: 20px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 3px solid #cbd5e1 !important;
+}
+
+.ftl-root .delivered-filters {
+  margin: 4px 0 10px;
+  flex-wrap: wrap
+}
+
+.ftl-root .delivered-filters .tripsearch {
+  flex-wrap: wrap
+}
+
+.ftl-root #deliveredTable .archive-select {
+  text-align: center
+}
+
+/* Truck Shipment Dropdown Selector */
+.ftl-root .truck-shp-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 2px 6px;
+  border-radius: 6px;
+  width: fit-content;
+}
+
+.ftl-root .truck-shp-lbl {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #166534;
+  white-space: nowrap;
+}
+
+.ftl-root .truck-shp-select {
+  background: #ffffff;
+  border: 1px solid #86efac;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #065f46;
+  padding: 1px 4px;
+  cursor: pointer;
+  outline: none;
+  max-width: 190px;
+}
+
+.ftl-root .truck-shp-select:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, .2);
+}
+
+/* Shared Truck Tag across shipments */
+.ftl-root .shared-truck-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 750;
+  padding: 1px 6px;
+  margin-top: 3px;
+  width: fit-content;
+}
+
+.ftl-root .shared-truck-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f59e0b;
+  display: inline-block;
+}

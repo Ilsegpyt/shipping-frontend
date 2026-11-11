@@ -57,6 +57,7 @@ import ResetPassword from "../pages/auth/ResetPassword";
 // Internal pages
 import Dashboard from "../pages/internal/shared/Dashboard";
 import OceanTransportDashboard from "../pages/internal/operations/OceanTransport/OceanTransportDashboard";
+import FtlAirportPage from "../pages/internal/operations/FtlAirport/FtlAirportPage";
 import Profile from "../pages/internal/shared/Profile";
 import Users from "../pages/internal/super-admin/Users";
 import Roles from "../pages/internal/super-admin/Roles";
@@ -240,6 +241,24 @@ export default function AppRoutes() {
             element={<ProtectedRoute requiredPermission="operations.view" />}
           >
             <Route index element={<OceanTransportDashboard />} />
+          </Route>
+          <Route
+            path="/ftl/dashboard"
+            element={<ProtectedRoute />}
+          >
+            <Route index element={<FtlAirportPage defaultView="dashboard" />} />
+          </Route>
+          <Route
+            path="/ftl/entry"
+            element={<ProtectedRoute />}
+          >
+            <Route index element={<FtlAirportPage defaultView="entry" />} />
+          </Route>
+          <Route
+            path="/ftl"
+            element={<ProtectedRoute />}
+          >
+            <Route index element={<FtlAirportPage defaultView="dashboard" />} />
           </Route>
           <Route path="/profile" element={<Profile />} />
           <Route
