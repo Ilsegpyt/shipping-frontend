@@ -919,7 +919,8 @@ export function createFtlEngine(root, options = {}) {
   const viewExcept = skip => DATA.filter(r => rowPass(r, skip));
 
   function fillSelect(id, values, labelFn) {
-    const sel = $(id), keep = sel.value; while (sel.options.length > 1) sel.remove(1);
+    const sel = $(id); if (!sel) return;
+    const keep = sel.value; while (sel.options.length > 1) sel.remove(1);
     values.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = labelFn ? labelFn(v) : v; sel.appendChild(o); });
     sel.value = [...sel.options].some(o => o.value === keep) ? keep : '';
   }
@@ -928,9 +929,10 @@ export function createFtlEngine(root, options = {}) {
     const imp = MODE() === 'Import';
     return [['load', AR() ? 'تاريخ النشاط' : 'Activity date'], ['reqDate', AR() ? (imp ? 'تاريخ التعتيق المطلوب' : 'تاريخ التحميل المطلوب') : (imp ? 'Required offloading date' : 'Required loading date')], ['arrDate', AR() ? 'تاريخ الوصول الفعلي' : 'Actual arrival date'], ['gateOut', AR() ? 'تاريخ الخروج من البوابة' : 'Gate-out date'], [imp ? 'free' : 'cut', AR() ? (imp ? 'نهاية فترة السماح' : 'آخر موعد للتسليم') : (imp ? 'Free-time end' : 'Cut-off date')]];
   }
-  function dateBasisLabel() { return dateBasisOptions().find(x => x[0] === $('dateBasis').value)?.[1] || ''; }
+  function dateBasisLabel() { return dateBasisOptions().find(x => x[0] === $('dateBasis')?.value)?.[1] || ''; }
   function syncDateBasis() {
-    const el = $('dateBasis'), keep = el.value;
+    const el = $('dateBasis'); if (!el) return;
+    const keep = el.value;
     el.innerHTML = dateBasisOptions().map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
     if ([...el.options].some(o => o.value === keep)) el.value = keep;
   }
@@ -938,22 +940,32 @@ export function createFtlEngine(root, options = {}) {
     const rows = directionRows(), uniq = k => [...new Set(rows.map(r => r[k]).filter(Boolean))].sort();
     for (const [id, key] of SELECTS) {
       if (id === 'fDir') continue;
+      const el = $(id);
+      if (!el) continue;
       let values = key === 'port' ? [...new Set(rows.map(r => r.pod || r.port).filter(Boolean))].sort() : uniq(key);
       if (key === 'size') values = values.filter(v => !/^45(?:\D|$)/.test(v));
       fillSelect(id, values, key === 'risk' ? riskLabel : undefined);
-      $(id).disabled = values.length === 0;
+      el.disabled = values.length === 0;
     }
-    $('lCreatedFrom').textContent = AR() ? 'إنشاء العملية من' : 'Created from'; $('lCreatedTo').textContent = AR() ? 'إنشاء العملية إلى' : 'Created to';
-    $('fFrom').options[0].text = AR() ? 'كل موانئ الشحن' : 'All loading ports';
-    $('fTo').options[0].text = AR() ? 'كل حالات النقل' : 'All transport statuses';
-    const W = t('workflow'); $('deliveryFilterLabel').textContent = W.deliveryStatus;
-    $('deliveryFilter').options[0].text = W.allShipments; $('deliveryFilter').options[1].text = W.open; $('deliveryFilter').options[2].text = W.delivered;
-    $('lDest').textContent = AR() ? (MODE() === 'Import' ? 'موقع التعتيق' : 'موقع التحميل') : (MODE() === 'Import' ? 'Offloading site' : 'Loading site');
+    if ($('lCreatedFrom')) $('lCreatedFrom').textContent = AR() ? 'إنشاء العملية من' : 'Created from';
+    if ($('lCreatedTo')) $('lCreatedTo').textContent = AR() ? 'إنشاء العملية إلى' : 'Created to';
+    if ($('fFrom')?.options?.[0]) $('fFrom').options[0].text = AR() ? 'كل موانئ الشحن' : 'All loading ports';
+    if ($('fTo')?.options?.[0]) $('fTo').options[0].text = AR() ? 'كل حالات النقل' : 'All transport statuses';
+    const W = t('workflow');
+    if ($('deliveryFilterLabel')) $('deliveryFilterLabel').textContent = W.deliveryStatus;
+    if ($('deliveryFilter')?.options?.length >= 3) {
+      $('deliveryFilter').options[0].text = W.allShipments;
+      $('deliveryFilter').options[1].text = W.open;
+      $('deliveryFilter').options[2].text = W.delivered;
+    }
+    if ($('lDest')) $('lDest').textContent = AR() ? (MODE() === 'Import' ? 'موقع التعتيق' : 'موقع التحميل') : (MODE() === 'Import' ? 'Offloading site' : 'Loading site');
     syncDateBasis();
   }
   function initFilters() {
-    fillSelect('fDir', ['Import', 'Export', 'FCL'], dirLabel);
-    if ($('fDir').value !== 'FCL' && !DATA.some(r => r.dir === $('fDir').value)) $('fDir').value = DATA.some(r => r.dir === 'Import') ? 'Import' : 'Export';
+    if ($('fDir')) {
+      fillSelect('fDir', ['Import', 'Export', 'FCL'], dirLabel);
+      if ($('fDir').value !== 'FCL' && !DATA.some(r => r.dir === $('fDir').value)) $('fDir').value = DATA.some(r => r.dir === 'Import') ? 'Import' : 'Export';
+    }
     refreshDirectionFilters(); syncDirTabs();
   }
 
@@ -1575,7 +1587,7 @@ export function createFtlEngine(root, options = {}) {
       { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 170 },
       { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 160 },
       { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 160 },
-      { k: 'cntr', h: 'cntr#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 140 },
+      { k: 'cntr', h: 'cntr#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 210 },
       { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g4', uniq: false, w: 120 },
       { k: 'loadStatus', h: 'Load Status', ar: 'حالة التحميل', t: 'text', g: 'g4', auto: true, uniq: false, w: 130 },
       { k: 'trucker', h: 'Transporter', ar: 'مقاول النقل', t: 'list', g: 'g5', w: 150, src: 'trucker' },
@@ -1610,7 +1622,7 @@ export function createFtlEngine(root, options = {}) {
       { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 170 },
       { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 160 },
       { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 160 },
-      { k: 'cntr', h: 'cntr no#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 140 },
+      { k: 'cntr', h: 'cntr no#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 210 },
       { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g4', uniq: false, w: 120 },
       { k: 'loadStatus', h: 'Load Status', ar: 'حالة التحميل', t: 'text', g: 'g4', auto: true, uniq: false, w: 130 },
       { k: 'trucker', h: 'Transporter', ar: 'مقاول النقل', t: 'list', g: 'g5', w: 150, src: 'trucker' },
@@ -2174,9 +2186,14 @@ export function createFtlEngine(root, options = {}) {
            operation is ONE shipment; one value per row when a truck carries several shipments.
      trk – truck, driver, gate and Latest Updates. One value per truck: merged over the
            shipment rows that truck carries, never merged across different trucks. */
-  const MERGE_LEVEL = { trk: new Set(['trucker', 'truckType', 'cntr', 'driver', 'mob', 'gateIn', 'gateInT', 'gateOut', 'gateOutT', 'updates']), shp: new Set(['shipNo', 'size', 'hawb', 'cert', 'customs']) };
+  const MERGE_LEVEL = {
+    trk: new Set(['trucker', 'truckType', 'cntr', 'driver', 'mob', 'gateIn', 'gateInT', 'gateOut', 'gateOutT', 'updates', 'transInv']),
+    shp: new Set(['shipNo', 'size', 'hawb', 'cert', 'customs', 'client', 'bl', 'booking', 'packages', 'weight', 'commodity', 'cbm', 'line', 'dest', 'aod', 'clrType']),
+    row: new Set(['loadedPackages', 'loadStatus', 'arrDate', 'arrTime', 'reqDate', 'reqTime']),
+    op: new Set(['vol', 'movement', 'status', 'oper'])
+  };
   const FIXED_LISTS = new Set(['clrType', 'truckType']);
-  const colLevel = c => !c ? 'row' : MERGE_LEVEL.trk.has(c.k) ? 'trk' : MERGE_LEVEL.shp.has(c.k) ? 'shp' : isMergeCol(c) ? 'op' : 'row';
+  const colLevel = c => !c ? 'row' : MERGE_LEVEL.row.has(c.k) ? 'row' : MERGE_LEVEL.trk.has(c.k) ? 'trk' : MERGE_LEVEL.op.has(c.k) ? 'op' : MERGE_LEVEL.shp.has(c.k) ? 'shp' : isMergeCol(c) ? 'shp' : 'row';
   const shipPer = ship => { const n = ship?.rows?.length || 0, p = Math.max(1, Number(ship?.per) || 1); return p > 1 && n % p === 0 ? p : 1; };
   /* FTL Airport layout — an operation has S shipments and T trucks, two independent counts.
      Rows = max(S,T). Shipment columns are S cells spread over the rows, truck columns are T cells,
@@ -2193,15 +2210,270 @@ export function createFtlEngine(root, options = {}) {
   }
   const validSpans = (spans, R) => Array.isArray(spans) && spans.length && spans.every(s => Array.isArray(s) && s.length === 2 && Number.isInteger(s[0]) && Number.isInteger(s[1]) && s[1] > 0) && spans[0][0] === 0 && spans.every((s, i) => i === 0 || s[0] === spans[i - 1][0] + spans[i - 1][1]) && spans[spans.length - 1][0] + spans[spans.length - 1][1] === R;
   const laneKeys = (dir, lane) => COLS[dir].filter(c => colLevel(c) === lane).map(c => c.k);
+
+  function ensureContiguousTrucks(dir, ship) {
+    if (!ship || !ship.rows || ship.rows.length <= 1) return false;
+    const R = ship.rows.length;
+    const rows = ENTRY[dir];
+    if (!rows) return false;
+
+    const origRows = ship.rows.slice();
+    const origTrkOf = (ship.trkOf || trkOfFromSpans(ship.trkSpans, R)).slice();
+
+    // Map each truck number to its plate so all rows of the same truck share the same key
+    const trkNoToPlate = new Map();
+    origRows.forEach((rx, rIdx) => {
+      const tNo = origTrkOf?.[rIdx];
+      const plate = (rows[rx]?.cntr || '').trim().toUpperCase();
+      if (tNo !== undefined && tNo !== null && plate && !trkNoToPlate.has(tNo)) {
+        trkNoToPlate.set(tNo, plate);
+      }
+    });
+
+    // Helper to get truck key for a row
+    const getTrkKey = (rx, rIdx) => {
+      const plate = (rows[rx]?.cntr || '').trim().toUpperCase();
+      if (plate) return 'p:' + plate;
+      const origIdx = origRows.indexOf(rx);
+      const tNo = origIdx >= 0 ? origTrkOf[origIdx] : null;
+      if (tNo !== null && tNo !== undefined) {
+        const known = trkNoToPlate.get(tNo);
+        if (known) return 'p:' + known;
+        return 't:' + tNo;
+      }
+      return 'r:' + rx;
+    };
+
+    // Helper to get shipment key for a row
+    const getShpKey = (rx, rIdx) => {
+      const sNo = (rows[rx]?.shipNo || '').trim().toUpperCase();
+      if (sNo) return 'no:' + sNo;
+      const hawb = (rows[rx]?.hawb || '').trim().toUpperCase();
+      if (hawb) return 'h:' + hawb;
+      const bl = (rows[rx]?.bl || '').trim().toUpperCase();
+      if (bl) return 'bl:' + bl;
+      if (Array.isArray(ship.shpSpans)) {
+        const spanIdx = ship.shpSpans.findIndex(([st, len]) => rIdx >= st && rIdx < st + len);
+        if (spanIdx >= 0) return 's:' + spanIdx;
+      }
+      return 'rx:' + rx;
+    };
+
+    const trkKeys = ship.rows.map((rx, rIdx) => getTrkKey(rx, rIdx));
+    const shpKeys = ship.rows.map((rx, rIdx) => getShpKey(rx, rIdx));
+
+    // Map truck key -> Set of shipment keys it belongs to
+    const truckToShipments = new Map();
+    ship.rows.forEach((rx, rIdx) => {
+      const tKey = trkKeys[rIdx];
+      const sKey = shpKeys[rIdx];
+      if (!truckToShipments.has(tKey)) truckToShipments.set(tKey, new Set());
+      truckToShipments.get(tKey).add(sKey);
+    });
+
+    const isSharedTruck = tKey => (truckToShipments.get(tKey)?.size || 0) > 1;
+
+    // Only run contiguous optimization if there is at least one shared truck across shipments
+    const hasAnyShared = [...truckToShipments.keys()].some(isSharedTruck);
+    if (!hasAnyShared) {
+      return false;
+    }
+
+    // Group rows by shipment key in order of initial appearance
+    const shipmentOrder = [];
+    const shipmentGroups = new Map();
+    shpKeys.forEach((sKey, rIdx) => {
+      if (!shipmentGroups.has(sKey)) {
+        shipmentOrder.push(sKey);
+        shipmentGroups.set(sKey, []);
+      }
+      shipmentGroups.get(sKey).push({
+        rx: ship.rows[rIdx],
+        rIdx,
+        tKey: trkKeys[rIdx]
+      });
+    });
+
+    // Check if both shipments and trucks are ALREADY contiguous
+    let shpContiguous = true;
+    const seenShp = new Set();
+    let prevShp = null;
+    for (const s of shpKeys) {
+      if (s !== prevShp) {
+        if (seenShp.has(s)) { shpContiguous = false; break; }
+        seenShp.add(s);
+        prevShp = s;
+      }
+    }
+
+    let trkContiguous = true;
+    const seenTrk = new Set();
+    let prevTrk = null;
+    for (const t of trkKeys) {
+      if (t !== prevTrk) {
+        if (seenTrk.has(t)) { trkContiguous = false; break; }
+        seenTrk.add(t);
+        prevTrk = t;
+      }
+    }
+
+    if (shpContiguous && trkContiguous) {
+      return false;
+    }
+
+    // Order shipments so that shipments sharing a truck are placed adjacent to each other
+    const orderedShipments = [];
+    const unvisited = new Set(shipmentOrder);
+
+    while (unvisited.size > 0) {
+      let cur = null;
+      if (orderedShipments.length > 0) {
+        const lastShp = orderedShipments[orderedShipments.length - 1];
+        const lastSharedTrucks = new Set(
+          shipmentGroups.get(lastShp).map(item => item.tKey).filter(isSharedTruck)
+        );
+        for (const cand of unvisited) {
+          const candTrucks = shipmentGroups.get(cand).map(item => item.tKey);
+          if (candTrucks.some(t => lastSharedTrucks.has(t))) {
+            cur = cand;
+            break;
+          }
+        }
+      }
+      if (!cur) {
+        for (const s of shipmentOrder) {
+          if (unvisited.has(s)) { cur = s; break; }
+        }
+      }
+      unvisited.delete(cur);
+      orderedShipments.push(cur);
+    }
+
+    // Order rows within each shipment:
+    // If S[i] shares truck with S[i-1], put that truck at the START.
+    // If S[i] shares truck with S[i+1], put that truck at the END.
+    const newRows = [];
+    const newShpSpans = [];
+    let startRow = 0;
+
+    orderedShipments.forEach((sKey, sIdx) => {
+      const items = shipmentGroups.get(sKey).slice();
+      let tPrev = null;
+      if (sIdx > 0) {
+        const prevKey = orderedShipments[sIdx - 1];
+        const prevTrucks = new Set(shipmentGroups.get(prevKey).map(it => it.tKey).filter(isSharedTruck));
+        const match = items.find(it => prevTrucks.has(it.tKey));
+        if (match) tPrev = match.tKey;
+      }
+
+      let tNext = null;
+      if (sIdx < orderedShipments.length - 1) {
+        const nextKey = orderedShipments[sIdx + 1];
+        const nextTrucks = new Set(shipmentGroups.get(nextKey).map(it => it.tKey).filter(isSharedTruck));
+        const match = items.find(it => nextTrucks.has(it.tKey));
+        if (match) tNext = match.tKey;
+      }
+
+      items.sort((a, b) => {
+        if (tPrev && a.tKey === tPrev && b.tKey !== tPrev) return -1;
+        if (tPrev && b.tKey === tPrev && a.tKey !== tPrev) return 1;
+        if (tNext && a.tKey === tNext && b.tKey !== tNext) return 1;
+        if (tNext && b.tKey === tNext && a.tKey !== tNext) return -1;
+        return a.rIdx - b.rIdx;
+      });
+
+      const spanLen = items.length;
+      newShpSpans.push([startRow, spanLen]);
+      startRow += spanLen;
+
+      items.forEach(it => newRows.push(it.rx));
+    });
+
+    if (newRows.length === R) {
+      ship.rows = newRows;
+      ship.shpSpans = newShpSpans;
+      ship.per = newShpSpans.length;
+
+      // Recompute trkSpans and trkOf preserving existing truck groupings
+      const finalTrkKeys = ship.rows.map((rx, rIdx) => getTrkKey(rx, rIdx));
+
+      const newTrkSpans = [];
+      const newTrkOf = new Array(R).fill(1);
+      let tStart = 0;
+      let truckNum = 1;
+
+      for (let r = 1; r <= R; r++) {
+        const prevKey = finalTrkKeys[r - 1];
+        const curKey = r < R ? finalTrkKeys[r] : null;
+        if (r === R || curKey !== prevKey) {
+          const spanLen = r - tStart;
+          newTrkSpans.push([tStart, spanLen]);
+          for (let j = tStart; j < r; j++) {
+            newTrkOf[j] = truckNum;
+          }
+          truckNum++;
+          tStart = r;
+        }
+      }
+
+      ship.trkSpans = newTrkSpans;
+      ship.trkOf = newTrkOf;
+
+      // Sync truck-level metadata across merged truck spans
+      newTrkSpans.forEach(([st, len]) => {
+        if (len > 1) {
+          const headRow = rows[ship.rows[st]] || {};
+          for (let j = st + 1; j < st + len; j++) {
+            const row = rows[ship.rows[j]];
+            if (row) {
+              row.cntr = headRow.cntr || row.cntr;
+              if (headRow.driver) row.driver = headRow.driver;
+              if (headRow.mob) row.mob = headRow.mob;
+              if (headRow.truckType) row.truckType = headRow.truckType;
+              if (headRow.trucker) row.trucker = headRow.trucker;
+            }
+          }
+        }
+      });
+
+      return true;
+    }
+    return false;
+  }
+
   function layoutShip(dir, ship, opts = {}) {
-    const R = ship.rows.length; ship.unmerged = ship.unmerged || new Set();
-    if (!R) { ship.shpSpans = []; ship.trkSpans = []; ship.trkOf = []; ship.per = 1; return ship; }
     const inShpSpans = opts.shpSpans || ship.shpSpans;
     const inTrkSpans = opts.trkSpans || ship.trkSpans;
     const inTrkOf = opts.trkOf || ship.trkOf;
-    const shp = Number(opts.shp) || (Array.isArray(inShpSpans) ? inShpSpans.length : 0);
-    const trk = Number(opts.trk) || (Array.isArray(inTrkSpans) ? inTrkSpans.length : 0);
-    const validTrkOf = Array.isArray(inTrkOf) && inTrkOf.length === R && inTrkOf.every(v => Number.isInteger(v) && v > 0);
+    const shp = Number(opts.shp) || Number(ship.initialShipCount || 0) || (Array.isArray(inShpSpans) ? inShpSpans.length : 0);
+    const trk = Number(opts.trk) || Number(ship.targetTruckCount || 0) || (Array.isArray(inTrkSpans) ? inTrkSpans.length : 0);
+
+    // In Shipments > Trucks: ensure the main table rows never exceed the shipment count!
+    if (shp > 0 && trk > 0 && shp > trk && ship.rows && ship.rows.length > shp) {
+      ship.rows = ship.rows.slice(0, shp);
+    }
+    const R = ship.rows.length; ship.unmerged = ship.unmerged || new Set();
+    if (!R) { ship.shpSpans = []; ship.trkSpans = []; ship.trkOf = []; ship.per = 1; return ship; }
+
+    // In Shipments > Trucks: enforce exactly S shipment rows and T truck spans strictly without duplicates or unassigned rows
+    if (shp > 0 && trk > 0 && shp > trk) {
+      ship.shpSpans = evenSpans(shp, R);
+      ship.trkSpans = evenSpans(trk, R);
+      ship.trkOf = trkOfFromSpans(ship.trkSpans, R);
+      ship.per = ship.shpSpans.length;
+      return ship;
+    }
+
+    // If explicit shipment/truck counts were given (e.g. from createOperation), respect them 100%
+    if (shp > 0 && trk > 0 && (opts.shp !== undefined || opts.trk !== undefined)) {
+      ship.shpSpans = evenSpans(shp, R);
+      ship.trkSpans = evenSpans(trk, R);
+      ship.trkOf = trkOfFromSpans(ship.trkSpans, R);
+      ship.per = ship.shpSpans.length;
+      return ship;
+    }
+
+    const validTrkOf = Array.isArray(inTrkOf) && inTrkOf.length === R && inTrkOf.every(v => Number.isInteger(v) && v >= 0);
     if (validTrkOf) ship.trkOf = inTrkOf.slice(); else ship.trkOf = null;
     if (validTrkOf && validSpans(inShpSpans, R)) {
       ship.shpSpans = inShpSpans.map(s => [s[0], s[1]]);
@@ -2214,6 +2486,7 @@ export function createFtlEngine(root, options = {}) {
     else if (shp > 0 && trk > 0) {
       ship.shpSpans = evenSpans(shp, R);
       ship.trkSpans = evenSpans(trk, R);
+      ship.trkOf = trkOfFromSpans(ship.trkSpans, R);
     }
     else {
       let sp = dataSpans(dir, ship.rows, laneKeys(dir, 'shp'));
@@ -2231,11 +2504,16 @@ export function createFtlEngine(root, options = {}) {
   }
   const trkOfFromSpans = (spans, R) => { const out = new Array(R).fill(1); (spans || []).forEach(([a, l], k) => { for (let r = a; r < a + l && r < R; r++)out[r] = k + 1; }); return out; };
   const spansFromTrkOf = trkOf => { const out = []; let start = 0; for (let r = 1; r <= trkOf.length; r++) { if (r === trkOf.length || trkOf[r] !== trkOf[start]) { out.push([start, r - start]); start = r; } } return out; };
-  const truckNumbers = ship => [...new Set(ship?.trkOf || [])].sort((a, b) => a - b);
-  const truckCount = ship => truckNumbers(ship).length || 1;
+  const truckNumbers = ship => [...new Set(ship?.trkOf || [])].filter(v => v > 0).sort((a, b) => a - b);
+  const truckCount = ship => Number(ship?.targetTruckCount) || truckNumbers(ship).length || 1;
   const spanIn = (spans, ri) => { const sp = (spans || []).find(([a, l]) => ri >= a && ri < a + l); return sp ? { start: sp[0], len: sp[1] } : { start: ri, len: 1 }; };
   function spanOf(ship, c, ri) {
-    const n = ship.rows.length, lv = colLevel(c);
+    const n = ship.rows.length;
+    const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+    if (isSGreater && (c.k === 'loadedPackages' || c.k === 'loadStatus')) {
+      return spanIn(ship.trkSpans, ri);
+    }
+    const lv = colLevel(c);
     if (lv === 'op') return { start: 0, len: n };
     if (lv === 'row') return { start: ri, len: 1 };
     if (!validSpans(ship.shpSpans, n) || !validSpans(ship.trkSpans, n) || !Array.isArray(ship.trkOf) || ship.trkOf.length !== n) layoutShip(ship.dir, ship, { shpSpans: ship.shpSpans, trkSpans: ship.trkSpans, trkOf: ship.trkOf });
@@ -2244,7 +2522,12 @@ export function createFtlEngine(root, options = {}) {
   }
   function groupRows(ship, c, i) {
     const ri = ship.rows.indexOf(i); if (ri < 0) return [i];
-    if (colLevel(c) === 'trk' && !(c.k === 'trucker' && !ship.unmerged.has('trucker'))) { spanOf(ship, c, ri); const n = ship.trkOf[ri]; return ship.rows.filter((_, k) => ship.trkOf[k] === n); }   /* a truck's cells are one value on every row of that truck */
+    const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+    if ((colLevel(c) === 'trk' || (isSGreater && (c.k === 'loadedPackages' || c.k === 'loadStatus'))) && !(c.k === 'trucker' && !ship.unmerged.has('trucker'))) {
+      spanOf(ship, c, ri);
+      const n = ship.trkOf[ri];
+      return ship.rows.filter((_, k) => ship.trkOf[k] === n);
+    }
     const sp = spanOf(ship, c, ri); return ship.rows.slice(sp.start, sp.start + sp.len);
   }
   const mergedFor = (ship, c) => !!ship && spanOf(ship, c, 0).len === ship.rows.length;
@@ -2274,17 +2557,37 @@ export function createFtlEngine(root, options = {}) {
   }
   function recalculateTruckSpans(dir, ship) {
     if (!ship || !ship.rows || ship.rows.length <= 1) return;
+    const isSGreater = ship.shpSpans && ship.shpSpans.length > truckCount(ship);
+    if (isSGreater) return;
     const R = ship.rows.length;
     const plates = ship.rows.map(ix => (ENTRY[dir][ix]?.cntr || '').trim().toUpperCase());
     if (!plates.some(Boolean)) return;
+    const trkOf = ship.trkOf || trkOfFromSpans(ship.trkSpans, R);
 
     const newSpans = [];
     let start = 0;
     for (let r = 1; r <= R; r++) {
-      const prev = plates[r - 1];
-      const cur = r < R ? plates[r] : null;
-      const same = prev && cur && prev === cur;
-      if (r === R || !same) {
+      if (r === R) {
+        newSpans.push([start, r - start]);
+        break;
+      }
+      const prevPlate = plates[r - 1];
+      const curPlate = plates[r];
+      const bothNamedAndDifferent = prevPlate && curPlate && prevPlate !== curPlate;
+      const bothNamedAndSame = prevPlate && curPlate && prevPlate === curPlate;
+      const sameTruck = trkOf && trkOf[r - 1] > 0 && trkOf[r] > 0 && (trkOf[r - 1] === trkOf[r]);
+
+      let same;
+      if (bothNamedAndDifferent) {
+        same = false;
+      } else if (bothNamedAndSame) {
+        same = true;
+      } else {
+        // At least one adjacent row has an empty plate: preserve existing truck grouping!
+        same = !!sameTruck;
+      }
+
+      if (!same) {
         newSpans.push([start, r - start]);
         start = r;
       }
@@ -2315,9 +2618,32 @@ export function createFtlEngine(root, options = {}) {
     const dir = EDIR, col = COLS[dir].find(c => c.k === k), ship = rowShip(dir, i);
     if (!col || isLocked(dir, col)) return;
     { const clr = cellVal(ENTRY[dir][i], 'clrType'); if (v && ((k === 'cert' && clr === 'BOSLA') || (k === 'customs' && clr !== 'BOSLA'))) { toast(k === 'cert' ? (AR() ? 'التخليص بوليصة (BOSLA) — مفيش رقم شهادة' : 'BOSLA clearance — no Certificate Number') : (AR() ? 'منطقة الجمارك للتخليص بوليصة (BOSLA) بس' : 'Customs Area is only for BOSLA clearance')); return false; } }
+    if (k === 'loadedPackages' && ship) {
+      const ri = ship.rows.indexOf(i);
+      const isSGreater = ship.shpSpans && ship.shpSpans.length > truckCount(ship);
+      const trkNo = ship.trkOf?.[ri];
+      const hasTruck = (ENTRY[dir][i]?.cntr && ENTRY[dir][i].cntr.trim()) || (trkNo && trkNo > 0);
+      if (isSGreater && !hasTruck) {
+        toast(AR() ? 'يرجى تعيين شاحنة لهذه الشحنة أولاً من بيان الشاحنة (Truck Manifest)' : 'Please assign a truck to this shipment first');
+        return false;
+      }
+    }
     const result = validateField(col, v); if (!result.ok) return false; v = result.value;
     const conflict = cellIdentityConflict(dir, i, k, v); if (conflict) { toast(conflict); return false; }
-    if (ship) groupRows(ship, col, i).forEach(r => ENTRY[dir][r][k] = v);
+    if (ship) {
+      const rowsToUpdate = new Set(groupRows(ship, col, i));
+      if (colLevel(col) === 'trk') {
+        const curPlate = (ENTRY[dir][i]?.cntr || '').trim().toUpperCase();
+        if (curPlate) {
+          ship.rows.forEach(rx => {
+            if ((ENTRY[dir][rx]?.cntr || '').trim().toUpperCase() === curPlate) {
+              rowsToUpdate.add(rx);
+            }
+          });
+        }
+      }
+      rowsToUpdate.forEach(r => ENTRY[dir][r][k] = v);
+    }
     else ENTRY[dir][i][k] = v;
     if (col.src && v && !FIXED_LISTS.has(col.src)) MASTER[col.src] = [...new Set([...(MASTER[col.src] || []), v])].sort();
 
@@ -2367,12 +2693,29 @@ export function createFtlEngine(root, options = {}) {
     /* Auto-update loadStatus based on packages and loadedPackages */
     if (['loadedPackages', 'packages'].includes(k)) {
       const rowsToUpdate = ship ? groupRows(ship, col, i) : [i];
+      const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
       rowsToUpdate.forEach(r => {
         const row = ENTRY[dir][r];
         if (row) {
           const tot = parseInt(normalizeDigits(row.packages || '0'), 10) || 0;
           const lod = parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0;
-          row.loadStatus = lod > 0 ? (tot > 0 && lod >= tot ? 'Full' : 'Partial') : '';
+          if (isSGreater) {
+            row.loadStatus = lod > 0 ? 'Full' : '';
+            if (k === 'loadedPackages') {
+              if (row.assignedShp != null) {
+                const curShp = parseInt(row.assignedShp, 10);
+                if (!row._allocations || !row._allocations.length) {
+                  row._allocations = [{ shpIdx: curShp, pkgs: lod }];
+                } else if (row._allocations.length === 1) {
+                  row._allocations[0].pkgs = lod;
+                }
+              } else if (row._allocations && row._allocations.length === 1) {
+                row._allocations[0].pkgs = lod;
+              }
+            }
+          } else {
+            row.loadStatus = lod > 0 ? (tot > 0 && lod === tot ? 'Full' : lod > tot ? 'Overload' : 'Partial') : '';
+          }
         }
       });
     }
@@ -2618,16 +2961,39 @@ export function createFtlEngine(root, options = {}) {
     let anyOverload = false;
     let anyPartial = false;
 
+    const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+
     shpSpans.forEach(([start, len], shpIdx) => {
       const shpRow = ENTRY[dir][ship.rows[start]] || {};
       const shpPkgs = parseInt(normalizeDigits(shpRow.packages || '0'), 10) || 0;
       totalShipmentPkgs += shpPkgs;
 
       let loadedForThisShp = 0;
-      for (let r = start; r < start + len && r < ship.rows.length; r++) {
-        const row = ENTRY[dir][ship.rows[r]];
-        if (row) {
-          loadedForThisShp += (parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0);
+      if (isSGreater) {
+        const seenTrucks = new Set();
+        ship.rows.forEach(rx => {
+          const row = ENTRY[dir][rx];
+          const trkId = row?._coLoadId || ship.trkOf?.[ship.rows.indexOf(rx)] || rx;
+          if (seenTrucks.has(trkId)) return;
+          seenTrucks.add(trkId);
+          if (row && Array.isArray(row._allocations) && row._allocations.length) {
+            row._allocations.forEach(a => {
+              if (parseInt(a.shpIdx, 10) === shpIdx) {
+                loadedForThisShp += (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0);
+              }
+            });
+          } else if (row && row.assignedShp !== undefined && row.assignedShp !== null && row.assignedShp !== '') {
+            if (parseInt(row.assignedShp, 10) === shpIdx) {
+              loadedForThisShp += (parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0);
+            }
+          }
+        });
+      } else {
+        for (let r = start; r < start + len && r < ship.rows.length; r++) {
+          const row = ENTRY[dir][ship.rows[r]];
+          if (row) {
+            loadedForThisShp += (parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0);
+          }
         }
       }
       totalLoadedPkgs += loadedForThisShp;
@@ -2675,59 +3041,173 @@ export function createFtlEngine(root, options = {}) {
     };
   }
 
-  function setTruckShipment(ref, ri, targetShpIdx) {
+  function setTruckShipment(ref, ri, targetVal, trkNo) {
     const dir = EDIR, ship = SHIPS[dir]?.[ref];
-    if (!ship || !Array.isArray(ship.shpSpans) || ship.shpSpans.length <= 1) return;
+    if (!ship || !Array.isArray(ship.shpSpans)) return;
     if (EDITING && !commitEdit()) return;
 
-    const R = ship.rows.length;
     const S = ship.shpSpans.length;
-    if (targetShpIdx < 0 || targetShpIdx >= S) return;
+    const rows = ENTRY[dir];
+    const sourceRowIdx = ship.rows[ri];
+    const sourceRow = rows[sourceRowIdx];
+    if (!sourceRow) return;
 
-    // Determine which shipment each row is currently assigned to
-    const currentAssignments = ship.rows.map((_, k) =>
-      ship.shpSpans.findIndex(([a, l]) => k >= a && k < a + l)
-    );
+    const plate = sourceRow.cntr || '—';
 
-    if (currentAssignments[ri] === targetShpIdx) return;
+    // 1. Unassign action: user selected "-- Select Shipment --"
+    if (targetVal === '' || targetVal === null || targetVal === undefined || isNaN(parseInt(targetVal, 10))) {
+      sourceRow.assignedShp = null;
+      sourceRow.loadedPackages = '';
+      sourceRow.loadStatus = '';
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      openTruckManifest(plate, sourceRowIdx);
+      toast(AR() ? '✓ تم فك ربط الشاحنة بالشحنة' : '✓ Truck unassigned');
+      return;
+    }
 
-    const newAssignments = currentAssignments.slice();
-    newAssignments[ri] = targetShpIdx;
+    const targetShpIdx = parseInt(targetVal, 10);
+    if (isNaN(targetShpIdx) || targetShpIdx < 0 || targetShpIdx >= S) return;
 
-    // Validate that each shipment has at least 1 truck
-    for (let s = 0; s < S; s++) {
-      const count = newAssignments.filter(a => a === s).length;
-      if (count === 0) {
-        toast(AR() ? 'كل شحنة يجب أن تحتوي على عربية واحدة على الأقل' : 'Each shipment must have at least 1 truck');
+    const curSpanIdx = ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l);
+    const curSpan = ship.shpSpans[curSpanIdx];
+    const curSpanLen = curSpan ? curSpan[1] : 1;
+    const T = truckCount(ship);
+    const isShipmentsGreaterThanTrucks = S > T;
+
+    // Dedicated handler for Shipments > Trucks (e.g. 4 shipments, 3 trucks):
+    // When the user assigns a shipment from inside Truck Manifest, fetch and populate
+    // its details directly into this row in front of the user!
+    if (isShipmentsGreaterThanTrucks) {
+      sourceRow.assignedShp = targetShpIdx;
+
+      const targetSpan = ship.shpSpans[targetShpIdx];
+      const targetMasterRowIdx = targetSpan ? ship.rows[targetSpan[0]] : -1;
+      const targetMasterRow = targetMasterRowIdx >= 0 ? rows[targetMasterRowIdx] : null;
+
+      const totTargetPkgs = parseInt(normalizeDigits(targetMasterRow?.packages || sourceRow.packages || '0'), 10) || 0;
+      const loaded = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
+      sourceRow.loadStatus = loaded > 0 ? (totTargetPkgs > 0 && loaded >= totTargetPkgs ? 'Full' : 'Partial') : '';
+
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      openTruckManifest(plate, sourceRowIdx);
+
+      const targetLabel = AR() ? `شحنة ${targetShpIdx + 1}` : `Shipment ${targetShpIdx + 1}`;
+      toast(AR() ? `✓ تم تعيين الشاحنة إلى ${targetLabel}` : `✓ Truck assigned to ${targetLabel}`);
+      return;
+    }
+
+    // If already in the target shipment span, just confirm the assignment
+    if (curSpanIdx === targetShpIdx) {
+      sourceRow.assignedShp = targetShpIdx;
+      const shpRow = rows[ship.rows[ship.shpSpans[targetShpIdx][0]]] || sourceRow;
+      const totTargetPkgs = parseInt(normalizeDigits(shpRow.packages || '0'), 10) || 0;
+      const loaded = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
+      sourceRow.loadStatus = loaded > 0 ? (totTargetPkgs > 0 && loaded >= totTargetPkgs ? 'Full' : 'Partial') : '';
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      openTruckManifest(plate, sourceRowIdx);
+      const targetLabel = AR() ? `شحنة ${targetShpIdx + 1}` : `Shipment ${targetShpIdx + 1}`;
+      toast(AR() ? `✓ تم ربط الشاحنة بـ ${targetLabel}` : `✓ Truck assigned to ${targetLabel}`);
+      return;
+    }
+
+    // If source shipment only has 1 truck row, SWAP with target shipment row so source shipment never vanishes
+    if (curSpanLen === 1) {
+      const targetSpan = ship.shpSpans[targetShpIdx];
+      const swapRi = targetSpan ? targetSpan[0] : -1;
+      if (swapRi >= 0 && swapRi !== ri) {
+        const swapRowIdx = ship.rows[swapRi];
+        const swapRow = rows[swapRowIdx];
+
+        // Swap truck columns
+        const trkKeys = laneKeys(dir, 'trk');
+        trkKeys.forEach(k => {
+          const tmp = sourceRow[k];
+          sourceRow[k] = swapRow[k];
+          swapRow[k] = tmp;
+        });
+
+        // Swap loadedPackages and loadStatus
+        const tmpPkgs = sourceRow.loadedPackages;
+        sourceRow.loadedPackages = swapRow.loadedPackages;
+        swapRow.loadedPackages = tmpPkgs;
+
+        const tmpStat = sourceRow.loadStatus;
+        sourceRow.loadStatus = swapRow.loadStatus;
+        swapRow.loadStatus = tmpStat;
+
+        const tmpAssigned = sourceRow.assignedShp;
+        sourceRow.assignedShp = swapRow.assignedShp;
+        swapRow.assignedShp = targetShpIdx;
+
+        if (Array.isArray(ship.trkOf)) {
+          const tmpTrk = ship.trkOf[ri];
+          ship.trkOf[ri] = ship.trkOf[swapRi];
+          ship.trkOf[swapRi] = tmpTrk;
+          ship.trkSpans = spansFromTrkOf(ship.trkOf);
+        }
+
+        if (ROWMETA[dir][sourceRowIdx] && ROWMETA[dir][swapRowIdx]) {
+          const tmpUpd = ROWMETA[dir][sourceRowIdx].updates;
+          ROWMETA[dir][sourceRowIdx].updates = ROWMETA[dir][swapRowIdx].updates;
+          ROWMETA[dir][swapRowIdx].updates = tmpUpd;
+        }
+
+        markDirty();
         renderEntry();
+        scheduleSave();
+
+        const targetLabel = AR() ? `شحنة ${targetShpIdx + 1}` : `Shipment ${targetShpIdx + 1}`;
+        toast(AR() ? `✓ تم تغيير الشاحنة إلى ${targetLabel}` : `✓ Truck changed to ${targetLabel}`);
+        openTruckManifest(plate, swapRowIdx);
         return;
       }
     }
 
-    // Capture shipment data snapshots
+    // If source shipment has multiple trucks, we can move this row into target shipment span
+    const currentAssignments = ship.rows.map((rx, k) => {
+      const r = rows[rx];
+      if (r?.assignedShp !== undefined && r?.assignedShp !== null && r?.assignedShp !== '') {
+        const p = parseInt(r.assignedShp, 10);
+        if (!isNaN(p) && p >= 0 && p < S) return p;
+      }
+      return ship.shpSpans.findIndex(([a, l]) => k >= a && k < a + l);
+    });
+
+    const newAssignments = currentAssignments.slice();
+    newAssignments[ri] = targetShpIdx;
+
     const shpData = ship.shpSpans.map(([start]) => {
-      const row = ENTRY[dir][ship.rows[start]] || {};
+      const row = rows[ship.rows[start]] || {};
       const d = {};
       laneKeys(dir, 'shp').forEach(k => { d[k] = row[k] ?? ''; });
       return d;
     });
 
-    // Capture truck data snapshots and rowmeta for each row
     const trkData = ship.rows.map((rowIdx, k) => {
-      const row = ENTRY[dir][rowIdx] || {};
+      const row = rows[rowIdx] || {};
       const d = {};
       laneKeys(dir, 'trk').forEach(k2 => { d[k2] = row[k2] ?? ''; });
       d.loadedPackages = row.loadedPackages ?? '';
       d.loadStatus = row.loadStatus ?? '';
       d.metaUpdates = (ROWMETA[dir][rowIdx]?.updates || []).map(u => ({ ...u }));
-      d.assignedShp = newAssignments[k];
+      d.assignedShp = (k === ri) ? targetShpIdx : newAssignments[k];
+      d.trkNo = ship.trkOf ? ship.trkOf[k] : (k + 1);
+      d.isTargetTruck = (k === ri);
       return d;
     });
 
-    // Sort truck rows so that rows assigned to the same shipment are contiguous
     trkData.sort((a, b) => a.assignedShp - b.assignedShp);
 
-    // Compute new spans based on how many trucks each shipment has
+    const newTrkOf = trkData.map(td => td.trkNo);
+    ship.trkOf = newTrkOf;
+    ship.trkSpans = spansFromTrkOf(newTrkOf);
+
     const newSpans = [];
     let curStart = 0;
     for (let s = 0; s < S; s++) {
@@ -2736,41 +3216,44 @@ export function createFtlEngine(root, options = {}) {
       curStart += count;
     }
 
-    // Write reordered truck data back to rows
     trkData.forEach((td, k) => {
-      const rowIdx = ship.rows[k];
+      const rIdx = ship.rows[k];
       laneKeys(dir, 'trk').forEach(k2 => {
-        ENTRY[dir][rowIdx][k2] = td[k2] ?? '';
+        ENTRY[dir][rIdx][k2] = td[k2] ?? '';
       });
-      ENTRY[dir][rowIdx].loadedPackages = td.loadedPackages;
-      ENTRY[dir][rowIdx].loadStatus = td.loadStatus;
-      if (ROWMETA[dir][rowIdx]) {
-        ROWMETA[dir][rowIdx].updates = td.metaUpdates;
+      ENTRY[dir][rIdx].loadedPackages = td.loadedPackages;
+      ENTRY[dir][rIdx].loadStatus = td.loadStatus;
+      ENTRY[dir][rIdx].assignedShp = td.assignedShp;
+      if (ROWMETA[dir][rIdx]) {
+        ROWMETA[dir][rIdx].updates = td.metaUpdates;
       }
     });
 
-    // Write shipment data to the new spans
     newSpans.forEach(([start, len], sIdx) => {
       const data = shpData[sIdx];
-      for (let r = start; r < start + len && r < R; r++) {
-        const rowIdx = ship.rows[r];
+      for (let r = start; r < start + len && r < ship.rows.length; r++) {
+        const rIdx = ship.rows[r];
         laneKeys(dir, 'shp').forEach(k => {
-          ENTRY[dir][rowIdx][k] = data[k] ?? '';
+          ENTRY[dir][rIdx][k] = data[k] ?? '';
         });
       }
     });
 
     ship.shpSpans = newSpans;
-    layoutShip(dir, ship, { shpSpans: newSpans, trkSpans: ship.trkSpans });
+    ship.per = newSpans.length;
     markDirty();
     renderEntry();
+    scheduleSave();
 
+    const newTargetRelIdx = trkData.findIndex(td => td.isTargetTruck);
+    const newRowIdx = (newTargetRelIdx >= 0) ? ship.rows[newTargetRelIdx] : sourceRowIdx;
     const targetLabel = AR() ? `شحنة ${targetShpIdx + 1}` : `Shipment ${targetShpIdx + 1}`;
-    toast(AR() ? `✓ تم ربط الشاحنة بـ ${targetLabel} بنجاح` : `✓ Truck assigned to ${targetLabel}`);
+    toast(AR() ? `✓ تم تغيير الشاحنة إلى ${targetLabel}` : `✓ Truck changed to ${targetLabel}`);
+    openTruckManifest(plate, newRowIdx);
   }
 
   /* ---------- Co-loading & Multi-Shipment Truck Allocation ---------- */
-  function addTruckCoLoad(ref, truckRowIndex, targetShpIdx, loadedPkgs) {
+  function addTruckCoLoad(ref, truckRowIndex, targetShpIdx, loadedPkgs, reopenManifest = true) {
     const dir = EDIR;
     const ship = SHIPS[dir]?.[ref];
     if (!ship || !Array.isArray(ship.shpSpans) || !ship.rows.length) return false;
@@ -2785,6 +3268,54 @@ export function createFtlEngine(root, options = {}) {
 
     const S = ship.shpSpans.length;
     if (targetShpIdx < 0 || targetShpIdx >= S) return false;
+
+    // In Shipments > Trucks mode (e.g. 4 shipments, 3 trucks):
+    // Main table has exactly S shipment rows and T truck spans.
+    // Co-load allocations are tracked cleanly on the truck's allocations array WITHOUT creating duplicate rows in the table!
+    if (S > truckCount(ship)) {
+      if (!Array.isArray(sourceRow._allocations) || !sourceRow._allocations.length) {
+        if (sourceRow.assignedShp != null) {
+          const curShp = parseInt(sourceRow.assignedShp, 10);
+          const curP = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
+          sourceRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
+        } else {
+          sourceRow._allocations = [];
+        }
+      }
+      if (sourceRow.assignedShp == null) {
+        sourceRow.assignedShp = targetShpIdx;
+      }
+
+      const existing = sourceRow._allocations.find(a => a.shpIdx === targetShpIdx);
+      const pkgsNum = parseInt(normalizeDigits(String(loadedPkgs || '0')), 10) || 0;
+      if (existing) {
+        existing.pkgs = pkgsNum;
+      } else {
+        sourceRow._allocations.push({ shpIdx: targetShpIdx, pkgs: pkgsNum });
+      }
+
+      const sum = sourceRow._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
+      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+      grp.forEach(r => {
+        const row = rows[r];
+        if (row) {
+          row._allocations = sourceRow._allocations.map(a => ({ ...a }));
+          row.loadedPackages = sum > 0 ? String(sum) : '';
+          row.loadStatus = sum > 0 ? 'Full' : '';
+          row.assignedShp = sourceRow.assignedShp;
+        }
+      });
+
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      if (reopenManifest) openTruckManifest(sourceRow.cntr || '', truckRowIndex);
+
+      const targetRow = rows[ship.rows[ship.shpSpans[targetShpIdx][0]]];
+      const targetShpName = targetRow?.shipNo || `SHP-${targetShpIdx + 1}`;
+      toast(AR() ? `✓ تم إضافة حمولة من (${targetShpName}) للشاحنة بنجاح!` : `✓ Shipment allocation added to truck!`);
+      return true;
+    }
 
     // Check if this truck already has an allocation under target shipment
     const targetSpan = ship.shpSpans[targetShpIdx];
@@ -2826,6 +3357,16 @@ export function createFtlEngine(root, options = {}) {
     newRow.loadStatus = pkgsNum > 0 ? (totTargetPkgs > 0 && pkgsNum >= totTargetPkgs ? 'Full' : 'Partial') : '';
     newRow.status = ship.status || 'Open';
     newRow.movement = dir;
+    newRow.assignedShp = targetShpIdx;
+
+    const srcShpIdx = ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l);
+    if (srcShpIdx >= 0 && (sourceRow.assignedShp === undefined || sourceRow.assignedShp === null)) {
+      sourceRow.assignedShp = srcShpIdx;
+    }
+
+    const coId = sourceRow._coLoadId || ('cl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
+    sourceRow._coLoadId = coId;
+    newRow._coLoadId = coId;
 
     const newRowIdx = rows.length;
     rows.push(newRow);
@@ -2840,24 +3381,56 @@ export function createFtlEngine(root, options = {}) {
       updates: []
     };
 
-    // Insert at end of target shipment span
-    const insertRelPos = tStart + tLen;
-    ship.rows.splice(insertRelPos, 0, newRowIdx);
-
+    // Insert immediately adjacent to source truck so the truck is contiguous and merged:
+    const plate = (sourceRow.cntr || '').trim().toUpperCase();
     const trkNo = ship.trkOf?.[ri] || (truckNumbers(ship).length + 1);
-    const newTrkOf = (ship.trkOf || trkOfFromSpans(ship.trkSpans, ship.rows.length - 1)).slice();
-    newTrkOf.splice(insertRelPos, 0, trkNo);
 
-    const newShpSpans = ship.shpSpans.map(([start, len], sIdx) => {
-      if (sIdx === targetShpIdx) return [start, len + 1];
-      if (sIdx > targetShpIdx) return [start + 1, len];
-      return [start, len];
+    let lastSrcRelIdx = ri;
+    ship.rows.forEach((rx, idx) => {
+      const r = rows[rx];
+      if (plate && (r?.cntr || '').trim().toUpperCase() === plate) {
+        lastSrcRelIdx = Math.max(lastSrcRelIdx, idx);
+      } else if (ship.trkOf?.[idx] === trkNo) {
+        lastSrcRelIdx = Math.max(lastSrcRelIdx, idx);
+      }
     });
 
-    ship.shpSpans = newShpSpans;
+    const insertRelPos = lastSrcRelIdx + 1;
+    ship.rows.splice(insertRelPos, 0, newRowIdx);
+
+    const newTrkOf = (ship.trkOf || trkOfFromSpans(ship.trkSpans, ship.rows.length - 1)).slice();
+    newTrkOf.splice(insertRelPos, 0, trkNo);
     ship.trkOf = newTrkOf;
     ship.trkSpans = spansFromTrkOf(newTrkOf);
+
+    // Recompute shpSpans:
+    const newShpSpans = [];
+    let sStart = 0;
+    for (let r = 1; r <= ship.rows.length; r++) {
+      const pShp = (rows[ship.rows[r - 1]]?.shipNo || '').trim();
+      const cShp = r < ship.rows.length ? (rows[ship.rows[r]]?.shipNo || '').trim() : null;
+      const same = pShp && cShp && pShp === cShp;
+      if (r === ship.rows.length || !same) {
+        newShpSpans.push([sStart, r - sStart]);
+        sStart = r;
+      }
+    }
+    if (newShpSpans.length === S && validSpans(newShpSpans, ship.rows.length)) {
+      ship.shpSpans = newShpSpans;
+    } else {
+      const updated = ship.shpSpans.map(([st, len], sIx) => {
+        if (sIx === targetShpIdx) return [st, len + 1];
+        if (sIx > targetShpIdx) return [st + 1, len];
+        return [st, len];
+      });
+      if (validSpans(updated, ship.rows.length)) {
+        ship.shpSpans = updated;
+      }
+    }
     ship.per = ship.shpSpans.length;
+    if (S <= truckCount(ship)) {
+      ensureContiguousTrucks(dir, ship);
+    }
 
     markDirty();
     renderEntry();
@@ -2868,10 +3441,10 @@ export function createFtlEngine(root, options = {}) {
     return true;
   }
 
-  function removeTruckCoLoad(ref, truckRowIndex) {
+  function removeTruckCoLoad(ref, truckRowIndex, allocIdx) {
     const dir = EDIR;
     const ship = SHIPS[dir]?.[ref];
-    if (!ship || ship.rows.length <= 1) return false;
+    if (!ship || !ship.rows.length) return false;
     if (EDITING && !commitEdit()) return false;
 
     const ri = ship.rows.indexOf(truckRowIndex);
@@ -2881,13 +3454,57 @@ export function createFtlEngine(root, options = {}) {
     const targetRow = rows[truckRowIndex];
     if (!targetRow) return false;
 
+    // In Shipments > Trucks mode (e.g. 4 shipments, 3 trucks):
+    // Allocations are tracked on targetRow._allocations: remove the allocation without touching table rows!
+    if (ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship)) {
+      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+      if (Array.isArray(targetRow._allocations) && targetRow._allocations.length > 1) {
+        const idx = typeof allocIdx === 'number' ? allocIdx : (targetRow._allocations.length - 1);
+        if (idx >= 0 && idx < targetRow._allocations.length) {
+          targetRow._allocations.splice(idx, 1);
+        }
+        const sum = targetRow._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
+        grp.forEach(r => {
+          const row = rows[r];
+          if (row) {
+            row._allocations = targetRow._allocations.map(a => ({ ...a }));
+            row.loadedPackages = sum > 0 ? String(sum) : '';
+            row.loadStatus = sum > 0 ? 'Full' : '';
+          }
+        });
+      } else {
+        grp.forEach(r => {
+          const row = rows[r];
+          if (row) {
+            laneKeys(dir, 'trk').forEach(k => {
+              row[k] = '';
+            });
+            row.loadedPackages = '';
+            row.loadStatus = '';
+            row.assignedShp = null;
+            row._coLoadId = null;
+            row._allocations = null;
+          }
+        });
+      }
+
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      openTruckManifest(targetRow.cntr || '', truckRowIndex);
+
+      toast(AR() ? '✓ تم إزالة حصة الشحنة من الشاحنة.' : '✓ Shipment allocation removed from truck.');
+      return true;
+    }
+
     const trkNo = ship.trkOf?.[ri];
     const plate = (targetRow.cntr || '').trim().toUpperCase();
 
     const truckAllocations = ship.rows.filter((ix, k) => {
       const r = rows[ix];
       if (plate && (r.cntr || '').trim().toUpperCase() === plate) return true;
-      return trkNo !== undefined && ship.trkOf?.[k] === trkNo;
+      if (targetRow._coLoadId && r._coLoadId && r._coLoadId === targetRow._coLoadId) return true;
+      return false;
     });
 
     if (truckAllocations.length <= 1) {
@@ -2918,6 +3535,9 @@ export function createFtlEngine(root, options = {}) {
     ship.trkOf = newTrkOf;
     ship.trkSpans = spansFromTrkOf(newTrkOf);
     ship.per = ship.shpSpans.length;
+    if (S <= truckCount(ship)) {
+      ensureContiguousTrucks(dir, ship);
+    }
 
     markDirty();
     renderEntry();
@@ -2927,23 +3547,77 @@ export function createFtlEngine(root, options = {}) {
     return true;
   }
 
-  function updateTruckAllocationPkgs(ref, truckRowIndex, pkgs) {
+  function updateTruckAllocationPkgs(ref, truckRowIndex, pkgs, allocIdx) {
     const dir = EDIR;
     const row = ENTRY[dir]?.[truckRowIndex];
     if (!row) return;
+    const ship = SHIPS[dir]?.[ref];
+    const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
     const val = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
+
+    if (isSGreater) {
+      if (!Array.isArray(row._allocations) || !row._allocations.length) {
+        if (row.assignedShp != null) {
+          const curShp = parseInt(row.assignedShp, 10);
+          row._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: val }];
+        } else {
+          row._allocations = [];
+        }
+      } else {
+        const idx = (typeof allocIdx === 'number' && allocIdx >= 0 && allocIdx < row._allocations.length) ? allocIdx : 0;
+        if (row._allocations[idx]) row._allocations[idx].pkgs = val;
+      }
+      const sum = row._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
+      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+      grp.forEach(r => {
+        const rx = ENTRY[dir]?.[r];
+        if (rx) {
+          rx._allocations = row._allocations.map(a => ({ ...a }));
+          rx.loadedPackages = sum > 0 ? String(sum) : '';
+          rx.loadStatus = sum > 0 ? 'Full' : '';
+        }
+      });
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      openTruckManifest(row.cntr || '', truckRowIndex);
+      return;
+    }
+
+    let tot = parseInt(normalizeDigits(row.packages || '0'), 10) || 0;
     row.loadedPackages = val > 0 ? String(val) : '';
-    const tot = parseInt(normalizeDigits(row.packages || '0'), 10) || 0;
-    row.loadStatus = val > 0 ? (tot > 0 && val >= tot ? 'Full' : 'Partial') : '';
+    row.loadStatus = val > 0 ? (tot > 0 && val === tot ? 'Full' : val > tot ? 'Overload' : 'Partial') : '';
     markDirty();
     renderEntry();
     scheduleSave();
+  }
+
+  function changeTruckAllocShp(ref, truckRowIndex, allocIdx, newShpIdx) {
+    const dir = EDIR;
+    const row = ENTRY[dir]?.[truckRowIndex];
+    if (!row || !Array.isArray(row._allocations)) return;
+    const ship = SHIPS[dir]?.[ref];
+    if (row._allocations[allocIdx]) {
+      row._allocations[allocIdx].shpIdx = newShpIdx;
+      if (ship) {
+        const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+        grp.forEach(r => {
+          const rx = ENTRY[dir]?.[r];
+          if (rx) rx._allocations = row._allocations.map(a => ({ ...a }));
+        });
+      }
+      markDirty();
+      renderEntry();
+      scheduleSave();
+      openTruckManifest(row.cntr || '', truckRowIndex);
+    }
   }
 
   /* =====================================================================
      POPOVERS: TRUCK MANIFEST & SHIPMENT BREAKDOWN
      ===================================================================== */
   function openTruckManifest(plateOrVal, rowIndex) {
+    $('shipmentBreakdownModal')?.classList.remove('open');
     const dir = EDIR, rows = ENTRY[dir] || [];
     const targetRow = rows[rowIndex] || {};
     const ship = rowShip(dir, rowIndex);
@@ -2952,12 +3626,18 @@ export function createFtlEngine(root, options = {}) {
     const ri = ship ? ship.rows.indexOf(rowIndex) : 0;
     const trkNo = (ship && Array.isArray(ship.trkOf)) ? ship.trkOf[ri] : null;
 
+    const S = ship?.shpSpans?.length || 0;
+    const T = ship ? truckCount(ship) : 0;
+    const isSGreater = S > T;
+
     let truckRows = shipRows.filter(r => {
       const ix = rows.indexOf(r);
       const r_ri = ship ? ship.rows.indexOf(ix) : -1;
+      if (r === targetRow) return true;
       if (plate && plate !== '—' && r.cntr && String(r.cntr).trim().toUpperCase() === String(plate).trim().toUpperCase()) return true;
-      if (targetRow.cntr && r.cntr && String(r.cntr).trim().toUpperCase() === String(targetRow.cntr).trim().toUpperCase()) return true;
-      if (trkNo !== null && r_ri >= 0 && ship.trkOf[r_ri] === trkNo) return true;
+      if (targetRow.cntr && String(targetRow.cntr).trim() && r.cntr && String(r.cntr).trim().toUpperCase() === String(targetRow.cntr).trim().toUpperCase()) return true;
+      if (targetRow._coLoadId && r._coLoadId && r._coLoadId === targetRow._coLoadId) return true;
+      if (!isSGreater && trkNo !== null && trkNo !== undefined && r_ri >= 0 && ship.trkOf?.[r_ri] === trkNo) return true;
       return false;
     });
     if (!truckRows.length) truckRows = [targetRow];
@@ -2966,47 +3646,173 @@ export function createFtlEngine(root, options = {}) {
     const driverMob = targetRow.mob || truckRows.find(r => r.mob)?.mob || '—';
     const truckType = targetRow.truckType || truckRows.find(r => r.truckType)?.truckType || '—';
     const trucker = targetRow.trucker || truckRows.find(r => r.trucker)?.trucker || '—';
-    const totalTruckPkgs = truckRows.reduce((acc, r) => acc + (parseInt(normalizeDigits(r.loadedPackages || r.packages || '0'), 10) || 0), 0);
-    const totalTruckWt = truckRows.reduce((acc, r) => acc + (parseFloat(normalizeDigits(r.weight || '0')) || 0), 0);
 
-    $('truckManifestTitle').textContent = AR() ? `🚚 بيان حمولة الشاحنة (${plate})` : `🚚 Truck Manifest (${plate})`;
-    const pillsEl = $('truckManifestPills');
-    if (pillsEl) {
-      pillsEl.innerHTML = `<div class="egypt-plate-badge"><span class="plate-egypt">مصر</span><span class="plate-code">${esc(plate)}</span></div>`;
+    if (isSGreater) {
+      if (!Array.isArray(targetRow._allocations) || !targetRow._allocations.length) {
+        if (targetRow.assignedShp != null) {
+          const curShp = parseInt(targetRow.assignedShp, 10);
+          const curP = parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0;
+          targetRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
+        } else {
+          targetRow._allocations = [];
+        }
+      }
     }
 
-    const tblRows = truckRows.map((r, idx) => {
-      const rIdx = rows.indexOf(r);
-      const ri = ship ? ship.rows.indexOf(rIdx) : 0;
-      const curShpIdx = (ship && Array.isArray(ship.shpSpans)) ? ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l) : -1;
-      const shpSpan = (curShpIdx >= 0 && ship.shpSpans) ? ship.shpSpans[curShpIdx] : [0, 1];
-      const shpRow = (ship && shpSpan) ? rows[ship.rows[shpSpan[0]]] || r : r;
+    const totalTruckPkgs = isSGreater
+      ? (targetRow._allocations || []).reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
+      : truckRows.reduce((acc, r) => acc + (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0), 0);
+    const totalTruckWt = truckRows.reduce((acc, r) => acc + (parseFloat(normalizeDigits(r.weight || '0')) || 0), 0);
 
-      const shRef = shpRow.shipNo || `SHP-${curShpIdx >= 0 ? curShpIdx + 1 : idx + 1}`;
-      const hawb = shpRow.hawb || '—';
-      const client = shpRow.client || '—';
-      const loadedPkgs = parseInt(normalizeDigits(r.loadedPackages || r.packages || '0'), 10) || 0;
-      const totalShipmentPkgs = parseInt(normalizeDigits(shpRow.packages || '0'), 10) || loadedPkgs;
-      let statusHtml = '';
-      if (totalShipmentPkgs > 0 && loadedPkgs >= totalShipmentPkgs) {
-        statusHtml = `<span class="manifest-tag-full">✓ ${AR() ? 'حمولة كاملة (100%)' : 'Full (100%)'}</span>`;
-      } else if (totalShipmentPkgs > 0 && loadedPkgs < totalShipmentPkgs) {
-        const pct = Math.round((loadedPkgs / totalShipmentPkgs) * 100);
-        statusHtml = `<span class="manifest-tag-partial">⚡ ${AR() ? `جزء من الشحنة (${loadedPkgs} من ${totalShipmentPkgs} · ${pct}%)` : `Partial (${loadedPkgs}/${totalShipmentPkgs} · ${pct}%)`}</span>`;
+    const trkLabel = (plate && plate !== '—') ? plate : (AR() ? `شاحنة ${trkNo || 1}` : `Truck ${trkNo || 1}`);
+    $('truckManifestTitle').textContent = AR() ? `🚚 بيان حمولة الشاحنة (${trkLabel})` : `🚚 Truck Manifest (${trkLabel})`;
+    const pillsEl = $('truckManifestPills');
+    if (pillsEl) {
+      pillsEl.innerHTML = (plate && plate !== '—')
+        ? `<div class="egypt-plate-badge"><span class="plate-egypt">مصر</span><span class="plate-code">${esc(plate)}</span></div>`
+        : `<div class="egypt-plate-badge"><span class="plate-code">${AR() ? 'شاحنة ' + (trkNo || 1) : 'Truck ' + (trkNo || 1)}</span></div>`;
+    }
+
+    const isMultiShip = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1;
+
+    let tblRows = '';
+    if (isSGreater) {
+      if (!(targetRow._allocations || []).length) {
+        tblRows = `<tr><td colspan="10" style="text-align:center;color:#64748b;padding:16px;font-weight:700">⏳ ${AR() ? 'لم يتم تعيين أي شحنة لهذه الشاحنة بعد — يمكنك اختيار شحنة وإدخال الطرود من الأسفل' : 'No shipments assigned to this truck yet — select a shipment below'}</td></tr>`;
       } else {
-        statusHtml = `<span class="manifest-tag-full">${loadedPkgs} ${AR() ? 'طرد' : 'pkgs'}</span>`;
+        tblRows = (targetRow._allocations || []).map((alloc, allocIdx) => {
+          const curShpIdx = alloc.shpIdx;
+          const shpSpan = (curShpIdx >= 0 && ship?.shpSpans) ? ship.shpSpans[curShpIdx] : null;
+          const shpRow = (ship && shpSpan) ? rows[ship.rows[shpSpan[0]]] || null : null;
+
+          const effectiveShipNo = shpRow?.shipNo || (AR() ? `شحنة ${curShpIdx + 1}` : `Shipment ${curShpIdx + 1}`);
+          const hawb = shpRow?.hawb || '—';
+          const client = shpRow?.client || '—';
+          const loadedPkgs = parseInt(normalizeDigits(String(alloc.pkgs || '0')), 10) || 0;
+          const totalShipmentPkgs = parseInt(normalizeDigits(shpRow?.packages || '0'), 10) || 0;
+
+          let statusHtml = '';
+          if (loadedPkgs === 0) {
+            statusHtml = `<span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px">📦 ${AR() ? 'لم يتم إدخال الطرود' : 'Pkgs not entered'}</span>`;
+          } else if (totalShipmentPkgs > 0 && loadedPkgs >= totalShipmentPkgs) {
+            statusHtml = `<span class="manifest-tag-full">✓ ${AR() ? 'حمولة كاملة (100%)' : 'Full (100%)'}</span>`;
+          } else if (totalShipmentPkgs > 0 && loadedPkgs < totalShipmentPkgs) {
+            const pct = Math.round((loadedPkgs / totalShipmentPkgs) * 100);
+            statusHtml = `<span class="manifest-tag-partial">⚡ ${AR() ? `جزء من الشحنة (${loadedPkgs} من ${totalShipmentPkgs} · ${pct}%)` : `Partial (${loadedPkgs}/${totalShipmentPkgs} · ${pct}%)`}</span>`;
+          } else {
+            statusHtml = `<span class="manifest-tag-full">${loadedPkgs} ${AR() ? 'طرد' : 'pkgs'}</span>`;
+          }
+
+          const term = shpRow?.line || shpRow?.aod || 'CAI';
+          const dest = shpRow?.dest || '—';
+          const canDeleteAllocation = (targetRow._allocations || []).length > 1;
+
+          const shpOptionsHtml = (ship && Array.isArray(ship.shpSpans)) ? ship.shpSpans.map(([start, len], sIdx) => {
+            const sRow = rows[ship.rows[start]] || {};
+            const isPl = plate && plate !== '—' && sRow.shipNo && sRow.shipNo.trim().toUpperCase() === plate;
+            const sName = (sRow.shipNo && !isPl) ? sRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
+            const sClient = sRow.client ? ` · ${sRow.client}` : '';
+            const sPkgs = sRow.packages ? ` (${sRow.packages} طرد)` : '';
+            const isSelected = (sIdx === curShpIdx);
+            return `<option value="${sIdx}" ${isSelected ? 'selected' : ''}>${esc(sName)}${esc(sClient)}${esc(sPkgs)}</option>`;
+          }).join('') : '';
+
+          const shpSelectHtml = `<select style="padding:4px 8px;border:1px solid #0284c7;border-radius:6px;font-weight:750;color:#0b4f7a;background:#f0f9ff;font-size:12px;cursor:pointer" onchange="__FTL__.changeTruckAllocShp('${esc(ship.ref)}', ${rowIndex}, ${allocIdx}, parseInt(this.value, 10));">
+          ${shpOptionsHtml}
+        </select>`;
+
+          return `<tr>
+          <td style="font-weight:700;color:#64748b;text-align:center">${allocIdx + 1}</td>
+          <td style="font-weight:700;color:#0b4f7a">${shpSelectHtml}</td>
+          <td style="font-weight:700">${esc(client)}</td>
+          <td style="font-weight:600;font-family:monospace">${esc(hawb)}</td>
+          <td style="font-weight:800;color:#0284c7;font-size:14px">${totalShipmentPkgs > 0 ? `${totalShipmentPkgs} ${AR() ? 'طرد' : 'pkgs'}` : '<span style="color:#94a3b8">—</span>'}</td>
+          <td style="font-weight:800;color:#b45309;font-size:14px">
+            <input type="number" min="0" value="${loadedPkgs > 0 ? loadedPkgs : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#b45309" onchange="__FTL__.updateTruckAllocationPkgs('${esc(ship ? ship.ref : '')}',${rowIndex},this.value,${allocIdx})">
+          </td>
+          <td>${statusHtml}</td>
+          <td>${esc(term)}</td>
+          <td>${esc(dest)}</td>
+          <td style="text-align:center">
+            ${canDeleteAllocation ? `<button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeTruckCoLoad('${esc(ship ? ship.ref : '')}',${rowIndex},${allocIdx})" title="${AR() ? 'إزالة هذه الشحنة من الشاحنة' : 'Remove shipment from truck'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>` : '<span style="color:#94a3b8;font-size:11px">—</span>'}
+          </td>
+        </tr>`;
+        }).join('');
       }
-      const term = r.line || shpRow.line || r.aod || 'CAI';
-      const dest = r.dest || shpRow.dest || '—';
-      const canDeleteAllocation = truckRows.length > 1 && (shpSpan && shpSpan[1] > 1);
-      return `<tr>
+    } else {
+      tblRows = truckRows.map((r, idx) => {
+        const rIdx = rows.indexOf(r);
+        const ri = ship ? ship.rows.indexOf(rIdx) : 0;
+        const isAssigned = (!isMultiShip || (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== ''));
+
+        let curShpIdx = -1;
+        if (isAssigned) {
+          if (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '') {
+            curShpIdx = parseInt(r.assignedShp, 10);
+          } else if (ship && Array.isArray(ship.shpSpans)) {
+            curShpIdx = ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l);
+          }
+        }
+        if (isNaN(curShpIdx) || curShpIdx < 0 || curShpIdx >= (ship?.shpSpans?.length || 0)) {
+          curShpIdx = isAssigned ? 0 : -1;
+        }
+
+        const shpSpan = (curShpIdx >= 0 && ship?.shpSpans) ? ship.shpSpans[curShpIdx] : null;
+        const shpRow = (ship && shpSpan) ? rows[ship.rows[shpSpan[0]]] || null : null;
+
+        const isPlateVal = plate && plate !== '—' && (r.shipNo || shpRow?.shipNo) && (r.shipNo || shpRow.shipNo).trim().toUpperCase() === plate;
+        const effectiveShipNo = isAssigned ? ((shpRow?.shipNo && !isPlateVal) ? shpRow.shipNo : (r.shipNo && !isPlateVal ? r.shipNo : '')) : '';
+        const shRef = effectiveShipNo || (isAssigned ? (AR() ? `شحنة ${curShpIdx + 1}` : `Shipment ${curShpIdx + 1}`) : (AR() ? '-- اختر الشحنة --' : '-- Select Shipment --'));
+        const hawb = isAssigned ? (shpRow?.hawb || r.hawb || '—') : '—';
+        const client = isAssigned ? (shpRow?.client || r.client || '—') : '—';
+        const loadedPkgs = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+        const totalShipmentPkgs = isAssigned ? ((parseInt(normalizeDigits(shpRow?.packages || r.packages || '0'), 10) || 0)) : 0;
+
+        let statusHtml = '';
+        if (!isAssigned) {
+          statusHtml = `<span style="background:#f1f5f9;color:#64748b;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px">⏳ ${AR() ? 'في انتظار تحديد الشحنة' : 'Select shipment'}</span>`;
+        } else if (loadedPkgs === 0) {
+          statusHtml = `<span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px">📦 ${AR() ? 'لم يتم إدخال الطرود' : 'Pkgs not entered'}</span>`;
+        } else if (totalShipmentPkgs > 0 && loadedPkgs >= totalShipmentPkgs) {
+          statusHtml = `<span class="manifest-tag-full">✓ ${AR() ? 'حمولة كاملة (100%)' : 'Full (100%)'}</span>`;
+        } else if (totalShipmentPkgs > 0 && loadedPkgs < totalShipmentPkgs) {
+          const pct = Math.round((loadedPkgs / totalShipmentPkgs) * 100);
+          statusHtml = `<span class="manifest-tag-partial">⚡ ${AR() ? `جزء من الشحنة (${loadedPkgs} من ${totalShipmentPkgs} · ${pct}%)` : `Partial (${loadedPkgs}/${totalShipmentPkgs} · ${pct}%)`}</span>`;
+        } else {
+          statusHtml = `<span class="manifest-tag-full">${loadedPkgs} ${AR() ? 'طرد' : 'pkgs'}</span>`;
+        }
+
+        const term = isAssigned ? (shpRow?.line || shpRow?.aod || r.line || r.aod || 'CAI') : '—';
+        const dest = isAssigned ? (shpRow?.dest || r.dest || '—') : '—';
+        const canDeleteAllocation = truckRows.length > 1 && (shpSpan && shpSpan[1] > 1);
+
+        const shpOptionsHtml = (ship && Array.isArray(ship.shpSpans)) ? [
+          `<option value="" ${curShpIdx < 0 ? 'selected' : ''}>${AR() ? '-- اختر الشحنة --' : '-- Select Shipment --'}</option>`,
+          ...ship.shpSpans.map(([start, len], sIdx) => {
+            const sRow = rows[ship.rows[start]] || {};
+            const isPl = plate && plate !== '—' && sRow.shipNo && sRow.shipNo.trim().toUpperCase() === plate;
+            const sName = (sRow.shipNo && !isPl) ? sRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
+            const sClient = sRow.client ? ` · ${sRow.client}` : '';
+            const sPkgs = sRow.packages ? ` (${sRow.packages} طرد)` : '';
+            const isSelected = isAssigned && (sIdx === curShpIdx);
+            return `<option value="${sIdx}" ${isSelected ? 'selected' : ''}>${esc(sName)}${esc(sClient)}${esc(sPkgs)}</option>`;
+          })
+        ].join('') : '';
+
+        const shpSelectHtml = isMultiShip
+          ? `<select style="padding:4px 8px;border:1px solid #0284c7;border-radius:6px;font-weight:750;color:#0b4f7a;background:#f0f9ff;font-size:12px;cursor:pointer" onchange="__FTL__.setTruckShipment('${esc(ship.ref)}', ${ri}, this.value, ${trkNo});">
+            ${shpOptionsHtml}
+           </select>`
+          : `<span style="font-weight:700;color:#0b4f7a">${esc(shRef)}</span>`;
+
+        return `<tr>
         <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
-        <td style="font-weight:700;color:#0b4f7a">${esc(shRef)}</td>
+        <td style="font-weight:700;color:#0b4f7a">${shpSelectHtml}</td>
         <td style="font-weight:700">${esc(client)}</td>
         <td style="font-weight:600;font-family:monospace">${esc(hawb)}</td>
-        <td style="font-weight:800;color:#0284c7;font-size:14px">${totalShipmentPkgs} ${AR() ? 'طرد' : 'pkgs'}</td>
+        <td style="font-weight:800;color:#0284c7;font-size:14px">${totalShipmentPkgs > 0 ? `${totalShipmentPkgs} ${AR() ? 'طرد' : 'pkgs'}` : '<span style="color:#94a3b8">—</span>'}</td>
         <td style="font-weight:800;color:#b45309;font-size:14px">
-          <input type="number" min="0" value="${loadedPkgs}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#b45309" onchange="__FTL__.updateTruckAllocationPkgs('${esc(ship ? ship.ref : '')}',${rIdx},this.value);__FTL__.openTruckManifest('${esc(plate)}',${rowIndex})">
+          <input type="number" min="0" value="${loadedPkgs > 0 ? loadedPkgs : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#b45309" onchange="__FTL__.updateTruckAllocationPkgs('${esc(ship ? ship.ref : '')}',${rIdx},this.value);__FTL__.openTruckManifest('${esc(plate)}',${rowIndex})">
         </td>
         <td>${statusHtml}</td>
         <td>${esc(term)}</td>
@@ -3015,7 +3821,8 @@ export function createFtlEngine(root, options = {}) {
           ${canDeleteAllocation ? `<button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeTruckCoLoad('${esc(ship ? ship.ref : '')}',${rIdx});__FTL__.openTruckManifest('${esc(plate)}',${rowIndex})" title="${AR() ? 'إزالة هذه الشحنة من الشاحنة' : 'Remove shipment from truck'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>` : '<span style="color:#94a3b8;font-size:11px">—</span>'}
         </td>
       </tr>`;
-    }).join('');
+      }).join('');
+    }
 
     const recon = ship ? operationPackageReconciliation(dir, ship.ref) : null;
     let reconNotice = '';
@@ -3036,7 +3843,8 @@ export function createFtlEngine(root, options = {}) {
     if (ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1) {
       const shpOptions = ship.shpSpans.map(([start, len], sIdx) => {
         const shRow = rows[ship.rows[start]] || {};
-        const sRef = shRow.shipNo || `SHP-${sIdx + 1}`;
+        const isPlateVal = plate && plate !== '—' && shRow.shipNo && shRow.shipNo.trim().toUpperCase() === plate;
+        const sRef = (shRow.shipNo && !isPlateVal) ? shRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
         const sClient = shRow.client ? ` · ${shRow.client}` : '';
         const sPkgs = shRow.packages ? ` (${shRow.packages} طرد)` : '';
         return `<option value="${sIdx}">${esc(sRef)}${esc(sClient)}${esc(sPkgs)}</option>`;
@@ -3054,6 +3862,9 @@ export function createFtlEngine(root, options = {}) {
       `;
     }
 
+    const carryingCount = isSGreater
+      ? (targetRow._allocations || []).length
+      : truckRows.filter(r => isMultiShip ? (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '') : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) > 0 || r.cntr)).length;
     $('truckManifestBody').innerHTML = `
       <div class="manifest-hero-grid">
         <div class="manifest-card truck-hero-card">
@@ -3071,11 +3882,11 @@ export function createFtlEngine(root, options = {}) {
         <div class="manifest-card truck-hero-card">
           <div class="card-top-label">📦 ${AR() ? 'إجمالي حمولة السيارة' : 'Total Onboard Load'}</div>
           <div class="hero-huge-metric amber">${totalTruckPkgs} <small>${AR() ? 'طرد' : 'pkgs'}</small></div>
-          <div class="card-sub-val">${AR() ? `شايلة ${truckRows.length} شحنات` : `Carrying ${truckRows.length} shipments`} ${totalTruckWt ? `· ${totalTruckWt.toFixed(1)} kg` : ''}</div>
+          <div class="card-sub-val">${carryingCount > 0 ? (AR() ? `شايلة ${carryingCount} شحنات` : `Carrying ${carryingCount} shipments`) : (AR() ? 'لم يتم تعيين أي شحنة بعد' : 'No shipment assigned yet')} ${totalTruckWt ? `· ${totalTruckWt.toFixed(1)} kg` : ''}</div>
         </div>
       </div>
       <div style="margin-bottom:10px;font-weight:800;font-size:14px;color:#1e293b;display:flex;align-items:center;justify-content:space-between">
-        <span>📋 ${AR() ? `كشف الشحنات المحملة على هذه الشاحنة (${truckRows.length})` : `Shipments Loaded on this Truck (${truckRows.length})`}</span>
+        <span>📋 ${AR() ? `كشف الشحنات المحملة على هذه الشاحنة (${carryingCount})` : `Shipments Loaded on this Truck (${carryingCount})`}</span>
       </div>
       <div class="manifest-table-wrap">
         <table class="manifest-table truck-theme" dir="${AR() ? 'rtl' : 'ltr'}">
@@ -3101,7 +3912,81 @@ export function createFtlEngine(root, options = {}) {
     $('truckManifestModal').classList.add('open');
   }
 
+  function addShipmentTruckAllocation(ref, shpIdx, truckRowIndex, pkgs) {
+    return addTruckCoLoad(ref, truckRowIndex, shpIdx, pkgs, false);
+  }
+
+  function updateShipmentTruckAllocation(ref, shpIdx, truckRowIndex, pkgs) {
+    const dir = EDIR, ship = SHIPS[dir]?.[ref], rows = ENTRY[dir];
+    const targetRow = rows?.[truckRowIndex];
+    if (!targetRow || !ship) return;
+    const val = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
+    const isSGreater = ship.shpSpans && ship.shpSpans.length > truckCount(ship);
+    if (isSGreater) {
+      if (!Array.isArray(targetRow._allocations)) targetRow._allocations = [];
+      const a = targetRow._allocations.find(x => x.shpIdx === shpIdx);
+      if (a) {
+        a.pkgs = val;
+      } else {
+        targetRow._allocations.push({ shpIdx, pkgs: val });
+      }
+      if (targetRow.assignedShp == null) {
+        targetRow.assignedShp = shpIdx;
+      }
+      const sum = targetRow._allocations.reduce((acc, x) => acc + (parseInt(normalizeDigits(String(x.pkgs || '0')), 10) || 0), 0);
+      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+      grp.forEach(r => {
+        const rx = rows[r];
+        if (rx) {
+          rx._allocations = targetRow._allocations.map(x => ({ ...x }));
+          rx.loadedPackages = sum > 0 ? String(sum) : '';
+          rx.loadStatus = sum > 0 ? 'Full' : '';
+          rx.assignedShp = targetRow.assignedShp;
+        }
+      });
+      markDirty(); renderEntry(); scheduleSave();
+    } else {
+      targetRow.loadedPackages = val > 0 ? String(val) : '';
+      markDirty(); renderEntry(); scheduleSave();
+    }
+  }
+
+  function removeShipmentTruckAllocation(ref, shpIdx, truckRowIndex) {
+    const dir = EDIR, ship = SHIPS[dir]?.[ref], rows = ENTRY[dir];
+    const targetRow = rows?.[truckRowIndex];
+    if (!targetRow || !ship) return;
+    const isSGreater = ship.shpSpans && ship.shpSpans.length > truckCount(ship);
+    if (isSGreater) {
+      if (Array.isArray(targetRow._allocations)) {
+        const idx = targetRow._allocations.findIndex(x => x.shpIdx === shpIdx);
+        if (idx >= 0) targetRow._allocations.splice(idx, 1);
+      }
+      const hasAllocs = Array.isArray(targetRow._allocations) && targetRow._allocations.length > 0;
+      const sum = hasAllocs ? targetRow._allocations.reduce((acc, x) => acc + (parseInt(normalizeDigits(String(x.pkgs || '0')), 10) || 0), 0) : 0;
+      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+      grp.forEach(r => {
+        const rx = rows[r];
+        if (rx) {
+          rx._allocations = hasAllocs ? targetRow._allocations.map(x => ({ ...x })) : null;
+          rx.loadedPackages = sum > 0 ? String(sum) : '';
+          rx.loadStatus = sum > 0 ? 'Full' : '';
+          if (!hasAllocs) {
+            rx.assignedShp = null;
+          } else if (rx.assignedShp === shpIdx) {
+            rx.assignedShp = targetRow._allocations[0].shpIdx;
+          }
+        }
+      });
+      markDirty(); renderEntry(); scheduleSave();
+    } else {
+      targetRow.loadedPackages = '';
+      targetRow.loadStatus = '';
+      markDirty(); renderEntry(); scheduleSave();
+    }
+  }
+
   function openShipmentBreakdown(shipNoOrVal, rowIndex) {
+    $('truckManifestModal')?.classList.remove('open');
     const dir = EDIR, rows = ENTRY[dir] || [];
     const targetRow = rows[rowIndex] || {};
     const ship = rowShip(dir, rowIndex);
@@ -3120,40 +4005,107 @@ export function createFtlEngine(root, options = {}) {
     const term = shpHeadRow.line || shpHeadRow.customs || '—';
     const dest = shpHeadRow.dest || '—';
     const totalShipmentPkgs = parseInt(normalizeDigits(shpHeadRow.packages || '0'), 10) || 0;
-    const totalLoadedAcrossTrucks = shpRows.reduce((sum, r) => sum + (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0), 0);
+    const S = ship?.shpSpans?.length || 0;
+    const T = ship ? truckCount(ship) : 0;
+    const isSGreater = S > T;
 
-    $('shipmentBreakdownTitle').textContent = AR() ? `📦 بيان وتوزيع الشحنة (${shpIdent})` : `📦 Shipment Distribution (${shpIdent})`;
-    const pillsEl = $('shipmentBreakdownPills');
-    if (pillsEl) {
-      pillsEl.innerHTML = `<div class="air-ship-badge"><span>✈️ HAWB</span><b>${esc(hawb || shpIdent)}</b></div>`;
+    let totalLoadedAcrossTrucks = 0;
+    let tblRows = '';
+    let carryingTrucksCount = 0;
+
+    if (isSGreater && curShpIdx >= 0) {
+      const breakdownTrucks = [];
+      const seen = new Set();
+      ship.rows.forEach((rx, k) => {
+        const r = rows[rx];
+        const trkNo = ship.trkOf?.[k] || (k + 1);
+        if (seen.has(trkNo)) return;
+        seen.add(trkNo);
+        let pkgsOnTruck = 0;
+        let hasAlloc = false;
+        if (Array.isArray(r._allocations) && r._allocations.length) {
+          const a = r._allocations.find(x => parseInt(x.shpIdx, 10) === curShpIdx);
+          if (a) {
+            hasAlloc = true;
+            pkgsOnTruck = parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0;
+          }
+        } else if (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '') {
+          if (parseInt(r.assignedShp, 10) === curShpIdx) {
+            hasAlloc = true;
+            pkgsOnTruck = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+          }
+        }
+        if (hasAlloc) {
+          breakdownTrucks.push({ r, pkgsOnTruck, trkNo, rx });
+        }
+      });
+
+      totalLoadedAcrossTrucks = breakdownTrucks.reduce((sum, item) => sum + item.pkgsOnTruck, 0);
+      carryingTrucksCount = breakdownTrucks.length;
+
+      if (!breakdownTrucks.length) {
+        tblRows = `<tr><td colspan="8" style="text-align:center;color:#64748b;padding:16px;font-weight:700">⏳ ${AR() ? 'لم يتم تعيين أي سيارة لهذه الشحنة بعد — يمكنك اختيار سيارة وإضافة حصة من النموذج بالأسفل' : 'No trucks assigned to this shipment yet — allocate a truck below'}</td></tr>`;
+      } else {
+        tblRows = breakdownTrucks.map((item, idx) => {
+          const r = item.r;
+          const plate = r.cntr || `${AR() ? 'شاحنة' : 'Truck'} ${item.trkNo || (idx + 1)}`;
+          const truckType = r.truckType || '—';
+          const trucker = r.trucker || '—';
+          const driver = r.driver || '—';
+          const mob = r.mob || '—';
+          const pkgsOnTruck = item.pkgsOnTruck;
+          const sharePct = totalShipmentPkgs > 0 ? Math.round((pkgsOnTruck / totalShipmentPkgs) * 100) : 0;
+          return `<tr>
+            <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
+            <td style="font-weight:700;color:#0b4f7a">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
+            <td style="font-weight:600">🏢 ${esc(trucker)}</td>
+            <td style="font-weight:700">👤 ${esc(driver)}</td>
+            <td>${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '—'}</td>
+            <td style="font-weight:800;color:#059669;font-size:14px">
+              <input type="number" min="0" value="${pkgsOnTruck > 0 ? pkgsOnTruck : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#059669" onchange="__FTL__.updateShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, ${item.rx}, this.value);__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex})">
+            </td>
+            <td>
+              <div class="mini-bar-wrap">
+                <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${sharePct}%"></div></div>
+                <span class="mini-bar-text">${sharePct}%</span>
+              </div>
+            </td>
+            <td style="text-align:center">
+              <button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, ${item.rx});__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex})" title="${AR() ? 'إزالة هذه الشاحنة من الشحنة' : 'Remove truck from shipment'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>
+            </td>
+          </tr>`;
+        }).join('');
+      }
+    } else {
+      totalLoadedAcrossTrucks = shpRows.reduce((sum, r) => sum + (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0), 0);
+      carryingTrucksCount = shpRows.length;
+      tblRows = shpRows.map((r, idx) => {
+        const plate = r.cntr || `${AR() ? 'شاحنة' : 'Truck'} ${idx + 1}`;
+        const truckType = r.truckType || '—';
+        const trucker = r.trucker || '—';
+        const driver = r.driver || '—';
+        const mob = r.mob || '—';
+        const pkgsOnTruck = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+        const sharePct = totalShipmentPkgs > 0 ? Math.round((pkgsOnTruck / totalShipmentPkgs) * 100) : (shpRows.length === 1 ? 100 : 0);
+        return `<tr>
+          <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
+          <td style="font-weight:700;color:#0b4f7a">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
+          <td style="font-weight:600">🏢 ${esc(trucker)}</td>
+          <td style="font-weight:700">👤 ${esc(driver)}</td>
+          <td>${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '—'}</td>
+          <td style="font-weight:800;color:#059669;font-size:14px">${pkgsOnTruck} ${AR() ? 'طرد' : 'pkgs'}</td>
+          <td>
+            <div class="mini-bar-wrap">
+              <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${sharePct}%"></div></div>
+              <span class="mini-bar-text">${sharePct}%</span>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
     }
 
-    const pctDone = totalShipmentPkgs > 0 ? Math.min(100, Math.round((totalLoadedAcrossTrucks / totalShipmentPkgs) * 100)) : 100;
+    const pctDone = totalShipmentPkgs > 0 ? Math.min(100, Math.round((totalLoadedAcrossTrucks / totalShipmentPkgs) * 100)) : 0;
     const remainingPkgs = Math.max(0, totalShipmentPkgs - totalLoadedAcrossTrucks);
-
-    const tblRows = shpRows.map((r, idx) => {
-      const plate = r.cntr || `${AR() ? 'شاحنة' : 'Truck'} ${idx + 1}`;
-      const truckType = r.truckType || '—';
-      const trucker = r.trucker || '—';
-      const driver = r.driver || '—';
-      const mob = r.mob || '—';
-      const pkgsOnTruck = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
-      const sharePct = totalShipmentPkgs > 0 ? Math.round((pkgsOnTruck / totalShipmentPkgs) * 100) : (shpRows.length === 1 ? 100 : 0);
-      return `<tr>
-        <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
-        <td style="font-weight:700;color:#0b4f7a">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
-        <td style="font-weight:600">🏢 ${esc(trucker)}</td>
-        <td style="font-weight:700">👤 ${esc(driver)}</td>
-        <td>${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '—'}</td>
-        <td style="font-weight:800;color:#059669;font-size:14px">${pkgsOnTruck} ${AR() ? 'طرد' : 'pkgs'}</td>
-        <td>
-          <div class="mini-bar-wrap">
-            <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${sharePct}%"></div></div>
-            <span class="mini-bar-text">${sharePct}%</span>
-          </div>
-        </td>
-      </tr>`;
-    }).join('');
 
     const recon = ship ? operationPackageReconciliation(dir, ship.ref) : null;
     let reconNotice = '';
@@ -3168,6 +4120,34 @@ export function createFtlEngine(root, options = {}) {
           <b>${recon.diff > 0 ? (AR() ? `متبقي ${recon.diff} طرد لم يُحمل بعد` : `${recon.diff} pkgs remaining`) : recon.diff < 0 ? (AR() ? `تحذير: زائد +${Math.abs(recon.diff)} طرد` : `+${Math.abs(recon.diff)} pkgs overload`) : (AR() ? '✓ تم توزيع كل الطرود بالكامل' : '✓ Fully balanced')}</b>
         </span>
       </div>`;
+    }
+
+    let truckAdderHtml = '';
+    if (ship && Array.isArray(ship.shpSpans)) {
+      const distinctTrucks = [];
+      const seenT = new Set();
+      ship.rows.forEach((rx, k) => {
+        const r = rows[rx];
+        const tNo = ship.trkOf?.[k] || (k + 1);
+        if (seenT.has(tNo)) return;
+        seenT.add(tNo);
+        const pl = (r?.cntr && r.cntr.trim()) ? r.cntr.trim() : (AR() ? `شاحنة ${tNo}` : `Truck ${tNo}`);
+        const dr = (r?.driver && r.driver.trim()) ? ` · ${r.driver.trim()}` : '';
+        distinctTrucks.push({ rx, tNo, label: pl + dr });
+      });
+
+      const trkOptions = distinctTrucks.map(t => `<option value="${t.rx}">${esc(t.label)}</option>`).join('');
+
+      truckAdderHtml = `
+        <div class="coload-adder-bar" style="margin-top:14px;padding:12px;background:#f0fdf4;border:1px dashed #86efac;border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-weight:800;color:#166534;font-size:13px">➕ ${AR() ? 'تحميل طرود من هذه الشحنة على سيارة:' : 'Allocate packages to a truck:'}</span>
+          <select id="shipAllocTruckSelect" style="padding:6px 10px;border-radius:6px;border:1px solid #86efac;font-weight:700;font-size:12px">
+            ${trkOptions}
+          </select>
+          <input type="number" id="shipAllocPkgsInput" placeholder="${AR() ? 'عدد الطرود' : 'Pkgs count'}" style="width:110px;padding:6px 10px;border-radius:6px;border:1px solid #86efac;font-weight:700;font-size:12px">
+          <button type="button" class="ebtn" style="background:#16a34a;color:#fff;font-weight:800;border:none;border-radius:6px;padding:6px 14px;cursor:pointer" onclick="const tEl=document.getElementById('shipAllocTruckSelect');const pEl=document.getElementById('shipAllocPkgsInput');if(tEl&&pEl&&pEl.value){__FTL__.addShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, parseInt(tEl.value, 10), parseInt(pEl.value, 10));__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex});}">➕ ${AR() ? 'إضافة للشاحنة' : 'Add to Truck'}</button>
+        </div>
+      `;
     }
 
     $('shipmentBreakdownBody').innerHTML = `
@@ -3193,7 +4173,7 @@ export function createFtlEngine(root, options = {}) {
         </div>
       </div>
       <div style="margin-bottom:10px;font-weight:800;font-size:14px;color:#1e293b;display:flex;align-items:center;justify-content:space-between">
-        <span>🚚 ${AR() ? `توزيع الشحنة على سيارات النقل والسائقين (${shpRows.length})` : `Trucks Carrying this Shipment (${shpRows.length})`}</span>
+        <span>🚚 ${AR() ? `توزيع الشحنة على سيارات النقل والسائقين (${carryingTrucksCount})` : `Trucks Carrying this Shipment (${carryingTrucksCount})`}</span>
       </div>
       <div class="manifest-table-wrap">
         <table class="manifest-table shipment-theme" dir="${AR() ? 'rtl' : 'ltr'}">
@@ -3206,12 +4186,14 @@ export function createFtlEngine(root, options = {}) {
               <th>${AR() ? 'رقم الموبايل' : 'Mobile'}</th>
               <th>${AR() ? 'الطرود مع السائق' : 'Packages on Truck'}</th>
               <th>${AR() ? 'نسبة المساهمة' : 'Share'}</th>
+              ${isSGreater ? `<th style="width:70px;text-align:center">${AR() ? 'إجراء' : 'Action'}</th>` : ''}
             </tr>
           </thead>
           <tbody>${tblRows}</tbody>
         </table>
       </div>
-      ${reconNotice}`;
+      ${reconNotice}
+      ${truckAdderHtml}`;
     $('shipmentBreakdownModal').classList.add('open');
   }
   function renderEntry() {
@@ -3251,7 +4233,10 @@ export function createFtlEngine(root, options = {}) {
       const ri = ship ? ship.rows.indexOf(i) : 0;
       if (ship && (!validSpans(ship.shpSpans, ship.rows.length) || !validSpans(ship.trkSpans, ship.rows.length))) layoutShip(dir, ship, { shpSpans: ship.shpSpans, trkSpans: ship.trkSpans });
       const truckStart = !!ship && ri > 0 && ship.trkSpans.some(([a]) => a === ri);
-      let tr = `<tr class="${ship && span > 1 ? (first ? 'ship-start' : last ? 'ship-end' : 'ship-mid') : ''}${ship && TRIP_SELECTED[dir].has(ship.ref) ? ' trip-selected' : ''}" data-r="${i}">`;
+      const rTrkNo = ship?.trkOf?.[ri];
+      const rCleanPlate = (r.cntr || '').trim().toUpperCase();
+      const rTrkKey = rCleanPlate || (rTrkNo !== undefined ? ('trk-' + rTrkNo) : '');
+      let tr = `<tr class="${ship && span > 1 ? (first ? 'ship-start' : last ? 'ship-end' : 'ship-mid') : ''}${ship && TRIP_SELECTED[dir].has(ship.ref) ? ' trip-selected' : ''}" data-r="${i}" data-truck-plate="${esc(rTrkKey)}">`;
 
       cols.forEach(c => {
         const sp = ship ? spanOf(ship, c, ri) : { start: 0, len: 1 };
@@ -3277,35 +4262,124 @@ export function createFtlEngine(root, options = {}) {
           let extraBadges = '';
           const isMergedTruck = merged && sp.len > 1;
           const cleanPlate = v.trim().toUpperCase();
-          const sharedAcrossRows = cleanPlate && ship && ship.rows.filter(ix => (rows[ix]?.cntr || '').trim().toUpperCase() === cleanPlate).length > 1;
+          const trkNo = ship?.trkOf?.[ri];
+          const isUnassignedTruck = !cleanPlate && (!trkNo || trkNo === 0);
+          const allTruckRows = ship ? ship.rows.filter(ix => {
+            const ixPlate = (rows[ix]?.cntr || '').trim().toUpperCase();
+            if (cleanPlate && ixPlate) return ixPlate === cleanPlate;
+            const ix_ri = ship.rows.indexOf(ix);
+            return trkNo !== undefined && trkNo > 0 && ix_ri >= 0 && ship.trkOf?.[ix_ri] === trkNo;
+          }) : [i];
+          const totalShares = isUnassignedTruck ? 0 : allTruckRows.length;
+          const shareIdx = isUnassignedTruck ? 0 : allTruckRows.indexOf(i) + 1;
 
           if (isMergedTruck) {
-            extraBadges += `<div class="shared-truck-tag" title="${AR() ? `عربة مشتركة محملة من ${sp.len} شحنات بالعملية` : `Shared truck carrying ${sp.len} shipments`}"><span class="shared-truck-dot"></span>🚚 ${AR() ? `مشتركة (${sp.len} شحنات)` : `Shared (${sp.len} shps)`}</div>`;
-          } else if (sharedAcrossRows) {
-            extraBadges += `<div class="shared-truck-tag" title="${AR() ? 'عربة مشتركة محملة من عدة شحنات' : 'Shared truck carrying multiple shipments'}"><span class="shared-truck-dot"></span>🚚 ${AR() ? 'عربة مشتركة' : 'Shared truck'}</div>`;
+            extraBadges += `<div class="shared-truck-tag" style="background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;margin-top:3px;display:inline-flex;align-items:center;gap:4px;" title="${AR() ? `عربة موحدة مشتركة بين ${sp.len} شحنات` : `Unified truck carrying ${sp.len} shipments`}"><span class="shared-truck-dot" style="background:#3b82f6;width:6px;height:6px;border-radius:50%;display:inline-block"></span>🚚 ${AR() ? `عربة موحدة مدموجة` : `Merged Truck`}</div>`;
+          } else if (totalShares > 1) {
+            extraBadges += `<div class="shared-truck-tag multi" title="${AR() ? `هذه الشاحنة (${esc(cleanPlate || trkNo)}) مشتركة في ${totalShares} شحنات، وهذه الحصة رقم (${shareIdx} من ${totalShares})` : `Shared truck (${shareIdx} of ${totalShares})`}"><span class="shared-truck-dot"></span>${AR() ? `مشتركة [حصة ${shareIdx} من ${totalShares}]` : `Shared [${shareIdx}/${totalShares}]`}</div>`;
           }
 
-          const quickColoadBtn = (ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1)
+          const quickColoadBtn = (!isUnassignedTruck && ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1)
             ? `<button type="button" class="quick-coload-btn" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'تحميل مشترك / تقسيم حمولة العربة' : 'Co-load / Split truck load'}" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:10px;font-weight:750;border-radius:4px;padding:1px 5px;margin-inline-start:4px;cursor:pointer">+ ${AR() ? 'مشترك' : 'Co-load'}</button>`
             : '';
 
-          inner = `<span class="cv"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'عرض بيان حمولة العربية (Truck Manifest)' : 'View Truck Manifest'}">🚚 ${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>${quickColoadBtn}${extraBadges}</span>`;
-        } else if (['shipNo', 'bl', 'booking', 'hawb', 'client'].includes(c.k) && v.trim()) {
+          const isSGreaterTruck = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+          const trkLoadedTotal = isUnassignedTruck ? 0 : (isSGreaterTruck ? (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0) : allTruckRows.reduce((acc, rx) => acc + (parseInt(normalizeDigits(rows[rx]?.loadedPackages || '0'), 10) || 0), 0));
+          const trkLoadBadge = trkLoadedTotal > 0
+            ? `<div class="trk-total-pkgs-pill" style="margin-top:3px;font-size:10.5px;font-weight:800;color:#0369a1;background:#f0f9ff;border:1px solid #7dd3fc;border-radius:10px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;" title="${AR() ? `إجمالي ما تحمله الشاحنة بالكامل من كل الشحنات: ${trkLoadedTotal} طرد` : `Truck total cargo: ${trkLoadedTotal} pkgs`}">📦 ${AR() ? 'إجمالي الحمولة:' : 'Load:'} <b>${trkLoadedTotal}</b> ${AR() ? 'طرد' : 'pkgs'}</div>`
+            : '';
+
+          const fallbackTrk = (trkNo && trkNo > 0) ? (AR() ? `شاحنة ${trkNo}` : `Truck ${trkNo}`) : '';
+          const trkText = esc(displayValue(c, v)) || (fallbackTrk ? `<span style="font-weight:750;color:#0b4f7a">${fallbackTrk}</span>` : (isUnassignedTruck ? `<span style="color:#94a3b8;font-size:11px;font-style:italic">⏳ ${AR() ? 'في انتظار التعيين' : 'Unassigned'}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'));
+          const clickAttr = isUnassignedTruck ? '' : `onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})"`;
+          const clickTitle = isUnassignedTruck ? (AR() ? 'في انتظار تعيين شاحنة لهذه الشحنة' : 'Unassigned') : (AR() ? 'عرض بيان حمولة العربية (Truck Manifest)' : 'View Truck Manifest');
+          inner = `<span class="cv"><span class="clickable-cell-badge" ${clickAttr} title="${clickTitle}">🚚 ${trkText}</span>${quickColoadBtn}${extraBadges}${trkLoadBadge}</span>`;
+        } else if (c.k === 'loadedPackages') {
+          const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+          let trkLoadedTotal = 0;
+          if (isSGreater) {
+            trkLoadedTotal = (Array.isArray(r._allocations) && r._allocations.length)
+              ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
+              : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0);
+          } else {
+            trkLoadedTotal = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+          }
+          const disp = trkLoadedTotal > 0 ? trkLoadedTotal : (v || '');
+          inner = `<span class="cv">${esc(displayValue(c, disp)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>`;
+        } else if (c.k === 'packages') {
+          const totalPkgs = parseInt(normalizeDigits(r.packages || '0'), 10) || 0;
+          const sIdx = ship?.shpSpans ? ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l) : -1;
+          const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+          let shpLoadedTotal = 0;
+          if (isSGreater && sIdx >= 0) {
+            const seenTrucks = new Set();
+            ship.rows.forEach(rx => {
+              const row = rows[rx];
+              const trkId = row?._coLoadId || ship.trkOf?.[ship.rows.indexOf(rx)] || rx;
+              if (seenTrucks.has(trkId)) return;
+              seenTrucks.add(trkId);
+              if (row && Array.isArray(row._allocations) && row._allocations.length) {
+                row._allocations.forEach(a => {
+                  if (parseInt(a.shpIdx, 10) === sIdx) {
+                    shpLoadedTotal += (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0);
+                  }
+                });
+              } else if (row && row.assignedShp !== undefined && row.assignedShp !== null && row.assignedShp !== '') {
+                if (parseInt(row.assignedShp, 10) === sIdx) {
+                  shpLoadedTotal += (parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0);
+                }
+              }
+            });
+          } else {
+            const shpRows = ship ? ship.rows.slice(sp.start, sp.start + sp.len) : [i];
+            shpLoadedTotal = shpRows.reduce((acc, rx) => acc + (parseInt(normalizeDigits(rows[rx]?.loadedPackages || '0'), 10) || 0), 0);
+          }
+          let shpBalBadge = '';
+          if (totalPkgs > 0) {
+            if (shpLoadedTotal === totalPkgs) {
+              shpBalBadge = `<div style="margin-top:2px;font-size:9.5px;font-weight:800;color:#059669" title="${AR() ? 'اكتمل توزيع طرود الشحنة بالكامل' : 'Fully allocated'}">✓ ${AR() ? 'مكتملة بالكامل' : 'Completed'}</div>`;
+            } else if (shpLoadedTotal > totalPkgs) {
+              shpBalBadge = `<div style="margin-top:2px;font-size:9.5px;font-weight:800;color:#dc2626" title="${AR() ? `فائض ${shpLoadedTotal - totalPkgs} طرد` : 'Overload'}">🚨 +${shpLoadedTotal - totalPkgs}</div>`;
+            } else if (shpLoadedTotal > 0 && sp.len > 1) {
+              shpBalBadge = `<div style="margin-top:2px;font-size:9.5px;font-weight:800;color:#d97706" title="${AR() ? `متبقي ${totalPkgs - shpLoadedTotal} طرد لم يُحمل` : 'Remaining'}">⚡ ${shpLoadedTotal}/${totalPkgs}</div>`;
+            }
+          }
+          inner = `<span class="cv"><span class="val">${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>${shpBalBadge}</span>`;
+        } else if (c.k === 'shipNo') {
+          const sIdx = ship?.shpSpans ? ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l) : -1;
+          const fallbackShp = sIdx >= 0 ? (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`) : '';
+          const disp = esc(displayValue(c, v)) || (fallbackShp ? `<span style="font-weight:750;color:#0284c7">${fallbackShp}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>');
+          inner = `<span class="cv"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض بيان توزيع الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}">📦 ${disp}</span></span>`;
+        } else if (['bl', 'booking', 'hawb', 'client'].includes(c.k) && v.trim()) {
           inner = `<span class="cv"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض بيان توزيع الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}">📦 ${esc(displayValue(c, v))}</span></span>`;
         } else if (c.k === 'loadStatus') {
-          const totalPkgs = parseInt(normalizeDigits(r.packages || '0'), 10) || 0;
-          const loaded = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
-          if (loaded > 0) {
-            if (totalPkgs > 0 && loaded >= totalPkgs) {
-              inner = `<span class="cv"><span class="manifest-tag-full" title="${AR() ? 'حمولة كاملة للشحنة (100%)' : 'Full Load (100%)'}">✓ ${AR() ? 'كلي (Full)' : 'Full'}</span></span>`;
-            } else if (totalPkgs > 0 && loaded < totalPkgs) {
-              const pct = Math.round((loaded / totalPkgs) * 100);
-              inner = `<span class="cv"><span class="manifest-tag-partial" title="${AR() ? `جزء من الشحنة (${loaded} من أصل ${totalPkgs} طرد)` : `Partial (${loaded} of ${totalPkgs} pkgs)`}">⚡ ${AR() ? `جزئي (${pct}%)` : `Partial (${pct}%)`}</span></span>`;
+          const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+          if (isSGreater) {
+            const loaded = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+            if (loaded > 0) {
+              inner = `<span class="cv"><span class="manifest-tag-full" title="${AR() ? 'حمولة كاملة (Full)' : 'Full Load'}">✓ ${AR() ? 'كلي' : 'Full'}</span></span>`;
             } else {
-              inner = `<span class="cv"><span class="manifest-tag-full">${loaded} ${AR() ? 'طرد' : 'pkgs'}</span></span>`;
+              inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
             }
           } else {
-            inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
+            let loaded = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+            let totalPkgs = parseInt(normalizeDigits(r.packages || '0'), 10) || 0;
+
+            if (loaded > 0) {
+              if (totalPkgs > 0 && loaded > totalPkgs) {
+                const extra = loaded - totalPkgs;
+                inner = `<span class="cv"><span class="manifest-tag-overload" style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;font-weight:800;border-radius:5px;padding:2px 8px;font-size:11px" title="${AR() ? `حمولة زائدة عن إجمالي بوليصة الشحنة (${loaded} من أصل ${totalPkgs} · زيادة ${extra} طرد)` : `Overload: +${extra} pkgs`}">🚨 ${AR() ? `فائض (+${extra})` : `Over (+${extra})`}</span></span>`;
+              } else if (totalPkgs > 0 && loaded === totalPkgs) {
+                inner = `<span class="cv"><span class="manifest-tag-full" title="${AR() ? 'حمولة كاملة للشحنة (100%)' : 'Full Load (100%)'}">✓ ${AR() ? 'كلي (Full)' : 'Full'}</span></span>`;
+              } else if (totalPkgs > 0 && loaded < totalPkgs) {
+                const pct = Math.round((loaded / totalPkgs) * 100);
+                inner = `<span class="cv"><span class="manifest-tag-partial" title="${AR() ? `جزء من الشحنة (${loaded} من أصل ${totalPkgs} طرد)` : `Partial (${loaded} of ${totalPkgs} pkgs)`}">⚡ ${AR() ? `جزئي (${pct}%)` : `Partial (${pct}%)`}</span></span>`;
+              } else {
+                inner = `<span class="cv"><span class="manifest-tag-full">${loaded} ${AR() ? 'طرد' : 'pkgs'}</span></span>`;
+              }
+            } else {
+              inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
+            }
           }
         } else {
           inner = `<span class="cv">${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>`;
@@ -3316,7 +4390,7 @@ export function createFtlEngine(root, options = {}) {
         const mergeBtn = (ship && span > 1 && canToggleMerge(dir, c))
           ? `<button class="mg" title="${merged ? E.unmergeTip : E.mergeTip}" onclick="event.stopPropagation();__FTL__.toggleMerge('${ship.ref}','${c.k}')">${merged ? '⧉' : '⊞'}</button>` : '';
         const sepHandle = '';
-        tr += `<td ${merged ? `rowspan="${sp.len}"` : ''} class="c${cur ? ' cur' : ''}${locked ? ' locked' : ''}${dimmed ? ' dimmed' : ''}${merged ? ' merged' : ''}" data-r="${i}" data-k="${c.k}" tabindex="${locked || dimmed ? -1 : 0}" style="--gc:${GROUPS[c.g].c};--w:${c.w}px">
+        tr += `<td ${merged ? `rowspan="${sp.len}"` : ''} class="c${cur ? ' cur' : ''}${locked ? ' locked' : ''}${dimmed ? ' dimmed' : ''}${merged ? ' merged' : ''}" data-r="${i}" data-k="${c.k}" data-truck-plate="${esc(rTrkKey)}" tabindex="${locked || dimmed ? -1 : 0}" style="--gc:${GROUPS[c.g].c};--w:${c.w}px">
                  ${sepHandle}<span class="cbox">${inner}${mergeBtn}</span></td>`;
       });
       if (first) {
@@ -3576,7 +4650,9 @@ export function createFtlEngine(root, options = {}) {
     let left = Math.min(Math.max(8, rc.left), innerWidth - w - 8), top = rc.top - h - 8; if (top < 8) top = rc.bottom + 8;
     TIP.style.left = left + 'px'; TIP.style.top = top + 'px';
   });
-  $('eBody').addEventListener('mouseout', e => { if (e.target.closest('.updbtn')) TIP.style.display = 'none'; });
+  $('eBody').addEventListener('mouseout', e => {
+    if (e.target.closest('.updbtn')) TIP.style.display = 'none';
+  });
   $('eBody').addEventListener('click', e => {
     if (e.target.closest('.mg') || e.target.closest('.updbtn') || e.target.closest('.ed') || e.target.closest('.status-select')) return;
     const td = e.target.closest('td.c'); if (!td) return;
@@ -4175,10 +5251,10 @@ export function createFtlEngine(root, options = {}) {
     }
     try {
       localStorage.removeItem('ftl-airport-mock-workspace');
-    } catch {}
+    } catch { }
     toast(t('cleared') || (AR() ? 'تم مسح جميع البيانات بنجاح' : 'All data cleared successfully'));
   }
-  let toastT; function toast(m) { const el = $('toast'); el.textContent = m; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 3800); }
+  let toastT; function toast(m) { const el = $('toast'); if (!el) return; el.textContent = m; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 3800); }
 
 
   /* ============================ 8. export to PDF ============================ */
@@ -4792,7 +5868,7 @@ export function createFtlEngine(root, options = {}) {
     const TRUCK_COLS = [
       { k: 'trucker', h: 'Transporter', ar: 'شركة النقل', t: 'list', g: 'g6', w: 165, src: 'trucker' },
       { k: 'truckType', h: 'Truck Type', ar: 'نوع السيارة', t: 'list', g: 'g6', w: 160, src: 'truckType' },
-      { k: 'cntr', h: 'Truck No.', ar: 'رقم السيارة', t: 'text', g: 'g6', w: 155 },
+      { k: 'cntr', h: 'Truck No.', ar: 'رقم السيارة', t: 'text', g: 'g6', w: 210 },
       { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g6', w: 130 },
       { k: 'loadStatus', h: 'Load Status', ar: 'حالة التحميل', t: 'text', g: 'g6', auto: true, w: 135 },
       { k: 'driver', h: 'Driver', ar: 'السائق', t: 'text', g: 'g6', w: 145 },
@@ -5061,8 +6137,15 @@ export function createFtlEngine(root, options = {}) {
       const shared = { movement: dir, vol: String(shipments) };
       let created = null; if (LIVE) { try { if (!ILS.api?.createOperation) throw Error('Create operation endpoint unavailable'); created = await ILS.api.createOperation({ direction: dir, rowCount: n, shipments, trucks, shared, requestId: crypto.randomUUID() }); if (!created?.ref || !Array.isArray(created.trips) || created.trips.length !== n) throw Error('Invalid create operation response'); WORKSPACE_VERSION = created.version; } catch (e) { toast(e.message || 'Could not create shipment'); return; } }
       const ref = created?.ref || opRefFor(OPSEQ++), at = created?.at || nowHM(), day = created?.day || today(), user = OP_USER, idxs = [];
-      for (let i = 0; i < n; i++) { const row = { ...shared, status: 'Open' }; const idx = ENTRY[dir].length; ROWMETA[dir][idx] = { id: created?.trips[i]?.id || null, ref, user, at, day, updates: [] }; ENTRY[dir].push(row); idxs.push(idx); }
-      SHIPS[dir][ref] = { ref, dir, rows: idxs, per: shipments, unmerged: new Set(), at, day, user, status: 'Open' }; layoutShip(dir, SHIPS[dir][ref], { shp: shipments, trk: trucks });
+      for (let i = 0; i < n; i++) {
+        const row = { ...shared, status: 'Open' };
+        const idx = ENTRY[dir].length;
+        ROWMETA[dir][idx] = { id: created?.trips[i]?.id || null, ref, user, at, day, updates: [] };
+        ENTRY[dir].push(row);
+        idxs.push(idx);
+      }
+      SHIPS[dir][ref] = { ref, dir, rows: idxs, per: shipments, unmerged: new Set(), at, day, user, status: 'Open', targetTruckCount: trucks, initialShipCount: shipments };
+      layoutShip(dir, SHIPS[dir][ref], { shp: shipments, trk: trucks });
       TRIP_SEARCH[dir] = [{ k: '__tripNo', v: '', join: 'AND' }]; TRIP_SORT[dir] = { key: '__tripNo', dir: 'asc' };
       $('op_vol').value = 1; $('opCount').value = 1; markDirty(); renderEntry(); toast(E.opCreated(n, ref, shipments, trucks)); const firstEditable = COLS[dir].find(c => !isLocked(dir, c)); if (firstEditable) setCursor(idxs[0], firstEditable.k, true);
     };
@@ -5082,7 +6165,7 @@ export function createFtlEngine(root, options = {}) {
     };
 
     dateBasisOptions = function () { const imp = MODE() === 'Import'; return [['load', AR() ? (imp ? 'تاريخ وصول الشحنة' : 'تاريخ الوصول المطلوب') : (imp ? 'Shipment arrival date' : 'Required arrival date')], ['gateIn', AR() ? 'تاريخ دخول البوابة' : 'Gate-in date'], ['gateOut', AR() ? 'تاريخ خروج البوابة' : 'Gate-out date'], ['invRcv', AR() ? 'تاريخ استلام الفواتير' : 'Invoices received date']]; };
-    const _airDisplayValue = displayValue; displayValue = function (c, v) { const raw = _airDisplayValue(c, v); if (!raw) return raw; if (c.k === 'movement') return raw === 'Import' ? dirLabel('Import') : raw === 'Export' ? dirLabel('Export') : raw; if (c.k === 'status') return raw === 'Delivered' ? t('workflow').delivered : raw === 'Open' ? t('workflow').open : raw; if (c.k === 'loadStatus') return raw === 'Full' ? (AR() ? 'كلي' : 'Full') : raw === 'Partial' ? (AR() ? 'جزئي' : 'Partial') : raw; return raw; };
+    const _airDisplayValue = displayValue; displayValue = function (c, v) { const raw = _airDisplayValue(c, v); if (!raw) return raw; if (c.k === 'movement') return raw === 'Import' ? dirLabel('Import') : raw === 'Export' ? dirLabel('Export') : raw; if (c.k === 'status') return raw === 'Delivered' ? t('workflow').delivered : raw === 'Open' ? t('workflow').open : raw; if (c.k === 'loadStatus') return raw === 'Full' ? (AR() ? 'كلي' : 'Full') : raw === 'Partial' ? (AR() ? 'جزئي' : 'Partial') : raw === 'Overload' ? (AR() ? 'فائض' : 'Overload') : raw; return raw; };
     MEASURES.Import.splice(0, MEASURES.Import.length, ['gateToArrH', 'Gate dwell (hours)', 'مدة البوابة (ساعات)'], ['packagesN', 'Packages', 'الطرود'], ['weightN', 'Weight', 'الوزن'], ['cbmN', 'CBM', 'الحجم بالمتر المكعب']);
     MEASURES.Export.splice(0, MEASURES.Export.length, ['offDelayH', 'Gate-in delay vs required (hours)', 'تأخير دخول البوابة عن المطلوب (ساعات)'], ['arrOnTime', 'On-time gate in', 'دخول البوابة في الميعاد'], ['gateToArrH', 'Gate dwell (hours)', 'مدة البوابة (ساعات)'], ['packagesN', 'Packages', 'الطرود'], ['weightN', 'Weight', 'الوزن'], ['cbmN', 'CBM', 'الحجم بالمتر المكعب']);
 
@@ -5221,7 +6304,8 @@ export function createFtlEngine(root, options = {}) {
     reopenSelectedShipment, resetFilters, runExport, saveTripExport, sendMail, showDash, showEntry,
     stepOpCount, toggleAllDelivered, toggleDeliveredSelection, toggleLang, toggleMerge, toggleOpForm,
     togglePanel, toggleTheme, xCount, xToggleAll,
-    openTruckManifest, openShipmentBreakdown, setTruckShipment, addTruckCoLoad, removeTruckCoLoad, updateTruckAllocationPkgs,
+    openTruckManifest, openShipmentBreakdown, setTruckShipment, addTruckCoLoad, removeTruckCoLoad, updateTruckAllocationPkgs, changeTruckAllocShp,
+    addShipmentTruckAllocation, updateShipmentTruckAllocation, removeShipmentTruckAllocation,
     openInactive, renderInactive, toggleAllInactive, toggleInactiveSelection, copyInactiveTrips, reopenSelectedInactive, delShip,
     pageInactive: (d) => { INACTIVE_PAGE += d; },
     stepOpShip: (d) => __extra.stepOpShip && __extra.stepOpShip(d),

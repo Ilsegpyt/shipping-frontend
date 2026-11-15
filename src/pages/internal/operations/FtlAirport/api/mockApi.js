@@ -25,10 +25,10 @@ export function createMockApi({
 } = {}) {
   // One-time automatic reset of old test data from previous runs
   try {
-    if (!storage.getItem('ftl-airport-clean-v5')) {
+    if (!storage.getItem('ftl-airport-clean-v6')) {
       storage.removeItem(STORE_KEY);
       storage.setItem(STORE_KEY, JSON.stringify(SEED_WORKSPACE));
-      storage.setItem('ftl-airport-clean-v5', 'true');
+      storage.setItem('ftl-airport-clean-v6', 'true');
     }
   } catch {
     // ignore
