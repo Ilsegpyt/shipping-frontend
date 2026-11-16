@@ -551,6 +551,20 @@ export function createFtlEngine(root, options = {}) {
       if (d <= 12 && validD(y, d, mo)) return iso(y, d, mo); return null;
     }
     m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return validD(+m[1], +m[2], +m[3]) ? s.slice(0, 10) : null;
+    // Short format: 'DD/MM' or 'DD-MM' (defaults to current year)
+    let mShort = s.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
+    if (mShort) {
+      const d = +mShort[1], mo = +mShort[2], y = new Date().getFullYear();
+      if (mo <= 12 && validD(y, mo, d)) return iso(y, mo, d);
+      if (d <= 12 && validD(y, d, mo)) return iso(y, d, mo);
+    }
+    // Short format with month name: '4/Jan' or '04-Nov' (defaults to current year)
+    let mShortNamed = raw.match(/^(\d{1,2})\s*[-\/\s]\s*([A-Za-z]{3,9})$/);
+    if (mShortNamed) {
+      const mo = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(mShortNamed[2].slice(0, 3).toLowerCase()) + 1;
+      const y = new Date().getFullYear();
+      if (mo && validD(y, mo, +mShortNamed[1])) return iso(y, mo, +mShortNamed[1]);
+    }
     m = raw.match(/^(\d{1,2})\s*[-\/\s]\s*([A-Za-z]{3,9})\s*[-\/\s]\s*(\d{2,4})$/);   // 1/Jan/26 · 1-Jan-2026 · 1 Jan 26
     if (m) {
       const mo = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'].indexOf(m[2].slice(0, 3).toLowerCase()) + 1;
@@ -786,9 +800,21 @@ export function createFtlEngine(root, options = {}) {
     if (v === null || v === undefined || v === '') return '';
     if (typeof v === 'number') { const m = Math.round(v * 24 * 60) % 1440; return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); }
     if (v instanceof Date) return String(v.getHours()).padStart(2, '0') + ':' + String(v.getMinutes()).padStart(2, '0');
-    const m = String(v).trim().match(/^(\d{1,2})[:.](\d{2})\s*([AaPp][Mm]?)?/); if (!m) return '';
-    let h = +m[1]; const mi = +m[2]; const ap = (m[3] || '').toLowerCase();
-    if (ap.startsWith('p') && h < 12) h += 12; if (ap.startsWith('a') && h === 12) h = 0;
+    const str = String(v).trim();
+    let m = str.match(/^(\d{1,2})[:.](\d{2})\s*([AaPp][Mm]?)?/);
+    let h = 0, mi = 0, ap = '';
+    if (m) {
+      h = +m[1]; mi = +m[2]; ap = (m[3] || '').toLowerCase();
+    } else {
+      const mSingle = str.match(/^(\d{1,2})\s*([AaPp][Mm]?)?$/);
+      if (mSingle) {
+        h = +mSingle[1]; mi = 0; ap = (mSingle[2] || '').toLowerCase();
+      } else {
+        return '';
+      }
+    }
+    if (ap.startsWith('p') && h < 12) h += 12;
+    if (ap.startsWith('a') && h === 12) h = 0;
     if (h > 23 || mi > 59) return '';
     return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
   }
@@ -1571,15 +1597,15 @@ export function createFtlEngine(root, options = {}) {
   };
   const COLS = {
     Import: [
-      { k: 'shipNo', h: 'Shipment #', ar: 'رقم الشحنة', t: 'text', g: 'g1', w: 135 },
+      { k: 'shipNo', h: 'Shipment #', ar: 'رقم الشحنة', t: 'text', g: 'g1', w: 155 },
       { k: 'vol', h: 'Shipments', ar: 'عدد الشحنات', t: 'num', g: 'g1', auto: true, w: 125 },
-      { k: 'oper', h: 'operation', ar: 'اسم الاوبريشن', t: 'list', g: 'g1', op: true, w: 130, src: 'oper' },
-      { k: 'cert', h: 'Certificate Number', ar: 'رقم الشهادة', t: 'text', g: 'g1', w: 190 },
-      { k: 'client', h: 'CLEINT', ar: 'اسم العميل', t: 'list', g: 'g1', w: 150, src: 'client' },
-      { k: 'bl', h: 'M/BL', ar: 'رقم البوليصة', t: 'text', g: 'g2', w: 150 },
-      { k: 'line', h: 'Air Terminal', ar: 'المحطة الجوية', t: 'list', g: 'g2', w: 140, src: 'line' },
-      { k: 'dest', h: 'destination', ar: 'مكان التعتيق', t: 'list', g: 'g2', w: 150, src: 'dest' },
-      { k: 'aod', h: 'AOD', ar: 'مطار الوصول', t: 'list', g: 'g2', w: 130, src: 'aod' },
+      { k: 'oper', h: 'operation', ar: 'اسم الاوبريشن', t: 'list', g: 'g1', op: true, w: 140, src: 'oper' },
+      { k: 'cert', h: 'Certificate Number', ar: 'رقم الشهادة', t: 'text', g: 'g1', w: 200 },
+      { k: 'client', h: 'CLEINT', ar: 'اسم العميل', t: 'list', g: 'g1', w: 320, src: 'client' },
+      { k: 'bl', h: 'M/BL', ar: 'رقم البوليصة', t: 'text', g: 'g2', w: 170 },
+      { k: 'line', h: 'Air Terminal', ar: 'المحطة الجوية', t: 'list', g: 'g2', w: 170, src: 'line' },
+      { k: 'dest', h: 'destination', ar: 'مكان التعتيق', t: 'list', g: 'g2', w: 190, src: 'dest' },
+      { k: 'aod', h: 'AOD', ar: 'مطار الوصول', t: 'list', g: 'g2', w: 140, src: 'aod' },
       { k: 'free', h: 'free time till', ar: 'فترة السماح للشحنة', t: 'date', g: 'g2', w: 150 },
       { k: 'reqDate', h: 'Required Offloading Date', ar: 'تاريخ التعتيق المطلوب', t: 'date', g: 'g3', w: 200 },
       { k: 'reqTime', h: 'Required Offloading Time', ar: 'وقت التعتيق المطلوب', t: 'time', g: 'g3', w: 200 },
@@ -1587,34 +1613,34 @@ export function createFtlEngine(root, options = {}) {
       { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 170 },
       { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 160 },
       { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 160 },
-      { k: 'cntr', h: 'cntr#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 210 },
-      { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g4', uniq: false, w: 120 },
+      { k: 'cntr', h: 'cntr#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 270 },
+      { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g4', auto: true, uniq: false, w: 130 },
       { k: 'loadStatus', h: 'Load Status', ar: 'حالة التحميل', t: 'text', g: 'g4', auto: true, uniq: false, w: 130 },
-      { k: 'trucker', h: 'Transporter', ar: 'مقاول النقل', t: 'list', g: 'g5', w: 150, src: 'trucker' },
-      { k: 'car', h: 'Car No.', ar: 'رقم السيارة', t: 'text', g: 'g5', uniq: false, w: 110 },
-      { k: 'driver', h: 'Driver Name', ar: 'اسم السائق', t: 'text', g: 'g5', uniq: false, w: 135 },
-      { k: 'mob', h: 'MOB', ar: 'رقم السائق', t: 'text', g: 'g5', uniq: false, w: 130 },
+      { k: 'trucker', h: 'Transporter', ar: 'مقاول النقل', t: 'list', g: 'g5', w: 190, src: 'trucker' },
+      { k: 'car', h: 'Car No.', ar: 'رقم السيارة', t: 'text', g: 'g5', uniq: false, w: 130 },
+      { k: 'driver', h: 'Driver Name', ar: 'اسم السائق', t: 'text', combo: true, src: 'driver', g: 'g5', uniq: false, w: 190 },
+      { k: 'mob', h: 'MOB', ar: 'رقم السائق', t: 'text', combo: true, src: 'mob', g: 'g5', uniq: false, w: 160 },
       { k: 'checkout', h: 'CHECK Out From the Port', ar: 'الخروج من الميناء', t: 'date', g: 'g6', uniq: false, w: 205 },
       { k: 'updDate', h: 'Updates Date', ar: 'تاريخ التحديث', t: 'text', g: 'g6', auto: true, w: 150 },
       { k: 'invRcv', h: 'Invoices Received Date', ar: 'تاريخ استلام الفواتير', t: 'date', g: 'g6', w: 195 },
-      { k: 'missDoc', h: 'Missing Docs', ar: 'المستندات الناقصة', t: 'text', g: 'g6', w: 140 },
+      { k: 'missDoc', h: 'Missing Docs', ar: 'المستندات الناقصة', t: 'text', g: 'g6', w: 150 },
       { k: 'missRcv', h: 'Receive Date of Mssing Docs', ar: 'تاريخ استلام المستندات', t: 'date', g: 'g6', w: 225 },
       { k: 'updates', h: 'Latest Updates', ar: 'آخر التحديثات', t: 'upd', g: 'g6', auto: true, w: 230 },
     ],
     Export: [
-      { k: 'shipNo', h: 'Shipment #', ar: 'رقم الشحنة', t: 'text', g: 'g1', w: 135 },
-      { k: 'vol', h: 'Shipments', ar: 'عدد الشحنات', t: 'num', g: 'g1', auto: true, w: 100 },
-      { k: 'oper', h: 'operation', ar: 'اسم الاوبريشن', t: 'list', g: 'g1', op: true, w: 130, src: 'oper' },
-      { k: 'clrType', h: 'Clearance Type', ar: 'نوع التخليص', t: 'list', g: 'g1', w: 130, src: 'clrType' },
-      { k: 'cert', h: 'Certificate Number', ar: 'رقم الشهادة', t: 'text', g: 'g1', w: 190 },
-      { k: 'customs', h: 'Customs', ar: 'الجمارك', t: 'text', g: 'g1', w: 130 },
-      { k: 'booking', h: 'BOOKING NO.', ar: 'رقم البوكينج', t: 'text', g: 'g1', w: 150 },
-      { k: 'client', h: 'CLEINT', ar: 'اسم العميل', t: 'list', g: 'g1', w: 150, src: 'client' },
-      { k: 'line', h: 'Air Terminal', ar: 'المحطة الجوية', t: 'list', g: 'g2', w: 140, src: 'line' },
-      { k: 'dest', h: 'destination', ar: 'مكان التحميل', t: 'list', g: 'g2', w: 150, src: 'dest' },
-      { k: 'pol', h: 'POL', ar: 'ميناء الشحن', t: 'list', g: 'g2', w: 130, src: 'pol' },
-      { k: 'aod', h: 'AOD', ar: 'مطار الوصول', t: 'list', g: 'g2', w: 130, src: 'aod' },
-      { k: 'pow', h: 'POW', ar: 'ميناء العبور', t: 'list', g: 'g2', opt: true, w: 130, src: 'pow' },
+      { k: 'shipNo', h: 'Shipment #', ar: 'رقم الشحنة', t: 'text', g: 'g1', w: 155 },
+      { k: 'vol', h: 'Shipments', ar: 'عدد الشحنات', t: 'num', g: 'g1', auto: true, w: 120 },
+      { k: 'oper', h: 'operation', ar: 'اسم الاوبريشن', t: 'list', g: 'g1', op: true, w: 140, src: 'oper' },
+      { k: 'clrType', h: 'Clearance Type', ar: 'نوع التخليص', t: 'list', g: 'g1', w: 140, src: 'clrType' },
+      { k: 'cert', h: 'Certificate Number', ar: 'رقم الشهادة', t: 'text', g: 'g1', w: 200 },
+      { k: 'customs', h: 'Customs', ar: 'الجمارك', t: 'text', g: 'g1', w: 170 },
+      { k: 'booking', h: 'BOOKING NO.', ar: 'رقم البوكينج', t: 'text', g: 'g1', w: 170 },
+      { k: 'client', h: 'CLEINT', ar: 'اسم العميل', t: 'list', g: 'g1', w: 320, src: 'client' },
+      { k: 'line', h: 'Air Terminal', ar: 'المحطة الجوية', t: 'list', g: 'g2', w: 170, src: 'line' },
+      { k: 'dest', h: 'destination', ar: 'مكان التحميل', t: 'list', g: 'g2', w: 190, src: 'dest' },
+      { k: 'pol', h: 'POL', ar: 'ميناء الشحن', t: 'list', g: 'g2', w: 140, src: 'pol' },
+      { k: 'aod', h: 'AOD', ar: 'مطار الوصول', t: 'list', g: 'g2', w: 140, src: 'aod' },
+      { k: 'pow', h: 'POW', ar: 'ميناء العبور', t: 'list', g: 'g2', opt: true, w: 140, src: 'pow' },
       { k: 'cut', h: 'CUT OFF', ar: 'آخر ميعاد التسليم', t: 'date', g: 'g3', w: 150 },
       { k: 'reqDate', h: 'Required loading Date', ar: 'تاريخ التحميل المطلوب', t: 'date', g: 'g3', w: 185 },
       { k: 'reqTime', h: 'Required loading Time', ar: 'وقت التحميل المطلوب', t: 'time', g: 'g3', w: 185 },
@@ -1622,16 +1648,16 @@ export function createFtlEngine(root, options = {}) {
       { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 170 },
       { k: 'gateOut', h: 'Gate out Date', ar: 'تاريخ الخروج من البوابة', t: 'date', g: 'g3', uniq: false, w: 160 },
       { k: 'gateOutT', h: 'Gate out Time', ar: 'وقت الخروج من البوابة', t: 'time', g: 'g3', uniq: false, w: 160 },
-      { k: 'cntr', h: 'cntr no#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 210 },
-      { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g4', uniq: false, w: 120 },
+      { k: 'cntr', h: 'cntr no#', ar: 'رقم الحاوية', t: 'text', g: 'g4', uniq: false, w: 270 },
+      { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g4', auto: true, uniq: false, w: 130 },
       { k: 'loadStatus', h: 'Load Status', ar: 'حالة التحميل', t: 'text', g: 'g4', auto: true, uniq: false, w: 130 },
-      { k: 'trucker', h: 'Transporter', ar: 'مقاول النقل', t: 'list', g: 'g5', w: 150, src: 'trucker' },
-      { k: 'car', h: 'Car No#', ar: 'رقم السيارة', t: 'text', g: 'g5', uniq: false, w: 110 },
-      { k: 'driver', h: 'Driver Name', ar: 'اسم السائق', t: 'text', g: 'g5', uniq: false, w: 135 },
-      { k: 'mob', h: 'MOB', ar: 'رقم السائق', t: 'text', g: 'g5', uniq: false, w: 130 },
+      { k: 'trucker', h: 'Transporter', ar: 'مقاول النقل', t: 'list', g: 'g5', w: 190, src: 'trucker' },
+      { k: 'car', h: 'Car No#', ar: 'رقم السيارة', t: 'text', g: 'g5', uniq: false, w: 130 },
+      { k: 'driver', h: 'Driver Name', ar: 'اسم السائق', t: 'text', combo: true, src: 'driver', g: 'g5', uniq: false, w: 190 },
+      { k: 'mob', h: 'MOB', ar: 'رقم السائق', t: 'text', combo: true, src: 'mob', g: 'g5', uniq: false, w: 160 },
       { k: 'updDate', h: 'Updates Date', ar: 'تاريخ التحديث', t: 'text', g: 'g6', auto: true, w: 150 },
       { k: 'invRcv', h: 'Invoices Received Date', ar: 'تاريخ استلام الفواتير', t: 'date', g: 'g6', w: 195 },
-      { k: 'missDoc', h: 'Missing Docs', ar: 'المستندات الناقصة', t: 'text', g: 'g6', w: 140 },
+      { k: 'missDoc', h: 'Missing Docs', ar: 'المستندات الناقصة', t: 'text', g: 'g6', w: 150 },
       { k: 'missRcv', h: 'Receive Date of Mssing Docs', ar: 'تاريخ استلام المستندات', t: 'date', g: 'g6', w: 225 },
       { k: 'updates', h: 'Latest Updates', ar: 'آخر التحديثات', t: 'upd', g: 'g6', auto: true, w: 230 },
     ]
@@ -1646,7 +1672,7 @@ export function createFtlEngine(root, options = {}) {
     const cols = COLS[dir], index = cols.findIndex(c => c.k === 'updates');
     const [updates] = cols.splice(index, 1); updates.g = cols.find(c => c.k === 'cntr').g;
     cols.splice(cols.findIndex(c => c.k === 'cntr') + 1, 0, updates);
-    cols.push({ k: 'status', h: 'Status', ar: 'حالة الشحنة', t: 'text', g: 'g7', w: 118, auto: true, uniq: true });
+    cols.push({ k: 'status', h: 'Status', ar: 'حالة الشحنة', t: 'text', g: 'g7', w: 145, auto: true, uniq: true });
   }
   const opFields = dir => COLS[dir].filter(c => c.op && c.k !== 'cut');
   const isMergeCol = c => !!c && c.uniq !== false;
@@ -1691,7 +1717,9 @@ export function createFtlEngine(root, options = {}) {
   const today = () => new Date().toISOString().slice(0, 10);
   const fmtDay = d => {
     if (!d) return ''; const p = fixDate(d, false); if (!p) return d;
-    const [y, m, dd] = p.split('-'); return AR() ? `${dd}-${m}-${y}` : `${dd}-${['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][+m - 1]}-${y}`;
+    const [y, m, dd] = p.split('-');
+    const mo = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'][+m - 1] || m;
+    return `${dd}-${mo}-${y}`;
   };
   const fmtDateTime = v => {
     const s = String(v ?? '').trim(); if (!s) return '';
@@ -1701,6 +1729,20 @@ export function createFtlEngine(root, options = {}) {
     if (m[4]) { if (h > 12 || h === 0) return s; if (m[4].toLowerCase() === 'pm' && h < 12) h += 12; if (m[4].toLowerCase() === 'am' && h === 12) h = 0; }
     return `${fmtDay(m[1])} ${String(h).padStart(2, '0')}:${m[3]}`;
   };
+  const fmtTime12 = v => {
+    if (v === null || v === undefined || v === '') return '';
+    const nt = normTime(v);
+    if (!nt) return String(v);
+    const parts = nt.split(':');
+    let h = parseInt(parts[0], 10);
+    const m = parts[1] || '00';
+    if (isNaN(h)) return String(v);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, '0')}:${m} ${ap}`;
+  };
+  const CAL_ICON_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;display:inline-block;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+  const CLK_ICON_SVG = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;display:inline-block;vertical-align:middle"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
 
   let SHIPS = { Import: {}, Export: {} };          // ref -> {ref, dir, rows:[idx…], unmerged:Set(cols), at, user}
   const TRIP_SELECTED = { Import: new Set(), Export: new Set() };
@@ -1739,7 +1781,8 @@ export function createFtlEngine(root, options = {}) {
     } else if (c.k === 'cert') {
       if (!/^\d+$/.test(v)) return bad('Certificate number: digits only', 'رقم الشهادة: أرقام فقط');
     } else if (c.k === 'mob') {
-      if (!/^\+?[\d ()-]+$/.test(v) || (!search && !/^\d{7,15}$/.test(v.replace(/\D/g, '')))) return bad('Phone: 7–15 digits; an initial + is allowed', 'التليفون: من 7 إلى 15 رقم، ومسموح + في البداية');
+      if (!/^\+?[\d ()-]+$/.test(v)) return bad('Phone: digits and + only', 'التليفون: أرقام ومسموح +');
+      return { ok: true, value: v };
     } else if (c.k === 'size') {
       if (!/^(20|40)['’]?$|^LCL$/i.test(v)) return bad('Choose 20, 40 or LCL', 'اختار 20 أو 40 أو LCL');
     } else if (c.k === 'cntr') {
@@ -1748,21 +1791,34 @@ export function createFtlEngine(root, options = {}) {
     } else if (['bl', 'booking', 'car'].includes(c.k)) {
       if (!/^[\p{L}\d /_.-]+$/u.test(v) || (!search && !/\d/.test(v))) return bad('Use an ID containing digits; letters, spaces, /, -, _ and . are allowed', 'اكتب كود يحتوي أرقام؛ مسموح حروف ومسافات و / و - و _ و .');
     } else if (type === 'time') {
-      if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(v)) return bad('Use 24-hour HH:mm, for example 14:50', 'استخدم وقت 24 ساعة HH:mm، مثال 14:50');
-      return { ok: true, value: v.padStart(5, '0') };
+      const nt = normTime(v);
+      if (!nt) return bad('Use time like 8, 2p, or 14:30', 'استخدم وقت مثل 8 أو 2p أو 14:30');
+      return { ok: true, value: nt };
     } else if (type === 'date') {
-      const date = strictEntryDate(v); if (!date) return bad('Enter a real date, for example 24-SEP-2026', 'اكتب تاريخًا صحيحًا، مثال 24-09-2026'); return { ok: true, value: date };
+      const date = fixDate(v, false);
+      if (!date) return bad('Enter a real date, for example 1/11 or 24-SEP-2026', 'اكتب تاريخًا صحيحًا، مثال 1/11 أو 24-09-2026');
+      return { ok: true, value: date };
     } else if (type === 'datetime') {
       const parts = v.match(/^(.+) (\d{1,2}:\d{2})$/);
-      if (!parts || !strictEntryDate(parts[1]) || !/^([01]?\d|2[0-3]):[0-5]\d$/.test(parts[2])) return bad('Use DD-MMM-YYYY HH:mm', 'استخدم DD-MMM-YYYY HH:mm');
+      if (!parts || !fixDate(parts[1], false) || !normTime(parts[2])) return bad('Use DD-MMM-YYYY HH:mm', 'استخدم DD-MMM-YYYY HH:mm');
     }
     return { ok: true, value: v };
   }
   function fieldFeedback(el, result) {
-    el.setCustomValidity(result.ok ? '' : result.message); el.setAttribute('aria-invalid', String(!result.ok));
-    const host = el.closest('.datetime-control') || el; let note = host.nextElementSibling;
-    if (!note?.classList.contains('field-error')) { note = document.createElement('small'); note.className = 'field-error'; note.setAttribute('role', 'status'); host.after(note); }
-    note.textContent = result.ok ? '' : result.message; note.hidden = result.ok;
+    if (!el) return;
+    el.setCustomValidity(result?.ok ? '' : (result?.message || ''));
+    el.setAttribute('aria-invalid', String(!result?.ok));
+    if (el.classList.contains('ed') || el.closest('#eTable') || el.closest('#eBody')) return;
+    const host = el.closest('.datetime-control') || el;
+    let note = host.nextElementSibling;
+    if (!note?.classList.contains('field-error')) {
+      note = document.createElement('small');
+      note.className = 'field-error';
+      note.setAttribute('role', 'status');
+      host.after(note);
+    }
+    note.textContent = result?.ok ? '' : (result?.message || '');
+    note.hidden = Boolean(result?.ok);
   }
   function inputColumn(el) {
     if (el.id === 'opCount') return { k: 'opCount', t: 'num' };
@@ -1771,23 +1827,37 @@ export function createFtlEngine(root, options = {}) {
     if (el.classList.contains('tripvalue')) { const key = (el.closest('#deliveredSearch') ? DELIVERED_SEARCH : TRIP_SEARCH)[EDIR][+el.closest('.triprule').dataset.ix]?.k; return COLS[EDIR].find(c => c.k === key) || { k: key, t: key === '__tripNo' ? 'num' : key === '__created' ? 'date' : 'text' }; }
   }
   function allowedFieldCharacters(c, v) {
+    if (!v) return true;
     if (tripType(c) === 'number' || c.k === 'cert') return /^\d*$/.test(v);
     if (c.k === 'mob') return /^\+?[\d ()-]*$/.test(v);
     if (c.k === 'cntr') return /^[a-zA-Z0-9]*$/.test(v);
-    if (tripType(c) === 'time') return /^[\d:]*$/.test(v);
+    if (tripType(c) === 'time') return /^[\d\s:a-zA-Z]*$/.test(v);
+    if (tripType(c) === 'date') return /^[\d\s\/\-a-zA-Z]*$/.test(v);
     return true;
   }
   __on(document, 'focusin', e => { const el = e.target; if (el.tagName === 'INPUT' && inputColumn(el)) el.dataset.acceptedValue = el.value; });
   __on(document, 'beforeinput', e => {
     const el = e.target; if (el.tagName !== 'INPUT') return; const c = inputColumn(el); if (!c || e.data == null || e.isComposing) return;
+    if (el.classList.contains('ed')) return;
     const candidate = normalizeDigits(el.value.slice(0, el.selectionStart ?? el.value.length) + e.data + el.value.slice(el.selectionEnd ?? el.value.length));
     if (!allowedFieldCharacters(c, candidate)) { e.preventDefault(); fieldFeedback(el, { ok: false, message: AR() ? 'القيمة دي مش مناسبة لنوع الخانة' : 'This value does not match the field type' }); }
   });
   __on(document, 'input', e => {
     const el = e.target; if (el.tagName !== 'INPUT') return; const c = inputColumn(el); if (!c) return;
     const value = normalizeDigits(el.value);
-    if (!allowedFieldCharacters(c, value)) { el.value = el.dataset.acceptedValue || ''; fieldFeedback(el, { ok: false, message: AR() ? 'القيمة المرفوضة فيها حروف غير مسموحة' : 'Rejected value contains unsupported characters' }); e.stopImmediatePropagation(); return; }
-    el.value = value; el.dataset.acceptedValue = value; fieldFeedback(el, validateField(c, value, el.classList.contains('tripvalue')));
+    if (!allowedFieldCharacters(c, value)) {
+      el.value = el.dataset.acceptedValue || '';
+      if (!el.classList.contains('ed')) {
+        fieldFeedback(el, { ok: false, message: AR() ? 'القيمة المرفوضة فيها حروف غير مسموحة' : 'Rejected value contains unsupported characters' });
+      }
+      e.stopImmediatePropagation();
+      return;
+    }
+    el.value = value;
+    el.dataset.acceptedValue = value;
+    if (!el.classList.contains('ed')) {
+      fieldFeedback(el, validateField(c, value, el.classList.contains('tripvalue')));
+    }
   }, true);
   function tripSearchKeys(dir) {
     return [{ k: '__tripNo', h: AR() ? 'ترتيب الإنشاء' : 'Created order', t: 'number' },
@@ -1846,8 +1916,8 @@ export function createFtlEngine(root, options = {}) {
       const selected = keys.find(c => c.k === r.k) || keys[0]; const type = selected.t;
       return `<div class="triprule" data-ix="${i}">${i ? `<select class="tripjoin" aria-label="${AR() ? 'ربط الشرط' : 'Join rule'}"><option${r.join === 'AND' ? ' selected' : ''}>AND</option><option${r.join === 'OR' ? ' selected' : ''}>OR</option><option${r.join === 'NOT' ? ' selected' : ''}>NOT</option></select>` : ''}
         <select class="tripkey" aria-label="${AR() ? 'العمود' : 'Column'}">${keys.map(c => `<option value="${esc(c.k)}"${c.k === selected.k ? ' selected' : ''}>${esc(c.h)}</option>`).join('')}</select><span class="triptype">${tripTypeLabel(type)}</span>
-        ${type === 'date' || type === 'datetime' ? `<span class="datetime-control"><input class="tripvalue" type="text" value="${esc(r.v || '')}" placeholder="${type === 'date' ? (AR() ? '24-09-2026' : 'DD-MMM-YYYY') : (AR() ? '24-09-2026 14:50' : 'DD-MMM-YYYY HH:mm')}" aria-label="${AR() ? 'القيمة' : 'Value'}"><button type="button" class="pickdate" onclick="__FTL__.openNativeDate(this)" title="${AR() ? 'اختيار من التقويم' : 'Choose from calendar'}">▦</button><input class="native-date" type="date" tabindex="-1" aria-hidden="true"></span>` :
-          `<span class="${type === 'time' ? 'datetime-control' : 'tripvalue-wrap'}"><input class="tripvalue" type="text" value="${esc(r.v || '')}" ${type === 'time' || type === 'numericId' || type === 'number' ? 'inputmode="numeric"' : ''} placeholder="${type === 'time' ? 'HH:mm (24h)' : type === 'text' || type === 'id' ? (AR() ? 'اكتب القيمة' : 'Type a value') : ''}" aria-label="${AR() ? 'القيمة' : 'Value'}">${type === 'time' ? `<button type="button" class="pickdate picktime" onclick="__FTL__.openTimePicker(this)" title="${AR() ? 'اختيار الوقت بنظام 24 ساعة' : 'Choose 24-hour time'}">◷</button>` : ''}</span>`}
+        ${type === 'date' || type === 'datetime' ? `<span class="datetime-control"><input class="tripvalue" type="text" value="${esc(r.v || '')}" placeholder="${type === 'date' ? (AR() ? 'مثال: 1/11 أو 24-09-2026' : 'DD-MMM-YYYY (e.g. 1/11)') : (AR() ? '24-09-2026 14:50' : 'DD-MMM-YYYY HH:mm')}" aria-label="${AR() ? 'القيمة' : 'Value'}"><button type="button" class="pickdate" onclick="__FTL__.openNativeDate(this)" title="${AR() ? 'اختيار من التقويم' : 'Choose from calendar'}">${CAL_ICON_SVG}</button><input class="native-date sr-only" type="date" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"></span>` :
+          `<span class="${type === 'time' ? 'datetime-control' : 'tripvalue-wrap'}"><input class="tripvalue" type="text" value="${esc(r.v || '')}" ${type === 'time' || type === 'numericId' || type === 'number' ? 'inputmode="text"' : ''} placeholder="${type === 'time' ? (AR() ? 'مثال: 8 أو 2p أو 14:30' : 'e.g. 8 or 2p or 14:30') : type === 'text' || type === 'id' ? (AR() ? 'اكتب القيمة' : 'Type a value') : ''}" aria-label="${AR() ? 'القيمة' : 'Value'}">${type === 'time' ? `<button type="button" class="pickdate picktime" onclick="__FTL__.openTimePicker(this)" title="${AR() ? 'اختيار الوقت' : 'Choose time'}">${CLK_ICON_SVG}</button><input class="native-time sr-only" type="time" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;">` : ''}</span>`}
         ${i ? `<button type="button" class="tripremove" title="${AR() ? 'حذف الشرط' : 'Remove rule'}">×</button>` : ''}</div>`;
     }).join('') +
       `<button class="tripadd" type="button"><span aria-hidden="true">+</span><span>${AR() ? 'شرط' : 'Rule'}</span></button><button class="tripclear" type="button">${AR() ? 'مسح' : 'Clear'}</button>`;
@@ -1948,7 +2018,34 @@ export function createFtlEngine(root, options = {}) {
   const filledRows = dir => ENTRY[dir].filter(r => COLS[dir].some(c => cellVal(r, c.k)));
   const tripRows = dir => ENTRY[dir].filter(r => COLS[dir].some(c => cellVal(r, c.k)));   // every created row is a trip
   const rowShip = (dir, i) => SHIPS[dir][ROWMETA[dir][i]?.ref];
-  const isLocked = (dir, c) => !!(c && (c.auto || (c.op && c.k !== 'cut')));  // fields set in the operation form stay read-only in the table
+  /* Soft Concurrency & Edit Mode state (matching FCL) */
+  const ACTIVE_EDIT_SHIPS = new Set();
+  const SAVING_SHIPS = new Set();
+  const OP_SNAPSHOTS = {};
+  const LOCK_HEARTBEATS = {};
+
+  const isLocked = (dir, c, i) => {
+    if (!c) return true;
+    // When a row index is given, check if that operation is in Edit Mode
+    if (i !== undefined && i !== null && i >= 0) {
+      const ship = rowShip(dir, i);
+      const ref = ship?.ref;
+      if (!ref || !ACTIVE_EDIT_SHIPS.has(ref)) return true; // Entire table is read-only until user clicks Edit!
+    }
+    // Fields permanently locked:
+    if (c.k === 'vol') return true; // Number of shipments cannot be edited after creation
+    if (c.k === 'loadedPackages') return true; // Loaded pkgs is strictly read-only
+    if (c.auto) return true;
+
+    // Export clearance type rules:
+    if (dir === 'Export' && i !== undefined && i !== null && i >= 0) {
+      const clr = cellVal(ENTRY[dir][i], 'clrType');
+      if (c.k === 'customs' && clr !== 'BOSLA') return true; // Only BOSLA allows typing in Customs Area
+      if (c.k === 'cert' && clr === 'BOSLA') return true;    // BOSLA does not have Certificate Number
+    }
+
+    return !!(c.op && c.k !== 'cut');
+  };
   const userOf = (dir, i) => LIVE ? OP_USER : (cellVal(ENTRY[dir][i], 'oper') || OP_USER);
 
   /* ---------- master lists ---------- */
@@ -1974,7 +2071,31 @@ export function createFtlEngine(root, options = {}) {
     visible.focus();
   }
   function openNativeDate(button) {
-    const wrapper = button.closest('.datetime-control'), visible = wrapper.querySelector('input[type="text"]');
+    const wrapper = button.closest('.datetime-control'), visible = wrapper?.querySelector('input[type="text"]');
+    if (!wrapper || !visible) return;
+    let native = wrapper.querySelector('.native-date');
+    if (!native) {
+      native = document.createElement('input');
+      native.type = 'date';
+      native.className = 'native-date sr-only';
+      native.tabIndex = -1;
+      native.setAttribute('aria-hidden', 'true');
+      native.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:0;height:0;';
+      wrapper.appendChild(native);
+    }
+    const curIso = fixDate(visible.value, false);
+    if (curIso) native.value = curIso;
+    native.onchange = () => {
+      if (native.value) {
+        pickerApply(visible, fmtDay(native.value));
+      }
+    };
+    if (typeof native.showPicker === 'function') {
+      try {
+        native.showPicker();
+        return;
+      } catch (err) {}
+    }
     if (DATE_POPOVER && DATE_POPOVER._for === visible) { closeDatePicker(); return; }
     closeDatePicker(); closeTimePicker(); DATE_PICKING = true;
     const timePart = visible.classList.contains('tripvalue') ? (visible.value.match(/\b\d{1,2}:\d{2}$/) || [])[0] : null;
@@ -2014,25 +2135,47 @@ export function createFtlEngine(root, options = {}) {
     TIME_PICKING = false;
   }
   function openTimePicker(button) {
-    const visible = button.closest('.datetime-control').querySelector('input[type="text"]');
+    const wrapper = button.closest('.datetime-control'), visible = wrapper?.querySelector('input[type="text"]');
+    if (!wrapper || !visible) return;
+    let native = wrapper.querySelector('.native-time');
+    if (!native) {
+      native = document.createElement('input');
+      native.type = 'time';
+      native.className = 'native-time sr-only';
+      native.tabIndex = -1;
+      native.setAttribute('aria-hidden', 'true');
+      native.style.cssText = 'position:absolute;opacity:0;pointer-events:none;width:0;height:0;';
+      wrapper.appendChild(native);
+    }
+    const curTime = normTime(visible.value);
+    if (curTime) native.value = curTime;
+    native.onchange = () => {
+      if (native.value) {
+        pickerApply(visible, fmtTime12(native.value));
+      }
+    };
+    if (typeof native.showPicker === 'function') {
+      try {
+        native.showPicker();
+        return;
+      } catch (err) {}
+    }
     closeTimePicker(); TIME_PICKING = true;
     const current = normTime(visible.value) || '00:00';
     const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
     const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
     const options = (values, value) => values.map(v => `<option value="${v}"${v === value ? ' selected' : ''}>${v}</option>`).join('');
     const pop = document.createElement('div'); pop.className = 'time-popover'; pop.setAttribute('role', 'dialog');
-    pop.setAttribute('aria-label', AR() ? 'اختيار الوقت بنظام 24 ساعة' : 'Choose time in 24-hour format');
+    pop.setAttribute('aria-label', AR() ? 'اختيار الوقت' : 'Choose time');
     pop.innerHTML = `<select aria-label="${AR() ? 'الساعة' : 'Hour'}">${options(hours, current.slice(0, 2))}</select><span class="time-sep">:</span><select aria-label="${AR() ? 'الدقيقة' : 'Minute'}">${options(minutes, current.slice(3, 5))}</select><button type="button">${AR() ? 'اختيار' : 'Set'}</button>`;
     __layer().appendChild(pop); TIME_POPOVER = pop; pop._for = visible; closeDatePicker();
     const rect = button.getBoundingClientRect(), height = pop.offsetHeight;
     pop.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - pop.offsetWidth - 8)) + 'px';
     pop.style.top = (rect.bottom + height + 8 > window.innerHeight ? Math.max(8, rect.top - height - 6) : rect.bottom + 6) + 'px';
     pop.querySelector('button').onclick = () => {
-      visible.value = pop.querySelectorAll('select')[0].value + ':' + pop.querySelectorAll('select')[1].value;
+      const selected = pop.querySelectorAll('select')[0].value + ':' + pop.querySelectorAll('select')[1].value;
+      pickerApply(visible, fmtTime12(selected));
       closeTimePicker();
-      if (visible.classList.contains('ed')) commitEdit();
-      else if (visible.classList.contains('tripvalue')) visible.dispatchEvent(new Event('input', { bubbles: true }));
-      else visible.dispatchEvent(new Event('change', { bubbles: true }));
     };
     pop.onkeydown = e => { if (e.key === 'Escape') { e.stopPropagation(); closeTimePicker(); visible.focus(); } };
     pop.querySelector('select').focus();
@@ -2066,15 +2209,15 @@ export function createFtlEngine(root, options = {}) {
         field = `<select id="op_${c.k}" data-src="${c.src}" class="op-sel"><option value=""></option>
           ${opts.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('')}
           ${c.src === 'clrType' ? '' : `<option value="${ADD_NEW}">＋ ${E.addNew}</option>`}</select>`;
-      } else if (c.t === 'date') field = `<div class="datetime-control"><input id="op_${c.k}" type="text" inputmode="text" placeholder="DD-MMM-YYYY" autocomplete="off"><button type="button" class="pickdate" onclick="__FTL__.openNativeDate(this)" title="${AR() ? 'اختيار من التقويم' : 'Choose from calendar'}">▦</button><input class="native-date" type="date" tabindex="-1" aria-hidden="true"></div>`;
-      else if (c.t === 'time') field = `<div class="datetime-control"><input id="op_${c.k}" type="text" inputmode="numeric" placeholder="HH:mm (24h)" autocomplete="off" maxlength="5"><button type="button" class="pickdate picktime" onclick="__FTL__.openTimePicker(this)" title="${AR() ? 'اختيار الوقت بنظام 24 ساعة' : 'Choose 24-hour time'}">◷</button></div>`;
+      } else if (c.t === 'date') field = `<div class="datetime-control"><input id="op_${c.k}" type="text" inputmode="text" placeholder="${AR() ? 'مثال: 1/11 أو 24-09-2026' : 'DD-MMM-YYYY (e.g. 1/11)'}" autocomplete="off"><button type="button" class="pickdate" onclick="__FTL__.openNativeDate(this)" title="${AR() ? 'اختيار من التقويم' : 'Choose from calendar'}">${CAL_ICON_SVG}</button><input class="native-date sr-only" type="date" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"></div>`;
+      else if (c.t === 'time') field = `<div class="datetime-control"><input id="op_${c.k}" type="text" inputmode="text" placeholder="${AR() ? 'مثال: 8 أو 2p أو 14:30' : 'e.g. 8 or 2p or 14:30'}" autocomplete="off"><button type="button" class="pickdate picktime" onclick="__FTL__.openTimePicker(this)" title="${AR() ? 'اختيار الوقت' : 'Choose time'}">${CLK_ICON_SVG}</button><input class="native-time sr-only" type="time" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"></div>`;
       else field = `<input id="op_${c.k}" type="text" ${NUMERIC_ID_KEYS.has(c.k) ? 'inputmode="numeric"' : ''} autocomplete="off">`;
       const hint = c.k === 'pow' ? `<small class="opopt">${E.powHint}</small>` : '';
       return `<div class="opf" style="--gc:${GROUPS[c.g].c}"><label for="op_${c.k}">${lab}<small class="optype">${tripTypeLabel(tripType(c))}</small>${c.opt ? ` <em>${E.optional}</em>` : ''}</label>${field}${hint}</div>`;
     }).join('');
     opFields(dir).forEach(c => { const el = $('op_' + c.k); if (el && old[c.k] !== undefined) el.value = old[c.k]; });
     if (LIVE && $('op_oper')) { const el = $('op_oper'); el.innerHTML = `<option value="${esc(OP_USER)}">${esc(OP_USER)}</option>`; el.value = OP_USER; el.disabled = true; }
-    if (dir === 'Export') { const cut = COLS.Export.find(c => c.k === 'cut'); const box = document.createElement('div'); box.className = 'opf'; box.style.setProperty('--gc', GROUPS[cut.g].c); box.innerHTML = `<label for="op_cut">${AR() ? cut.ar : cut.h} <em>(${E.optional})</em></label><div class="datetime-control"><input id="op_cut" type="text" placeholder="DD-MMM-YYYY" autocomplete="off"><button type="button" class="pickdate" onclick="__FTL__.openNativeDate(this)">▦</button><input class="native-date" type="date" tabindex="-1"></div>`; grid.appendChild(box); if (grid.dataset.cutDraft) $('op_cut').value = grid.dataset.cutDraft; }
+    if (dir === 'Export') { const cut = COLS.Export.find(c => c.k === 'cut'); const box = document.createElement('div'); box.className = 'opf'; box.style.setProperty('--gc', GROUPS[cut.g].c); box.innerHTML = `<label for="op_cut">${AR() ? cut.ar : cut.h} <em>(${E.optional})</em></label><div class="datetime-control"><input id="op_cut" type="text" placeholder="${AR() ? 'مثال: 1/11 أو 24-09-2026' : 'DD-MMM-YYYY (e.g. 1/11)'}" autocomplete="off"><button type="button" class="pickdate" onclick="__FTL__.openNativeDate(this)">${CAL_ICON_SVG}</button><input class="native-date sr-only" type="date" tabindex="-1" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"></div>`; grid.appendChild(box); if (grid.dataset.cutDraft) $('op_cut').value = grid.dataset.cutDraft; }
     $('opGrid').querySelectorAll('.op-sel').forEach(sel => sel.addEventListener('change', async () => {
       if (sel.value !== ADD_NEW) return;
       const src = sel.dataset.src, v = prompt(E.addNewPrompt);
@@ -2199,7 +2342,30 @@ export function createFtlEngine(root, options = {}) {
      Rows = max(S,T). Shipment columns are S cells spread over the rows, truck columns are T cells,
      operation columns (Number of Shipments, Movement Type, Status) are one cell, and row columns
      (Arrival Date / Time) are one per row. Transporter is merged over the operation unless un-merged. */
-  function evenSpans(n, R) { n = Math.max(1, Math.min(Math.floor(Number(n)) || 1, R)); const out = []; for (let i = 0; i < n; i++) { const a = Math.floor(i * R / n), b = Math.floor((i + 1) * R / n); out.push([a, b - a]); } return out; }
+  function evenSpans(n, R) {
+    n = Math.max(1, Math.min(Math.floor(Number(n)) || 1, R));
+    const base = Math.floor(R / n);
+    const rem = R % n;
+    const lens = new Array(n).fill(base);
+    if (rem > 0) {
+      // Distribute extra rows symmetrically starting from the center outward
+      const center = (n - 1) / 2;
+      const order = [...Array(n).keys()].sort((a, b) => {
+        const da = Math.abs(a - center), db = Math.abs(b - center);
+        return da !== db ? da - db : a - b;
+      });
+      for (let i = 0; i < rem; i++) {
+        lens[order[i]]++;
+      }
+    }
+    const out = [];
+    let start = 0;
+    for (let i = 0; i < n; i++) {
+      out.push([start, lens[i]]);
+      start += lens[i];
+    }
+    return out;
+  }
   function dataSpans(dir, idxs, keys, blankSeparate = false) {
     if (!idxs.length) return [];
     const sig = i => keys.map(k => k === 'updates' ? JSON.stringify(ROWMETA[dir][i]?.updates || []) : String(ENTRY[dir][i]?.[k] ?? '').trim().toUpperCase()).join('\u0001');
@@ -2235,7 +2401,7 @@ export function createFtlEngine(root, options = {}) {
       const plate = (rows[rx]?.cntr || '').trim().toUpperCase();
       if (plate) return 'p:' + plate;
       const origIdx = origRows.indexOf(rx);
-      const tNo = origIdx >= 0 ? origTrkOf[origIdx] : null;
+      const tNo = (origIdx >= 0 ? origTrkOf[origIdx] : null) ?? ship.trkOf?.[rIdx];
       if (tNo !== null && tNo !== undefined) {
         const known = trkNoToPlate.get(tNo);
         if (known) return 'p:' + known;
@@ -2616,7 +2782,7 @@ export function createFtlEngine(root, options = {}) {
   /* writing to a merged cell writes to every row of the shipment */
   function setCell(i, k, v) {
     const dir = EDIR, col = COLS[dir].find(c => c.k === k), ship = rowShip(dir, i);
-    if (!col || isLocked(dir, col)) return;
+    if (!col || isLocked(dir, col, i)) return;
     { const clr = cellVal(ENTRY[dir][i], 'clrType'); if (v && ((k === 'cert' && clr === 'BOSLA') || (k === 'customs' && clr !== 'BOSLA'))) { toast(k === 'cert' ? (AR() ? 'التخليص بوليصة (BOSLA) — مفيش رقم شهادة' : 'BOSLA clearance — no Certificate Number') : (AR() ? 'منطقة الجمارك للتخليص بوليصة (BOSLA) بس' : 'Customs Area is only for BOSLA clearance')); return false; } }
     if (k === 'loadedPackages' && ship) {
       const ri = ship.rows.indexOf(i);
@@ -2745,6 +2911,11 @@ export function createFtlEngine(root, options = {}) {
     }
 
     stampUpdate(i, null, true);
+    if (ship?.ref) {
+      try {
+        localStorage.setItem(`ftl_draft_${ship.ref}`, JSON.stringify(ship.rows.map(idx => ENTRY[dir][idx])));
+      } catch (e) {}
+    }
     markDirty();
   }
 
@@ -2753,7 +2924,14 @@ export function createFtlEngine(root, options = {}) {
     const dir = EDIR, m = ROWMETA[dir][i]; if (!m) return;
     const day = today(), at = nowHM(), user = userOf(dir, i);
     const ship = rowShip(dir, i);
-    if (text) { const targets = ship ? groupRows(ship, COLS[dir].find(c => c.k === 'updates'), i) : [i]; targets.forEach(r => ROWMETA[dir][r].updates.push({ day, at, user, text })); }
+    if (text) {
+      const targets = ship ? groupRows(ship, COLS[dir].find(c => c.k === 'updates'), i) : [i];
+      targets.forEach(r => {
+        if (!ROWMETA[dir][r].updates) ROWMETA[dir][r].updates = [];
+        ROWMETA[dir][r].updates.push({ id: '', day, at, user, by: user, text, note: text });
+        ENTRY[dir][r].updates = text;
+      });
+    }
     const stamp = `${fmtDay(day)} ${at}`;
     const updCol = COLS[dir].find(c => c.k === 'updDate'); (ship && updCol ? groupRows(ship, updCol, i) : [i]).forEach(r => { ENTRY[dir][r].updDate = stamp; });
     if (!silent) markDirty();
@@ -2771,10 +2949,26 @@ export function createFtlEngine(root, options = {}) {
     setTimeout(() => $('uText')?.focus(), 50);
     $('uText').onkeydown = e => { if (e.key === 'Enter') addUpdate(i); };
   }
-  function addUpdate(i) {
+  async function addUpdate(i) {
     const v = $('uText').value.trim(); if (!v) return;
+    const dir = EDIR, m = ROWMETA[dir][i];
+    const ship = rowShip(dir, i);
+    const ref = m?.ref || ship?.ref;
+    const tripId = m?.id;
+
     stampUpdate(i, v);
     renderEntry(); openUpdates(i); toast(t('entry').updAdded);
+
+    if (LIVE && ILS.api?.addTruckUpdate && ref) {
+      try {
+        const saved = await ILS.api.addTruckUpdate(ref, tripId, v);
+        if (saved?.version !== undefined && saved?.version !== null) {
+          WORKSPACE_VERSION = saved.version;
+        }
+      } catch (err) {
+        console.warn('Failed to persist truck update immediately:', err);
+      }
+    }
   }
   const esc = x => String(x ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
 
@@ -2783,7 +2977,7 @@ export function createFtlEngine(root, options = {}) {
     if (!v) return '';
     if (c.t === 'date') return fmtDay(v);
     if (c.k === 'updDate') return fmtDateTime(v);
-    if (c.t === 'time') return normTime(v) || v;
+    if (c.t === 'time') return fmtTime12(v);
     return v;
   }
   function changeTripPage(delta) {
@@ -2801,17 +2995,326 @@ export function createFtlEngine(root, options = {}) {
       if (!ILS.api?.updateShipmentStatus) { toast(AR() ? 'ربط تغيير الحالة غير مكتمل' : 'Status endpoint unavailable'); return; }
       try { const saved = await ILS.api.updateShipmentStatus(ref, next, WORKSPACE_VERSION); if (saved?.version === undefined) throw Error('Status response has no version'); WORKSPACE_VERSION = saved.version; } catch (e) { toast(AR() ? 'تعذّر حفظ الحالة' : 'Could not save status'); return; }
     }
-    ship.status = next; ship.rows.forEach(i => ENTRY[EDIR][i].status = next);
+    ship.status = next;
+    if (next === 'Delivered') {
+      ship.deliveredAt = new Date().toISOString();
+      ship.deliveredBy = OP_USER;
+    } else if (next === 'Open') {
+      ship.reopenedAt = new Date().toISOString();
+      ship.reopenedBy = OP_USER;
+    }
+    ship.rows.forEach(i => ENTRY[EDIR][i].status = next);
     DATA.filter(r => r.dir === EDIR && (r._ref === ref || (ship.uploadGroup && r._uploadGroup === ship.uploadGroup) || ship.rows.some(i => ENTRY[EDIR][i].shipNo && ENTRY[EDIR][i].shipNo === r.shipNo))).forEach(r => r.status = next);
     TRIP_SELECTED[EDIR].delete(ref); CURSOR = { r: -1, k: null }; EDITING = null; markDirty(); renderEntry();
     if ($('deliveredModal').classList.contains('open')) renderDelivered();
     if (VIEW_MODE === 'dash') applyFilters();
   }
-  async function changeShipmentStatus(select, ref) {
-    const next = select.value;
-    if (next !== 'Delivered') return;
+  async function changeShipmentStatus(target, ref) {
+    const next = typeof target === 'string' ? target : target?.value;
+    if (next !== 'Delivered' && next !== 'Open') return;
     await setShipmentStatus(ref, next);
-    if (SHIPS[EDIR][ref]?.status !== 'Delivered') select.value = 'Open';
+  }
+
+  function toggleStatusMenu(ref, btnEl) {
+    const existing = document.querySelector('.fcl-status-menu');
+    if (existing) {
+      const isSame = existing.dataset.ref === ref;
+      existing.remove();
+      if (isSame) return;
+    }
+    const container = btnEl.closest('.fcl-status-container');
+    if (!container) return;
+    const isAr = AR();
+    const menu = document.createElement('div');
+    menu.className = 'fcl-status-menu';
+    menu.dataset.ref = ref;
+    menu.innerHTML = `
+      <button type="button" onclick="event.stopPropagation();__FTL__.setAndCloseStatus('${esc(ref)}', 'Open')">
+        <span class="fcl-status-dot open" style="width:8px;height:8px;border-radius:50%;background:#0284c7;display:inline-block"></span>
+        <span>${isAr ? 'قيد التنفيذ (Open)' : 'Open'}</span>
+      </button>
+      <button type="button" onclick="event.stopPropagation();__FTL__.setAndCloseStatus('${esc(ref)}', 'Delivered')">
+        <span class="fcl-status-dot delivered" style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block"></span>
+        <span>${isAr ? 'تم التسليم (Delivered)' : 'Delivered'}</span>
+      </button>
+    `;
+    container.appendChild(menu);
+
+    const onDocClick = (e) => {
+      if (!menu.contains(e.target)) {
+        menu.remove();
+        document.removeEventListener('click', onDocClick);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', onDocClick), 0);
+  }
+
+  async function setAndCloseStatus(ref, newStatus) {
+    const existing = document.querySelector('.fcl-status-menu');
+    if (existing) existing.remove();
+    await setShipmentStatus(ref, newStatus);
+  }
+
+  /* ---------- Operation Status History Drawer (Audit Log & Lifecycle Timeline) ---------- */
+  async function openStatusHistory(ref, rowIdx) {
+    if (EDITING && !commitEdit()) return;
+    const dir = EDIR;
+    const ship = SHIPS[dir]?.[ref];
+    const rIdx = (rowIdx != null && rowIdx >= 0) ? rowIdx : (ship?.rows?.[0] ?? -1);
+    const row = rIdx >= 0 ? ENTRY[dir]?.[rIdx] : null;
+    const meta = rIdx >= 0 ? ROWMETA[dir]?.[rIdx] : null;
+
+    const shipRef = ref || meta?.ref || '—';
+    const clientName = (row && (row.client || cellVal(row, 'client'))) || (meta && meta.client) || '—';
+    const currentStatus = ship?.status || 'Open';
+    const isDelivered = currentStatus === 'Delivered';
+
+    // Update Header labels for current language
+    const isAr = AR();
+    if ($('ftlStatusHistTitle')) $('ftlStatusHistTitle').textContent = isAr ? 'سجل وتاريخ حالات الشحنة' : 'Operation Status History';
+    if ($('ftlStatusHistSub')) $('ftlStatusHistSub').textContent = 'Audit Log & Lifecycle Timeline';
+    if ($('ftlStatusHistRefLbl')) $('ftlStatusHistRefLbl').textContent = isAr ? 'الشحنة / البوليصة' : 'Shipment / BL';
+    if ($('ftlStatusHistClientLbl')) $('ftlStatusHistClientLbl').textContent = isAr ? 'العميل' : 'Client';
+    if ($('ftlStatusHistStatusLbl')) $('ftlStatusHistStatusLbl').textContent = isAr ? 'الحالة الحالية' : 'Current';
+    if ($('ftlStatusHistFooterText')) $('ftlStatusHistFooterText').textContent = isAr ? 'سجل غير قابل للتعديل (Audit Log)' : 'Immutable Audit Log';
+    if ($('ftlStatusHistCloseBtn')) $('ftlStatusHistCloseBtn').textContent = isAr ? 'إغلاق' : 'Close';
+
+    // Populate Info Bar
+    if ($('ftlStatusHistRef')) $('ftlStatusHistRef').textContent = shipRef;
+    if ($('ftlStatusHistClient')) $('ftlStatusHistClient').textContent = clientName;
+    if ($('ftlStatusHistStatusBadge')) {
+      const badge = $('ftlStatusHistStatusBadge');
+      badge.className = `ftl-sh-status-pill ${isDelivered ? 'delivered' : 'open'}`;
+      if ($('ftlStatusHistStatusDot')) {
+        $('ftlStatusHistStatusDot').className = `ftl-sh-status-dot ${isDelivered ? 'delivered' : 'open'}`;
+      }
+      if ($('ftlStatusHistStatusText')) {
+        $('ftlStatusHistStatusText').textContent = isDelivered ? (t('workflow')?.delivered || 'Delivered') : (t('workflow')?.open || 'Open');
+      }
+    }
+
+    // Helper to format date matching FCL image 2: "03-NOV-2026 - 09:00"
+    function fmtStatusDateTime(val) {
+      if (!val) return '';
+      try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return String(val);
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const day = String(d.getDate()).padStart(2, '0');
+        const mmm = months[d.getMonth()];
+        const yyyy = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${day}-${mmm}-${yyyy} - ${hh}:${mm}`;
+      } catch (e) {
+        return String(val);
+      }
+    }
+
+    // Helper to resolve user name (clean up UUIDs if present)
+    function resolveUserName(rawVal, fallback) {
+      if (!rawVal) return fallback || OP_USER || (isAr ? 'فريق العمليات' : 'Operations Team');
+      const str = String(rawVal).trim();
+      const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      if (isGuid) {
+        return fallback || OP_USER || (isAr ? 'فريق العمليات' : 'Operations Team');
+      }
+      return str;
+    }
+
+    // Base "Operation Created" event
+    const createdUser = resolveUserName(ship?.user || meta?.user || OP_USER);
+    let createdTimestamp = '';
+    if (meta?.day && meta?.at) {
+      try {
+        createdTimestamp = fmtStatusDateTime(`${meta.day}T${meta.at}`);
+      } catch (e) {
+        createdTimestamp = `${meta.day} ${meta.at}`;
+      }
+    } else if (ship?.day && ship?.time) {
+      try {
+        createdTimestamp = fmtStatusDateTime(`${ship.day}T${ship.time}`);
+      } catch (e) {
+        createdTimestamp = `${ship.day} ${ship.time}`;
+      }
+    } else {
+      createdTimestamp = fmtStatusDateTime(new Date());
+    }
+
+    const defaultEvents = [
+      {
+        id: 'created',
+        type: 'Created',
+        title: isAr ? 'إنشاء العملية (Created)' : 'Operation Created',
+        userName: createdUser,
+        timestamp: createdTimestamp,
+        sortTime: (meta?.day && meta?.at) ? new Date(`${meta.day}T${meta.at}`).getTime() : 0,
+        color: 'created',
+      }
+    ];
+
+    if (isDelivered) {
+      defaultEvents.unshift({
+        id: 'delivered_current',
+        type: 'Delivered',
+        title: isAr ? 'تم التسليم (Delivered)' : 'Marked as Delivered',
+        userName: resolveUserName(ship?.deliveredBy || ship?.user || OP_USER),
+        timestamp: fmtStatusDateTime(ship?.deliveredAt || new Date()),
+        sortTime: Date.now(),
+        color: 'delivered',
+      });
+    }
+
+    // Render local/cached events immediately so drawer opens instantaneously
+    renderStatusTimeline(defaultEvents);
+    $('ftlStatusHistoryModal').classList.add('open');
+
+    // Asynchronously fetch status audits from backend FtlStatusAudits table
+    try {
+      let audits = null;
+      if (ILS.api?.getStatusAudits) {
+        try {
+          audits = await ILS.api.getStatusAudits(shipRef);
+        } catch (e) {
+          // ignore
+        }
+      }
+
+      if (!audits) {
+        const token = localStorage.getItem('token') || '';
+        const headers = { 'Accept': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        try {
+          const res = await fetch(`/api/v1/ftl/operations/${encodeURIComponent(shipRef)}/status-audits`, { headers });
+          if (res.ok) audits = await res.json();
+        } catch (e) {}
+
+        if (!audits) {
+          try {
+            const res = await fetch(`/api/operations/ftl/${encodeURIComponent(shipRef)}/status-audits`, { headers });
+            if (res.ok) audits = await res.json();
+          } catch (e) {}
+        }
+      }
+
+      if (Array.isArray(audits) && audits.length > 0) {
+        const events = audits.map((a, idx) => {
+          const isDeliv = a.afterStatus === 'Delivered';
+          const isReopen = a.afterStatus === 'Open' && a.beforeStatus === 'Delivered';
+          const type = isDeliv ? 'Delivered' : (isReopen ? 'Reopened' : 'StatusChange');
+          let title = '';
+          if (isDeliv) {
+            title = isAr ? 'تم التسليم (Delivered)' : 'Marked as Delivered';
+          } else if (isReopen) {
+            title = isAr ? 'إعادة فتح العملية (Reopened to Open)' : 'Reopened to Open';
+          } else {
+            title = isAr ? `تغيير الحالة إلى ${a.afterStatus}` : `Status changed to ${a.afterStatus}`;
+          }
+
+          return {
+            id: a.id || `audit_${idx}`,
+            type,
+            title,
+            userName: resolveUserName(a.userName || a.userId, createdUser),
+            timestamp: fmtStatusDateTime(a.atUtc),
+            sortTime: new Date(a.atUtc || 0).getTime(),
+            reason: a.reason || null,
+            color: isDeliv ? 'delivered' : (isReopen ? 'reopened' : 'other'),
+          };
+        });
+
+        // Ensure "Operation Created" is present
+        const hasCreated = events.some(e => e.type === 'Created');
+        if (!hasCreated) {
+          events.push(defaultEvents[defaultEvents.length - 1]);
+        }
+
+        // Sort descending by timestamp
+        events.sort((a, b) => (b.sortTime || 0) - (a.sortTime || 0));
+        renderStatusTimeline(events);
+      }
+    } catch (err) {
+      console.warn('Could not fetch FTL status audits:', err);
+    }
+  }
+
+  function renderStatusTimeline(events) {
+    const body = $('ftlStatusHistBody');
+    if (!body) return;
+    const isAr = AR();
+
+    if (!events || events.length === 0) {
+      body.innerHTML = `
+        <div style="padding:80px 20px;text-align:center;color:#94a3b8;font-size:12px">
+          <div style="font-size:32px;margin-bottom:8px;opacity:0.4">🕒</div>
+          <div>${isAr ? 'لا يوجد سجلات سابقة مسجلة' : 'No status history records found'}</div>
+        </div>
+      `;
+      return;
+    }
+
+    let html = `
+      <div class="ftl-sh-timeline-wrap">
+        <div class="ftl-sh-line"></div>
+        <div class="ftl-sh-list">
+    `;
+
+    events.forEach(item => {
+      const isDelivered = item.type === 'Delivered';
+      const isReopened = item.type === 'Reopened';
+      const isCreated = item.type === 'Created';
+
+      let nodeClass = 'created';
+      let iconSvg = '';
+      if (isDelivered) {
+        nodeClass = 'delivered';
+        iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      } else if (isReopened) {
+        nodeClass = 'reopened';
+        iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`;
+      } else if (isCreated) {
+        nodeClass = 'created';
+        iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`;
+      } else {
+        nodeClass = 'other';
+        iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+      }
+
+      html += `
+        <div class="ftl-sh-item">
+          <!-- Timeline Node Badge -->
+          <div class="ftl-sh-node ${nodeClass}">
+            ${iconSvg}
+          </div>
+
+          <!-- Event Card -->
+          <div class="ftl-sh-card">
+            <div class="ftl-sh-card-top">
+              <span class="ftl-sh-card-title ${nodeClass}">${esc(item.title)}</span>
+              <span class="ftl-sh-card-time">${esc(item.timestamp || (isAr ? 'غير محدد' : 'Unknown'))}</span>
+            </div>
+            <div class="ftl-sh-card-user">
+              <span class="by-lbl">${isAr ? 'بواسطة:' : 'By:'}</span>
+              <span class="user-badge">${esc(item.userName)}</span>
+            </div>
+            ${item.reason ? `
+              <div class="ftl-sh-card-reason">
+                <span class="reason-lbl">${isAr ? 'سبب إعادة الفتح:' : 'Reopen Reason:'}</span>
+                <span class="reason-txt">"${esc(item.reason)}"</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
+    });
+
+    html += `
+        </div>
+      </div>
+    `;
+
+    body.innerHTML = html;
   }
   let DELIVERED_PAGE = 0;
   let REOPEN_GRANTED = false;
@@ -4206,7 +4709,7 @@ export function createFtlEngine(root, options = {}) {
       b.querySelector('.lbl').textContent = dirLabel(b.dataset.dir); b.querySelector('.cnt').textContent = fmtN(tripRows(b.dataset.dir).length);
     });
     $('eHead').innerHTML = `<tr>${cols.map(c =>
-      `<th style="--gc:${GROUPS[c.g].c};--w:${c.w}px" title="${AR() ? (c.ar || c.h) : c.h}"><span>${AR() ? (c.ar || c.h) : c.h}<small class="dtype">${tripTypeLabel(tripType(c))}</small></span>${isLocked(dir, c) ? '<i class="lk" title="' + E.lockedTip + '">🔒</i>' : ''}</th>`).join('')}<th class="meta" style="--w:160px"><span>${E.colMeta}</span></th><th class="select-head" style="--w:68px"><span>${AR() ? 'تحديد' : 'Select'}</span></th></tr>`;
+      `<th style="--gc:${GROUPS[c.g].c};--w:${c.w}px" title="${AR() ? (c.ar || c.h) : c.h}"><span>${AR() ? (c.ar || c.h) : c.h}<small class="dtype">${tripTypeLabel(tripType(c))}</small></span>${isLocked(dir, c) ? '<i class="lk" title="' + E.lockedTip + '">🔒</i>' : ''}</th>`).join('')}<th class="actions-head" style="--gc:#8fa3b4;--w:115px"><span>${AR() ? 'الإجراءات' : 'Actions'}</span></th><th class="meta" style="--gc:#8fa3b4;--w:170px"><span>${AR() ? 'العملية والمدخل' : 'Operation / entered'}</span></th><th class="select-head" style="--w:68px"><span>${AR() ? 'تحديد' : 'Select'}</span></th></tr>`;
     const rows = ENTRY[dir];
     const visible = sortedTripShips(dir).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive');
     const pages = shipmentPages(visible);
@@ -4243,7 +4746,7 @@ export function createFtlEngine(root, options = {}) {
         if (sp.start !== ri) return;                             /* covered by the rowspan of the group's first row */
         const merged = sp.len > 1;
         const v = String(r[c.k] ?? '');
-        const locked = isLocked(dir, c);
+        const locked = isLocked(dir, c, i);
         const clr = cellVal(r, 'clrType');
         const dimmed = (c.k === 'cert' && clr === 'BOSLA') || (c.k === 'customs' && clr !== 'BOSLA');   /* CERT → Certificate Number · BOSLA → Customs Area */
         const cur = CURSOR.r === i && CURSOR.k === c.k;
@@ -4256,8 +4759,6 @@ export function createFtlEngine(root, options = {}) {
                     ${u.length ? `<span class="updn">${u.length}</span>` : ''}</button>`;
         } else if (editing) {
           inner = editorHTML(c, v, i);
-        } else if (['driver', 'mob'].includes(c.k) && v.trim()) {
-          inner = `<span class="cv"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'عرض بيان حمولة العربية (Truck Manifest)' : 'View Truck Manifest'}">🚚 ${esc(displayValue(c, v))}</span></span>`;
         } else if (c.k === 'cntr') {
           let extraBadges = '';
           const isMergedTruck = merged && sp.len > 1;
@@ -4274,26 +4775,29 @@ export function createFtlEngine(root, options = {}) {
           const shareIdx = isUnassignedTruck ? 0 : allTruckRows.indexOf(i) + 1;
 
           if (isMergedTruck) {
-            extraBadges += `<div class="shared-truck-tag" style="background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;margin-top:3px;display:inline-flex;align-items:center;gap:4px;" title="${AR() ? `عربة موحدة مشتركة بين ${sp.len} شحنات` : `Unified truck carrying ${sp.len} shipments`}"><span class="shared-truck-dot" style="background:#3b82f6;width:6px;height:6px;border-radius:50%;display:inline-block"></span>🚚 ${AR() ? `عربة موحدة مدموجة` : `Merged Truck`}</div>`;
+            extraBadges += `<span class="shared-truck-tag" style="background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1;font-size:9.5px;font-weight:750;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `عربة موحدة مدموجة بين ${sp.len} شحنات` : `Unified truck carrying ${sp.len} shipments`}"><span class="shared-truck-dot" style="background:#3b82f6;width:5px;height:5px;border-radius:50%;display:inline-block"></span>🚚 ${AR() ? `عربة موحدة مدموجة` : `Merged Truck`}</span>`;
           } else if (totalShares > 1) {
-            extraBadges += `<div class="shared-truck-tag multi" title="${AR() ? `هذه الشاحنة (${esc(cleanPlate || trkNo)}) مشتركة في ${totalShares} شحنات، وهذه الحصة رقم (${shareIdx} من ${totalShares})` : `Shared truck (${shareIdx} of ${totalShares})`}"><span class="shared-truck-dot"></span>${AR() ? `مشتركة [حصة ${shareIdx} من ${totalShares}]` : `Shared [${shareIdx}/${totalShares}]`}</div>`;
+            extraBadges += `<span class="shared-truck-tag multi" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:9.5px;font-weight:750;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `هذه الشاحنة مشتركة في ${totalShares} شحنات [حصة ${shareIdx} من ${totalShares}]` : `Shared truck (${shareIdx} of ${totalShares})`}"><span class="shared-truck-dot" style="background:#2563eb;width:5px;height:5px;border-radius:50%;display:inline-block"></span>${AR() ? `مشتركة [${shareIdx}/${totalShares}]` : `Shared [${shareIdx}/${totalShares}]`}</span>`;
           }
 
           const quickColoadBtn = (!isUnassignedTruck && ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1)
-            ? `<button type="button" class="quick-coload-btn" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'تحميل مشترك / تقسيم حمولة العربة' : 'Co-load / Split truck load'}" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:10px;font-weight:750;border-radius:4px;padding:1px 5px;margin-inline-start:4px;cursor:pointer">+ ${AR() ? 'مشترك' : 'Co-load'}</button>`
+            ? `<button type="button" class="quick-coload-btn" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'تحميل مشترك / تقسيم حمولة العربة' : 'Co-load / Split truck load'}" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:9.5px;font-weight:750;border-radius:4px;padding:1px 5px;cursor:pointer">+ ${AR() ? 'مشترك' : 'Co-load'}</button>`
             : '';
 
           const isSGreaterTruck = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
           const trkLoadedTotal = isUnassignedTruck ? 0 : (isSGreaterTruck ? (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0) : allTruckRows.reduce((acc, rx) => acc + (parseInt(normalizeDigits(rows[rx]?.loadedPackages || '0'), 10) || 0), 0));
           const trkLoadBadge = trkLoadedTotal > 0
-            ? `<div class="trk-total-pkgs-pill" style="margin-top:3px;font-size:10.5px;font-weight:800;color:#0369a1;background:#f0f9ff;border:1px solid #7dd3fc;border-radius:10px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;" title="${AR() ? `إجمالي ما تحمله الشاحنة بالكامل من كل الشحنات: ${trkLoadedTotal} طرد` : `Truck total cargo: ${trkLoadedTotal} pkgs`}">📦 ${AR() ? 'إجمالي الحمولة:' : 'Load:'} <b>${trkLoadedTotal}</b> ${AR() ? 'طرد' : 'pkgs'}</div>`
+            ? `<span class="trk-total-pkgs-pill" style="font-size:9.5px;font-weight:750;color:#0369a1;background:#f0f9ff;border:1px solid #7dd3fc;border-radius:5px;padding:1px 5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `إجمالي ما تحمله الشاحنة: ${trkLoadedTotal} طرد` : `Truck total cargo: ${trkLoadedTotal} pkgs`}">📦 ${AR() ? 'الحمولة:' : 'Load:'} <b>${trkLoadedTotal}</b></span>`
             : '';
 
           const fallbackTrk = (trkNo && trkNo > 0) ? (AR() ? `شاحنة ${trkNo}` : `Truck ${trkNo}`) : '';
           const trkText = esc(displayValue(c, v)) || (fallbackTrk ? `<span style="font-weight:750;color:#0b4f7a">${fallbackTrk}</span>` : (isUnassignedTruck ? `<span style="color:#94a3b8;font-size:11px;font-style:italic">⏳ ${AR() ? 'في انتظار التعيين' : 'Unassigned'}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'));
           const clickAttr = isUnassignedTruck ? '' : `onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})"`;
           const clickTitle = isUnassignedTruck ? (AR() ? 'في انتظار تعيين شاحنة لهذه الشحنة' : 'Unassigned') : (AR() ? 'عرض بيان حمولة العربية (Truck Manifest)' : 'View Truck Manifest');
-          inner = `<span class="cv"><span class="clickable-cell-badge" ${clickAttr} title="${clickTitle}">🚚 ${trkText}</span>${quickColoadBtn}${extraBadges}${trkLoadBadge}</span>`;
+
+          const badgesRow = (extraBadges || trkLoadBadge) ? `<div style="display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap;margin-top:2px">${extraBadges}${trkLoadBadge}</div>` : '';
+
+          inner = `<span class="cv" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:4px"><div style="display:inline-flex;align-items:center;justify-content:center;gap:5px"><span class="clickable-cell-badge" ${clickAttr} title="${clickTitle}" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-weight:750;border-radius:9px;font-size:12px;background:#f0f9ff;border:1px solid #7dd3fc;color:#0369a1;cursor:pointer;white-space:nowrap">🚚 <span>${trkText}</span></span>${quickColoadBtn}</div>${badgesRow}</span>`;
         } else if (c.k === 'loadedPackages') {
           const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
           let trkLoadedTotal = 0;
@@ -4346,12 +4850,9 @@ export function createFtlEngine(root, options = {}) {
           }
           inner = `<span class="cv"><span class="val">${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>${shpBalBadge}</span>`;
         } else if (c.k === 'shipNo') {
-          const sIdx = ship?.shpSpans ? ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l) : -1;
-          const fallbackShp = sIdx >= 0 ? (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`) : '';
-          const disp = esc(displayValue(c, v)) || (fallbackShp ? `<span style="font-weight:750;color:#0284c7">${fallbackShp}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>');
-          inner = `<span class="cv"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض بيان توزيع الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}">📦 ${disp}</span></span>`;
-        } else if (['bl', 'booking', 'hawb', 'client'].includes(c.k) && v.trim()) {
-          inner = `<span class="cv"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض بيان توزيع الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}">📦 ${esc(displayValue(c, v))}</span></span>`;
+          const valText = esc(displayValue(c, v));
+          const disp = valText ? `<span>${valText}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>';
+          inner = `<span class="cv" style="display:flex;align-items:center;justify-content:center;width:100%"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض بيان توزيع الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:9px;font-weight:750;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b;cursor:pointer;white-space:nowrap">📦 ${disp}</span></span>`;
         } else if (c.k === 'loadStatus') {
           const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
           if (isSGreater) {
@@ -4385,7 +4886,19 @@ export function createFtlEngine(root, options = {}) {
           inner = `<span class="cv">${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>`;
         }
         if (c.k === 'status' && first && ship) {
-          inner = `<select class="status-select" aria-label="${AR() ? 'حالة الشحنة' : 'Shipment status'}" onchange="__FTL__.changeShipmentStatus(this,'${ship.ref}')" onclick="event.stopPropagation()"><option value="Open" selected>${t('workflow').open}</option><option value="Delivered">${t('workflow').delivered}</option></select>`;
+          const isDelivered = (ship.status || 'Open') === 'Delivered';
+          inner = `
+            <div class="fcl-status-container" onclick="event.stopPropagation()">
+              <button type="button" class="fcl-status-pill ${isDelivered ? 'delivered' : 'open'}" onclick="__FTL__.toggleStatusMenu('${esc(ship.ref)}', this)" title="${AR() ? 'تغيير حالة الشحنة' : 'Change status'}">
+                <span class="fcl-status-dot ${isDelivered ? 'delivered' : 'open'}"></span>
+                <span class="fcl-status-text">${isDelivered ? (t('workflow')?.delivered || 'Delivered') : (t('workflow')?.open || 'Open')}</span>
+                <span style="font-size:9px;margin-inline-start:2px;opacity:0.7">▾</span>
+              </button>
+              <button type="button" class="fcl-status-history-btn" onclick="__FTL__.openStatusHistory('${esc(ship.ref)}', ${ship.rows[0]})" title="${AR() ? 'سجل وتاريخ تغيرات الحالة (Status History Timeline)' : 'Status History Timeline'}" style="width:26px;height:26px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #cbd5e1;background:#ffffff;color:#64748b;cursor:pointer;transition:all 0.15s;flex-shrink:0" onmouseover="this.style.color='#0284c7';this.style.borderColor='#93c5fd'" onmouseout="this.style.color='#64748b';this.style.borderColor='#cbd5e1'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+              </button>
+            </div>
+          `;
         }
         const mergeBtn = (ship && span > 1 && canToggleMerge(dir, c))
           ? `<button class="mg" title="${merged ? E.unmergeTip : E.mergeTip}" onclick="event.stopPropagation();__FTL__.toggleMerge('${ship.ref}','${c.k}')">${merged ? '⧉' : '⊞'}</button>` : '';
@@ -4410,7 +4923,55 @@ export function createFtlEngine(root, options = {}) {
             reconHtml = `<div class="op-recon-pill unloaded" title="${AR() ? 'إجمالي طرود العملية للتحميل' : 'Operation packages to load'}">📦 ${AR() ? `${recon.totalShipmentPkgs} طرد للتحميل` : `${recon.totalShipmentPkgs} pkgs to load`}</div>`;
           }
         }
-        tr += `<td class="meta" rowspan="${span}"><span class="cbox">${m ? `${m.ref}<br>${fmtDay(m.day)} · ${m.at}<br><b>${esc(m.user)}</b>` : '—'}${reconHtml}<button type="button" class="delbtn" onclick="event.stopPropagation();__FTL__.delShip('${esc(ship.ref)}',${i})" title="${AR() ? 'نقل إلى الأرشيف غير النشط' : 'Move to Inactive Archive'}" style="margin-top:5px;background:#fff1f2;border:1px solid #fecdd3;color:#e11d48;font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px;cursor:pointer;display:inline-flex;align-items:center;gap:3px">🗑️ ${AR() ? 'حذف' : 'Delete'}</button></span></td><td class="select-last" rowspan="${span}"><button type="button" class="ship-select" data-ref="${esc(ship.ref)}" aria-pressed="${TRIP_SELECTED[dir].has(ship.ref)}" aria-label="${AR() ? 'تحديد الشحنة ' : 'Select shipment '}${esc(ship.ref)}">${TRIP_SELECTED[dir].has(ship.ref) ? '✓' : '□'}</button></td>`;
+        const isEditingThis = ACTIVE_EDIT_SHIPS.has(ship.ref);
+        const isSavingThis = SAVING_SHIPS.has(ship.ref);
+        const hasDraft = !isEditingThis && Boolean(localStorage.getItem('ftl_draft_' + ship.ref));
+
+        let opControls = '';
+        if (isEditingThis) {
+          opControls = `
+            <button type="button" class="save-edit-btn" onclick="event.stopPropagation();__FTL__.saveShipmentEdits('${esc(ship.ref)}')" ${isSavingThis ? 'disabled' : ''} style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;max-width:95px;padding:6px 10px;border-radius:8px;font-size:11.5px;font-weight:750;background:#10b981;color:#ffffff;border:none;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,0.06)">
+              ${isSavingThis ? (AR() ? '⏳ جاري الحفظ...' : 'Saving...') : '💾 ' + (AR() ? 'حفظ' : 'Save')}
+            </button>
+            <button type="button" class="cancel-edit-btn" onclick="event.stopPropagation();__FTL__.cancelEditShipment('${esc(ship.ref)}')" ${isSavingThis ? 'disabled' : ''} style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;max-width:95px;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;cursor:pointer">
+              ✕ ${AR() ? 'إلغاء' : 'Cancel'}
+            </button>
+          `;
+        } else {
+          const draftBadge = hasDraft
+            ? `<button type="button" onclick="event.stopPropagation();__FTL__.restoreDraft('${esc(ship.ref)}')" style="width:100%;max-width:95px;font-size:9.5px;font-weight:750;background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:2px 4px;border-radius:6px;cursor:pointer">📝 ${AR() ? 'استرجاع المسودة' : 'Restore Draft'}</button>`
+            : '';
+
+          opControls = `
+            <button type="button" class="start-edit-btn" onclick="event.stopPropagation();__FTL__.startEditShipment('${esc(ship.ref)}')" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%;max-width:95px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#f0f9ff;color:#0369a1;border:1px solid #7dd3fc;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              <span>${AR() ? 'تعديل' : 'Edit'}</span>
+            </button>
+            <button type="button" class="delbtn" onclick="event.stopPropagation();__FTL__.delShip('${esc(ship.ref)}',${i})" title="${AR() ? 'حذف هذه الشحنة ونقلها للمحذوفات' : 'Delete shipment'}" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;max-width:95px;padding:4.5px 8px;border-radius:8px;font-size:11.5px;font-weight:650;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              <span>${AR() ? 'حذف' : 'Delete'}</span>
+            </button>
+            ${draftBadge}
+          `;
+        }
+
+        const actionsTd = `
+          <td class="actions-td" rowspan="${span}" style="width:115px;vertical-align:middle;text-align:center;padding:4px">
+            <div class="fcl-actions-cell" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;width:100%">
+              ${opControls}
+            </div>
+          </td>
+        `;
+
+        const opCard = `
+          <div class="fcl-op-card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;border-radius:16px;border:1px solid rgba(226, 232, 240, 0.9);background:linear-gradient(to bottom, #ffffff, rgba(240, 249, 255, 0.45));box-shadow:0 1px 3px rgba(6, 42, 74, 0.05);text-align:center;width:100%;min-height:58px;box-sizing:border-box">
+            <span class="fcl-op-ref" style="font-size:12px;font-weight:700;color:#334155;letter-spacing:-0.01em">${esc(m?.ref || ship.ref)}</span>
+            <span class="fcl-op-date" style="font-size:10px;color:#64748b;margin:2px 0;font-weight:500">${m ? `${fmtDay(m.day)} · ${esc(m.at)}` : ''}</span>
+            <span class="fcl-op-user" style="font-size:12px;font-weight:800;color:#0f172a">${esc(m?.user || '—')}</span>
+          </div>
+        `;
+
+        tr += `${actionsTd}<td class="meta" rowspan="${span}" style="width:170px;vertical-align:middle;padding:4px"><span class="cbox" style="flex-direction:column;align-items:stretch;padding:0;min-width:160px;height:auto;border:none;background:transparent;box-shadow:none">${opCard}</span></td><td class="select-last" rowspan="${span}"><button type="button" class="ship-select" data-ref="${esc(ship.ref)}" aria-pressed="${TRIP_SELECTED[dir].has(ship.ref)}" aria-label="${AR() ? 'تحديد الشحنة ' : 'Select shipment '}${esc(ship.ref)}">${TRIP_SELECTED[dir].has(ship.ref) ? '✓' : '□'}</button></td>`;
       }
       tr += '</tr>'; html.push(tr);
       if (last) {
@@ -4511,11 +5072,253 @@ export function createFtlEngine(root, options = {}) {
       return `<select class="ed" data-r="${i}" data-k="${c.k}"><option value=""></option>${cur && !opts.includes(cur) ? `<option selected>${esc(cur)}</option>` : ''}
         ${opts.map(o => `<option value="${esc(o)}"${o === cur ? ' selected' : ''}>${esc(o)}</option>`).join('')}${FIXED_LISTS.has(c.src) ? '' : `<option value="${ADD_NEW}">＋ ${E.addNew}</option>`}</select>`;
     }
-    if (c.t === 'date') return `<span class="datetime-control"><input class="ed" type="text" dir="ltr" value="${esc(fmtDay(v))}" placeholder="${AR() ? '24-09-2026' : 'DD-MMM-YYYY'}" data-r="${i}" data-k="${c.k}" autocomplete="off"><button type="button" class="pickdate" onclick="event.stopPropagation();__FTL__.openNativeDate(this)" title="${AR() ? 'اختيار من التقويم' : 'Choose from calendar'}">▦</button><input class="native-date" type="date" tabindex="-1" aria-hidden="true"></span>`;
-    if (c.t === 'time') return `<span class="datetime-control"><input class="ed" type="text" dir="ltr" inputmode="numeric" placeholder="HH:mm (24h)" maxlength="5" value="${esc(normTime(v) || v)}" data-r="${i}" data-k="${c.k}" autocomplete="off"><button type="button" class="pickdate picktime" onclick="event.stopPropagation();__FTL__.openTimePicker(this)" title="${AR() ? 'اختيار الوقت بنظام 24 ساعة' : 'Choose 24-hour time'}">◷</button></span>`;
+    if (c.t === 'date') return `<span class="datetime-control"><input class="ed" type="text" dir="ltr" value="${esc(fmtDay(v))}" placeholder="${AR() ? 'مثال: 1/11 أو 24-09-2026' : 'DD-MMM-YYYY (e.g. 1/11)'}" data-r="${i}" data-k="${c.k}" autocomplete="off"><button type="button" class="pickdate" onclick="event.stopPropagation();__FTL__.openNativeDate(this)" title="${AR() ? 'اختيار من التقويم' : 'Choose from calendar'}">${CAL_ICON_SVG}</button><input class="native-date sr-only" type="date" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"></span>`;
+    if (c.t === 'time') return `<span class="datetime-control"><input class="ed" type="text" dir="ltr" inputmode="text" placeholder="${AR() ? 'مثال: 8 أو 2p أو 14:30' : 'e.g. 8 or 2p or 14:30'}" value="${esc(fmtTime12(v))}" data-r="${i}" data-k="${c.k}" autocomplete="off"><button type="button" class="pickdate picktime" onclick="event.stopPropagation();__FTL__.openTimePicker(this)" title="${AR() ? 'اختيار الوقت' : 'Choose time'}">${CLK_ICON_SVG}</button><input class="native-time sr-only" type="time" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;"></span>`;
     const type = c.t === 'num' ? 'number' : 'text';
     return `<input class="ed" type="${type}" ${c.t === 'time' || NUMERIC_ID_KEYS.has(c.k) ? 'inputmode="numeric"' : ''} ${c.t === 'time' ? 'placeholder="HH:mm (24h)" maxlength="5"' : ''} value="${esc(c.t === 'time' ? normTime(v) || v : v)}" data-r="${i}" data-k="${c.k}" autocomplete="off" spellcheck="false">`;
   }
+  /* Soft Concurrency & Edit Lifecycle Management (Matching FCL) */
+  function showConflictModal({ title, message, conflictType, lockerName, onAction, actionLabel }) {
+    const modal = $('ftlConflictModal');
+    if (!modal) {
+      alert(message);
+      return;
+    }
+    const titleEl = $('ftlConflictTitle');
+    const bodyEl = $('ftlConflictBody');
+    const actBtn = $('ftlConflictAction');
+    if (titleEl) titleEl.textContent = title || (AR() ? 'تعارض في قفل العملية' : 'Lock Conflict');
+    if (bodyEl) {
+      bodyEl.innerHTML = `
+        <div style="font-weight:700;margin-bottom:8px;color:#b91c1c">${esc(message)}</div>
+        ${lockerName ? `<div style="font-size:12px;color:#64748b;margin-bottom:4px">${AR() ? 'الموظف المسؤول عن القفل:' : 'Locked by:'} <b>${esc(lockerName)}</b></div>` : ''}
+        <div style="font-size:11.5px;color:#64748b;background:#ffffff;border:1px dashed #cbd5e1;padding:8px;border-radius:6px;margin-top:8px">
+          💡 ${conflictType === 'MODIFIED_BY_OTHER' 
+              ? (AR() ? 'تم إيقاف الحفظ لحماية البيانات من الاستبدال. تم الاحتفاظ بتعديلاتك في مسودة محلية بأمان.' : 'Save halted to prevent overwrite. Changes preserved in local draft.')
+              : (AR() ? 'لا يمكن فتح وضع التعديل طالما العملية محجوزة بواسطة موظف آخر، منعاً لتضارب البيانات.' : 'Operation cannot be edited while locked by another user.')}
+        </div>
+      `;
+    }
+    if (actBtn) {
+      if (onAction && actionLabel) {
+        actBtn.style.display = '';
+        actBtn.textContent = actionLabel;
+        actBtn.onclick = () => { closeM('ftlConflictModal'); onAction(); };
+      } else {
+        actBtn.style.display = 'none';
+      }
+    }
+    modal.style.display = 'flex';
+    modal.classList.add('open');
+  }
+
+  async function startEditShipment(ref) {
+    const dir = EDIR;
+    const ship = SHIPS[dir][ref];
+    if (!ship) return;
+
+    if (LIVE && ILS.api?.lockOperation) {
+      try {
+        const lockRes = await ILS.api.lockOperation(ref);
+        if (lockRes && lockRes.isLocked === false) {
+          showConflictModal({
+            title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
+            message: AR() ? `العملية (${ref}) مقفولة ومحجوزة للتعديل بواسطة: ${lockRes.lockedByName || 'موظف آخر'}` : `Operation is currently locked by ${lockRes.lockedByName || 'another user'}`,
+            conflictType: 'LOCKED_BY_OTHER',
+            lockerName: lockRes.lockedByName
+          });
+          return;
+        }
+      } catch (err) {
+        const errMsg = err?.message || String(err);
+        if (errMsg.includes('locked by') || errMsg.includes('مقفولة')) {
+          showConflictModal({
+            title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
+            message: errMsg,
+            conflictType: 'LOCKED_BY_OTHER'
+          });
+          return;
+        }
+        console.warn('lockOperation error:', err);
+      }
+    }
+
+    OP_SNAPSHOTS[ref] = JSON.parse(JSON.stringify(ship.rows.map(idx => ({ ...ENTRY[dir][idx] }))));
+    ACTIVE_EDIT_SHIPS.add(ref);
+
+    try {
+      const savedDraft = localStorage.getItem(`ftl_draft_${ref}`);
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (Array.isArray(parsed) && parsed.length === ship.rows.length) {
+          toast(AR() ? `📝 تم استعادة مسودة محلية محفوظة تلقائياً للعملية (${ref})` : `Restored local draft for ${ref}`);
+          ship.rows.forEach((idx, rIdx) => {
+            if (parsed[rIdx]) ENTRY[dir][idx] = { ...parsed[rIdx] };
+          });
+        }
+      }
+    } catch (e) { }
+
+    if (LOCK_HEARTBEATS[ref]) clearInterval(LOCK_HEARTBEATS[ref]);
+    LOCK_HEARTBEATS[ref] = setInterval(() => {
+      if (ACTIVE_EDIT_SHIPS.has(ref) && LIVE && ILS.api?.lockOperation) {
+        ILS.api.lockOperation(ref).catch(err => console.warn('Heartbeat lock renewal failed:', err));
+      }
+    }, 210000);
+
+    renderEntry();
+    toast(AR() ? `✓ تم حجز القفل وفتح وضع التعديل للعملية (${ref})` : `Edit mode activated for ${ref}`);
+
+    const firstRow = ship.rows[0];
+    const firstCol = COLS[dir].find(c => !isLocked(dir, c, firstRow));
+    if (firstCol) setCursor(firstRow, firstCol.k, true);
+  }
+
+  async function saveShipmentEdits(ref) {
+    const dir = EDIR;
+    const ship = SHIPS[dir][ref];
+    if (!ship) return;
+    if (EDITING && !commitEdit()) return;
+
+    SAVING_SHIPS.add(ref);
+    renderEntry();
+
+    let saveSuccess = false;
+    try {
+      const opData = serializeSingleShipment(dir, ref);
+      if (LIVE) {
+        if (ILS.api?.updateOperation) {
+          const result = await ILS.api.updateOperation(ref, opData);
+          if (result?.version !== undefined && result?.version !== null) {
+            WORKSPACE_VERSION = result.version;
+          }
+          saveSuccess = true;
+        } else if (ILS.api?.updateShipment) {
+          const result = await ILS.api.updateShipment(ref, opData);
+          if (result?.version !== undefined && result?.version !== null) {
+            WORKSPACE_VERSION = result.version;
+          }
+          saveSuccess = true;
+        } else {
+          saveSuccess = true;
+        }
+      } else {
+        saveSuccess = true;
+      }
+    } catch (err) {
+      if (err.status === 409 || String(err.message || '').includes('conflict') || String(err.message || '').includes('changed on the server')) {
+        showConflictModal({
+          title: AR() ? 'تعارض في حفظ البيانات' : 'Save Conflict',
+          message: AR() ? 'قام موظف آخر بتعديل وحفظ هذه الشحنة أثناء عملك. تم إيقاف الحفظ لحماية البيانات، وتم الاحتفاظ بتعديلاتك في مسودة محلية بأمان.' : 'Another user modified and saved this shipment. Save stopped to prevent overwriting.',
+          conflictType: 'MODIFIED_BY_OTHER'
+        });
+        SAVING_SHIPS.delete(ref);
+        renderEntry();
+        return;
+      } else {
+        toast(AR() ? '⚠️ تعذر الاتصال بالسيرفر. تم الاحتفاظ بتعديلاتك في مسودة محلية بأمان. اضغط حفظ لإعادة المحاولة.' : 'Could not save. Changes preserved in local draft.');
+        SAVING_SHIPS.delete(ref);
+        renderEntry();
+        return;
+      }
+    }
+
+    if (saveSuccess) {
+      try {
+        localStorage.removeItem(`ftl_draft_${ref}`);
+      } catch (e) {}
+
+      if (LIVE && ILS.api?.unlockOperation) {
+        try {
+          await ILS.api.unlockOperation(ref);
+        } catch (e) {
+          console.warn('Unlock error on save:', e);
+        }
+      }
+
+      if (LOCK_HEARTBEATS[ref]) {
+        clearInterval(LOCK_HEARTBEATS[ref]);
+        delete LOCK_HEARTBEATS[ref];
+      }
+
+      delete OP_SNAPSHOTS[ref];
+      ACTIVE_EDIT_SHIPS.delete(ref);
+      SAVING_SHIPS.delete(ref);
+      SAVED_AT = new Date();
+      DIRTY = false;
+
+      renderEntry();
+      toast(AR() ? `✓ تم حفظ تعديلات العملية (${ref}) بنجاح وفك القفل` : `Saved ${ref} successfully`);
+    }
+  }
+
+  async function cancelEditShipment(ref) {
+    const dir = EDIR;
+    const ship = SHIPS[dir][ref];
+    if (!ship) return;
+
+    if (OP_SNAPSHOTS[ref]) {
+      const isDirty = JSON.stringify(ship.rows.map(idx => ENTRY[dir][idx])) !== JSON.stringify(OP_SNAPSHOTS[ref]);
+      if (isDirty) {
+        if (!confirm(AR() ? 'هل أنت متأكد من إلغاء التعديلات والتراجع عن التغييرات غير المحفوظة؟' : 'Discard unsaved changes?')) {
+          return;
+        }
+      }
+      ship.rows.forEach((idx, rIdx) => {
+        if (OP_SNAPSHOTS[ref][rIdx]) {
+          ENTRY[dir][idx] = { ...OP_SNAPSHOTS[ref][rIdx] };
+        }
+      });
+      delete OP_SNAPSHOTS[ref];
+    }
+
+    try {
+      localStorage.removeItem(`ftl_draft_${ref}`);
+    } catch (e) {}
+
+    if (LIVE && ILS.api?.unlockOperation) {
+      try {
+        await ILS.api.unlockOperation(ref);
+      } catch (e) {
+        console.warn('Unlock on cancel error:', e);
+      }
+    }
+
+    if (LOCK_HEARTBEATS[ref]) {
+      clearInterval(LOCK_HEARTBEATS[ref]);
+      delete LOCK_HEARTBEATS[ref];
+    }
+
+    ACTIVE_EDIT_SHIPS.delete(ref);
+    SAVING_SHIPS.delete(ref);
+    EDITING = null;
+    renderEntry();
+    toast(AR() ? `تم إلغاء التعديل وفك قفل العملية (${ref})` : `Edit cancelled for ${ref}`);
+  }
+
+  function restoreDraft(ref) {
+    startEditShipment(ref);
+  }
+
+  __on(window, 'pagehide', () => {
+    if (ACTIVE_EDIT_SHIPS.size > 0 && LIVE) {
+      const token = localStorage.getItem('accessToken');
+      const apiBase = (import.meta.env?.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+      for (const ref of ACTIVE_EDIT_SHIPS) {
+        try {
+          fetch(`${apiBase}/api/v1/ftl/operations/${encodeURIComponent(ref)}/unlock`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {})
+            },
+            keepalive: true
+          });
+        } catch (e) { }
+      }
+    }
+  });
+
   async function delShip(ref, i) {
     const dir = EDIR, E = t('entry');
     const ship = SHIPS[dir][ref];
@@ -4584,17 +5387,21 @@ export function createFtlEngine(root, options = {}) {
       }
     }
   }
-  function startEdit() { if (CURSOR.r < 0 || isLocked(EDIR, COLS[EDIR].find(c => c.k === CURSOR.k))) return; const td = root.querySelector(`#eBody td[data-r="${CURSOR.r}"][data-k="${CURSOR.k}"]`); if (!td || td.classList.contains('locked') || td.classList.contains('dimmed')) return; EDITING = { ...CURSOR }; renderEntry(); }
+  function startEdit() { if (CURSOR.r < 0 || isLocked(EDIR, COLS[EDIR].find(c => c.k === CURSOR.k), CURSOR.r)) return; const td = root.querySelector(`#eBody td[data-r="${CURSOR.r}"][data-k="${CURSOR.k}"]`); if (!td || td.classList.contains('locked') || td.classList.contains('dimmed')) return; EDITING = { ...CURSOR }; renderEntry(); }
   function commitEdit() {
     if (!EDITING) return;
     const el = root.querySelector('#eBody .ed'); const { r, k } = EDITING;
     if (el) {
       let v = el.value;
       const col = COLS[EDIR].find(c => c.k === k);
-      if (isLocked(EDIR, col)) { EDITING = null; renderEntry(); return; }
-      if (v !== ADD_NEW) { const result = validateField(col, v); fieldFeedback(el, result); if (!result.ok) { el.focus(); return false; } v = result.value; }
-      if (v && col.t === 'date') { const parsed = fixDate(v, false); if (!parsed) { toast(AR() ? 'تاريخ غير صحيح' : 'Invalid date'); el.focus(); return; } v = parsed; }
-      if (v && col.t === 'time') { const parsed = normTime(v); if (!parsed) { toast(AR() ? 'اكتب الوقت بنظام 24 ساعة' : 'Enter a 24-hour time'); el.focus(); return; } v = parsed; }
+      if (isLocked(EDIR, col, r)) { EDITING = null; renderEntry(); return; }
+      if (v !== ADD_NEW) {
+        if (v && col.t === 'date') { const parsed = fixDate(v, false); if (!parsed) { toast(AR() ? 'تاريخ غير صحيح (مثال: 1/11 أو 24-09-2026)' : 'Invalid date (e.g. 1/11 or 24-SEP-2026)'); el.focus(); return false; } v = parsed; }
+        if (v && col.t === 'time') { const parsed = normTime(v); if (!parsed) { toast(AR() ? 'اكتب الوقت مثل 8 أو 2p أو 14:30' : 'Enter time (e.g. 8, 2p, 14:30)'); el.focus(); return false; } v = parsed; }
+        const result = validateField(col, v);
+        if (!result.ok) { toast(result.message); el.focus(); return false; }
+        v = result.value;
+      }
       if (v === ADD_NEW) {
         const nv = prompt(t('entry').addNewPrompt); v = nv && nv.trim() ? nv.trim() : (ENTRY[EDIR][r][k] || '');
         if (LIVE && nv?.trim()) {
@@ -4603,8 +5410,11 @@ export function createFtlEngine(root, options = {}) {
           return false;
         }
       }
-      const finalValue = validateField(col, v); fieldFeedback(el, finalValue); if (!finalValue.ok) { el.focus(); return false; } v = finalValue.value;
-      const conflict = cellIdentityConflict(EDIR, r, k, v); if (conflict) { fieldFeedback(el, { ok: false, message: conflict }); el.focus(); return false; }
+      const finalValue = validateField(col, v);
+      if (!finalValue.ok) { toast(finalValue.message); el.focus(); return false; }
+      v = finalValue.value;
+      const conflict = cellIdentityConflict(EDIR, r, k, v);
+      if (conflict) { toast(conflict); el.focus(); return false; }
       if (String(ENTRY[EDIR][r][k] ?? '') !== String(v) && setCell(r, k, v) === false) return false;
     }
     EDITING = null;
@@ -4630,11 +5440,11 @@ export function createFtlEngine(root, options = {}) {
       case 'ArrowUp': e.preventDefault(); moveCursor(-1, 0); break;
       case 'Tab': e.preventDefault(); moveCursor(0, e.shiftKey ? -1 : 1); break;
       case 'Enter': case 'F2': e.preventDefault(); startEdit(); break;
-      case 'Delete': case 'Backspace': { e.preventDefault(); const c = COLS[EDIR].find(x => x.k === CURSOR.k); if (!isLocked(EDIR, c)) { setCell(CURSOR.r, CURSOR.k, ''); renderEntry(); } break; }
+      case 'Delete': case 'Backspace': { e.preventDefault(); const c = COLS[EDIR].find(x => x.k === CURSOR.k); if (!isLocked(EDIR, c, CURSOR.r)) { setCell(CURSOR.r, CURSOR.k, ''); renderEntry(); } break; }
       default:
         if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) { /* start typing = start editing with that character */
           const c = COLS[EDIR].find(x => x.k === CURSOR.k);
-          if (c && !isLocked(EDIR, c) && c.t !== 'date' && c.t !== 'time' && c.t !== 'list') { e.preventDefault(); EDITING = { ...CURSOR }; renderEntry(); const el = root.querySelector('#eBody .ed'); if (el) { el.value = e.key; } }
+          if (c && !isLocked(EDIR, c, CURSOR.r) && c.t !== 'date' && c.t !== 'time' && c.t !== 'list') { e.preventDefault(); EDITING = { ...CURSOR }; renderEntry(); const el = root.querySelector('#eBody .ed'); if (el) { el.value = e.key; } }
         }
     }
   });
@@ -4680,7 +5490,8 @@ export function createFtlEngine(root, options = {}) {
     for (const d of ['Import', 'Export']) {
       if (opts.directions && !opts.directions.includes(d)) continue;
       const included = opts.operations?.[d] ? new Set(opts.operations[d]) : null;
-      const rows = ENTRY[d].map((r, i) => ({ r, i })).filter(({ i }) => !included || included.has(rowShip(d, i)?.ref));
+      const allowedRows = (opts.rowIndices && opts.rowIndices[d]) ? new Set(opts.rowIndices[d]) : null;
+      const rows = ENTRY[d].map((r, i) => ({ r, i })).filter(({ i }) => (!included || included.has(rowShip(d, i)?.ref)) && (!allowedRows || allowedRows.has(i)));
       if (!rows.length) continue;
       const rowNumbers = new Map(rows.map(({ i }, position) => [i, position + 2]));
       const pick = (opts.columns && opts.columns[d]) ? COLS[d].filter(c => opts.columns[d].includes(c.k)) : COLS[d].filter(c => c.t !== 'upd');
@@ -4784,8 +5595,32 @@ export function createFtlEngine(root, options = {}) {
       </div>
       <div class="pickhead pickcreated"><label for="${prefix}CFrom">${AR() ? 'تاريخ إنشاء العملية من' : 'Operation created from'}</label><input type="date" id="${prefix}CFrom" class="${prefix}CFrom"><label for="${prefix}CTo">${AR() ? 'إلى' : 'to'}</label><input type="date" id="${prefix}CTo" class="${prefix}CTo"></div>
       <div class="picklist">${ships.map((sh, i) => {
-      const r = ENTRY[dir][sh.rows[0]] || {}; const cl = cellVal(r, 'client'); const label = `#${i + 1} · ${sh.ref} · ${dir === 'Import' ? cellVal(r, 'bl') : cellVal(r, 'booking')} · ${cl}${sh.day ? ' · ' + fmtDay(sh.day) : ''}`;
-      return `<label title="${esc(label)}" data-client="${esc(cl || '')}" data-created="${esc(sh.day || '')}"><input type="checkbox" class="${prefix}Op" value="${esc(sh.ref)}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}><span>${esc(label)}</span></label>`;
+      const r = ENTRY[dir][sh.rows[0]] || {}; const cl = cellVal(r, 'client');
+      const countInfo = (sh.rows.length > 1) ? ` (${sh.rows.length} ${AR() ? 'نقلات/شحنات' : 'trips'})` : '';
+      const label = `#${i + 1} · ${sh.ref} · ${dir === 'Import' ? cellVal(r, 'bl') : cellVal(r, 'booking')} · ${cl}${sh.day ? ' · ' + fmtDay(sh.day) : ''}${countInfo}`;
+      
+      let subItems = '';
+      if (sh.rows.length > 1) {
+        subItems = `<div class="sub-pick-list" style="margin-inline-start:26px;margin-top:3px;margin-bottom:6px;display:flex;flex-direction:column;gap:3px">
+          ${sh.rows.map((ri, rIdx) => {
+            const row = ENTRY[dir][ri] || {};
+            const trk = row.cntr || row.car || row.driver || '';
+            const pkgs = row.loadedPackages || row.packages || '';
+            const subLbl = `${AR() ? 'نقلة/شحنة' : 'Trip'} ${rIdx + 1}: ${row.shipNo ? `#${row.shipNo}` : ''} ${row.hawb || row.cert ? `· ${row.hawb || row.cert}` : ''} ${pkgs ? `· ${pkgs} ${AR() ? 'طرد' : 'pkgs'}` : ''} ${trk ? `· 🚚 ${trk}` : ''}`;
+            return `<label class="sub-pick-item" style="font-size:11.5px;color:#475569;display:flex;align-items:center;gap:6px;padding:3px 6px;background:#f8fafc;border-radius:4px;border:1px solid #f1f5f9">
+              <input type="checkbox" class="${prefix}SubRow" data-ref="${esc(sh.ref)}" data-row="${ri}" value="${ri}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}>
+              <span>${esc(subLbl)}</span>
+            </label>`;
+          }).join('')}
+        </div>`;
+      } else {
+        subItems = `<input type="checkbox" class="${prefix}SubRow" data-ref="${esc(sh.ref)}" data-row="${sh.rows[0]}" value="${sh.rows[0]}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''} style="display:none">`;
+      }
+
+      return `<div class="op-pick-group" data-client="${esc(cl || '')}" data-created="${esc(sh.day || '')}" style="margin-bottom:6px">
+        <label title="${esc(label)}" style="font-weight:650;display:flex;align-items:center;gap:6px"><input type="checkbox" class="${prefix}Op" data-ref="${esc(sh.ref)}" value="${esc(sh.ref)}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}><span>${esc(label)}</span></label>
+        ${subItems}
+      </div>`;
     }).join('')}</div></div>`;
   }
   function composeClientShipmentSummary(dir, clientName) {
@@ -4817,21 +5652,28 @@ export function createFtlEngine(root, options = {}) {
   function wireTripPicker(root, prefix) {
     root.querySelector(`.${prefix}AllCols`).onchange = e => root.querySelectorAll(`.${prefix}Col`).forEach(c => c.checked = e.target.checked);
     /* "Select all" and the search / created-date filters work together: hidden operations are never (un)selected by Select all */
-    const visibleOps = () => [...root.querySelectorAll(`.${prefix}Op`)].filter(c => c.closest('label').style.display !== 'none');
+    const visibleOps = () => [...root.querySelectorAll(`.${prefix}Op`)].filter(c => c.closest('.op-pick-group')?.style.display !== 'none');
     const applyPick = () => {
       const q = (root.querySelector(`.${prefix}OpSearch`).value || '').toLocaleLowerCase();
       const cf = root.querySelector(`.${prefix}CFrom`)?.value || '';
       const ct = root.querySelector(`.${prefix}CTo`)?.value || '';
       const clFilter = (root.querySelector(`.${prefix}ClientFilter`)?.value || '').toLocaleLowerCase();
       root.querySelectorAll(`.${prefix}Op`).forEach(c => {
-        const lab = c.closest('label'), d = lab.dataset.created || '', opCl = (lab.dataset.client || '').toLocaleLowerCase();
+        const group = c.closest('.op-pick-group');
+        const d = group?.dataset.created || '', opCl = (group?.dataset.client || '').toLocaleLowerCase();
         const matchesClient = !clFilter || opCl === clFilter;
-        const matchesSearch = lab.textContent.toLocaleLowerCase().includes(q);
+        const matchesSearch = group?.textContent.toLocaleLowerCase().includes(q);
         const matchesDate = (!cf || (d && d >= cf)) && (!ct || (d && d <= ct));
         const show = matchesClient && matchesSearch && matchesDate;
-        lab.style.display = show ? '' : 'none';
-        if (!show) c.checked = false;
-        else if (clFilter) c.checked = true;
+        if (group) group.style.display = show ? '' : 'none';
+        if (!show) {
+          c.checked = false;
+          root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = false; });
+        }
+        else if (clFilter) {
+          c.checked = true;
+          root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = true; });
+        }
       });
       const vis = visibleOps();
       root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(c => c.checked);
@@ -4851,18 +5693,42 @@ export function createFtlEngine(root, options = {}) {
         }
       }
     };
-    root.querySelector(`.${prefix}AllOps`).onchange = e => visibleOps().forEach(c => c.checked = e.target.checked);
+    root.querySelector(`.${prefix}AllOps`).onchange = e => {
+      visibleOps().forEach(c => {
+        c.checked = e.target.checked;
+        root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
+      });
+    };
     root.querySelector(`.${prefix}OpSearch`).oninput = applyPick;
     root.querySelectorAll(`.${prefix}CFrom,.${prefix}CTo`).forEach(el => el.onchange = applyPick);
     root.querySelector(`.${prefix}ClientFilter`)?.addEventListener('change', applyPick);
     root.querySelectorAll(`.${prefix}Col`).forEach(c => c.onchange = () => root.querySelector(`.${prefix}AllCols`).checked = [...root.querySelectorAll(`.${prefix}Col`)].every(x => x.checked));
-    root.querySelectorAll(`.${prefix}Op`).forEach(c => c.onchange = () => { const vis = visibleOps(); root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked); });
+    root.querySelectorAll(`.${prefix}Op`).forEach(c => c.onchange = (e) => {
+      const ref = e.target.dataset.ref || e.target.value;
+      root.querySelectorAll(`.${prefix}SubRow[data-ref="${ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
+      const vis = visibleOps();
+      root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked);
+    });
+    root.querySelectorAll(`.${prefix}SubRow`).forEach(sub => sub.onchange = (e) => {
+      const ref = e.target.dataset.ref;
+      const parentOp = root.querySelector(`.${prefix}Op[data-ref="${ref}"]`);
+      if (parentOp) {
+        const allSubs = [...root.querySelectorAll(`.${prefix}SubRow[data-ref="${ref}"]`)];
+        const anyChecked = allSubs.some(x => x.checked);
+        const allChecked = allSubs.every(x => x.checked);
+        parentOp.checked = anyChecked;
+        parentOp.indeterminate = anyChecked && !allChecked;
+      }
+      const vis = visibleOps();
+      root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked);
+    });
   }
   function pickedTripOptions(root, prefix, dir) {
     const columns = [...root.querySelectorAll(`.${prefix}Col:checked`)].map(x => x.value);
     const operations = [...root.querySelectorAll(`.${prefix}Op:checked`)].map(x => x.value);
-    if (!columns.length || !operations.length) throw new Error(AR() ? 'اختار عمودًا وشحنة واحدة على الأقل.' : 'Select at least one column and one shipment.');
-    return { directions: [dir], columns: { [dir]: columns }, operations: { [dir]: operations } };
+    const rowIndices = [...root.querySelectorAll(`.${prefix}SubRow:checked`)].map(x => +x.dataset.row);
+    if (!columns.length || (!operations.length && !rowIndices.length)) throw new Error(AR() ? 'اختار عمودًا وشحنة واحدة على الأقل.' : 'Select at least one column and one shipment.');
+    return { directions: [dir], columns: { [dir]: columns }, operations: { [dir]: operations }, rowIndices: { [dir]: rowIndices } };
   }
   function tripExportDefaults(dir, scope = 'all') {
     if (scope === 'delivered') return DELIVERED_SELECTED[dir].size ? [...DELIVERED_SELECTED[dir]] : null;
@@ -4885,35 +5751,27 @@ export function createFtlEngine(root, options = {}) {
 
   /* ---------- system strip / save ---------- */
   let CHANGE_SEQ = 0, SAVE_IN_FLIGHT = false;
-  function markDirty() { DIRTY = true; CHANGE_SEQ++; __emit('change', null); renderSysBar(); scheduleSave(); }
+  function markDirty() { DIRTY = true; CHANGE_SEQ++; __emit('change', null); renderSysBar(); }
   let _saveT;
-  function scheduleSave() { clearTimeout(_saveT); _saveT = setTimeout(flushWorkspace, 1200); }
+  function scheduleSave() {
+    /* Autosave disabled — all edits are committed per-operation via Edit -> Save */
+  }
   async function flushWorkspace() {
-    if (!DIRTY || SAVE_IN_FLIGHT) return;
-    const seq = CHANGE_SEQ;
-    if (!LIVE) {
-      try { if (typeof ILS.save === 'function') await ILS.save(exportPayload(), __snapshot()); SAVED_AT = new Date(); DIRTY = false; }
-      catch (e) { toast(e.message || 'Could not save draft'); }
-      renderSysBar(); return;
-    }
-    if (!ILS.api?.saveWorkspace) { toast('Workspace save endpoint unavailable'); return; }
-    SAVE_IN_FLIGHT = true;
-    try {
-      const result = await ILS.api.saveWorkspace({ version: WORKSPACE_VERSION, shipments: workspaceShipments() });
-      if (result?.version === undefined || result?.version === null) throw Error('Save did not return a version');
-      WORKSPACE_VERSION = result.version; SAVED_AT = new Date();
-      if (seq === CHANGE_SEQ) DIRTY = false;
-    } catch (e) { DIRTY = true; toast(e.status === 409 ? 'Data changed on the server. Refresh before saving again.' : (e.message || 'Could not save changes')); }
-    finally { SAVE_IN_FLIGHT = false; renderSysBar(); if (DIRTY && seq !== CHANGE_SEQ) scheduleSave(); }
+    /* Whole-workspace auto-flushing disabled */
   }
   function renderSysBar() {
     const E = t('entry');
     const time = SAVED_AT ? SAVED_AT.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null;
-    const el = $('sysSaved'); el.className = 'chipst' + (DIRTY ? ' dirty' : '');
-    const live = typeof LIVE !== 'undefined' && LIVE;
-    el.textContent = DIRTY ? E.saving : (time ? (live ? E.savedLive(time) : E.savedAt(time)) : (live ? E.live : E.draft));
-    $('sysUser').textContent = E.byUser(AR() ? 'آي إل إس · الشحن الجوي' : OP_USER);
-    $('sysOps').textContent = E.opsCount(Object.keys(SHIPS[EDIR]).length, tripRows(EDIR).length);
+    const el = $('sysSaved');
+    if (el) {
+      el.className = 'chipst' + (DIRTY ? ' dirty' : '');
+      const live = typeof LIVE !== 'undefined' && LIVE;
+      el.textContent = DIRTY ? E.saving : (time ? (live ? E.savedLive(time) : E.savedAt(time)) : (live ? E.live : E.draft));
+    }
+    const userEl = $('sysUser');
+    if (userEl) userEl.textContent = E.byUser(AR() ? 'آي إل إس · الشحن الجوي' : OP_USER);
+    const opsEl = $('sysOps');
+    if (opsEl) opsEl.textContent = E.opsCount(Object.keys(SHIPS[EDIR]).length, tripRows(EDIR).length);
   }
   function exportPayload() {
     const pack = d => ({
@@ -4923,12 +5781,77 @@ export function createFtlEngine(root, options = {}) {
     });
     return { Import: pack('Import'), Export: pack('Export') };
   }
+  function sanitizeTripFields(dir, row) {
+    if (!row) return {};
+    const fields = {};
+    if (COLS[dir]) {
+      COLS[dir].forEach(c => {
+        if (c.k && c.k !== 'updates') {
+          const v = row[c.k];
+          fields[c.k] = (v === null || v === undefined) ? '' : String(v);
+        }
+      });
+    }
+    const skip = new Set(['assignedShp', '_allocations', '_file', '_sheet', '_row', '_uploadGroup', '_ref', '_updates', 'updates']);
+    for (const [k, v] of Object.entries(row)) {
+      if (skip.has(k) || k.startsWith('_')) continue;
+      if (fields[k] === undefined && v !== null && v !== undefined && typeof v !== 'object' && typeof v !== 'function') {
+        fields[k] = String(v);
+      }
+    }
+    if (row.updates !== undefined && row.updates !== null) fields.updates = String(row.updates);
+    if (row.updDate !== undefined && row.updDate !== null) fields.updDate = String(row.updDate);
+    return fields;
+  }
+  function serializeSingleShipment(dir, ref) {
+    const sh = SHIPS[dir]?.[ref];
+    if (!sh) return null;
+    return {
+      ref: sh.ref,
+      direction: dir,
+      status: sh.status,
+      per: sh.per || 1,
+      shp: (sh.shpSpans || []).length || 1,
+      trk: truckCount(sh),
+      shpSpans: sh.shpSpans || [],
+      trkSpans: sh.trkSpans || [],
+      trkOf: sh.trkOf || [],
+      day: sh.day || '',
+      at: sh.at || '',
+      enteredBy: { id: OP_USER_ID || 'local', displayName: sh.user || OP_USER },
+      unmerged: [...sh.unmerged],
+      trips: sh.rows.map((i, ordinal) => ({
+        id: ROWMETA[dir][i]?.id,
+        ordinal,
+        fields: sanitizeTripFields(dir, ENTRY[dir][i]),
+        updates: (ROWMETA[dir][i]?.updates || []).map(u => ({
+          id: u.id || '',
+          text: u.text || u.note || '',
+          note: u.text || u.note || '',
+          at: u.at || '',
+          by: u.user || u.by || '',
+          user: u.user || u.by || '',
+          day: u.day || ''
+        }))
+      }))
+    };
+  }
   function workspaceShipments() {
     return ['Import', 'Export'].flatMap(direction => Object.values(SHIPS[direction]).map(sh => ({
-      ref: sh.ref, direction, status: sh.status, per: sh.per || 1, shp: (sh.shpSpans || []).length || 1, trk: truckCount(sh), shpSpans: sh.shpSpans || [], trkSpans: sh.trkSpans || [], trkOf: sh.trkOf || [], day: sh.day || '', at: sh.at || '', unmerged: [...sh.unmerged],
+      ref: sh.ref, direction, status: sh.status, per: sh.per || 1, shp: (sh.shpSpans || []).length || 1, trk: truckCount(sh), shpSpans: sh.shpSpans || [], trkSpans: sh.trkSpans || [], trkOf: sh.trkOf || [], day: sh.day || '', at: sh.at || '',
+      enteredBy: { id: OP_USER_ID || 'local', displayName: sh.user || OP_USER },
+      unmerged: [...sh.unmerged],
       trips: sh.rows.map((i, ordinal) => ({
-        id: ROWMETA[direction][i]?.id, ordinal, fields: { ...ENTRY[direction][i] },
-        updates: (ROWMETA[direction][i]?.updates || []).map(u => ({ ...u }))
+        id: ROWMETA[direction][i]?.id, ordinal, fields: sanitizeTripFields(direction, ENTRY[direction][i]),
+        updates: (ROWMETA[direction][i]?.updates || []).map(u => ({
+          id: u.id || '',
+          text: u.text || u.note || '',
+          note: u.text || u.note || '',
+          at: u.at || '',
+          by: u.user || u.by || '',
+          user: u.user || u.by || '',
+          day: u.day || ''
+        }))
       }))
     })));
   }
@@ -5158,7 +6081,7 @@ export function createFtlEngine(root, options = {}) {
     $('qModal').classList.add('open');
   }
   function closeM(id) { $(id).classList.remove('open'); }
-  ['hModal', 'qModal', 'rModal', 'xModal', 'uModal', 'mModal', 'tripExportModal', 'deliveredModal'].forEach(id => $(id).addEventListener('click', e => { if (e.target.id === id) closeM(id); }));
+  ['hModal', 'qModal', 'rModal', 'xModal', 'uModal', 'mModal', 'tripExportModal', 'deliveredModal', 'ftlStatusHistoryModal'].forEach(id => $(id)?.addEventListener('click', e => { if (e.target.id === id) closeM(id); }));
 
   /* upload */
   function openTptUpload() { if (VIEW_MODE === 'entry' && EDITING && !commitEdit()) return; $('fileInput').click(); }
@@ -5241,14 +6164,6 @@ export function createFtlEngine(root, options = {}) {
     showEntry(true);
     renderEntry();
     updateTag();
-    if (LIVE && ILS.api?.saveWorkspace) {
-      try {
-        const res = await ILS.api.saveWorkspace({ version: WORKSPACE_VERSION, shipments: [] });
-        if (res?.version) WORKSPACE_VERSION = res.version;
-      } catch (e) {
-        console.warn('clearData saveWorkspace:', e);
-      }
-    }
     try {
       localStorage.removeItem('ftl-airport-mock-workspace');
     } catch { }
@@ -5393,7 +6308,29 @@ export function createFtlEngine(root, options = {}) {
         if (!tr.id || !tr.fields) throw Error('Missing server trip ID or fields');
         const row = {}; COLS[d].forEach(c => { row[c.k] = String(tr.fields[c.k] ?? ''); }); row.status = status;
         const idx = ENTRY[d].length; ENTRY[d].push(row); idxs.push(idx);
-        ROWMETA[d][idx] = { id: tr.id, ref: sh.ref, user: sh.enteredBy?.displayName || sh.enteredBy || '', day: sh.day || '', at: sh.at || '', updates: (tr.updates || []).map(u => ({ ...u })) };
+        const parsedUpdates = (tr.updates || []).map(u => ({
+          id: u.id,
+          text: u.text || u.note || '',
+          day: u.day || (u.at && u.at.length >= 10 ? u.at.slice(0, 10) : sh.day || ''),
+          at: (u.at && u.at.length > 10 ? u.at.slice(11, 16) : u.at) || '',
+          user: u.user || u.by || '',
+          by: u.by || u.user || ''
+        }));
+        if (parsedUpdates.length > 0) {
+          const lastU = parsedUpdates[parsedUpdates.length - 1];
+          if (!row.updDate) row.updDate = `${fmtDay(lastU.day)} ${lastU.at}`.trim();
+          if (!row.updates) row.updates = lastU.text;
+        } else if (row.updates) {
+          parsedUpdates.push({
+            id: '',
+            text: row.updates,
+            day: sh.day || today(),
+            at: sh.at || nowHM(),
+            user: sh.enteredBy?.displayName || sh.enteredBy || 'User',
+            by: sh.enteredBy?.displayName || sh.enteredBy || 'User'
+          });
+        }
+        ROWMETA[d][idx] = { id: tr.id, ref: sh.ref, user: sh.enteredBy?.displayName || sh.enteredBy || '', day: sh.day || '', at: sh.at || '', updates: parsedUpdates };
       }
       SHIPS[d][sh.ref] = { ref: sh.ref, dir: d, rows: idxs, per: Math.max(1, Number(sh.per) || 1), unmerged: new Set((sh.unmerged || []).filter(k => canToggleMerge(d, COLS[d].find(c => c.k === k)))), at: sh.at || '', day: sh.day || '', user: sh.enteredBy?.displayName || sh.enteredBy || '', status };
       layoutShip(d, SHIPS[d][sh.ref], { shpSpans: sh.shpSpans, trkSpans: sh.trkSpans, trkOf: sh.trkOf, shp: sh.shp, trk: sh.trk });
@@ -5405,7 +6342,7 @@ export function createFtlEngine(root, options = {}) {
     if (typeof ILS.api !== 'object' || !ILS.api) return false;   /* offline / one-time mode */
     try {
       const api = ILS.api;
-      for (const name of ['getCurrentUser', 'loadMaster', 'load', 'saveWorkspace', 'createOperation', 'updateShipmentStatus', 'loadPermissions', 'addMaster', 'importTrips'])
+      for (const name of ['getCurrentUser', 'loadMaster', 'load', 'createOperation', 'updateOperation', 'updateShipmentStatus', 'loadPermissions', 'addMaster', 'importTrips'])
         if (typeof api[name] !== 'function') throw Error('Missing ILS_API.' + name);
       const [identity, m, d] = await Promise.all([api.getCurrentUser(), api.loadMaster(), api.load()]);
       if (!identity?.id || !identity?.displayName) throw Error('Missing signed-in identity');
@@ -5523,16 +6460,18 @@ export function createFtlEngine(root, options = {}) {
   function tableEmailHTML(dir, opts) {
     const pick = (opts.columns && opts.columns[dir]) ? COLS[dir].filter(c => opts.columns[dir].includes(c.k)) : COLS[dir].filter(c => c.t !== 'upd');
     const included = opts.operations?.[dir] ? new Set(opts.operations[dir]) : null;
-    const ships = Object.values(SHIPS[dir]).filter(sh => !included || included.has(sh.ref));
+    const allowedRows = (opts.rowIndices && opts.rowIndices[dir]) ? new Set(opts.rowIndices[dir]) : null;
+    const ships = Object.values(SHIPS[dir]).filter(sh => (!included || included.has(sh.ref)) && (!allowedRows || sh.rows.some(r => allowedRows.has(r))));
     const th = c => { const col = GROUPS[c.g].c, dark = luminance(col) < 0.55; return `<th style="padding:7px 9px;border:1px solid #b7c1cc;background:${col};color:${dark ? '#ffffff' : '#1f2937'};font-size:12px;font-weight:700;white-space:nowrap">${esc(AR() ? (c.ar || c.h) : c.h)}</th>`; };
     const value = (c, i) => { const r = ENTRY[dir][i]; if (c.t === 'upd') return (ROWMETA[dir][i]?.updates || []).map(u => `${fmtDay(u.day)} ${u.at} ${u.user}: ${u.text}`).join(' | '); return displayValue(c, String(r[c.k] ?? '')); };
     let rows = '', n = 0;
     ships.forEach((sh, si) => {
-      sh.rows.forEach((i, ri) => {
+      const renderRows = sh.rows.filter(r => !allowedRows || allowedRows.has(r));
+      renderRows.forEach((i, ri) => {
         n++;
         const cells = pick.map(c => {
-          const sp = spanOf(sh, c, ri); if (sp.start !== ri) return ''; const v = value(c, i);
-          return `<td${sp.len > 1 ? ` rowspan="${sp.len}"` : ''} style="padding:6px 9px;border:1px solid #d8e3ea;${ri === 0 ? 'border-top:2px solid #0b4f7a;' : ''}${ri === sh.rows.length - 1 || sp.start + sp.len === sh.rows.length ? 'border-bottom:2px solid #0b4f7a;' : ''}background:${si % 2 ? '#f7fafc' : '#ffffff'};font-size:12px;color:#243e50;text-align:center;vertical-align:middle;white-space:nowrap">${esc(v) || '&nbsp;'}</td>`;
+          const v = value(c, i);
+          return `<td style="padding:6px 9px;border:1px solid #d8e3ea;${ri === 0 ? 'border-top:2px solid #0b4f7a;' : ''}${ri === renderRows.length - 1 ? 'border-bottom:2px solid #0b4f7a;' : ''}background:${si % 2 ? '#f7fafc' : '#ffffff'};font-size:12px;color:#243e50;text-align:center;vertical-align:middle;white-space:nowrap">${esc(v) || '&nbsp;'}</td>`;
         }).join('');
         rows += `<tr>${cells}</tr>`;
       });
@@ -5868,7 +6807,7 @@ export function createFtlEngine(root, options = {}) {
     const TRUCK_COLS = [
       { k: 'trucker', h: 'Transporter', ar: 'شركة النقل', t: 'list', g: 'g6', w: 165, src: 'trucker' },
       { k: 'truckType', h: 'Truck Type', ar: 'نوع السيارة', t: 'list', g: 'g6', w: 160, src: 'truckType' },
-      { k: 'cntr', h: 'Truck No.', ar: 'رقم السيارة', t: 'text', g: 'g6', w: 210 },
+      { k: 'cntr', h: 'Truck No.', ar: 'رقم السيارة', t: 'text', g: 'g6', w: 270 },
       { k: 'loadedPackages', h: 'Loaded Pkgs', ar: 'الطرود المحملة', t: 'num', g: 'g6', w: 130 },
       { k: 'loadStatus', h: 'Load Status', ar: 'حالة التحميل', t: 'text', g: 'g6', auto: true, w: 135 },
       { k: 'driver', h: 'Driver', ar: 'السائق', t: 'text', g: 'g6', w: 145 },
@@ -5882,13 +6821,13 @@ export function createFtlEngine(root, options = {}) {
       { k: 'transInv', h: 'Transporter Invoice No.', ar: 'رقم فاتورة الناقل', t: 'text', g: 'g8', w: 165 },
       { k: 'missDoc', h: 'Missing Docs', ar: 'المستندات الناقصة', t: 'text', g: 'g8', w: 145 },
       { k: 'missRcv', h: 'Missing Docs Receive Date', ar: 'تاريخ استلام المستندات الناقصة', t: 'date', g: 'g8', w: 220 },
-      { k: 'status', h: 'Status', ar: 'حالة الشحنة', t: 'text', g: 'g8', auto: true, uniq: true, w: 118 }
+      { k: 'status', h: 'Status', ar: 'حالة الشحنة', t: 'text', g: 'g8', auto: true, uniq: true, w: 145 }
     ];
     const HEAD_COLS = (mawb, clearance) => [
       { k: 'vol', h: 'Number of Shipments', ar: 'عدد الشحنات', t: 'num', g: 'g1', op: true, uniq: true, w: 130 },
-      { k: 'shipNo', h: 'Shipment Number', ar: 'رقم الشحنة', t: 'text', g: 'g1', w: 150 },
+      { k: 'shipNo', h: 'Shipment Number', ar: 'رقم الشحنة', t: 'text', g: 'g1', w: 160 },
       ...(clearance ? [{ k: 'clrType', h: 'Clearance Type', ar: 'نوع التخليص', t: 'list', g: 'g1', w: 140, src: 'clrType' }] : []),
-      { k: 'client', h: 'Client', ar: 'العميل', t: 'list', g: 'g1', w: 150, src: 'client' },
+      { k: 'client', h: 'Client', ar: 'العميل', t: 'list', g: 'g1', w: 320, src: 'client' },
       { k: mawb, h: 'MAWB', ar: 'البوليصة الرئيسية', t: 'text', g: 'g2', w: 145 },
       { k: 'hawb', h: 'HAWB', ar: 'البوليصة الفرعية', t: 'text', g: 'g2', w: 145 },
       { k: 'cert', h: 'Certificate Number', ar: 'رقم الشهادة', t: 'text', g: 'g2', w: 170, src: 'cert', combo: true },
@@ -5969,23 +6908,29 @@ export function createFtlEngine(root, options = {}) {
         if (!/^[\p{L}\d /_.-]+$/u.test(v)) return bad('Use letters or digits; / - _ . are allowed', 'استخدم حروف أو أرقام؛ مسموح / - _ .');
         return { ok: true, value: v.toUpperCase() };
       } else if (c.k === 'mob') {
-        if (!/^\+?[\d ()-]+$/.test(v) || (!search && !/^\d{7,15}$/.test(v.replace(/\D/g, '')))) return bad('Phone: 7–15 digits; an initial + is allowed', 'التليفون: من 7 إلى 15 رقم، ومسموح + في البداية');
+        if (!/^\+?[\d ()-]+$/.test(v)) return bad('Phone: digits and + only', 'التليفون: أرقام ومسموح +');
+        return { ok: true, value: v };
       } else if (['bl', 'booking', 'hawb', 'shipNo', 'cntr', 'transInv'].includes(c.k)) {
         if (!/^[\p{L}\d /_.-]+$/u.test(v)) return bad('Use letters, digits, spaces, /, -, _ or .', 'استخدم حروف أو أرقام ومسافات و / و - و _ و .');
         return { ok: true, value: v.toUpperCase() };
       } else if (type === 'time') {
-        if (!/^([01]?\d|2[0-3]):[0-5]\d$/.test(v)) return bad('Use 24-hour HH:mm, for example 14:50', 'استخدم وقت 24 ساعة HH:mm، مثال 14:50');
-        return { ok: true, value: v.padStart(5, '0') };
+        const nt = normTime(v);
+        if (!nt) return bad('Use time like 8, 2p, or 14:30', 'استخدم وقت مثل 8 أو 2p أو 14:30');
+        return { ok: true, value: nt };
       } else if (type === 'date') {
-        const date = strictEntryDate(v); if (!date) return bad('Enter a real date, for example 24-SEP-2026', 'اكتب تاريخًا صحيحًا، مثال 24-09-2026'); return { ok: true, value: date };
+        const date = fixDate(v, false);
+        if (!date) return bad('Enter a real date, for example 1/11 or 24-SEP-2026', 'اكتب تاريخًا صحيحًا، مثال 1/11 أو 24-09-2026');
+        return { ok: true, value: date };
       }
       return { ok: true, value: v };
     };
     allowedFieldCharacters = function (c, v) {
+      if (!v) return true;
       if (c.k === 'weight' || c.k === 'cbm') return /^\d*(?:\.\d*)?$/.test(v);
       if (tripType(c) === 'number') return /^\d*$/.test(v);
       if (c.k === 'mob') return /^\+?[\d ()-]*$/.test(v);
-      if (tripType(c) === 'time') return /^[\d:]*$/.test(v);
+      if (tripType(c) === 'time') return /^[\d\s:a-zA-Z]*$/.test(v);
+      if (tripType(c) === 'date') return /^[\d\s\/\-a-zA-Z]*$/.test(v);
       return true;
     };
 
@@ -6304,9 +7249,11 @@ export function createFtlEngine(root, options = {}) {
     reopenSelectedShipment, resetFilters, runExport, saveTripExport, sendMail, showDash, showEntry,
     stepOpCount, toggleAllDelivered, toggleDeliveredSelection, toggleLang, toggleMerge, toggleOpForm,
     togglePanel, toggleTheme, xCount, xToggleAll,
+    toggleStatusMenu, setAndCloseStatus, openStatusHistory,
     openTruckManifest, openShipmentBreakdown, setTruckShipment, addTruckCoLoad, removeTruckCoLoad, updateTruckAllocationPkgs, changeTruckAllocShp,
     addShipmentTruckAllocation, updateShipmentTruckAllocation, removeShipmentTruckAllocation,
-    openInactive, renderInactive, toggleAllInactive, toggleInactiveSelection, copyInactiveTrips, reopenSelectedInactive, delShip,
+    openInactive, renderInactive, toggleAllInactive, toggleInactiveSelection, copyInactiveTrips, delShip,
+    startEditShipment, saveShipmentEdits, cancelEditShipment, restoreDraft,
     pageInactive: (d) => { INACTIVE_PAGE += d; },
     stepOpShip: (d) => __extra.stepOpShip && __extra.stepOpShip(d),
     setRawTab: (i) => { rawTab = i; },

@@ -80,6 +80,28 @@ export function createMockApi({
       return { version: db.version };
     },
 
+    async updateOperation(ref, payload) {
+      await wait(latency);
+      const db = read();
+      const idx = db.shipments.findIndex(s => s.ref === ref);
+      if (idx >= 0) {
+        db.shipments[idx] = {
+          ...payload,
+          enteredBy: payload.enteredBy || enteredBy,
+          trips: (payload.trips || []).map((t) => ({ ...t, id: t.id || uid() })),
+        };
+      } else {
+        db.shipments.push({
+          ...payload,
+          enteredBy: payload.enteredBy || enteredBy,
+          trips: (payload.trips || []).map((t) => ({ ...t, id: t.id || uid() })),
+        });
+      }
+      db.version += 1;
+      write(db);
+      return { version: db.version };
+    },
+
     async createOperation({ direction, rowCount, containerCount, shared }) {
       await wait(latency);
       const db = read();
@@ -128,6 +150,14 @@ export function createMockApi({
     },
 
     async authorizeDeleteShipment() { await wait(latency); return permissions.delete_shipments === true; },
+    async lockOperation(ref) {
+      await wait(latency);
+      return { isLocked: true, lockedByName: user.displayName, lockedAtUtc: new Date().toISOString() };
+    },
+    async unlockOperation(ref) {
+      await wait(latency);
+      return { success: true };
+    },
     async deleteShipment(ref, version) {
       await wait(latency);
       const db = read();
@@ -136,6 +166,11 @@ export function createMockApi({
       db.version += 1;
       write(db);
       return { version: db.version };
+    },
+    async getStatusAudits(ref) {
+      await wait(latency);
+      const db = read();
+      return db.statusAudits?.filter(a => a.ref === ref) || [];
     },
   };
 }

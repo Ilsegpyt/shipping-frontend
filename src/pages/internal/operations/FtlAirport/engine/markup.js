@@ -51,7 +51,6 @@ export const getMarkup = () => `
         <button type="button" class="ebtn ebtn-delivered" id="deliveredOpen" onclick="__FTL__.openDelivered()">Delivered shipments (0)</button>
         <button type="button" class="ebtn ebtn-inactive" id="inactiveOpen" onclick="__FTL__.openInactive()">Inactive shipments (0)</button>
         <button type="button" class="ebtn" id="entryUpload" onclick="__FTL__.openTptUpload()">Upload File</button>
-        <button type="button" class="ebtn" id="entryClearBtn" onclick="__FTL__.clearData()" style="color:#e03131;border-color:#ffa8a8;background:#fff5f5" title="مسح وتفريغ كل البيانات للبدء من جديد">🗑 مسح الكل</button>
       </div>
       <div class="espacer"></div>
       <div id="eStatus" class="estatus"></div>
@@ -61,8 +60,6 @@ export const getMarkup = () => `
       <button class="ebtn go" id="eApply" onclick="__FTL__.applyEntry()" style="display:none"></button>
     </div>
     <div class="sysbar">
-      <span class="chipst" id="sysSaved"></span>
-      <span class="chipst muted" id="sysUser"></span>
       <span class="chipst muted" id="sysOps"></span>
       <span class="spacer"></span>
     </div>
@@ -237,10 +234,8 @@ export const getMarkup = () => `
       <div class="tripsearch" id="inactiveSearch"></div>
       <span class="tripgrow"></span>
     </div>
-    <div class="delivered-actions" id="inactiveActions">
-      <label id="reopenInactiveLabel" for="reopenInactiveShipment"></label>
-      <select id="reopenInactiveShipment"></select>
-      <button type="button" class="ebtn" id="reopenInactiveAction" onclick="__FTL__.reopenSelectedInactive()"></button>
+    <div class="delivered-actions read-only-audit" id="inactiveActions" style="background:#f8fafc;padding:8px 12px;border-radius:8px;font-size:12.5px;color:#64748b;display:flex;align-items:center;gap:6px;border:1px solid #e2e8f0;margin-bottom:8px">
+      <span>🔒 أرشيف العمليات المحذوفة (سجل تدقيق تاريخي للقراءة فقط — غير قابل للتعديل أو الاسترجاع)</span>
     </div>
     <div class="trip-page" id="inactivePage">
       <button type="button" id="inactivePrev" onclick="__FTL__.pageInactive(-1);__FTL__.renderInactive()">‹</button>
@@ -249,6 +244,84 @@ export const getMarkup = () => `
     </div>
     <div class="delivered-scroll">
       <table id="inactiveTable"><thead id="inactiveHead"></thead><tbody id="inactiveBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="modal conflict-modal" id="ftlConflictModal" style="display:none;z-index:99999">
+  <div class="box" style="max-width:520px;border-radius:16px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);border:1px solid #e2e8f0;padding:24px;background:#ffffff">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div style="width:40px;height:40px;border-radius:12px;background:#fff1f2;color:#e11d48;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🔒</div>
+      <div style="flex:1">
+        <h3 id="ftlConflictTitle" style="margin:0;font-size:16px;font-weight:750;color:#0f172a">تعارض في قفل العملية والتعديل</h3>
+        <p id="ftlConflictSub" style="margin:2px 0 0;font-size:12px;color:#64748b">حماية البيانات والتنافسية</p>
+      </div>
+      <button type="button" class="ebtn" onclick="__FTL__.closeM('ftlConflictModal')" style="padding:4px 8px;font-size:14px;border:none;background:transparent;cursor:pointer">✕</button>
+    </div>
+    <div id="ftlConflictBody" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#334155">
+      <!-- Dynamic body -->
+    </div>
+    <div id="ftlConflictFoot" style="display:flex;justify-content:flex-end;gap:10px">
+      <button type="button" class="ebtn" onclick="__FTL__.closeM('ftlConflictModal')" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer">إغلاق</button>
+      <button type="button" class="ebtn go" id="ftlConflictAction" style="padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;display:none"></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal ftl-status-history-modal" id="ftlStatusHistoryModal">
+  <div class="ftl-status-history-drawer" id="ftlStatusHistoryDrawer" onclick="event.stopPropagation()">
+    <!-- Header -->
+    <div class="ftl-sh-header">
+      <div class="ftl-sh-header-left">
+        <div class="ftl-sh-icon-box">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M12 7v5l4 2"/>
+          </svg>
+        </div>
+        <div>
+          <h3 id="ftlStatusHistTitle">Operation Status History</h3>
+          <p id="ftlStatusHistSub">Audit Log &amp; Lifecycle Timeline</p>
+        </div>
+      </div>
+      <button type="button" class="ftl-sh-close-btn" onclick="__FTL__.closeM('ftlStatusHistoryModal')" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Operation Info Bar -->
+    <div class="ftl-sh-infobar" id="ftlStatusHistInfo">
+      <div class="ftl-sh-info-col">
+        <span class="ftl-sh-info-lbl" id="ftlStatusHistRefLbl">Shipment / BL</span>
+        <span class="ftl-sh-info-val" id="ftlStatusHistRef">—</span>
+      </div>
+      <div class="ftl-sh-info-col" id="ftlStatusHistClientCol">
+        <span class="ftl-sh-info-lbl" id="ftlStatusHistClientLbl">Client</span>
+        <span class="ftl-sh-info-val" id="ftlStatusHistClient">—</span>
+      </div>
+      <div class="ftl-sh-info-col ftl-sh-info-end">
+        <span class="ftl-sh-info-lbl" id="ftlStatusHistStatusLbl">Current</span>
+        <span class="ftl-sh-status-pill open" id="ftlStatusHistStatusBadge">
+          <span class="ftl-sh-status-dot open" id="ftlStatusHistStatusDot"></span>
+          <span id="ftlStatusHistStatusText">Open</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Timeline Body -->
+    <div class="ftl-sh-body" id="ftlStatusHistBody">
+      <!-- Dynamic timeline items rendered here -->
+    </div>
+
+    <!-- Footer -->
+    <div class="ftl-sh-footer">
+      <span class="ftl-sh-footer-lock">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-inline-end:5px">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span id="ftlStatusHistFooterText">Immutable Audit Log</span>
+      </span>
+      <button type="button" class="ftl-sh-footer-close" onclick="__FTL__.closeM('ftlStatusHistoryModal')" id="ftlStatusHistCloseBtn">Close</button>
     </div>
   </div>
 </div>

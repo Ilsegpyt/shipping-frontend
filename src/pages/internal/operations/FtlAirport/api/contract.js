@@ -7,7 +7,7 @@ export const REQUIRED_METHODS = [
   'getCurrentUser',        // () => {id, displayName}
   'loadMaster',            // () => { [listName]: string[] }
   'load',                  // () => {version, shipments[]}
-  'saveWorkspace',         // ({version, shipments[]}) => {version}        409 on version conflict
+  'updateOperation',       // (ref, payload) => {version}
   'createOperation',       // ({direction, rowCount, shipments, trucks, shared, requestId}) => {ref, version, at?, day?, trips:[{id}]}
   'updateShipmentStatus',  // (ref, status, version) => {version}
   'loadPermissions',       // () => {reopen_shipments:boolean, delete_shipments:boolean}
@@ -18,6 +18,10 @@ export const REQUIRED_METHODS = [
 export const OPTIONAL_METHODS = [
   'authorizeDeleteShipment', // (ref) => boolean
   'deleteShipment',          // (ref, version) => {version}
+  'lockOperation',           // (ref) => {isLocked, lockedByName, lockedAtUtc}
+  'unlockOperation',         // (ref) => {unlocked}
+  'getStatusAudits',         // (ref) => [{ id, beforeStatus, afterStatus, userId, userName, atUtc }]
+  'addTruckUpdate',          // (ref, tripId, note) => {id, text, at, by, version?}
 ];
 
 /** Throws if `api` does not implement the required methods. */

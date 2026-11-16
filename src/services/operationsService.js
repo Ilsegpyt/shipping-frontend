@@ -231,6 +231,11 @@ export const getOperationStatusAudits = async (operationId) => {
   return response.data;
 };
 
+export const getFtlStatusAudits = async (reference) => {
+  const response = await api.get(`/api/v1/ftl/operations/${encodeURIComponent(reference)}/status-audits`);
+  return response.data;
+};
+
 /**
  * Concurrency / Soft Lock Endpoints
  */

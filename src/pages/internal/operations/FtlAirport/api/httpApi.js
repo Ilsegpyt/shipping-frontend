@@ -55,6 +55,7 @@ export function createHttpApi({
     authorizeDeleteShipment: async (ref) =>
       (await request('GET', '/shipments/' + enc(ref) + '/permissions')).delete_shipments === true,
     deleteShipment: (ref, version) => request('DELETE', '/shipments/' + enc(ref), { version }),
+    addTruckUpdate: (ref, tripId, note) => request('POST', '/operations/' + enc(ref) + '/truck-updates', { tripId, note }),
   };
 }
 

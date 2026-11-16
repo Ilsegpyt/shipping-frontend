@@ -21,8 +21,13 @@ export function createLiveApi({
     },
 
     async loadMaster() {
-      const res = await api.get('/api/v1/ftl/master');
-      return res.data;
+      try {
+        const res = await api.get('/api/v1/ftl/master');
+        return res.data;
+      } catch (e) {
+        console.warn('[FTL Airport] loadMaster fallback:', e);
+        return { clients: [], lines: [], truckers: [], destinations: [], drivers: [], vehicles: [] };
+      }
     },
 
     async loadPermissions() {
@@ -44,8 +49,8 @@ export function createLiveApi({
       return res.data;
     },
 
-    async saveWorkspace({ version, shipments }) {
-      const res = await api.post('/api/v1/ftl/workspace', { version, shipments });
+    async updateOperation(ref, payload) {
+      const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}`, payload);
       return res.data;
     },
 
@@ -73,8 +78,31 @@ export function createLiveApi({
       return res.data;
     },
 
+    async lockOperation(ref) {
+      const res = await api.post(`/api/v1/ftl/operations/${enc(ref)}/lock`);
+      return res.data;
+    },
+
+    async unlockOperation(ref) {
+      const res = await api.post(`/api/v1/ftl/operations/${enc(ref)}/unlock`);
+      return res.data;
+    },
+
     async importTrips(payload) {
       const res = await api.post('/api/v1/ftl/trips/import', payload);
+      return res.data;
+    },
+
+    async getStatusAudits(ref) {
+      const res = await api.get(`/api/v1/ftl/operations/${enc(ref)}/status-audits`);
+      return res.data;
+    },
+
+    async addTruckUpdate(ref, tripId, note) {
+      const res = await api.post(`/api/v1/ftl/operations/${enc(ref)}/truck-updates`, {
+        tripId,
+        note,
+      });
       return res.data;
     },
   };

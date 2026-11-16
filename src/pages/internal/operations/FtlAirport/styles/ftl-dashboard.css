@@ -3226,6 +3226,7 @@
 
 .ftl-root #eTable thead th.rn,
 .ftl-root #eTable thead th.meta,
+.ftl-root #eTable thead th.actions-head,
 .ftl-root #eTable thead th.del {
   --gc: #8fa3b4
 }
@@ -6050,22 +6051,46 @@
 
 .ftl-root #eTable td.c.merged {
   height: auto !important;
-  padding-block: 6px !important;
-  vertical-align: middle;
+  padding-block: 4px !important;
+  vertical-align: middle !important;
   position: relative;
   min-width: calc(var(--w) + 10px)
 }
 
 .ftl-root #eTable td.c.merged .cbox {
-  position: absolute;
-  inset-inline-start: 5px;
-  top: 50%;
-  translate: 0 -50%;
-  height: 40% !important;
-  min-height: 0 !important;
+  position: relative;
+  inset-inline-start: auto;
+  top: auto;
+  translate: none;
+  height: calc(100% - 4px);
+  min-height: 38px;
   max-height: none;
   border-radius: 12px;
-  justify-content: center
+  justify-content: center;
+  display: flex;
+  align-items: center;
+}
+
+.ftl-root #eTable td[data-k="client"] .cbox {
+  justify-content: flex-start !important;
+  padding-inline-start: 12px !important;
+  padding-inline-end: 8px !important;
+}
+
+.ftl-root #eTable td[data-k="client"] .cv {
+  text-align: start !important;
+  justify-content: flex-start !important;
+  padding: 0 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.ftl-root #eTable td[data-k="cntr"] .cv,
+.ftl-root #eTable td[data-k="cntr"] .cbox {
+  text-align: center !important;
+  justify-content: center !important;
 }
 
 .ftl-root #eTable td.c.merged .cv {
@@ -7150,12 +7175,14 @@
 }
 
 .ftl-root #eTable thead th.meta,
+.ftl-root #eTable thead th.actions-head,
 .ftl-root #eTable thead th.select-head {
   --gc: #8fa3b4;
   text-align: center
 }
 
 .ftl-root #eTable thead th.meta span,
+.ftl-root #eTable thead th.actions-head span,
 .ftl-root #eTable thead th.select-head span {
   min-height: 52px;
   display: flex;
@@ -7436,3 +7463,815 @@
 .ftl-root td.c.merged[data-k="cntr"] {
   text-align: center;
 }
+
+/* Table Cell & Header Centering & Field Sizing (Aligned with FCL) */
+.ftl-root #eTable th {
+  text-align: center !important;
+  vertical-align: middle;
+}
+.ftl-root #eTable td {
+  text-align: center !important;
+  vertical-align: middle;
+}
+.ftl-root #eTable .cbox {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+.ftl-root #eTable td.c .cv {
+  text-align: center !important;
+  justify-content: center !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100%;
+}
+.ftl-root #eTable td input,
+.ftl-root #eTable td select,
+.ftl-root #eTable td .cell-sel,
+.ftl-root #eTable .ed {
+  text-align: center !important;
+  text-align-last: center !important;
+}
+.ftl-root #eTable .datetime-control {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+}
+.ftl-root #eTable .datetime-control input.ed {
+  width: 100% !important;
+  text-align: center !important;
+  padding-right: 20px !important;
+  padding-left: 4px !important;
+  font-variant-numeric: tabular-nums !important;
+}
+.ftl-root[dir="rtl"] #eTable .datetime-control input.ed {
+  padding-left: 20px !important;
+  padding-right: 4px !important;
+}
+.ftl-root #eTable .datetime-control .pickdate {
+  position: absolute !important;
+  right: 2px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  padding: 0 !important;
+  color: #64748b !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: color 0.15s ease !important;
+}
+.ftl-root[dir="rtl"] #eTable .datetime-control .pickdate {
+  left: 2px !important;
+  right: auto !important;
+}
+.ftl-root #eTable .datetime-control .pickdate:hover {
+  color: #0284c7 !important;
+}
+.ftl-root #eTable .field-error {
+  display: none !important;
+}
+
+/* Conflict & Lock Modal */
+.ftl-root .conflict-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+}
+.ftl-root .conflict-modal.open {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+}
+.ftl-root .conflict-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+  max-width: 480px;
+  width: 90%;
+  padding: 20px 24px;
+  animation: ftlModalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes ftlModalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Sub-shipment / Truck picker in Export Excel & Email modals */
+.ftl-root .sub-pick-list {
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  padding: 4px 6px;
+}
+.ftl-root .sub-pick-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: background 0.12s;
+}
+.ftl-root .sub-pick-item:hover {
+  background: #f1f5f9;
+}
+
+/* Latest Updates Cell - Parity with FCL */
+.ftl-root .updbtn.fcl-updates-cell {
+  width: 100%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 4px 8px;
+  min-height: 34px;
+  height: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: start;
+  transition: all .15s ease;
+}
+.ftl-root .updbtn.fcl-updates-cell:hover {
+  background: rgba(34, 184, 207, 0.08);
+  border-radius: 8px;
+}
+.ftl-root .updbtn.fcl-updates-cell .upd-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  text-align: start;
+}
+.ftl-root .updbtn.fcl-updates-cell .updtxt {
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+}
+.ftl-root .updbtn.fcl-updates-cell .updtxt.muted {
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--steel);
+  opacity: 0.7;
+  text-align: center;
+  width: 100%;
+}
+.ftl-root .updbtn.fcl-updates-cell .updby {
+  font-size: 10px;
+  color: var(--steel);
+  font-weight: 500;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+.ftl-root .updbtn.fcl-updates-cell .updn {
+  margin-inline-start: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0891b2;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 750;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* FCL-style Status Card & Popover */
+.ftl-root .fcl-status-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(to bottom, #ffffff, rgba(240, 249, 255, 0.4));
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+}
+
+.ftl-root .fcl-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid #7dd3fc;
+  background: #f0f9ff;
+  color: #0369a1;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.ftl-root .fcl-status-pill:hover {
+  background: #e0f2fe;
+  border-color: #38bdf8;
+}
+
+.ftl-root .fcl-status-pill.delivered {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #065f46;
+}
+
+.ftl-root .fcl-status-pill.delivered:hover {
+  background: #d1fae5;
+  border-color: #4ade80;
+}
+
+.ftl-root .fcl-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #0284c7;
+  display: inline-block;
+  animation: fclPulse 1.8s infinite;
+}
+
+.ftl-root .fcl-status-pill.delivered .fcl-status-dot {
+  background: #10b981;
+  animation: none;
+}
+
+@keyframes fclPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.ftl-root .fcl-status-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  padding: 4px;
+  z-index: 100;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ftl-root .fcl-status-menu button {
+  padding: 6px 12px;
+  font-size: 11.5px;
+  font-weight: 650;
+  text-align: start;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.12s;
+}
+
+.ftl-root .fcl-status-menu button:hover {
+  background: #f1f5f9;
+}
+
+/* FCL-style Operation / Entered Card */
+.ftl-root .fcl-op-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: linear-gradient(to bottom, #ffffff, rgba(240, 249, 255, 0.45));
+  box-shadow: 0 1px 3px rgba(6, 42, 74, 0.05);
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ftl-root .fcl-op-ref {
+  font-size: 12px;
+  font-weight: 750;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+.ftl-root .fcl-op-date {
+  font-size: 10px;
+  color: #64748b;
+  margin: 2px 0;
+  font-weight: 500;
+}
+
+.ftl-root .fcl-op-user {
+  font-size: 11.5px;
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.ftl-root .fcl-op-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  width: 100%;
+}
+
+/* FCL-style Actions Column */
+.ftl-root #eTable th.actions-head {
+  width: 115px;
+  min-width: 115px;
+  text-align: center;
+}
+
+.ftl-root #eTable td.actions-td {
+  vertical-align: middle !important;
+  text-align: center;
+  padding: 4px;
+}
+
+.ftl-root .fcl-actions-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+}
+
+.ftl-root .fcl-status-history-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.ftl-root .fcl-status-history-btn:hover {
+  color: #0284c7;
+  border-color: #93c5fd;
+  background: #f0f9ff;
+}
+
+/* =====================================================================
+   Operation Status History Slide-over Drawer (Audit Log & Lifecycle Timeline)
+   Matches FCL pixel-for-pixel (Header, Info Bar, Timeline Nodes, Badges, Footer)
+   ===================================================================== */
+.ftl-root .ftl-status-history-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+  z-index: 10050 !important;
+  display: none !important;
+  padding: 0 !important;
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+  overflow: hidden !important;
+}
+
+.ftl-root .ftl-status-history-modal.open {
+  display: flex !important;
+  animation: ftlFadeIn 0.2s ease-out;
+}
+
+[dir="rtl"] .ftl-root .ftl-status-history-modal,
+.ftl-root[dir="rtl"] .ftl-status-history-modal {
+  justify-content: flex-start !important;
+}
+
+.ftl-root .ftl-status-history-drawer {
+  width: 100%;
+  max-width: 440px;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: -12px 0 36px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-inline-start: 1px solid #e2e8f0;
+  animation: ftlSlideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+[dir="rtl"] .ftl-root .ftl-status-history-drawer,
+.ftl-root[dir="rtl"] .ftl-status-history-drawer {
+  box-shadow: 12px 0 36px rgba(0, 0, 0, 0.16);
+  animation: ftlSlideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ftlSlideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes ftlSlideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes ftlFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Header */
+.ftl-root .ftl-sh-header {
+  padding: 16px 22px;
+  border-bottom: 1px solid #f1f5f9;
+  background: linear-gradient(to right, #f8fafc, #ffffff, rgba(240, 249, 255, 0.45));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.ftl-root .ftl-sh-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ftl-root .ftl-sh-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: rgba(224, 242, 254, 0.7);
+  color: #0369a1;
+  border: 1px solid rgba(186, 230, 253, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.ftl-root .ftl-sh-header-left h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 750;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.ftl-root .ftl-sh-header-left p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ftl-root .ftl-sh-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 15px;
+}
+
+.ftl-root .ftl-sh-close-btn:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+/* Operation Info Bar */
+.ftl-root .ftl-sh-infobar {
+  padding: 13px 22px;
+  background: rgba(248, 250, 252, 0.85);
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.ftl-root .ftl-sh-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ftl-root .ftl-sh-info-lbl {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.ftl-root .ftl-sh-info-val {
+  font-size: 12px;
+  font-weight: 750;
+  color: #1e293b;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.ftl-root .ftl-sh-info-end {
+  align-items: flex-end;
+}
+
+.ftl-root .ftl-sh-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2.5px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid;
+}
+
+.ftl-root .ftl-sh-status-pill.open {
+  background: #f0f9ff;
+  color: #075985;
+  border-color: #bae6fd;
+}
+
+.ftl-root .ftl-sh-status-pill.delivered {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.ftl-root .ftl-sh-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.ftl-root .ftl-sh-status-dot.open {
+  background: #0284c7;
+}
+
+.ftl-root .ftl-sh-status-dot.delivered {
+  background: #10b981;
+}
+
+/* Timeline Body */
+.ftl-root .ftl-sh-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 22px 22px;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.ftl-root .ftl-sh-timeline-wrap {
+  position: relative;
+  min-height: 100%;
+}
+
+.ftl-root .ftl-sh-line {
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: #e2e8f0;
+  left: 19px;
+  z-index: 1;
+}
+
+[dir="rtl"] .ftl-root .ftl-sh-line,
+.ftl-root[dir="rtl"] .ftl-sh-line {
+  left: auto;
+  right: 19px;
+}
+
+.ftl-root .ftl-sh-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+  z-index: 2;
+}
+
+.ftl-root .ftl-sh-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+  animation: ftlFadeIn 0.2s ease-out;
+}
+
+.ftl-root .ftl-sh-node {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 2px solid;
+  background: #ffffff;
+}
+
+.ftl-root .ftl-sh-node.created {
+  background: #f0f9ff;
+  border-color: #0ea5e9;
+  color: #0284c7;
+}
+
+.ftl-root .ftl-sh-node.delivered {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #059669;
+}
+
+.ftl-root .ftl-sh-node.reopened {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #d97706;
+}
+
+.ftl-root .ftl-sh-node.other {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #475569;
+}
+
+.ftl-root .ftl-sh-card {
+  flex: 1;
+  background: rgba(248, 250, 252, 0.75);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 16px;
+  padding: 13px 15px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s;
+  box-sizing: border-box;
+}
+
+.ftl-root .ftl-sh-card:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.ftl-root .ftl-sh-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ftl-root .ftl-sh-card-title {
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.ftl-root .ftl-sh-card-title.created {
+  color: #075985;
+}
+
+.ftl-root .ftl-sh-card-title.delivered {
+  color: #065f46;
+}
+
+.ftl-root .ftl-sh-card-title.reopened {
+  color: #92400e;
+}
+
+.ftl-root .ftl-sh-card-title.other {
+  color: #334155;
+}
+
+.ftl-root .ftl-sh-card-time {
+  font-size: 10.5px;
+  color: #94a3b8;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.ftl-root .ftl-sh-card-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #475569;
+}
+
+.ftl-root .ftl-sh-card-user .by-lbl {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.ftl-root .ftl-sh-card-user .user-badge {
+  font-weight: 600;
+  color: #1e293b;
+  background: #ffffff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.ftl-root .ftl-sh-card-reason {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(254, 243, 199, 0.7);
+  border: 1px solid rgba(253, 230, 138, 0.85);
+  font-size: 11.5px;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+.ftl-root .ftl-sh-card-reason .reason-lbl {
+  display: block;
+  font-weight: 750;
+  font-size: 11px;
+  color: #92400e;
+  margin-bottom: 2px;
+}
+
+.ftl-root .ftl-sh-card-reason .reason-txt {
+  font-style: italic;
+}
+
+/* Footer */
+.ftl-root .ftl-sh-footer {
+  padding: 14px 22px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.ftl-root .ftl-sh-footer-lock {
+  font-size: 11px;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 500;
+}
+
+.ftl-root .ftl-sh-footer-close {
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ftl-root .ftl-sh-footer-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+

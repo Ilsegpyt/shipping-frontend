@@ -1,54 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import FtlDashboard from './components/FtlDashboard';
-import { createMockApi } from './api/mockApi';
 import { createLiveApi } from './api/liveApi';
 import { useAuth } from '../../../../auth/AuthContext';
-
-function createResilientFtlApi(options) {
-  const liveApi = createLiveApi(options);
-  const mockApi = createMockApi(options);
-  let useLive = true;
-
-  const wrap = (methodName) => async (...args) => {
-    if (useLive) {
-      try {
-        return await liveApi[methodName](...args);
-      } catch (err) {
-        const isOffline =
-          !err.status ||
-          err.status === 404 ||
-          err.status >= 500 ||
-          err.code === 'ERR_NETWORK' ||
-          err.message?.includes('Network Error');
-
-        if (isOffline) {
-          console.warn(
-            `[FTL Airport] Live backend unavailable (${err.message || err.status}), using local mock adapter:`,
-            methodName
-          );
-          useLive = false;
-          return await mockApi[methodName](...args);
-        }
-        throw err;
-      }
-    }
-    return await mockApi[methodName](...args);
-  };
-
-  return {
-    getCurrentUser: wrap('getCurrentUser'),
-    loadMaster: wrap('loadMaster'),
-    loadPermissions: wrap('loadPermissions'),
-    addMaster: wrap('addMaster'),
-    load: wrap('load'),
-    saveWorkspace: wrap('saveWorkspace'),
-    createOperation: wrap('createOperation'),
-    updateShipmentStatus: wrap('updateShipmentStatus'),
-    authorizeDeleteShipment: wrap('authorizeDeleteShipment'),
-    deleteShipment: wrap('deleteShipment'),
-    importTrips: wrap('importTrips'),
-  };
-}
 
 export default function FtlAirportPage({ defaultView = 'dashboard' }) {
   const { user } = useAuth();
@@ -90,7 +43,7 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
       user?.permissions?.includes('operations.delete')
     );
 
-    return createResilientFtlApi({
+    return createLiveApi({
       user: { id: userId, displayName },
       permissions: {
         reopen_shipments: canReopen,
