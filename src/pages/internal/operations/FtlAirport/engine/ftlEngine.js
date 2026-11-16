@@ -580,6 +580,14 @@ export function createFtlEngine(root, options = {}) {
   const txt = v => { if (v === null || v === undefined) return null; const s = String(v).trim(); return (!s || s === '..' || s === '-' || s === '.') ? null : s; };
   const num = v => { if (v === null || v === undefined || v === '') return null; const n = parseFloat(String(v).replace(/,/g, '')); return isNaN(n) ? null : n; };
   const titleCase = s => s ? s.replace(/\S+/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase()) : s;
+  function cleanDocValue(val) {
+    if (!val) return '';
+    const s = String(val).trim();
+    if (/^[-—_.\s]+$/.test(s) || s.toLowerCase() === 'none' || s === 'لا يوجد' || s === 'مكتمل' || s === 'لايوجد' || s.toLowerCase() === 'null' || s.toLowerCase() === 'undefined') {
+      return '';
+    }
+    return s;
+  }
   function normClient(v) {
     let s = (txt(v) || '').toUpperCase().replace(/\s+/g, ' ');
     if (!s) return null;
@@ -771,9 +779,9 @@ export function createFtlEngine(root, options = {}) {
         free: d('free'), cut: d('cut'), reqDate: d('reqDate'), reqTime: t('reqTime'),
         arrDate: d('arrDate'), arrTime: t('arrTime'), gateOut: d('gateOut'), gateOutT: t('gateOutT'),
         size: normSize(v('size')), cntr: txt(v('cntr')), trucker: normTrucker(v('trucker')),
-        car: txt(v('car')), driver: titleCase(txt(v('driver'))), mob: txt(v('mob')),
+        car: txt(v('car')) ? String(v('car')).trim().toUpperCase() : '', driver: titleCase(txt(v('driver'))), mob: txt(v('mob')) ? String(v('mob')).trim() : '',
         checkout: d('checkout'), updDate: txt(v('updDate')), invRcv: d('invRcv'),
-        missDoc: txt(v('missDoc')), missRcv: d('missRcv'), updates: txt(v('updates')), status: String(v('status') || '').trim().toLowerCase() === 'delivered' ? 'Delivered' : 'Open',
+        missDoc: cleanDocValue(v('missDoc')), missRcv: d('missRcv'), updates: txt(v('updates')), status: String(v('status') || '').trim().toLowerCase() === 'delivered' ? 'Delivered' : 'Open',
         fwd: 'ILS', note: txt(v('note')), _file: file, _sheet: name, _row: r + 1, _uploadGroup: groupId
       };
       entry.load = entry.arrDate || entry.reqDate || entry.gateOut || null;
@@ -1780,6 +1788,8 @@ export function createFtlEngine(root, options = {}) {
       if (!/^\d+$/.test(v) || !Number.isSafeInteger(Number(v)) || Number(v) < 1 || (c.k === 'opCount' && Number(v) > 200)) return bad(c.k === 'opCount' ? 'Enter a whole number from 1 to 200' : 'Enter a positive whole number', c.k === 'opCount' ? 'اكتب عدد صحيح من 1 إلى 200' : 'اكتب عدد صحيح أكبر من صفر');
     } else if (c.k === 'cert') {
       if (!/^\d+$/.test(v)) return bad('Certificate number: digits only', 'رقم الشهادة: أرقام فقط');
+    } else if (c.k === 'missDoc') {
+      return { ok: true, value: cleanDocValue(v) };
     } else if (c.k === 'mob') {
       if (!/^\+?[\d ()-]+$/.test(v)) return bad('Phone: digits and + only', 'التليفون: أرقام ومسموح +');
       return { ok: true, value: v };
@@ -1790,6 +1800,7 @@ export function createFtlEngine(root, options = {}) {
       return { ok: true, value: v.toUpperCase() };
     } else if (['bl', 'booking', 'car'].includes(c.k)) {
       if (!/^[\p{L}\d /_.-]+$/u.test(v) || (!search && !/\d/.test(v))) return bad('Use an ID containing digits; letters, spaces, /, -, _ and . are allowed', 'اكتب كود يحتوي أرقام؛ مسموح حروف ومسافات و / و - و _ و .');
+      return { ok: true, value: c.k === 'car' ? v.toUpperCase() : v };
     } else if (type === 'time') {
       const nt = normTime(v);
       if (!nt) return bad('Use time like 8, 2p, or 14:30', 'استخدم وقت مثل 8 أو 2p أو 14:30');
@@ -2795,6 +2806,14 @@ export function createFtlEngine(root, options = {}) {
       }
     }
     const result = validateField(col, v); if (!result.ok) return false; v = result.value;
+    if (k === 'missDoc') v = cleanDocValue(v);
+    else if (k === 'car' && v) v = String(v).trim().toUpperCase();
+    else if (k === 'driver' && v) v = titleCase(String(v).trim());
+    else if (k === 'mob' && v) v = String(v).replace(/\s+/g, ' ').trim();
+    else if (k === 'client' && v) v = normClient(v) || String(v).trim();
+    else if (k === 'line' && v) v = normLine(v) || String(v).trim();
+    else if (['dest', 'aod', 'pod', 'pol', 'pow'].includes(k) && v) v = normSite(v) || String(v).trim();
+    else if (k === 'trucker' && v) v = normTrucker(v) || String(v).trim();
     const conflict = cellIdentityConflict(dir, i, k, v); if (conflict) { toast(conflict); return false; }
     if (ship) {
       const rowsToUpdate = new Set(groupRows(ship, col, i));
@@ -5787,7 +5806,15 @@ export function createFtlEngine(root, options = {}) {
     if (COLS[dir]) {
       COLS[dir].forEach(c => {
         if (c.k && c.k !== 'updates') {
-          const v = row[c.k];
+          let v = row[c.k];
+          if (c.k === 'missDoc') v = cleanDocValue(v);
+          else if (c.k === 'car' && v) v = String(v).trim().toUpperCase();
+          else if (c.k === 'driver' && v) v = titleCase(String(v).trim());
+          else if (c.k === 'mob' && v) v = String(v).replace(/\s+/g, ' ').trim();
+          else if (c.k === 'client' && v) v = normClient(v) || String(v).trim();
+          else if (c.k === 'line' && v) v = normLine(v) || String(v).trim();
+          else if (['dest', 'aod', 'pod', 'pol', 'pow'].includes(c.k) && v) v = normSite(v) || String(v).trim();
+          else if (c.k === 'trucker' && v) v = normTrucker(v) || String(v).trim();
           fields[c.k] = (v === null || v === undefined) ? '' : String(v);
         }
       });
@@ -6306,7 +6333,7 @@ export function createFtlEngine(root, options = {}) {
       const idxs = [], status = sh.status === 'Delivered' ? 'Delivered' : 'Open';
       for (const tr of sh.trips) {
         if (!tr.id || !tr.fields) throw Error('Missing server trip ID or fields');
-        const row = {}; COLS[d].forEach(c => { row[c.k] = String(tr.fields[c.k] ?? ''); }); row.status = status;
+        const row = {}; COLS[d].forEach(c => { row[c.k] = c.k === 'missDoc' ? cleanDocValue(tr.fields[c.k]) : String(tr.fields[c.k] ?? ''); }); row.status = status;
         const idx = ENTRY[d].length; ENTRY[d].push(row); idxs.push(idx);
         const parsedUpdates = (tr.updates || []).map(u => ({
           id: u.id,
