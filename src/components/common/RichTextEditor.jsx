@@ -129,6 +129,10 @@ function ResizableImage({ editor, node, updateAttributes, selected, getPos }) {
       ? `${Math.round(previewSize.height)}px`
       : node.attrs.imageHeight || "auto";
 
+  const imageFit = ["fill", "cover", "contain"].includes(node.attrs.imageFit)
+    ? node.attrs.imageFit
+    : null;
+
   const margins = {
     left: "0 auto 0 0",
     center: "0 auto",
@@ -164,7 +168,7 @@ function ResizableImage({ editor, node, updateAttributes, selected, getPos }) {
           maxWidth: "none",
           position: "relative",
           margin: margins[node.attrs.imageAlign] || margins.left,
-          borderRadius: "12px",
+          borderRadius: "0px"
         }}
       >
         <img
@@ -179,9 +183,10 @@ function ResizableImage({ editor, node, updateAttributes, selected, getPos }) {
             display: "block",
             width,
             height,
+            ...(imageFit ? { objectFit: imageFit } : {}),
             maxWidth: "none",
             maxHeight: "none",
-            borderRadius: "12px",
+            borderRadius: "0px",
             cursor: "pointer",
           }}
         />
@@ -287,6 +292,18 @@ const ImageWithOptions = Image.extend({
         }),
       },
 
+      imageFit: {
+        default: null,
+        parseHTML: (element) => {
+          const fit = element.getAttribute("data-image-fit");
+          return ["fill", "cover", "contain"].includes(fit) ? fit : null;
+        },
+        renderHTML: (attributes) =>
+          ["fill", "cover", "contain"].includes(attributes.imageFit)
+            ? { "data-image-fit": attributes.imageFit }
+            : {},
+      },
+
       imageLayout: {
         default: "above",
         parseHTML: (element) =>
@@ -305,6 +322,8 @@ const ImageWithOptions = Image.extend({
           const height = attributes.imageHeight || "auto";
           const maxHeight = attributes.imageMaxHeight || "";
           const spacing = attributes.imageSpacing || "0px";
+          const fit = ["fill", "cover", "contain"].includes(attributes.imageFit)
+            ? attributes.imageFit : "fill";
 
           const margins = {
             left: "0 auto 0 0",
@@ -318,12 +337,12 @@ const ImageWithOptions = Image.extend({
               `width: ${width}`,
               "max-width: none",
               `height: ${height}`,
-              "object-fit: fill",
+              `object-fit: ${fit}`,
               `margin: ${margins[align] || margins.left}`,
               `margin-top: ${spacing}`,
               `margin-bottom: ${spacing}`,
               `max-height: ${maxHeight || "none"}`,
-              "border-radius: 12px",
+              "border-radius: 0",
             ].join("; "),
           };
         },
@@ -394,6 +413,54 @@ const createCroppedImage = async (imageSrc, pixelCrop) => {
 
 const controlClass =
   "rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-sky-500";
+
+// Keep the typed number locally until the user finishes editing.
+// Updating TipTap on every keystroke can re-render the image controls and
+// prevent multi-digit values from being entered normally.
+function ImageDimensionInput({ label, attribute, value, min, max, onCommit }) {
+  const [draft, setDraft] = useState(() =>
+    value && value !== "auto" ? String(parseFloat(value)) : ""
+  );
+
+  useEffect(() => {
+    setDraft(value && value !== "auto" ? String(parseFloat(value)) : "");
+  }, [value]);
+
+  const commit = () => {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      onCommit(attribute, "auto");
+      return;
+    }
+    const number = Number(trimmed);
+    if (!Number.isFinite(number)) return;
+    const clamped = Math.max(min, Math.min(max, number));
+    setDraft(String(clamped));
+    onCommit(attribute, `${clamped}px`);
+  };
+
+  return (
+    <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+      {label}
+      <input
+        type="number"
+        min={min}
+        max={max}
+        className={controlClass}
+        value={draft}
+        placeholder="Auto"
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            event.currentTarget.blur();
+          }
+        }}
+      />
+    </label>
+  );
+}
 
 export default function RichTextEditor({ value, onChange }) {
   const fileInputRef = useRef(null);
@@ -481,6 +548,7 @@ export default function RichTextEditor({ value, onChange }) {
           imageMaxHeight: "",
           imageSpacing: "0px",
           imageLayout: "above",
+          imageFit: null,
         })
         .run();
 
@@ -717,47 +785,23 @@ export default function RichTextEditor({ value, onChange }) {
               </select>
             </label>
 
-            {/* Width in pixels */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-              Width (px)
-              <input
-                type="number"
-                min="60"
-                max="2000"
-                className={controlClass}
-                value={parseFloat(imageAttributes.imageWidth) || ""}
-                placeholder="Auto"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "") {
-                    updateImageOption("imageWidth", "auto");
-                    return;
-                  }
-                  updateImageOption("imageWidth", `${value}px`);
-                }}
-              />
-            </label>
-
-            {/* Height in pixels */}
-            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
-              Height (px)
-              <input
-                type="number"
-                min="40"
-                max="1200"
-                className={controlClass}
-                value={parseFloat(imageAttributes.imageHeight) || ""}
-                placeholder="Auto"
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === "") {
-                    updateImageOption("imageHeight", "auto");
-                    return;
-                  }
-                  updateImageOption("imageHeight", `${value}px`);
-                }}
-              />
-            </label>
+            {/* Commit dimensions on blur/Enter, not on every keystroke. */}
+            <ImageDimensionInput
+              label="Width (px)"
+              attribute="imageWidth"
+              value={imageAttributes.imageWidth}
+              min={60}
+              max={2000}
+              onCommit={updateImageOption}
+            />
+            <ImageDimensionInput
+              label="Height (px)"
+              attribute="imageHeight"
+              value={imageAttributes.imageHeight}
+              min={40}
+              max={1200}
+              onCommit={updateImageOption}
+            />
 
             {/* Text layout */}
             <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
@@ -772,6 +816,21 @@ export default function RichTextEditor({ value, onChange }) {
                 <option value="above">Image above text</option>
                 <option value="left">Image left, text beside it</option>
                 <option value="right">Image right, text beside it</option>
+              </select>
+            </label>
+
+            {/* Image fit: no selection preserves existing image behavior. */}
+            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600">
+              Image Fit
+              <select
+                className={controlClass}
+                value={imageAttributes.imageFit || ""}
+                onChange={(e) => updateImageOption("imageFit", e.target.value || null)}
+              >
+                <option value="">Default (keep current)</option>
+                <option value="fill">Stretch (fill)</option>
+                <option value="cover">Cover (crop to fit)</option>
+                <option value="contain">Contain (show full image)</option>
               </select>
             </label>
 

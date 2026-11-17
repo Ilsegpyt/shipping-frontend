@@ -12,7 +12,8 @@ import CmsPublicPage from "../pages/public/CmsPublicPage";
 import Philosophy from "../pages/public/About ILS/Philosophy";
 import PurposeAndStrategy from "../pages/public/About ILS/PurposeAndStrategy";
 import Values from "../pages/public/About ILS/Values";
-import Certificates from "../pages/public/About ILS/certificates";
+// Certificates page retained for future reactivation.
+// import Certificates from "../pages/public/About ILS/certificates";
 import News from "../pages/public/news/News";
 import Incoterms from "../pages/public/resources/Incoterms";
 import CbmCalculator from "../pages/public/resources/CbmCalculator";
@@ -138,7 +139,9 @@ export default function AppRoutes() {
           element={<PurposeAndStrategy />}
         />
         <Route path="/about-ils/values" element={<Values />} />
-        <Route path="/about-ils/certificates" element={<Certificates />} />
+        {/* Certificates temporarily hidden; keep original route for future reactivation. */}
+        {/* <Route path="/about-ils/certificates" element={<Certificates />} /> */}
+        <Route path="/about-ils/certificates" element={<Navigate to="/" replace />} />
         <Route path="/news" element={<News />} />
         <Route path="/resources/incoterms" element={<Incoterms />} />
         <Route

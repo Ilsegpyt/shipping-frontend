@@ -1,0 +1,185 @@
+/* Shared public CMS presentation only. Does not modify CMS data or editor behavior. */
+.ils-shared-content .about-rich,
+.ils-shared-content .structured-rich {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Consistent readable spacing across both public renderers. */
+.ils-shared-content .about-rich :is(p, ul, ol),
+.ils-shared-content .structured-rich :is(p, ul, ol) {
+  margin-block: 0.875rem;
+}
+
+.ils-shared-content .about-rich :is(h1, h2, h3, h4, h5, h6),
+.ils-shared-content .structured-rich :is(h1, h2, h3, h4, h5, h6) {
+  margin-block: 1.5rem 0.75rem;
+  line-height: 1.3;
+}
+
+/* Images remain square without overriding CMS widths, heights or alignment. */
+.ils-shared-content .about-rich img,
+.ils-shared-content .structured-rich img,
+.ils-shared-content .about-certificate-card {
+  border-radius: 0 !important;
+}
+
+/* Both public renderers use the same side-by-side image/text wrapper. */
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: 100%;
+  min-width: 0;
+  margin: 1rem 0;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout[data-image-layout="right"] {
+  flex-direction: row-reverse;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__image {
+  flex: 0 1 40%;
+  width: 40%;
+  max-width: 40%;
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__text {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 0;
+  overflow-wrap: anywhere;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__image > p {
+  width: 100%;
+  margin: 0;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__image img {
+  max-width: 100% !important;
+  height: auto !important;
+  float: none !important;
+  margin: 0 !important;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout[data-image-align="top"] {
+  align-items: flex-start;
+}
+.ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout[data-image-align="bottom"] {
+  align-items: flex-end;
+}
+
+/* Tablet and mobile: image above text, preserving the selected image width. */
+@media (max-width: 767px) {
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout,
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout[data-image-layout="right"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__image,
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__text {
+    flex: 0 1 auto;
+    width: 100%;
+    max-width: 100%;
+  }
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__image img {
+    margin-inline: auto !important;
+  }
+}
+
+/* Slightly smaller typography on tablet; desktop stays unchanged. */
+@media (min-width: 640px) and (max-width: 1023px) {
+  .ils-shared-content :is(.about-rich, .structured-rich):not(.intro-rich) { font-size: 1.125rem; }
+  .ils-shared-content :is(.about-rich, .structured-rich) h1 { font-size: 2.5rem; }
+  .ils-shared-content article > div > h2 { font-size: 2rem; }
+  .ils-shared-content > section:first-child h1 { font-size: 2.75rem; }
+}
+/* Smaller typography on phones, including CMS rich-text headings. */
+@media (max-width: 639px) {
+  .ils-shared-content :is(.about-rich, .structured-rich):not(.intro-rich) { font-size: 1rem; line-height: 1.7; }
+  .ils-shared-content :is(.about-rich, .structured-rich) h1 { font-size: 2rem; }
+  .ils-shared-content :is(.about-rich, .structured-rich) :is(h2, h3) { font-size: 1.5rem; }
+  .ils-shared-content article > div > h2 { font-size: 1.75rem; }
+  .ils-shared-content > section:first-child h1 { font-size: 2.25rem; }
+}
+
+/* Explicit 2-axis stretching, only for CMS images opting into Fill. */
+.ils-shared-content :is(.about-rich, .structured-rich) img[data-image-fit="fill"] {
+  object-fit: fill !important;
+  max-width: 100% !important;
+}
+/* Side-by-side images occupy the full image column height on desktop. */
+@media (min-width: 768px) {
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout:has(img[data-image-fit="fill"]) {
+    align-items: stretch;
+  }
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout:has(img[data-image-fit="fill"]) .about-image-layout__image {
+    align-items: stretch;
+    min-height: 220px;
+    display: flex;
+  }
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout:has(img[data-image-fit="fill"]) .about-image-layout__image > p {
+    display: flex;
+    align-items: stretch;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+  .ils-shared-content :is(.about-rich, .structured-rich) .about-image-layout__image img[data-image-fit="fill"] {
+    width: 100% !important;
+    height: auto !important;
+    align-self: stretch;
+    flex: 1 1 auto;
+    aspect-ratio: auto !important;
+  }
+}
+/* On mobile/tablet preserve a controlled height for Fill instead of height:auto. */
+@media (max-width: 767px) {
+  .ils-shared-content :is(.about-rich, .structured-rich) img[data-image-fit="fill"] {
+    height: 260px !important;
+    aspect-ratio: auto !important;
+  }
+}
+
+/* Center the text vertically against a stretched side image on desktop.
+   Respect any explicit Top / Bottom alignment selected in the CMS. */
+@media (min-width: 768px) {
+  .ils-shared-content :is(.about-rich, .structured-rich)
+  .about-image-layout:has(img[data-image-fit="fill"]):not([data-image-align="top"]):not([data-image-align="bottom"])
+  .about-image-layout__text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-self: stretch;
+  }
+}
+
+/* Unified public section rhythm — presentation only.
+   The existing CMS image layout, fit and alignment rules above remain unchanged. */
+.ils-shared-content .ils-cms-content-section {
+  min-width: 0;
+  border-radius: 0;
+}
+
+/* Remove accidental extra space at the start/end of rich-text content. */
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) > :first-child {
+  margin-top: 0;
+}
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) > :last-child {
+  margin-bottom: 0;
+}
+
+/* Match the spacing of content directly following a section heading. */
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) {
+  max-width: 100%;
+}
+
+/* Prevent nested CMS rich-text elements from causing horizontal overflow. */
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) :is(p, ul, ol, blockquote) {
+  max-width: 100%;
+}
+
+@media (max-width: 639px) {
+  .ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) :is(p, ul, ol) {
+    margin-block: 0.75rem;
+  }
+}

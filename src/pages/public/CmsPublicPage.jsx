@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Navigate, useParams } from "react-router-dom";
 import contentService from "../../services/contentService";
 import { StructuredAboutRenderer } from "../../components/common/StructuredAboutContent";
 
@@ -7,6 +7,21 @@ const getTypeName = (type) =>
   typeof type === "string"
     ? type
     : ({ 1: "Category", 2: "Page", 3: "Post", 4: "Link" }[type] || "");
+
+// Keep the Certificates CMS data intact, but do not publish its page.
+// Remove this guard when Certificates should become publicly visible again.
+const isHiddenCertificatesPage = (content) => {
+  const normalize = (value) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+  return [content?.title, content?.slug].some(
+    (value) => normalize(value) === "certificates",
+  );
+};
 
 export default function CmsPublicPage() {
   const { contentId } = useParams();
@@ -20,6 +35,7 @@ export default function CmsPublicPage() {
     async function loadPage() {
       try {
         setLoading(true);
+        setPage(null);
         setError("");
         const response = await contentService.getById(contentId);
         const content = response?.data;
@@ -55,6 +71,10 @@ export default function CmsPublicPage() {
         <p className="text-center text-red-600">{error || "Page not found."}</p>
       </main>
     );
+  }
+
+  if (isHiddenCertificatesPage(page)) {
+    return <Navigate to="/" replace />;
   }
 
   return <StructuredAboutRenderer page={page} styleVariant="default" />;

@@ -5,7 +5,8 @@ import { ArrowLeft, ArrowUpRight } from 'lucide-react';
 import contentService from '../../../services/contentService';
 import { cleanImageUrl, cleanHtmlImages } from '../../../utils/mediaUrl';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5250";
 
 function createSlug(title = '') {
     return title
@@ -87,6 +88,8 @@ async function getAllContent() {
     return allContent;
 }
 
+const cachedArticles = new Map();
+
 export default function NewsDetails() {
     const { slug } = useParams();
 
@@ -104,23 +107,31 @@ export default function NewsDetails() {
                 setLoading(true);
                 setError('');
 
-                const allContent = await getAllContent();
+                let post = cachedArticles.get(slug);
 
-                const post = allContent.find((item) => {
-                    const type = getContentTypeName(item.type);
+                if (!post) {
+                    // News links normally contain a numeric or UUID content ID.
+                    const isContentId = /^\d+$/.test(slug) ||
+                        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug);
 
-                    if (type.toLowerCase() !== 'post') {
-                        return false;
+                    if (isContentId) {
+                        const response = await contentService.getById(slug);
+                        const candidate = response.data?.data ?? response.data;
+
+                        if (candidate && getContentTypeName(candidate.type).toLowerCase() === 'post') {
+                            post = candidate;
+                        }
+                    } else {
+                        // Preserve old title-based links without changing routing.
+                        const allContent = await getAllContent();
+                        post = allContent.find((item) =>
+                            getContentTypeName(item.type).toLowerCase() === 'post' &&
+                            createSlug(item.title) === slug
+                        );
                     }
 
-                    // Current news links use the Content ID.
-                    if (String(item.id) === String(slug)) {
-                        return true;
-                    }
-
-                    // Keep compatibility with old English slug URLs.
-                    return createSlug(item.title) === slug;
-                });
+                    if (post) cachedArticles.set(slug, post);
+                }
 
                 if (!post) {
                     throw new Error('News article not found.');

@@ -1,3 +1,9 @@
+import "./SharedCmsContentLayout.css";
+import "./SharedCmsImageStyles.css";
+import SharedSectionHeading from "./SharedSectionHeading";
+import SharedCmsPageHero from "./SharedCmsPageHero";
+import SharedContentSection from "./SharedContentSection";
+import SharedDynamicSection from "./SharedDynamicSection";
 import RichTextEditor from "./RichTextEditor";
 import ContentBlockEditor from "./ContentBlockEditor";
 import { useEffect, useState } from "react";
@@ -646,7 +652,20 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
         image.style.width = hasCustomWidth ? `min(${widthPx}px, 100%)` : "100%";
 
+        const imageFit = image.getAttribute("data-image-fit");
+        const hasImageFit = ["fill", "cover", "contain"].includes(imageFit);
         image.style.height = "auto";
+        // Side-by-side Fill takes its height from the rendered text column.
+        // Do not set an inline !important height: it would block CSS Y-axis stretch.
+        const isSideFill = imageFit === "fill" &&
+          ["left", "right"].includes(image.getAttribute("data-image-layout"));
+        if (isSideFill) {
+          image.style.removeProperty("height");
+        } else if (imageFit === "fill" && !hasCustomHeight) {
+          image.style.setProperty("height", "320px", "important");
+        } else if (hasImageFit && hasCustomHeight) {
+          image.style.setProperty("height", `${heightPx}px`, "important");
+        }
 
         if (hasCustomWidth && hasCustomHeight) {
           image.style.aspectRatio = `${widthPx} / ${heightPx}`;
@@ -657,8 +676,8 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
         image.style.maxWidth = "100%";
         image.style.minWidth = "0";
         image.style.boxSizing = "border-box";
-        image.style.objectFit = "fill";
-        image.style.borderRadius = "12px";
+        image.style.objectFit = hasImageFit ? imageFit : "fill";
+        image.style.borderRadius = "0";
         image.style.float = "none";
 
         const alignment = image.getAttribute("data-image-align") || "left";
@@ -720,116 +739,26 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     );
   };
 
-  const isSolutions = styleVariant === "solutions";
   return (
-    <main className="min-h-screen bg-white text-slate-900">
-      <section className="relative overflow-hidden bg-slate-950 px-6 pb-16 pt-32 sm:px-8 lg:px-12">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
-
-        <div className="relative mx-auto max-w-7xl">
-          {data.introLabel && (
-            <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-              {data.introLabel}
-            </p>
-          )}
-
-          <h1 className="max-w-4xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-            {page?.title || "About ILS"}
-          </h1>
-
-          {renderRich(
-            data.introText,
-            "intro-rich mt-5 max-w-3xl text-base leading-8 #00bcff sm:text-lg",
-          )}
-        </div>
-      </section>
+    <main className="ils-shared-content min-h-screen bg-white text-slate-900">
+      <SharedCmsPageHero label={data.introLabel} title={page?.title || "About ILS"}>
+        {renderRich(
+          data.introText,
+          "intro-rich mt-5 max-w-3xl text-base leading-7 text-[#00bcff] sm:text-lg sm:leading-8",
+        )}
+      </SharedCmsPageHero>
       <section className="px-4 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
         <div className="mx-auto max-w-7xl space-y-6">
-          {data.pageOrder.map((item, index) => {
-            const section =
-              item.type === "section"
-                ? data.sections.find((entry) => entry.id === item.id)
-                : null;
-            const global =
-              item.type === "highlight"
-                ? data.highlights.find((entry) => entry.id === item.id)
-                : item.type === "closing"
-                  ? data.closings.find((entry) => entry.id === item.id)
-                  : null;
-            if (
-              (item.type === "section" && !section) ||
-              (item.type !== "section" && !global)
-            )
-              return null;
-
-            if (item.type === "highlight")
-              return (
-                <section
-                  key={item.id}
-                  className="rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
-                >
-                  <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-xl leading-8 text-sky-400 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
-                    {renderRich(global.text, "")}
-                  </div>
-                </section>
-              );
-
-            if (item.type === "closing")
-              return (
-                <section
-                  key={item.id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-xl leading-8 text-slate-600 sm:p-8 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
-                >
-                  {renderRich(global.text, "")}
-                </section>
-              );
-            return (
-              <article
-                key={section.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md sm:p-8 lg:p-10"
-              >
-                {section.label && (
-                  <p className="text-base font-semibold uppercase tracking-[0.2em] text-sky-600">
-                    {section.label}
-                  </p>
-                )}
-                {section.title && (
-                  <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">
-                    {section.title}
-                  </h2>
-                )}
-                {section.subtitle && (
-                  <p className="mt-3 text-xl leading-7 text-slate-600 sm:text-2xl sm:leading-8">
-                    {section.subtitle}
-                  </p>
-                )}
-                <div className="mt-5 space-y-4">
-                  {(section.contentBlocks || []).map((block) => (
-                    <div
-                      key={block.id}
-                      className={
-                        block.type === "highlight"
-                          ? "rounded-2xl border border-slate-800 bg-slate-950 px-6 py-6 sm:px-8 sm:py-8 lg:px-10"
-                          : block.type === "closing"
-                            ? "rounded-2xl border border-slate-200 bg-slate-50 p-6 text-xl leading-8 text-slate-600 sm:p-8 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2"
-                            : "text-slate-600"
-                      }
-                    >
-                      {block.type === "highlight" ? (
-                        <div className="max-w-6xl border-l-4 border-sky-400 pl-6 text-xl leading-8 text-sky-400 sm:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2">
-                          {renderRich(block.text, "")}
-                        </div>
-                      ) : (
-                        renderRich(block.text, "text-xl leading-8")
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
+          {data.pageOrder.map((item) => (
+            <SharedDynamicSection
+              key={`${item.type}-${item.id}`}
+              item={item}
+              data={data}
+              renderRich={renderRich}
+            />
+          ))}
           {!data.pageOrder.length && (
-            <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+            <p className="rounded-none border border-brand-border bg-white p-8 text-center text-brand-muted">
               No content is available for this page in the CMS.
             </p>
           )}
@@ -837,11 +766,11 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       </section>
 
       {/* Back to Home - consistent footer navigation */}
-      <section className="border-t border-slate-200 bg-slate-50 px-6 py-8 sm:px-8 lg:px-12">
+      <section className="border-t border-brand-border bg-brand-bg px-6 py-8 sm:px-8 lg:px-12">
         <div className="mx-auto flex max-w-7xl justify-center">
           <a
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-800 shadow-sm transition hover:border-sky-500 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+            className="inline-flex items-center justify-center gap-2 rounded-none border border-brand-border bg-white px-6 py-3 text-sm font-semibold text-slate-800  transition hover:border-brand-accent hover:bg-brand-bg hover:text-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-offset-2"
           >
             <span aria-hidden="true">←</span>
             Back to Home
@@ -927,7 +856,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
   display: block;
   max-width: 100% !important;
   height: auto;
-  border-radius: 12px;
+  border-radius: 0;
   box-sizing: border-box;
 }
 
@@ -1014,7 +943,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     flex-direction: column;
     overflow: hidden;
     border: 1px solid #e2e8f0;
-    border-radius: 1rem;
+    border-radius: 0;
     background: #fff;
     padding: 0.75rem;
     box-shadow: 0 8px 24px rgb(15 23 42 / 0.07);
@@ -1035,7 +964,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     object-fit: contain !important;
     object-position: center !important;
     background: #f8fafc;
-    border-radius: 0.65rem;
+    border-radius: 0;
     margin: 0;
     padding: 0.5rem;
     box-sizing: border-box;

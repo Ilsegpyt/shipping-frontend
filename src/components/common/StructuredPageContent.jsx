@@ -1,5 +1,11 @@
+import "./SharedCmsContentLayout.css";
+import "./SharedCmsImageStyles.css";
+import SharedSectionHeading from "./SharedSectionHeading";
+import SharedCmsPageHero from "./SharedCmsPageHero";
+import SharedContentSection from "./SharedContentSection";
 import RichTextEditor from "./RichTextEditor";
 import { cleanHtmlImages } from "../../utils/mediaUrl";
+
 
 export const STRUCTURED_PAGE_MARKER = "<!--ILS_STRUCTURED_PAGE_V1-->";
 export const STRUCTURED_PAGE_SCHEMA = "ils-structured-page-v1";
@@ -212,6 +218,67 @@ export function StructuredPageEditor({ value, onChange }) {
   );
 }
 
+// Public presentation only: preserve stored CMS HTML and image attributes.
+// Match the image/text wrapper used by StructuredAboutRenderer.
+function prepareStructuredRichHtml(html = "") {
+  const cleaned = cleanHtmlImages(html);
+  if (!cleaned || typeof DOMParser === "undefined") return cleaned;
+  const doc = new DOMParser().parseFromString(cleaned, "text/html");
+
+  doc.querySelectorAll('img[data-image-layout="left"], img[data-image-layout="right"]').forEach((image) => {
+    const imageBlock = image.parentElement?.tagName === "P" ? image.parentElement : image;
+    const textBlock = imageBlock.nextElementSibling;
+    if (!imageBlock.parentNode || !textBlock || textBlock.querySelector("img")) return;
+
+    const wrapper = doc.createElement("div");
+    wrapper.className = "about-image-layout";
+    wrapper.setAttribute("data-image-layout", image.getAttribute("data-image-layout") || "left");
+    wrapper.setAttribute("data-image-align", image.getAttribute("data-image-align") || "center");
+    const imageColumn = doc.createElement("div");
+    imageColumn.className = "about-image-layout__image";
+    const textColumn = doc.createElement("div");
+    textColumn.className = "about-image-layout__text";
+    imageBlock.parentNode.insertBefore(wrapper, imageBlock);
+    wrapper.append(imageColumn, textColumn);
+    imageColumn.appendChild(imageBlock);
+    textColumn.appendChild(textBlock);
+  });
+
+  doc.querySelectorAll("img").forEach((image) => {
+    const width = Number.parseFloat(image.getAttribute("data-image-width"));
+    const height = Number.parseFloat(image.getAttribute("data-image-height"));
+    const hasWidth = Number.isFinite(width) && width > 0;
+    const hasHeight = Number.isFinite(height) && height > 0;
+    if (hasWidth) image.style.width = `min(${width}px, 100%)`;
+    image.style.maxWidth = "100%";
+    const fit = image.getAttribute("data-image-fit");
+    const hasFit = ["fill", "cover", "contain"].includes(fit);
+    image.style.height = "auto";
+    if (hasFit) {
+      image.style.objectFit = fit;
+      // A side-by-side Fill image must inherit its rendered column height.
+      // Inline !important pixel heights prevent stretching on the Y-axis.
+      const isSideFill = fit === "fill" &&
+        ["left", "right"].includes(image.getAttribute("data-image-layout"));
+      if (isSideFill) image.style.removeProperty("height");
+      else if (fit === "fill" && !hasHeight) image.style.setProperty("height", "320px", "important");
+      else if (hasHeight) image.style.setProperty("height", `${height}px`, "important");
+    }
+    if (hasWidth && hasHeight) image.style.aspectRatio = `${width} / ${height}`;
+    image.style.borderRadius = "0";
+    image.style.float = "none";
+    const layout = image.getAttribute("data-image-layout") || "above";
+    const align = image.getAttribute("data-image-align") || "left";
+    if (layout === "left" || layout === "right") {
+      image.style.margin = "0";
+    } else {
+      image.style.marginLeft = align === "center" || align === "right" ? "auto" : "0";
+      image.style.marginRight = align === "center" || align === "left" ? "auto" : "0";
+    }
+  });
+  return doc.body.innerHTML;
+}
+
 export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
   const body = page?.body || "";
   let data;
@@ -219,65 +286,34 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
   catch { data = parseStructuredPage(body); }
   const hasIntro = Boolean(data.introLabel || data.introTitle || data.introText);
   return (
-    <main className="min-h-screen bg-slate-50 text-sky-800">
-      <section className="bg-slate-950 px-6 pb-14 pt-32 sm:px-8 lg:px-12">
-        <div className="mx-auto max-w-7xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-            {data.introLabel || parentTitle}
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-            {data.introTitle || page?.title || "About ILS"}
-          </h1>
-          {data.introText && (
-            <div
-              className="structured-rich mt-6 max-w-3xl text-base leading-8 text-slate-100 sm:text-lg"
-              dangerouslySetInnerHTML={{ __html: cleanHtmlImages(data.introText) }}
-            />
-          )}
-          {/* <a
-            href="/"
-            className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-sky-400 hover:text-sky-300"
-          >
-            ← Back to Home
-          </a> */}
-        </div>
-      </section>
+    <main className="ils-shared-content min-h-screen bg-slate-50 text-sky-800">
+      <SharedCmsPageHero label={data.introLabel || parentTitle} title={data.introTitle || page?.title || "About ILS"}>
+        {data.introText && (
+          <div
+            className="structured-rich mt-5 max-w-3xl text-base leading-7 text-slate-100 sm:text-lg sm:leading-8"
+            dangerouslySetInnerHTML={{ __html: prepareStructuredRichHtml(data.introText) }}
+          />
+        )}
+      </SharedCmsPageHero>
       <section className="px-6 py-12 sm:px-8 sm:py-16 lg:px-12">
         <div className="mx-auto max-w-7xl space-y-6">
           {!hasIntro && !data.sections?.length && (
-            <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sky-800">
+            <p className="rounded-none border border-brand-border bg-white p-8 text-center text-brand-primary">
               No content is available for this page in the CMS.
             </p>
           )}
           {(data.sections || []).map((section, index) => (
-            <article
-              key={section.id || index}
-              className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-            >
+            <SharedContentSection key={section.id || index}>
               <div className="p-6 sm:p-8 lg:p-10">
-                {section.label && (
-                  <p className="text-base font-semibold uppercase tracking-[0.2em] text-sky-600">
-                    {section.label}
-                  </p>
-                )}
-                {section.title && (
-                  <h2 className="mt-2 text-3xl font-semibold tracking-tight text-sky-800 sm:text-5xl">
-                    {section.title}
-                  </h2>
-                )}
-                {section.subtitle && (
-                  <p className="mt-3 text-2xl leading-7 text-sky-800">
-                    {section.subtitle}
-                  </p>
-                )}
+                <SharedSectionHeading label={section.label} title={section.title} subtitle={section.subtitle} />
                 {section.content && (
                   <div
-                    className="structured-rich mt-5 text-xl leading-8 text-sky-800"
-                    dangerouslySetInnerHTML={{ __html: cleanHtmlImages(section.content) }}
+                    className="structured-rich mt-5 text-xl leading-8 text-brand-primary"
+                    dangerouslySetInnerHTML={{ __html: prepareStructuredRichHtml(section.content) }}
                   />
                 )}
               </div>
-            </article>
+            </SharedContentSection>
           ))}
         </div>
       </section>
@@ -298,21 +334,12 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
     margin:.45rem 0
     }
     .structured-rich img{
-    max-width:100%;height:auto;border-radius:1rem;margin:1rem 0
+    max-width:100%;height:auto;border-radius:0;margin:1rem 0
     }
     
-/* Image beside text — regular CMS images */
-.structured-rich img[data-image-layout="left"] {
-  float: left;
-  display: block;
-  margin: 0.25rem 1rem 0.75rem 0;
-}
-
-.structured-rich img[data-image-layout="right"] {
-  float: right;
-  display: block;
-  margin: 0.25rem 0 0.75rem 1rem;
-}
+/* Side-by-side CMS images use the shared .about-image-layout wrapper. */
+.structured-rich img[data-image-layout="left"],
+.structured-rich img[data-image-layout="right"] { float: none; display: block; }
 
 /* Vertical layout */
 .structured-rich img[data-image-layout="above"],

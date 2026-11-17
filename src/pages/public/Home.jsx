@@ -83,7 +83,7 @@ const getClientPortalPath = () => {
   }
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5250";
 
 const getImageUrl = (image) => cleanImageUrl(image, API_BASE_URL);
 
@@ -151,48 +151,44 @@ const getExcerpt = (body, maxLength = 180) => {
   return `${text.slice(0, maxLength).trim()}...`;
 };
 
+// Share the CMS request between Home news and Solutions, including remounts.
+let allContentPromise = null;
+
 async function getAllContent() {
-  const response = await contentService.getRootContent();
+  if (allContentPromise) return allContentPromise;
 
-  const roots = Array.isArray(response.data) ? response.data : [];
+  allContentPromise = (async () => {
+    const response = await contentService.getRootContent();
+    const roots = Array.isArray(response.data) ? response.data : [];
+    const allContent = [];
+    const visited = new Set();
 
-  const allContent = [];
+    async function collect(items) {
+      await Promise.all(items.map(async (item) => {
+        if (!item?.id || visited.has(item.id)) return;
+        visited.add(item.id);
+        allContent.push(item);
 
-  const visited = new Set();
-
-  async function collect(items) {
-    for (const item of items) {
-      if (!item?.id || visited.has(item.id)) {
-        continue;
-      }
-
-      visited.add(item.id);
-
-      allContent.push(item);
-
-      try {
-        const childrenResponse = await contentService.getChildren(item.id);
-
-        const children = Array.isArray(childrenResponse.data)
-          ? childrenResponse.data
-          : [];
-
-        if (children.length > 0) {
-          await collect(children);
+        try {
+          const childrenResponse = await contentService.getChildren(item.id);
+          const children = Array.isArray(childrenResponse.data)
+            ? childrenResponse.data
+            : [];
+          if (children.length > 0) await collect(children);
+        } catch (childError) {
+          console.error(`Failed to load children for content ${item.id}:`, childError);
         }
-      } catch (childError) {
-        console.error(
-          `Failed to load children for content ${item.id}:`,
-
-          childError,
-        );
-      }
+      }));
     }
-  }
 
-  await collect(roots);
+    await collect(roots);
+    return allContent;
+  })().catch((error) => {
+    allContentPromise = null;
+    throw error;
+  });
 
-  return allContent;
+  return allContentPromise;
 }
 
 function Home() {
@@ -454,12 +450,11 @@ function Home() {
   };
 
   return (
-    <main className="bg-white">
+    <main className="ils-website bg-white">
       {/* ==================== Hero ==================== */}
-
-      <section className="relative min-h-screen overflow-hidden">
+      <section className="relative isolate min-h-screen overflow-hidden bg-white">
         <video
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 h-full w-full object-cover object-center"
           src={heroVideo}
           autoPlay
           muted
@@ -467,54 +462,38 @@ function Home() {
           playsInline
         />
 
-        <div className="absolute inset-0 bg-slate-950/55" />
-
-        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-slate-950/60 to-transparent" />
-
-        {/* Navbar */}
+        {/* Light gradient keeps the headline readable while showing the video. */}
+        <div className="pointer-events-none absolute inset-0 " />
 
         {/* Hero Content */}
+        <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-16 sm:px-6 lg:px-8">
+          <div className="max-w-162.5 ">
+            <h1 className="max-w-162.5 text-[clamp(2.15rem,4vw,3.65rem)] font-bold leading-[1.12] tracking-[-0.035em] text-brand-surface">
+              You grow your business. <span className="block">We'll take care of the logistics.</span>
 
-        <div className="relative z-10 flex min-h-[100svh] w-full items-center px-4 pb-16 pt-32 sm:px-6 sm:pb-20 sm:pt-36 lg:min-h-screen lg:px-16 lg:pt-32">
-          <div className="mx-auto w-full max-w-7xl">
-            <div className="max-w-3xl">
-              <div className="mb-5 inline-flex max-w-full items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-2 backdrop-blur-md sm:mb-6 sm:gap-3 sm:px-4">
-                <span className="h-2 w-2 shrink-0 rounded-full bg-sky-400" />
+            </h1>
 
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-white/90 sm:text-xs sm:tracking-[0.2em]">
-                  International Logistics Solutions
-                </span>
-              </div>
+            <p className="mt-5 max-w-140 text-sm leading-7 text-brand-surface sm:text-base">
+              As the world of commerce is changing, it's time to change your
+              business with it. Move your logistics service from offline to
+              online. With ILS, shipment, tracking and managing your shipments
+              is easy
+            </p>
 
-              <h1 className="max-w-4xl text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
-                You grow your business.
-                <span className="mt-1 block text-sky-400 sm:mt-0">
-                  We'll take care of the logistics.
-                </span>
-              </h1>
+            <div className="mt-7 flex flex-wrap gap-3 sm:gap-4">
+              <a
+                href="#solutions"
+                className="inline-flex min-h-11 items-center justify-center  bg-brand-primary px-6 py-3 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-primary-hover"
+              >
+                Explore Solutions
+              </a>
 
-              <p className="mt-5 max-w-2xl text-sm leading-6 text-white/80 sm:mt-7 sm:text-base sm:leading-7 lg:text-lg">
-                As the world of commerce is changing, it's time to change your
-                business with it. Move your logistics service from offline to
-                online. With ILS, shipment, tracking and managing your shipments
-                is easy
-              </p>
-
-              <div className="mt-7 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:flex-wrap sm:gap-4">
-                <a
-                  href="#solutions"
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-sky-500 px-6 py-3.5 text-center text-sm font-semibold text-white shadow-lg shadow-sky-950/20 transition hover:bg-sky-400 sm:w-auto"
-                >
-                  Explore Solutions
-                </a>
-
-                <a
-                  href="#contact"
-                  className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 text-center text-sm font-semibold text-white backdrop-blur-md transition hover:bg-white/15 sm:w-auto"
-                >
-                  Talk to ILS
-                </a>
-              </div>
+              <a
+                href="#contact"
+                className="inline-flex min-h-11 items-center justify-center  border border-brand-primary bg-white/85 px-6 py-3 text-center text-sm font-semibold text-brand-primary transition-colors hover:bg-white"
+              >
+                Talk to ILS
+              </a>
             </div>
           </div>
         </div>
@@ -522,14 +501,14 @@ function Home() {
 
       {/* ==================== Industries ==================== */}
 
-      <section id="industries" className="bg-slate-50 py-16 sm:py-20 lg:py-28">
+      <section id="industries" className="bg-brand-surface py-10 sm:py-20 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-2xl">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
               Industries
             </p>
 
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
               Logistics expertise built around your industry.
             </h2>
 
@@ -539,7 +518,7 @@ function Home() {
             </p>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:mt-14 lg:grid-cols-3">
+          <div className="mt-10 grid grid-cols-1 border-l border-t border-brand-border sm:grid-cols-2 lg:mt-14 lg:grid-cols-3">
             <IndustryCard
               icon={<HeartPulse size={24} strokeWidth={1.8} />}
               title={
@@ -603,15 +582,15 @@ function Home() {
 
       {/* ==================== Solutions ==================== */}
 
-      <section id="solutions" className="bg-white py-16 sm:py-20 lg:py-28">
+      <section id="solutions" className="bg-white py-10 sm:py-20 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-5 sm:gap-6 lg:flex-row lg:items-end">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                 ILS Solutions
               </p>
 
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
                 End-to-end logistics solutions.
               </h2>
 
@@ -630,14 +609,14 @@ function Home() {
                   behavior: "smooth",
                 });
               }}
-              className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600 sm:px-5"
+              className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2  border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-brand-primary transition hover:border-sky-200 hover:text-brand-accent sm:px-5"
             >
               Discuss your requirements
               <ArrowUpRight size={17} />
             </a>
           </div>
 
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:mt-10 sm:grid-cols-2 sm:gap-5 lg:mt-14 lg:grid-cols-4">
+          <div className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 lg:mt-14">
             <SolutionCard
               image={seaFreight}
               title={seaFreightContent?.title || "Sea Freight"}
@@ -692,16 +671,16 @@ function Home() {
         </div>
       </section>
 
-      {/* ==================== Partners ==================== */}
+      {/* ==================== Partners ====================
 
-      <section className="overflow-hidden bg-slate-50 py-16 sm:py-20 lg:py-28">
+      <section className="overflow-hidden bg-slate-50 py-10 sm:py-20 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
               ILS Partners
             </p>
 
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
               Connected to a global network.
             </h2>
 
@@ -712,16 +691,16 @@ function Home() {
           </div>
 
           <div className="relative mt-10 overflow-hidden sm:mt-12 lg:mt-16">
-            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-gradient-to-r from-slate-50 to-transparent sm:w-40" />
+            <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-24 bg-linear-to-r from-slate-50 to-transparent sm:w-40" />
 
-            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-gradient-to-l from-slate-50 to-transparent sm:w-40" />
+            <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-24 bg-linear-to-l from-slate-50 to-transparent sm:w-40" />
 
             <div className="partners-track flex w-max animate-[partners-scroll_45s_linear_infinite]">
               <div className="flex items-center gap-6 px-3">
                 {partners.map((partner, index) => (
                   <div
                     key={`partner-${index}`}
-                    className="flex h-20 w-32 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:h-24 sm:w-40 sm:rounded-2xl sm:px-6"
+                    className="flex h-20 w-32 shrink-0 items-center justify-center  border border-slate-200/80 bg-white px-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:h-24 sm:w-40  sm:px-6"
                   >
                     <img
                       src={partner}
@@ -736,7 +715,7 @@ function Home() {
                 {partners.map((partner, index) => (
                   <div
                     key={`partner-copy-${index}`}
-                    className="flex h-20 w-32 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white px-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:h-24 sm:w-40 sm:rounded-2xl sm:px-6"
+                    className="flex h-20 w-32 shrink-0 items-center justify-center  border border-slate-200/80 bg-white px-4 shadow-sm transition-shadow duration-300 hover:shadow-md sm:h-24 sm:w-40  sm:px-6"
                   >
                     <img
                       src={partner}
@@ -769,19 +748,19 @@ function Home() {
     }
   `}
         </style>
-      </section>
+      </section> */}
 
       {/* ==================== News ==================== */}
 
-      <section id="news" className="bg-white py-16 sm:py-20 lg:py-28">
+      <section id="news" className="bg-white py-10 sm:py-20 lg:py-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
             <div className="max-w-2xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                 Media Room
               </p>
 
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
                 Latest from ILS.
               </h2>
 
@@ -793,7 +772,7 @@ function Home() {
 
             <a
               href="/news"
-              className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:text-sky-600 sm:px-5"
+              className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2  border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-brand-primary transition hover:border-sky-200 hover:text-brand-accent sm:px-5"
             >
               View All News
               <ArrowUpRight size={17} />
@@ -805,9 +784,9 @@ function Home() {
               <Link
                 key={news.id}
                 to={news.to}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:rounded-3xl"
+                className="group flex h-full flex-col overflow-hidden  border border-slate-200/80 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 "
               >
-                <div className="relative aspect-[16/10] overflow-hidden bg-slate-100">
+                <div className="relative aspect-16/10 overflow-hidden bg-slate-100">
                   <img
                     src={news.image}
                     alt={news.title}
@@ -815,10 +794,10 @@ function Home() {
                     className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                   />
 
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
+                  <div className="absolute inset-0 bg-linear-to-t from-slate-950/40 via-transparent to-transparent" />
 
                   <div className="absolute left-5 top-5">
-                    <span className="rounded-full bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur-sm">
+                    <span className="bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur-sm">
                       {news.category}
                     </span>
                   </div>
@@ -829,7 +808,7 @@ function Home() {
                     <span>{news.date}</span>
                   </div>
 
-                  <h3 className="mt-3 text-xl font-semibold leading-snug text-slate-900 transition group-hover:text-sky-600">
+                  <h3 className="mt-3 text-xl font-semibold leading-snug text-brand-primary transition group-hover:text-brand-accent">
                     {news.title}
                   </h3>
 
@@ -837,7 +816,7 @@ function Home() {
                     {news.excerpt}
                   </p>
 
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-900 transition group-hover:text-sky-600">
+                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary transition group-hover:text-brand-accent">
                     Read more
                     <ArrowUpRight
                       size={16}
@@ -853,38 +832,26 @@ function Home() {
 
       {/* ==================== Why ILS ==================== */}
 
-      <section id="about" className="bg-slate-950 py-16 sm:py-20 lg:py-28">
+      <section id="about" className="bg-brand-bg py-10 sm:py-20 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-10 sm:gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+          <div className="grid gap-10 lg:grid-cols-[1.6fr_4fr] lg:items-center lg:gap-8">
             {/* Left */}
 
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                 Why ILS
               </p>
 
-              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-white sm:mt-4 sm:text-4xl lg:text-5xl">
-                WHY ILS SHOULD BE YOUR TRANSPORT AND LOGISTICS COMPANY OF CHOICE
+              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-brand-primary sm:mt-4 sm:text-3xl lg:text-3xl">
+                Why ILS should be your transport and logistics company of choice
               </h2>
 
-              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-300 sm:mt-6 sm:text-base sm:leading-8 lg:text-lg">
-                As a global freight forwarder, ILS provides and manages supply
-                chain solutions for thousands of companies every day. Whether
-                you are a small family-run business or large global corporation
-                ILS focus on keeping your supply chains flowing through
-                operational excellence and sustainable growth. This is at the
-                core of our purpose, vision and mission. Our skilled people with
-                industry know-how, modern warehouses, strong carrier
-                relationships and a global network across 80 countries position
-                us to better serve your needs. ILS help you achieve your
-                business objectives through a unique blend of optimized and
-                flexible solutions, combined with visibility tools
-              </p>
+             
             </div>
 
             {/* Right */}
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-3">
               <WhyCard
                 number="01"
                 title="Global Network"
@@ -915,17 +882,17 @@ function Home() {
 
       {/* ==================== Contact ==================== */}
 
-      <section id="contact" className="bg-slate-50 py-16 sm:py-20 lg:py-28">
+      <section id="contact" className="bg-white py-10 sm:py-20 lg:py-16">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid items-start gap-8 sm:gap-10 lg:grid-cols-2 lg:gap-16 xl:gap-20">
             {/* Left */}
 
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                 Contact ILS
               </p>
 
-              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-slate-900 sm:mt-4 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
                 Let’s move your business forward.
               </h2>
 
@@ -948,7 +915,7 @@ function Home() {
 
             {/* Right */}
 
-            <div className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6 lg:p-8 xl:p-9">
+            <div className="min-w-0  border border-slate-200/80 bg-white p-4 shadow-sm  sm:p-6 lg:p-8 xl:p-9">
               <form onSubmit={handleContactSubmit} className="space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
@@ -961,7 +928,7 @@ function Home() {
                       name="fullName"
                       placeholder="Your name"
                       required
-                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
 
@@ -975,7 +942,7 @@ function Home() {
                       name="company"
                       placeholder="Company name"
                       required
-                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
                 </div>
@@ -991,7 +958,7 @@ function Home() {
                       name="email"
                       placeholder="you@company.com"
                       required
-                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
 
@@ -1005,7 +972,7 @@ function Home() {
                       name="phone"
                       placeholder="+20"
                       required
-                      className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                      className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
                   </div>
                 </div>
@@ -1018,7 +985,7 @@ function Home() {
                   <select
                     name="service"
                     required
-                    className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     defaultValue=""
                   >
                     <option value="" disabled>
@@ -1053,26 +1020,26 @@ function Home() {
                     rows={5}
                     required
                     placeholder="Tell us about your requirements..."
-                    className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    className="mt-2 w-full resize-none  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+                  className="inline-flex w-full items-center justify-center gap-2  bg-brand-primary px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-brand-primary-hover"
                 >
                   Send Inquiry
                   <ArrowUpRight size={17} />
                 </button>
 
                 {contactSubmitted && (
-                  <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                  <div className="border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
                     Your inquiry has been sent successfully.
                   </div>
                 )}
 
                 {contactError && (
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                     {contactError}
                   </div>
                 )}
@@ -1091,37 +1058,16 @@ function IndustryCard({ icon, title, description, to }) {
   return (
     <Link
       to={to}
-      className="group relative flex h-full min-h-[220px] flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:min-h-[240px] sm:rounded-3xl sm:p-7"
+      className="group flex min-h-56 flex-col  border-brand-border bg-brand-bg m-1 px-6 py-8 transition-colors hover:bg-brand-border focus-visible:outline-2 focus-visible:outline-brand-accent sm:px-8"
     >
-      {/* Subtle hover accent */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-sky-500 transition-transform duration-300 group-hover:scale-x-100" />
-
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-600 transition-colors duration-300 group-hover:bg-sky-500 group-hover:text-white sm:h-12 sm:w-12 sm:rounded-2xl">
-          {icon}
-        </div>
-
-        <ArrowUpRight
-          size={20}
-          aria-hidden="true"
-          className="mt-1 shrink-0 text-slate-300 transition-all duration-300 group-hover:-translate-y-1 group-hover:translate-x-1 group-hover:text-sky-500"
-        />
+      <div className="mb-6  text-brand-primary transition-colors group-hover:text-brand-accent">
+        {icon}
       </div>
-
-      <h3 className="mt-6 text-lg font-semibold leading-snug text-slate-900 transition-colors duration-300 group-hover:text-sky-700 sm:mt-7 sm:text-xl">
-        {title}
-      </h3>
-
-      <p className="mt-3 flex-1 text-sm leading-6 text-slate-600 sm:mt-4">
-        {description}
-      </p>
-
-      <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-sky-600 sm:mt-6">
-        <span>Explore industry</span>
-        <span className="transition-transform duration-300 group-hover:translate-x-1">
-          <ArrowUpRight size={16} aria-hidden="true" />
-        </span>
-      </div>
+      <h3 className="text-lg font-semibold text-brand-primary sm:text-xl">{title}</h3>
+      <p className="mt-3 flex-1 text-sm leading-7 text-brand-muted">{description}</p>
+      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">
+        Explore industry <ArrowUpRight size={16} aria-hidden="true" />
+      </span>
     </Link>
   );
 }
@@ -1130,33 +1076,18 @@ function SolutionCard({ image, title, to }) {
   return (
     <Link
       to={to}
-      className="group relative block aspect-[4/3] overflow-hidden rounded-2xl bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:aspect-[3/4] sm:rounded-3xl lg:aspect-[4/5]"
+      className="group relative block aspect-4/5 w-[78vw] max-w-80 shrink-0 snap-start overflow-hidden bg-brand-primary focus-visible:outline-2 focus-visible:outline-brand-accent sm:w-[42vw] lg:w-[24%] lg:max-w-none"
     >
       <img
         src={image}
         alt={title}
         loading="lazy"
-        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
       />
-
-      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent transition-colors duration-300 group-hover:from-slate-950/95" />
-
-      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 lg:p-6">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/65 sm:text-xs sm:tracking-[0.18em]">
-              Solution
-            </p>
-
-            <h3 className="mt-2 break-words text-lg font-semibold leading-snug text-white sm:text-xl">
-              {title}
-            </h3>
-          </div>
-
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors duration-300 group-hover:border-sky-500 group-hover:bg-sky-500 sm:h-10 sm:w-10">
-            <ArrowUpRight size={19} aria-hidden="true" />
-          </span>
-        </div>
+      <div className="absolute inset-0 bg-linear-to-t from-[#141625]/90 via-transparent to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
+        <h3 className="text-lg font-semibold text-white sm:text-xl">{title}</h3>
+        <ArrowUpRight size={20} className="shrink-0 text-white" aria-hidden="true" />
       </div>
     </Link>
   );
@@ -1164,30 +1095,18 @@ function SolutionCard({ image, title, to }) {
 
 function WhyCard({ number, title, description }) {
   return (
-    <article className="group relative flex h-full min-h-[190px] flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-sky-400/30 hover:bg-white/[0.07] hover:shadow-xl hover:shadow-black/10 focus-within:border-sky-400/40 sm:min-h-[210px] sm:rounded-3xl sm:p-6">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold tracking-[0.2em] text-sky-400">
-          {number}
-        </span>
+    <article className="flex h-full min-w-0 flex-col border-l border-brand-primary/20 px-4 py-2">
+      <span className="text-2xl font-semibold text-brand-accent">
+        {number}
+      </span>
 
-        <span
-          aria-hidden="true"
-          className="h-px w-10 bg-sky-400/30 transition-all duration-300 group-hover:w-16 group-hover:bg-sky-400/70"
-        />
-      </div>
-
-      <h3 className="mt-5 text-lg font-semibold leading-snug text-white transition-colors duration-300 group-hover:text-sky-300 sm:mt-6 sm:text-xl">
+      <h3 className="mt-3 text-base font-semibold leading-snug text-brand-primary">
         {title}
       </h3>
 
-      <p className="mt-3 flex-1 text-sm leading-6 text-slate-400">
+      <p className="mt-2 text-sm leading-6 text-brand-muted">
         {description}
       </p>
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-px origin-left scale-x-0 bg-gradient-to-r from-sky-400/70 to-transparent transition-transform duration-300 group-hover:scale-x-100"
-      />
     </article>
   );
 }
@@ -1195,8 +1114,8 @@ function WhyCard({ number, title, description }) {
 function ContactInfo({ label, value }) {
   return (
     <div className="group flex min-w-0 items-start gap-3 sm:gap-4">
-      <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-50 transition-colors duration-300 group-hover:bg-sky-100">
-        <span className="h-2 w-2 rounded-full bg-sky-500" />
+      <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center  bg-sky-50 transition-colors duration-300 group-hover:bg-sky-100">
+        <span className="h-2 w-2  bg-brand-primary" />
       </div>
 
       <div className="min-w-0 flex-1">
@@ -1204,7 +1123,7 @@ function ContactInfo({ label, value }) {
           {label}
         </p>
 
-        <p className="mt-1 break-words text-sm font-medium leading-6 text-slate-900 sm:text-base sm:leading-7">
+        <p className="mt-1 wrap-break-word text-sm font-medium leading-6 text-brand-primary sm:text-base sm:leading-7">
           {value}
         </p>
       </div>

@@ -1,7 +1,25 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import ilsLogo from "../../assets/branding/ils-logo-horizontal.png";
+import ilsLogo from "../../assets/branding/ILS_Egypt_navy_transparent.png";
 import contentService from "../../services/contentService";
+
+// Temporarily hide Certificates from public navigation, including CMS-generated links.
+// Set to true to restore navigation when the page is re-enabled.
+const SHOW_CERTIFICATES = false;
+
+const isCertificatesLink = (link) => {
+  const label = String(link?.label || "").trim().toLowerCase();
+  const path = String(link?.to || link?.href || "").split("?")[0].replace(/\/$/, "").toLowerCase();
+  return label.split(" / ").some((part) => part.trim() === "certificates")
+    || path === "/about-ils/certificates";
+};
+
+const filterHiddenPages = (groups) => SHOW_CERTIFICATES
+  ? groups
+  : groups.map((group) => ({
+      ...group,
+      links: group.links.filter((link) => !isCertificatesLink(link)),
+    }));
 
 const navGroups = [
   {
@@ -166,7 +184,7 @@ function getClientPortalPath() {
 
 function NavLink({ to, href, children, onClick }) {
   const className =
-    "block rounded-lg px-3 py-2 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white";
+    "block rounded-none px-3 py-2 text-sm text-brand-text transition hover:bg-brand-surface-muted hover:text-brand-primary";
 
   if (to) {
     return (
@@ -195,13 +213,13 @@ function NavDropdown({ label, links }) {
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10 hover:text-white"
+        className="inline-flex items-center gap-1 rounded-none px-2 py-2 text-sm font-semibold text-brand-primary transition hover:bg-brand-surface-muted"
         aria-haspopup="true"
         aria-expanded={isOpen}
       >
         {label}
         <span
-          className={`text-[10px] text-white/60 transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+          className={`text-[10px] text-brand-primary transition-transform duration-200 ${isOpen ? "rotate-180" : ""
             }`}
         >
           ⌄
@@ -209,7 +227,7 @@ function NavDropdown({ label, links }) {
       </button>
 
       {isOpen && (
-        <div className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 rounded-xl border border-white/10 bg-slate-950/95 p-2 shadow-2xl shadow-slate-950/30 backdrop-blur-xl">
+        <div className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 rounded-none border border-brand-border bg-white p-2 shadow-xl">
           <div className="space-y-0.5">
             {links.map((link) => (
               <NavLink
@@ -230,24 +248,10 @@ function NavDropdown({ label, links }) {
 
 
 export default function WebsiteNavbar() {
-  const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMobileGroup, setExpandedMobileGroup] = useState(null);
-  const [displayNavGroups, setDisplayNavGroups] = useState(navGroups);
+  const [displayNavGroups, setDisplayNavGroups] = useState(() => filterHiddenPages(navGroups));
   const location = useLocation();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 24);
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
 
   useEffect(() => {
     let active = true;
@@ -303,10 +307,10 @@ export default function WebsiteNavbar() {
           }
         }
 
-        if (active) setDisplayNavGroups(nextGroups);
+        if (active) setDisplayNavGroups(filterHiddenPages(nextGroups));
       } catch (error) {
         console.error("Failed to load CMS navigation:", error);
-        if (active) setDisplayNavGroups(navGroups);
+        if (active) setDisplayNavGroups(filterHiddenPages(navGroups));
       }
     }
 
@@ -331,13 +335,10 @@ export default function WebsiteNavbar() {
   const portalPath = getClientPortalPath();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50">
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b-2 border-brand-border bg-white ">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div
-          className={`mt-3 flex min-h-16 items-center justify-between gap-3 rounded-2xl border px-3 shadow-lg backdrop-blur-xl transition-all duration-300 sm:px-5 ${isScrolled
-            ? "border-white/10 bg-slate-950/95 shadow-slate-950/20"
-            : "border-white/15 bg-slate-950/70"
-            }`}
+          className={"flex min-h-16 items-center justify-between gap-3 bg-white py-2"}
         >
           <Link
             to="/"
@@ -345,7 +346,7 @@ export default function WebsiteNavbar() {
             aria-label="ILS Egypt home"
             onClick={closeMobileMenu}
           >
-            <img src={ilsLogo} alt="ILS Egypt" className="h-8 w-auto sm:h-10" />
+            <img src={ilsLogo} alt="ILS Egypt" className="h-10 w-auto sm:h-11" />
           </Link>
 
           {/* Desktop navigation */}
@@ -365,7 +366,7 @@ export default function WebsiteNavbar() {
           {/* Desktop portal button */}
           <Link
             to={portalPath}
-            className="hidden shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 lg:inline-flex"
+            className="hidden shrink-0 rounded-none bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-primary-hover lg:inline-flex"
           >
             Portal
           </Link>
@@ -374,7 +375,7 @@ export default function WebsiteNavbar() {
           <div className="flex shrink-0 items-center gap-2 lg:hidden">
             <Link
               to={portalPath}
-              className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-100 sm:px-4 sm:text-sm"
+              className="rounded-none bg-brand-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-primary-hover sm:px-4 sm:text-sm"
             >
               Portal
             </Link>
@@ -382,7 +383,7 @@ export default function WebsiteNavbar() {
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen((open) => !open)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-white/15 text-white transition hover:bg-white/10"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-none border border-brand-border text-brand-primary transition hover:bg-brand-surface-muted"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMobileMenuOpen}
               aria-controls="mobile-navigation"
@@ -419,12 +420,12 @@ export default function WebsiteNavbar() {
           <nav
             id="mobile-navigation"
             aria-label="Mobile navigation"
-            className="mt-2 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-2xl border border-white/10 bg-slate-950/95 p-3 shadow-2xl backdrop-blur-xl lg:hidden"
+            className="absolute left-4 right-4 top-full max-h-[calc(100dvh-5rem)] overflow-y-auto rounded-none border border-brand-border bg-white p-3 shadow-xl lg:hidden"
           >
             <Link
               to="/"
               onClick={closeMobileMenu}
-              className="mb-2 block rounded-lg px-3 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+              className="mb-2 block rounded-none px-3 py-3 text-sm font-semibold text-brand-primary transition hover:bg-brand-surface-muted"
             >
               Home
             </Link>
@@ -436,11 +437,11 @@ export default function WebsiteNavbar() {
                 .replace(/\s+/g, "-")}`;
 
               return (
-                <div key={group.label} className="border-t border-white/10">
+                <div key={group.label} className="border-t border-brand-border">
                   <button
                     type="button"
                     onClick={() => toggleMobileGroup(group.label)}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium text-white/90 transition hover:bg-white/10 hover:text-white"
+                    className="flex w-full items-center justify-between gap-3 rounded-none px-3 py-3 text-left text-sm font-medium text-brand-primary transition hover:bg-brand-surface-muted"
                     aria-expanded={isExpanded}
                     aria-controls={panelId}
                   >

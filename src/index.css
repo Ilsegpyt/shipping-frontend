@@ -1,1 +1,127 @@
+
 @import "tailwindcss";
+
+/* =========================================
+   ILS Egypt — Global Design Tokens
+========================================= */
+
+:root {
+  /* Brand palette */
+  --ils-navy: #1E3672;
+  --ils-gray: #B5B6B9;
+  --ils-light-gray: #E6E6E7;
+  --ils-blue: #224980;
+  --ils-cyan: #3097BF;
+  --ils-ink: #141625;
+  --ils-semi-cyan:#f3f8fc;
+
+  /* Semantic colors */
+  --color-primary: var(--ils-navy);
+  --color-primary-hover: var(--ils-blue);
+  --color-secondary: var(--ils-gray);
+  --color-secondary-l: var(--ils-light-gray);
+  --color-accent: var(--ils-cyan);
+  --color-bg:var(--ils-semi-cyan);
+  --color-text: var(--ils-ink);
+  --color-text-muted: #626978;
+  --color-text-inverse: #FFFFFF;
+
+  --color-surface: #FFFFFF;
+  --color-surface-muted: var(--ils-light-gray);
+  --color-surface-dark: var(--ils-navy);
+
+  --color-border: var(--ils-light-gray);
+}
+
+/* Tailwind CSS v4 theme */
+@theme inline {
+  --color-brand-primary: var(--color-primary);
+  --color-brand-primary-hover: var(--color-primary-hover);
+  --color-brand-secondary: var(--color-secondary);
+  --color-brand-secondary-l: var(--color-secondary-l);
+  --color-brand-accent: var(--color-accent);
+  --color-brand-bg:var(--color-bg);
+  --color-brand-text: var(--color-text);
+  --color-brand-muted: var(--color-text-muted);
+  --color-brand-inverse: var(--color-text-inverse);
+
+  --color-brand-surface: var(--color-surface);
+  --color-brand-surface-muted: var(--color-surface-muted);
+  --color-brand-surface-dark: var(--color-surface-dark);
+
+  --color-brand-border: var(--color-border);
+}
+
+/* =========================================
+   ILS Egypt — Public Website Typography
+========================================= */
+
+.ils-website,
+.ils-website *,
+.ils-website *::before,
+.ils-website *::after {
+  border-radius: 0 !important;
+}
+
+.ils-website img,
+.ils-website .about-rich img,
+.ils-website .page-rich img,
+.ils-website [class*="cms"] img {
+  border-radius: 0 !important;
+}
+
+.ils-website {
+  font-family: "Inter", Arial, sans-serif;
+  color: var(--color-text);
+}
+
+/* Hero */
+.ils-website .text-hero {
+  font-size: clamp(2.5rem, 4.5vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  color: var(--color-text);
+}
+
+/* Header */
+.ils-website .text-header {
+  font-size: clamp(2rem, 3vw, 3rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  color: var(--color-text);
+}
+
+/* Title */
+.ils-website .text-title {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--color-text);
+}
+
+/* Subtitle */
+.ils-website .text-subtitle {
+  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--color-text);
+}
+
+/* Paragraph */
+.ils-website .text-paragraph {
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.75;
+  color: var(--color-text-muted);
+}
+/* Force square corners across CMS content */
+.ils-website img,
+.ils-website .about-rich img,
+.ils-website .page-rich img,
+.about-rich img,
+.page-rich img,
+img[src*="/uploads/content/"] {
+  border-radius: 0 !important;
+}

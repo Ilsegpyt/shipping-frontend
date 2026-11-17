@@ -1,0 +1,15 @@
+/* Shared CMS image presentation.
+   Keep existing image alignment, width, layout and gallery behavior intact. */
+.ils-shared-content .about-rich img,
+.ils-shared-content .structured-rich img {
+  max-width: 100%;
+  box-sizing: border-box;
+  border-radius: 0 !important;
+}
+
+/* Rich text should never expand a section beyond its container. */
+.ils-shared-content .about-rich,
+.ils-shared-content .structured-rich {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

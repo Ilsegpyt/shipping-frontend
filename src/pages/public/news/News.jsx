@@ -7,7 +7,8 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import contentService from "../../../services/contentService";
 import { cleanImageUrl } from "../../../utils/mediaUrl";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:5250";
 
 const getImageUrl = (image) => cleanImageUrl(image, API_BASE_URL);
 
@@ -101,6 +102,12 @@ export default function News() {
     let isMounted = true;
 
     const loadNews = async () => {
+      if (cachedPosts) {
+        setAllPosts(cachedPosts);
+        setLoading(false);
+        return;
+      }
+
       try {
         if (!cachedPosts) {
           setLoading(true);

@@ -45,11 +45,11 @@ function XIcon() {
 }
 
 const socialLinkClass =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition-colors duration-300 hover:border-sky-400/40 hover:bg-sky-500 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-brand-secondary-l/75 transition-colors duration-300 hover:border-brand-accent/50 hover:bg-brand-accent hover:text-brand-secondary-l focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-accent focus-visible:ring-offset-2 focus-visible:ring-offset-brand-primary";
 
 export default function WebsiteFooter() {
   return (
-    <footer className="bg-slate-950 text-white">
+    <footer className="bg-brand-primary text-brand-secondary-l">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 gap-10 py-12 sm:grid-cols-2 sm:gap-8 lg:grid-cols-4 lg:gap-10 lg:py-16">
           {/* Brand */}
@@ -58,7 +58,7 @@ export default function WebsiteFooter() {
               <img src={ilsLogo} alt="ILS Egypt" className="h-11 w-auto" />
             </Link>
 
-            <p className="mt-6 max-w-md text-sm leading-6 text-slate-400">
+            <p className="mt-6 max-w-md text-sm leading-6 text-brand-secondary-l/75">
               Integrated logistics solutions connecting businesses to markets
               across Egypt and around the world.
             </p>
@@ -120,13 +120,13 @@ export default function WebsiteFooter() {
 
           {/* Navigation */}
           <div>
-            <h3 className="text-sm font-semibold text-white">Navigation</h3>
+            <h3 className="text-sm font-semibold text-brand-secondary-l">Navigation</h3>
 
             <ul className="mt-5 space-y-3">
               <li>
                 <a
                   href="/#about"
-                  className="text-sm text-slate-400 transition hover:text-white"
+                  className="text-sm text-brand-secondary-l/75 transition hover:text-brand-secondary-l"
                 >
                   About ILS
                 </a>
@@ -135,7 +135,7 @@ export default function WebsiteFooter() {
               <li>
                 <a
                   href="/#solutions"
-                  className="text-sm text-slate-400 transition hover:text-white"
+                  className="text-sm text-brand-secondary-l/75 transition hover:text-brand-secondary-l"
                 >
                   Solutions
                 </a>
@@ -144,7 +144,7 @@ export default function WebsiteFooter() {
               <li>
                 <a
                   href="/#industries"
-                  className="text-sm text-slate-400 transition hover:text-white"
+                  className="text-sm text-brand-secondary-l/75 transition hover:text-brand-secondary-l"
                 >
                   Industries
                 </a>
@@ -153,7 +153,7 @@ export default function WebsiteFooter() {
               <li>
                 <a
                   href="/#news"
-                  className="text-sm text-slate-400 transition hover:text-white"
+                  className="text-sm text-brand-secondary-l/75 transition hover:text-brand-secondary-l"
                 >
                   Media Room
                 </a>
@@ -162,7 +162,7 @@ export default function WebsiteFooter() {
               <li>
                 <a
                   href="/#contact"
-                  className="text-sm text-slate-400 transition hover:text-white"
+                  className="text-sm text-brand-secondary-l/75 transition hover:text-brand-secondary-l"
                 >
                   Contact
                 </a>
@@ -172,45 +172,45 @@ export default function WebsiteFooter() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-sm font-semibold text-white">Contact</h3>
+            <h3 className="text-sm font-semibold text-brand-secondary-l">Contact</h3>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 border- space-y-4">
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-500">
+                <p className="text-xs uppercase tracking-wider text-brand-secondary-l/60">
                   Email
                 </p>
-                <p className="mt-1 text-sm text-slate-400">info@ilsegypt.com</p>
+                <p className="mt-1 text-sm text-brand-secondary-l/75">info@ilsegypt.com</p>
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-500">
+                <p className="text-xs uppercase tracking-wider text-brand-secondary-l/60">
                   Phone
                 </p>
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-brand-secondary-l/75">
                   0222683311 - 0222683312
                 </p>
               </div>
 
               <div>
-                <p className="text-xs uppercase tracking-wider text-slate-500">
+                <p className="text-xs uppercase tracking-wider text-brand-secondary-l/60">
                   Location
                 </p>
-                <p className="mt-1 text-sm text-slate-400">Cairo, Egypt</p>
+                <p className="mt-1 text-sm text-brand-secondary-l/75">Cairo, Egypt</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 border-t border-white/10 py-6 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-slate-500">
+        <div className="flex flex-col gap-4 border-t border-white/20 py-6 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-brand-secondary-l/60">
             © {new Date().getFullYear()} ILS Egypt. All rights reserved.
           </p>
 
           <div className="flex flex-wrap gap-x-6 gap-y-3">
-            <a href="#" className="text-slate-500 transition hover:text-white">
+            <a href="#" className="text-brand-secondary-l/60 transition hover:text-brand-secondary-l">
               Privacy Policy
             </a>
-            <a href="#" className="text-slate-500 transition hover:text-white">
+            <a href="#" className="text-brand-secondary-l/60 transition hover:text-brand-secondary-l">
               Terms &amp; Conditions
             </a>
           </div>
