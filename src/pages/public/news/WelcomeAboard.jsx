@@ -37,7 +37,7 @@ export default function WelcomeAboard() {
                             21-Nov-2025
                         </p>
 
-                        <h1 className="mt-4 max-w-5xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 max-w-5xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
                             Welcome Aboard
                         </h1>
                     </div>
@@ -58,15 +58,15 @@ export default function WelcomeAboard() {
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
                             <div className="max-w-3xl">
-                                <p className="text-xl font-semibold leading-8 text-slate-900 sm:text-2xl sm:leading-9">
+                                <p className="text-base font-semibold leading-8 text-slate-900 sm:text-lg sm:leading-9">
                                     We are thrilled to announce two new distinguished members joining our team at ILS Egypt.
                                 </p>
 
-                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-lg">
+                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-sm">
                                     we are welcoming Mr. Mohamed Al Amrousy, who will be taking on the role of Commercial Manager, and Mr. Mohamed Al shabassy, who will be stepping into the position of Business Development Manager.
                                 </p>
 
-                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-lg">
+                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-sm">
                                     We are excited about the dynamic future ahead and look forward to the contributions both Mr. Mohamed Al Amrousy and Mr. Mohamed Al shabassy will bring to our company.
                                 </p>
 

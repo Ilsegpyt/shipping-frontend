@@ -205,7 +205,7 @@ export default function NewsDetails() {
                         </Link>
 
                         <div className="mt-14 max-w-4xl">
-                            <h1 className="text-4xl font-semibold text-white sm:text-5xl">
+                            <h1 className="text-2xl font-semibold text-white sm:text-3xl">
                                 News article not found
                             </h1>
 
@@ -253,7 +253,7 @@ export default function NewsDetails() {
                             </p>
                         )}
 
-                        <h1 className="mt-4 max-w-4xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 max-w-4xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
                             {content.title}
                         </h1>
                     </div>
@@ -276,7 +276,7 @@ export default function NewsDetails() {
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
                             <div
-                                className="prose prose-slate max-w-3xl prose-p:text-base prose-p:leading-8 prose-p:text-slate-600 sm:prose-p:text-lg"
+                                className="prose prose-slate max-w-3xl prose-p:text-base prose-p:leading-8 prose-p:text-slate-600 sm:prose-p:text-sm"
                                 dangerouslySetInnerHTML={{
                                     __html: cleanHtmlImages(content.body, API_BASE_URL),
                                 }}

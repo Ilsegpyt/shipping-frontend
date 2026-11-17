@@ -149,7 +149,7 @@ export default function CbmCalculator() {
                             ILS Resources
                         </span>
 
-                        <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                             CBM Calculator
                         </h1>
 
@@ -305,7 +305,7 @@ export default function CbmCalculator() {
                                     </p>
 
                                     <div
-                                        className={`mt-2 text-2xl font-bold ${container.accent}`}
+                                        className={`mt-2 text-lg font-bold ${container.accent}`}
                                     >
                                         {container.units}
                                     </div>

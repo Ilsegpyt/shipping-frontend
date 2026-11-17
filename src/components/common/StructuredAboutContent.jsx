@@ -744,7 +744,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       <SharedCmsPageHero label={data.introLabel} title={page?.title || "About ILS"}>
         {renderRich(
           data.introText,
-          "intro-rich mt-5 max-w-3xl text-base leading-7 text-[#00bcff] sm:text-lg sm:leading-8",
+          "intro-rich mt-5 max-w-3xl text-base leading-7 text-[#224980] sm:text-sm sm:leading-8",
         )}
       </SharedCmsPageHero>
       <section className="px-4 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
@@ -779,24 +779,14 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       </section>
 
       <style>{`
-  /* Intro text only */
-.about-rich.intro-rich,
-.about-rich.intro-rich p,
-.about-rich.intro-rich span,
-.about-rich.intro-rich strong,
-.about-rich.intro-rich em,
-.about-rich.intro-rich h1,
-.about-rich.intro-rich h2,
-.about-rich.intro-rich h3,
-.about-rich.intro-rich h4,
-.about-rich.intro-rich h5,
-.about-rich.intro-rich h6 {
-  color: #00bcff !important;
-}
-  .intro-rich,
-.intro-rich * {
-  color: #00bcff !important;
-}
+  /* New light CMS hero: override legacy intro colors without changing stored HTML. */
+  .ils-cms-hero .about-rich.intro-rich,
+  .ils-cms-hero .about-rich.intro-rich * {
+    color: #224980 !important;
+  }
+  .ils-cms-hero .about-rich.intro-rich a {
+    color: #1E3672 !important;
+  }
 .about-rich {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -822,7 +812,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
 
   /* Paragraphs */
-  .about-rich h1 { font-size: 3rem; line-height: 1.2; }
+  .about-rich h1 { font-size: 2rem; line-height: 1.2; }
 
 .about-rich p {
     margin: 0.8rem 0;
@@ -1144,7 +1134,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
           <button
             type="button"
             onClick={() => setCertificateViewer(null)}
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20"
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20"
             aria-label="Close image viewer"
           >
             ×
@@ -1161,7 +1151,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                   current.images.length,
               }));
             }}
-            className="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20 sm:left-6 sm:h-14 sm:w-14"
+            className="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20 sm:left-6 sm:h-14 sm:w-14"
             aria-label="Previous certificate"
           >
             ‹
@@ -1197,7 +1187,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                 index: (current.index + 1) % current.images.length,
               }));
             }}
-            className="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-3xl text-white hover:bg-white/20 sm:right-6 sm:h-14 sm:w-14"
+            className="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20 sm:right-6 sm:h-14 sm:w-14"
             aria-label="Next certificate"
           >
             ›

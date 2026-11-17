@@ -78,11 +78,11 @@ function Solutions() {
                             </span>
                         </div>
 
-                        <h1 className="text-5xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl">
+                        <h1 className="text-3xl font-semibold leading-[1.05] tracking-tight text-white sm:text-4xl lg:text-5xl">
                             End-to-end logistics solutions.
                         </h1>
 
-                        <p className="mt-7 max-w-3xl text-lg leading-8 text-white/70 sm:text-xl">
+                        <p className="mt-7 max-w-3xl text-sm leading-8 text-white/70 sm:text-base">
                             Flexible logistics solutions designed to move your
                             cargo efficiently across every stage of the supply
                             chain
@@ -99,7 +99,7 @@ function Solutions() {
                             Our solutions
                         </p>
 
-                        <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
+                        <h2 className="mt-4 text-xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
                             Logistics solutions for every need
                         </h2>
                     </div>
@@ -121,7 +121,7 @@ function Solutions() {
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
 
                                     <div className="absolute bottom-0 left-0 right-0 p-6">
-                                        <h3 className="text-2xl font-semibold text-white">
+                                        <h3 className="text-lg font-semibold text-white">
                                             {solution.title}
                                         </h3>
                                     </div>

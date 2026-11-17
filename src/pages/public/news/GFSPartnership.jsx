@@ -37,7 +37,7 @@ export default function GFSPartnership() {
                             23-Nov-2025
                         </p>
 
-                        <h1 className="mt-4 max-w-5xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 max-w-5xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
                             Exclusive Partnership and Deep Cooperation Announcement
                         </h1>
                     </div>
@@ -57,8 +57,8 @@ export default function GFSPartnership() {
                         </div>
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
-                            <div className="max-w-3xl space-y-7 text-base leading-8 text-slate-600 sm:text-lg">
-                                <p className="text-xl font-semibold leading-8 text-slate-900 sm:text-2xl sm:leading-9">
+                            <div className="max-w-3xl space-y-7 text-base leading-8 text-slate-600 sm:text-sm">
+                                <p className="text-base font-semibold leading-8 text-slate-900 sm:text-lg sm:leading-9">
                                     Exclusive Partnership and Deep Cooperation Announcement
                                 </p>
 

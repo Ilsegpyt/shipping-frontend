@@ -9,11 +9,11 @@ export default function NafezaPlatform() {
 
             <div className="relative mx-auto max-w-5xl">
                 <div className="rounded-2xl border border-slate-700/60 bg-slate-900/80 p-10 text-center shadow-2xl backdrop-blur-sm">
-                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-sky-500 text-2xl font-bold text-white shadow-lg shadow-sky-500/20">
+                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-sky-500 text-lg font-bold text-white shadow-lg shadow-sky-500/20">
                         N
                     </div>
 
-                    <h1 className="text-4xl font-bold text-white">
+                    <h1 className="text-2xl font-bold text-white">
                         Nafeza Platform
                     </h1>
 

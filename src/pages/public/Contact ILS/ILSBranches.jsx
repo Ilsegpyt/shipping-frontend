@@ -67,11 +67,11 @@ export default function ILSBranches() {
                             Contact ILS
                         </p>
 
-                        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
                             ILS Branches
                         </h1>
 
-                        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-sky-400 sm:text-lg">
+                        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
                             Find our offices and contact the team at your nearest ILS branch.
                         </p>
                     </div>
@@ -129,7 +129,7 @@ export default function ILSBranches() {
                             {selectedBranch && (
                                 <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
                                     <div className="px-6 py-7 text-center sm:px-8">
-                                        <h2 className="text-xl font-semibold text-slate-900">
+                                        <h2 className="text-base font-semibold text-slate-900">
                                             {selectedBranch.name}
                                         </h2>
 

@@ -508,11 +508,11 @@ function Home() {
               Industries
             </p>
 
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-2xl lg:text-3xl">
               Logistics expertise built around your industry.
             </h2>
 
-            <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
+            <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-sm">
               Industry-focused logistics solutions designed to support your
               operations, supply chain and business goals.
             </p>
@@ -590,11 +590,11 @@ function Home() {
                 ILS Solutions
               </p>
 
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-2xl lg:text-3xl">
                 End-to-end logistics solutions.
               </h2>
 
-              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-sm">
                 Flexible logistics solutions designed to move your cargo
                 efficiently across every stage of the supply chain.
               </p>
@@ -680,11 +680,11 @@ function Home() {
               ILS Partners
             </p>
 
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
+            <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-2xl lg:text-3xl">
               Connected to a global network.
             </h2>
 
-            <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
+            <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-sm">
               Strong partnerships help us deliver reliable logistics solutions
               across global markets.
             </p>
@@ -760,11 +760,11 @@ function Home() {
                 Media Room
               </p>
 
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-primary sm:mt-4 sm:text-2xl lg:text-3xl">
                 Latest from ILS.
               </h2>
 
-              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-lg">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:mt-5 sm:text-base sm:leading-7 lg:text-sm">
                 Discover the latest news, industry insights and milestones from
                 ILS Egypt.
               </p>
@@ -808,7 +808,7 @@ function Home() {
                     <span>{news.date}</span>
                   </div>
 
-                  <h3 className="mt-3 text-xl font-semibold leading-snug text-brand-primary transition group-hover:text-brand-accent">
+                  <h3 className="mt-3 text-base font-semibold leading-snug text-brand-primary transition group-hover:text-brand-accent">
                     {news.title}
                   </h3>
 
@@ -842,7 +842,7 @@ function Home() {
                 Why ILS
               </p>
 
-              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-brand-primary sm:mt-4 sm:text-3xl lg:text-3xl">
+              <h2 className="mt-3 max-w-xl text-xl font-semibold leading-tight tracking-tight text-brand-primary sm:mt-4 sm:text-xl lg:text-xl">
                 Why ILS should be your transport and logistics company of choice
               </h2>
 
@@ -892,11 +892,11 @@ function Home() {
                 Contact ILS
               </p>
 
-              <h2 className="mt-3 max-w-xl text-3xl font-semibold leading-tight tracking-tight text-brand-primary sm:mt-4 sm:text-4xl lg:text-5xl">
+              <h2 className="mt-3 max-w-xl text-xl font-semibold leading-tight tracking-tight text-brand-primary sm:mt-4 sm:text-2xl lg:text-3xl">
                 Let’s move your business forward.
               </h2>
 
-              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-600 sm:mt-6 sm:text-base sm:leading-8 lg:text-lg">
+              <p className="mt-5 max-w-xl text-sm leading-7 text-slate-600 sm:mt-6 sm:text-base sm:leading-8 lg:text-sm">
                 Tell us what you need and our team will get back to you to
                 discuss the right logistics solution for your business.
               </p>
@@ -1063,7 +1063,7 @@ function IndustryCard({ icon, title, description, to }) {
       <div className="mb-6  text-brand-primary transition-colors group-hover:text-brand-accent">
         {icon}
       </div>
-      <h3 className="text-lg font-semibold text-brand-primary sm:text-xl">{title}</h3>
+      <h3 className="text-sm font-semibold text-brand-primary sm:text-base">{title}</h3>
       <p className="mt-3 flex-1 text-sm leading-7 text-brand-muted">{description}</p>
       <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-brand-primary">
         Explore industry <ArrowUpRight size={16} aria-hidden="true" />
@@ -1086,7 +1086,7 @@ function SolutionCard({ image, title, to }) {
       />
       <div className="absolute inset-0 bg-linear-to-t from-[#141625]/90 via-transparent to-transparent" />
       <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-5">
-        <h3 className="text-lg font-semibold text-white sm:text-xl">{title}</h3>
+        <h3 className="text-sm font-semibold text-white sm:text-base">{title}</h3>
         <ArrowUpRight size={20} className="shrink-0 text-white" aria-hidden="true" />
       </div>
     </Link>
@@ -1096,7 +1096,7 @@ function SolutionCard({ image, title, to }) {
 function WhyCard({ number, title, description }) {
   return (
     <article className="flex h-full min-w-0 flex-col border-l border-brand-primary/20 px-4 py-2">
-      <span className="text-2xl font-semibold text-brand-accent">
+      <span className="text-lg font-semibold text-brand-accent">
         {number}
       </span>
 

@@ -290,7 +290,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
       <SharedCmsPageHero label={data.introLabel || parentTitle} title={data.introTitle || page?.title || "About ILS"}>
         {data.introText && (
           <div
-            className="structured-rich mt-5 max-w-3xl text-base leading-7 text-slate-100 sm:text-lg sm:leading-8"
+            className="structured-rich mt-5 max-w-3xl text-base leading-7 text-slate-100 sm:text-sm sm:leading-8"
             dangerouslySetInnerHTML={{ __html: prepareStructuredRichHtml(data.introText) }}
           />
         )}
@@ -308,7 +308,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
                 <SharedSectionHeading label={section.label} title={section.title} subtitle={section.subtitle} />
                 {section.content && (
                   <div
-                    className="structured-rich mt-5 text-xl leading-8 text-brand-primary"
+                    className="structured-rich mt-5 text-base leading-8 text-brand-primary"
                     dangerouslySetInnerHTML={{ __html: prepareStructuredRichHtml(section.content) }}
                   />
                 )}

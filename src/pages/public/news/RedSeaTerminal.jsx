@@ -37,7 +37,7 @@ export default function RedSeaTerminal() {
                 29-Dec-2025
               </p>
 
-              <h1 className="mt-4 max-w-5xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+              <h1 className="mt-4 max-w-5xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
                 Red Sea Container Terminal No. 1 in Ain Sokhna Port Begins Trial
                 Operations
               </h1>
@@ -59,7 +59,7 @@ export default function RedSeaTerminal() {
 
               <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
                 <div className="max-w-3xl">
-                  <p className="text-xl font-semibold leading-8 text-slate-900 sm:text-2xl sm:leading-9">
+                  <p className="text-base font-semibold leading-8 text-slate-900 sm:text-lg sm:leading-9">
                     Egypt has officially begun trial operations at the Red Sea
                     Container Terminal No. 1 at Sokhna Port, marking a major
                     step in its bid to become a leading logistics and

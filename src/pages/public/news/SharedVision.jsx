@@ -37,7 +37,7 @@ export default function SharedVision() {
                             06-Nov-2025
                         </p>
 
-                        <h1 className="mt-4 max-w-5xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 max-w-5xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
                             A shared vision, strong coordination, and trusted expertise
                         </h1>
                     </div>
@@ -58,7 +58,7 @@ export default function SharedVision() {
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
                             <div className="max-w-3xl">
-                                <p className="text-base leading-8 text-slate-600 sm:text-lg">
+                                <p className="text-base leading-8 text-slate-600 sm:text-sm">
                                     The collaboration between ILS Egypt and{' '}
                                     <a
                                         href="https://www.linkedin.com/company/gmcc-welling/"

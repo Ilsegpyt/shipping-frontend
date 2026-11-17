@@ -121,11 +121,11 @@ export default function GetAQuote() {
                         Contact ILS
                     </p>
 
-                    <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                    <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
                         Get A Quote
                     </h1>
 
-                    <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-sky-400 sm:text-lg">
+                    <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
                         Fill in the form and our experts will contact you.
                     </p>
                 </div>
@@ -139,7 +139,7 @@ export default function GetAQuote() {
                             Quote Request
                         </p>
 
-                        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                             Tell us about your shipment
                         </h2>
 

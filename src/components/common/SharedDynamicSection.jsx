@@ -6,9 +6,9 @@ import SharedSectionHeading from "./SharedSectionHeading";
 const HIGHLIGHT_CONTAINER_CLASS =
   "rounded-none border border-brand-primary bg-brand-surface-dark px-5 py-5 sm:px-8 sm:py-8 lg:px-10";
 const HIGHLIGHT_CONTENT_CLASS =
-  "max-w-6xl border-l-4 border-brand-accent pl-4 text-base leading-7 text-brand-accent sm:pl-6 sm:text-lg sm:leading-8 lg:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
+  "max-w-6xl border-l-4 border-brand-accent pl-4 text-base leading-7 text-brand-accent sm:pl-6 sm:text-sm sm:leading-8 lg:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
 const CLOSING_CLASS =
-  "rounded-none border border-brand-border bg-brand-bg p-5 text-base leading-7 text-brand-muted sm:p-8 sm:text-lg sm:leading-8 lg:text-2xl [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
+  "rounded-none border border-brand-border bg-brand-bg p-5 text-base leading-7 text-brand-muted sm:p-8 sm:text-sm sm:leading-8 lg:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
 
 /** Presentation only. Accepts normalized CMS data; never changes or saves it. */
 export default function SharedDynamicSection({ item, data, renderRich }) {
@@ -60,7 +60,7 @@ export default function SharedDynamicSection({ item, data, renderRich }) {
               </div>
             ) : renderRich(
               block.text,
-              block.type === "closing" ? "" : "text-base leading-7 sm:text-lg sm:leading-8 lg:text-xl"
+              block.type === "closing" ? "" : "text-base leading-7 sm:text-sm sm:leading-8 lg:text-base"
             )}
           </div>
         ))}

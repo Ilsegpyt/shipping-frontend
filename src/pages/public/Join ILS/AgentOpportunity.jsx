@@ -106,11 +106,11 @@ export default function AgentOpportunity() {
                             Join ILS
                         </p>
 
-                        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
                             Become an Agent
                         </h1>
 
-                        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+                        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 sm:text-sm">
                             Join our global network of agents and explore new business
                             opportunities with ILS.
                         </p>
@@ -126,7 +126,7 @@ export default function AgentOpportunity() {
                             Agent Opportunity
                         </p>
 
-                        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                             Tell us about your business
                         </h2>
 

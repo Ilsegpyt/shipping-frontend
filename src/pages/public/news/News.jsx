@@ -255,11 +255,11 @@ export default function News() {
               </span>
             </div>
 
-            <h1 className="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
               Latest from ILS
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-lg">
+            <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
               Discover the latest news, industry insights and milestones from
               ILS Egypt.
             </p>
@@ -328,7 +328,7 @@ export default function News() {
                       <span>{item.category}</span>
                     </div>
 
-                    <h2 className="mt-4 text-xl font-semibold leading-7 text-slate-900">
+                    <h2 className="mt-4 text-base font-semibold leading-7 text-slate-900">
                       <Link
                         to={item.to}
                         className="transition hover:text-sky-600"

@@ -37,7 +37,7 @@ export default function MideaFactory() {
                             23-Nov-2025
                         </p>
 
-                        <h1 className="mt-4 max-w-5xl text-4xl font-semibold leading-tight tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 max-w-5xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
                             ILSegypt cooperate #Midea for opening one of its factories at Sadat City
                         </h1>
                     </div>
@@ -58,11 +58,11 @@ export default function MideaFactory() {
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
                             <div className="max-w-3xl">
-                                <p className="text-xl font-semibold leading-8 text-slate-900 sm:text-2xl sm:leading-9">
+                                <p className="text-base font-semibold leading-8 text-slate-900 sm:text-lg sm:leading-9">
                                     ILSegypt cooperate #Midea for opening one of its factories at Sadat City
                                 </p>
 
-                                <p className="mt-7 whitespace-pre-line text-base leading-8 text-slate-600 sm:text-lg">
+                                <p className="mt-7 whitespace-pre-line text-base leading-8 text-slate-600 sm:text-sm">
                                     وضع المهندس أحمد سمير، وزير التجارة والصناعة، اليوم، حجر الأساس لمصنع جديد لشركة ميديا إليكتريك مصر الصينية المتخصصة في إنتاج الأجهزة المنزلية بالمنطقة الصناعية بمدينة السادات،ووالذى يقام على مساحة 220 ألف متر مربع، وذلك بحضور السفير/ لياو ليتشيانج سفير الصين بالقاهرة والدكتور/ أحمد كُريم نائب رئيس الهيئة العامة للاستثمار لشئون ترويج الاستثمار، والسيد/عمرو سعيد الرئيس التنفيذي لشركة ميديا إليكتريك مصر.
                                 </p>
 

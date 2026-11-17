@@ -97,11 +97,11 @@ export default function Recruitment() {
                             Join ILS
                         </p>
 
-                        <h1 className="mt-4 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
                             Recruitment
                         </h1>
 
-                        <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-lg">
+                        <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
                             Welcome to our team. Explore opportunities and take the next
                             step in your career with ILS.
                         </p>
@@ -117,7 +117,7 @@ export default function Recruitment() {
                             Careers
                         </p>
 
-                        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                             Join our team
                         </h2>
 

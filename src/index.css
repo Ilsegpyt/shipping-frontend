@@ -77,7 +77,7 @@
 
 /* Hero */
 .ils-website .text-hero {
-  font-size: clamp(2.5rem, 4.5vw, 4.5rem);
+  font-size: clamp(2rem, 3.5vw, 3.5rem);
   font-weight: 700;
   line-height: 1.1;
   letter-spacing: -0.035em;
@@ -86,7 +86,7 @@
 
 /* Header */
 .ils-website .text-header {
-  font-size: clamp(2rem, 3vw, 3rem);
+  font-size: clamp(1.5rem, 2.5vw, 2.25rem);
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.025em;
@@ -95,7 +95,7 @@
 
 /* Title */
 .ils-website .text-title {
-  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-size: clamp(1.125rem, 1.6vw, 1.5rem);
   font-weight: 600;
   line-height: 1.3;
   color: var(--color-text);
@@ -103,7 +103,7 @@
 
 /* Subtitle */
 .ils-website .text-subtitle {
-  font-size: clamp(1.125rem, 1.4vw, 1.375rem);
+  font-size: clamp(1rem, 1.2vw, 1.125rem);
   font-weight: 500;
   line-height: 1.5;
   color: var(--color-text);
@@ -111,7 +111,7 @@
 
 /* Paragraph */
 .ils-website .text-paragraph {
-  font-size: 1rem;
+  font-size: 0.875rem;
   font-weight: 400;
   line-height: 1.75;
   color: var(--color-text-muted);

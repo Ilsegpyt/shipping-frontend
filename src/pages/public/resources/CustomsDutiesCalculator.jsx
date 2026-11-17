@@ -243,7 +243,7 @@ export default function CustomsDutiesCalculator() {
                             ILS Resources
                         </span>
 
-                        <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+                        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                             Customs Duties Calculator
                         </h1>
 
@@ -565,7 +565,7 @@ export default function CustomsDutiesCalculator() {
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
                                     Total Estimated Duties
                                 </div>
-                                <div className="mt-2 text-3xl font-semibold tracking-tight">
+                                <div className="mt-2 text-xl font-semibold tracking-tight">
                                     {formatNumber(calculations.totalDuties)} EGP
                                 </div>
                             </div>
