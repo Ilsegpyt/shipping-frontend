@@ -1,8 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import seaFreightImage from "../../assets/website/solutions/seafreight.webp";
 
 /** Presentation-only hero. CMS parsing, routing, and persistence remain unchanged. */
 export default function SharedCmsPageHero({ label, title, children, image = seaFreightImage }) {
+  const { pathname } = useLocation();
+  const normalizedPath = pathname.replace(/\/$/, "");
+  const isNewsIndex = normalizedPath === "/news";
+  const isNewsDetail = /^\/news\/[^/]+/.test(normalizedPath);
+  const isSolutionsPage = pathname.replace(/\/$/, "") === "/solutions";
+  const isSolutionDetail = /^\/solutions\/[^/]+/.test(pathname) || ["ils solutions", "solutions"].includes(String(label || "").trim().toLowerCase());
   const heading = String(title || "ILS Egypt");
   const section = typeof label === "string" ? label.trim() : "";
   const showSection = section && section.toLowerCase() !== heading.toLowerCase();
@@ -29,9 +35,37 @@ export default function SharedCmsPageHero({ label, title, children, image = seaF
         <div className="w-full max-w-3xl lg:max-w-[58%]">
           <nav aria-label="Breadcrumb" className="mb-7 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold tracking-wide text-[#224980] sm:text-sm">
             <Link to="/" className="transition-colors hover:text-[#3097BF]">Home</Link>
-            {showSection && <><span aria-hidden="true">/</span><span>{section}</span></>}
-            <span aria-hidden="true">/</span>
-            <span aria-current="page" className="text-[#1E3672]">{heading}</span>
+            {isNewsIndex ? (
+              <>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="text-[#1E3672]">Media Room</span>
+              </>
+            ) : isNewsDetail ? (
+              <>
+                <span aria-hidden="true">/</span>
+                <Link to="/news" className="transition-colors hover:text-[#3097BF]">Media Room</Link>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="text-[#1E3672]">{heading}</span>
+              </>
+            ) : isSolutionsPage ? (
+              <>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="text-[#1E3672]">Solutions</span>
+              </>
+            ) : isSolutionDetail ? (
+              <>
+                <span aria-hidden="true">/</span>
+                <Link to="/solutions" className="transition-colors hover:text-[#3097BF]">Solutions</Link>
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="text-[#1E3672]">{heading}</span>
+              </>
+            ) : (
+              <>
+                {showSection && <><span aria-hidden="true">/</span><span>{section}</span></>}
+                <span aria-hidden="true">/</span>
+                <span aria-current="page" className="text-[#1E3672]">{heading}</span>
+              </>
+            )}
           </nav>
           <div aria-hidden="true" className="mb-5 h-1 w-12 bg-[#3097BF]" />
           <h1 className="max-w-3xl text-[clamp(2.1rem,4vw,3.8rem)] font-bold leading-[1.08] tracking-[-0.035em] text-[#1E3672]">

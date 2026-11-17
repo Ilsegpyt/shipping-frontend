@@ -1,3 +1,4 @@
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import { useMemo, useState } from 'react';
 import {
     Box,
@@ -139,31 +140,13 @@ export default function CbmCalculator() {
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-900">
-            <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(14,165,233,0.18),transparent_38%)]" />
-
-                <div className="relative mx-auto max-w-7xl px-6 pb-14 pt-28 lg:px-8">
-                    <div className="mx-auto max-w-3xl text-center">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-300 backdrop-blur-md">
-                            <Calculator size={14} />
-                            ILS Resources
-                        </span>
-
-                        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                            CBM Calculator
-                        </h1>
-
-                        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-sky-400 sm:text-base">
-                            Calculate cargo volume, gross weight and volumetric
-                            weight for your shipment.
-                        </p>
-                    </div>
-                </div>
-            </section>
+            <SharedCmsPageHero label="ILS Resources" title="CBM Calculator">
+                <p className="text-base leading-7 text-[#53677c] sm:text-lg sm:leading-8">Calculate cargo volume, gross weight and volumetric weight for your shipment.</p>
+            </SharedCmsPageHero>
 
             <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
-                <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50">
-                    <div className="border-b border-slate-200 bg-slate-950 px-5 py-3 text-xs font-medium text-slate-300 sm:px-7">
+                <div className="overflow-hidden rounded-none border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 bg-[#1E3672] px-5 py-3 text-xs font-medium text-white sm:px-7">
                         <span className="text-sky-400">UOM:</span>{' '}
                         Centimeters (cm) & Kilograms (kg)
                     </div>
@@ -225,7 +208,7 @@ export default function CbmCalculator() {
                             <button
                                 type="button"
                                 onClick={reset}
-                                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:text-sky-600"
+                                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-none border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:border-sky-200 hover:text-sky-600"
                             >
                                 <RotateCcw size={15} />
                                 Reset
@@ -294,7 +277,7 @@ export default function CbmCalculator() {
                             {calculation.containers.map((container) => (
                                 <div
                                     key={container.name}
-                                    className="rounded-xl border border-slate-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
+                                    className="rounded-none border border-slate-200 bg-white p-4 text-center transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-md"
                                 >
                                     <h3 className="text-xs font-semibold text-slate-800">
                                         {container.name}
@@ -337,7 +320,7 @@ function InputRow({ label, value, unit, onChange }) {
                     value={value}
                     onChange={(event) => onChange(event.target.value)}
                     placeholder="0"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-14 text-sm text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    className="w-full rounded-none border border-slate-200 bg-white px-4 py-3 pr-14 text-sm text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                 />
 
                 <span className="absolute inset-y-0 right-3 flex items-center text-[10px] font-semibold uppercase text-slate-400">
@@ -350,9 +333,9 @@ function InputRow({ label, value, unit, onChange }) {
 
 function ResultRow({ icon, iconClass, title, subtitle, value, unit }) {
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+        <div className="flex items-center gap-3 rounded-none border border-slate-100 bg-slate-50 p-3">
             <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white ${iconClass}`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-none text-white ${iconClass}`}
             >
                 {icon}
             </div>

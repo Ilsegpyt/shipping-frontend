@@ -1,3 +1,4 @@
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import React, { useState } from 'react';
 import agentApplicationsService from '../../../services/agentApplicationsService';
 
@@ -37,7 +38,7 @@ const citiesByCountry = {
 };
 
 const inputClass =
-    'mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
+    'mt-2 w-full rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15';
 
 const labelClass = 'text-sm font-medium text-slate-700';
 
@@ -94,32 +95,13 @@ export default function AgentOpportunity() {
 
     return (
         <main className="bg-white">
-            {/* ==================== Hero ==================== */}
-            <section className="relative overflow-hidden bg-slate-950 pt-32 pb-20 sm:pt-36 sm:pb-24">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_40%)]" />
-                <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
-                <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
-
-                <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-                    <div className="max-w-3xl">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-                            Join ILS
-                        </p>
-
-                        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                            Become an Agent
-                        </h1>
-
-                        <p className="mt-6 max-w-2xl text-base leading-7 text-slate-300 sm:text-sm">
-                            Join our global network of agents and explore new business
-                            opportunities with ILS.
-                        </p>
-                    </div>
-                </div>
-            </section>
+            {/* Shared public website hero */}
+            <SharedCmsPageHero label="Join ILS" title="Become an Agent">
+                <p>Join our global network of agents and explore new business opportunities with ILS.</p>
+            </SharedCmsPageHero>
 
             {/* ==================== Form ==================== */}
-            <section className="bg-slate-50 py-20 sm:py-24">
+            <section className="bg-[#f6fafc] py-14 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <div className="mb-10 max-w-2xl">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
@@ -136,7 +118,7 @@ export default function AgentOpportunity() {
                         </p>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
+                    <div className="rounded-none border border-[#dce9f2] bg-white p-6 shadow-sm sm:p-9">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
@@ -259,7 +241,7 @@ export default function AgentOpportunity() {
                                             onChange={(event) => setCountryCode(event.target.value)}
                                             autoComplete="tel-country-code"
                                             aria-label="Country code"
-                                            className="w-24 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                            className="w-24 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
                                         />
 
                                         <input
@@ -273,7 +255,7 @@ export default function AgentOpportunity() {
                                             aria-describedby={phoneError ? 'cellPhone-error' : undefined}
                                             onInvalid={() => setPhoneError('Please enter your cell phone number.')}
                                             onChange={() => setPhoneError('')}
-                                            className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                                            className="min-w-0 flex-1 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
                                         />
                                     </div>
                                     {phoneError && (
@@ -320,20 +302,20 @@ export default function AgentOpportunity() {
 
                                 <button
                                     type="submit"
-                                    className="inline-flex items-center justify-center rounded-xl bg-sky-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100"
+                                    className="inline-flex items-center justify-center rounded-none bg-[#1E3672] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-[#3097BF] focus:outline-none focus:ring-2 focus:ring-[#3097BF]/20"
                                 >
                                     Submit
                                 </button>
                             </div>
 
                             {submissionError && (
-                                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                                <div role="alert" className="rounded-none border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                                     {submissionError}
                                 </div>
                             )}
 
                             {submitted && (
-                                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                <div className="rounded-none border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
                                     Your request has been submitted successfully.
                                 </div>
                             )}

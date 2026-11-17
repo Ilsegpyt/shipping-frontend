@@ -1,3 +1,4 @@
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -231,32 +232,13 @@ export default function CustomsDutiesCalculator() {
 
     return (
         <main className="min-h-screen bg-slate-50 text-slate-900">
-            <section className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(14,165,233,0.18),transparent_38%)]" />
-
-                <div className="relative mx-auto max-w-7xl px-6 pb-14 pt-8 lg:px-8">
-                    
-
-                    <div className="mx-auto mt-12 max-w-3xl text-center">
-                        <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-sky-300 backdrop-blur-md">
-                            <Calculator size={14} />
-                            ILS Resources
-                        </span>
-
-                        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-                            Customs Duties Calculator
-                        </h1>
-
-                        <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-sky-400 sm:text-base">
-                            Estimate import taxes, VAT &amp; duties for shipments to Egypt.
-                        </p>
-                    </div>
-                </div>
-            </section>
+            <SharedCmsPageHero label="ILS Resources" title="Customs Duties Calculator">
+                <p className="text-base leading-7 text-[#53677c] sm:text-lg sm:leading-8">Estimate import taxes, VAT & duties for shipments to Egypt.</p>
+            </SharedCmsPageHero>
 
             <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                    <div className="bg-slate-950 px-5 py-3 text-xs font-semibold text-sky-300">
+                <div className="overflow-hidden rounded-none border border-slate-200 bg-white shadow-sm">
+                    <div className="bg-[#1E3672] px-5 py-3 text-xs font-semibold text-white">
                         All monetary values converted to EGP
                     </div>
 
@@ -271,7 +253,7 @@ export default function CustomsDutiesCalculator() {
                                     key={item}
                                     type="button"
                                     onClick={() => setIncoterm(item)}
-                                    className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition ${incoterm === item
+                                    className={`rounded-none border px-4 py-2.5 text-sm font-semibold transition ${incoterm === item
                                         ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
                                         : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50'
                                         }`}
@@ -387,7 +369,7 @@ export default function CustomsDutiesCalculator() {
                                             key={item}
                                             type="button"
                                             onClick={() => setGoodsType(item)}
-                                            className={`rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${goodsType === item
+                                            className={`rounded-none border px-3 py-2.5 text-xs font-semibold transition ${goodsType === item
                                                 ? 'border-sky-500 bg-sky-50 text-sky-700'
                                                 : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300'
                                                 }`}
@@ -409,7 +391,7 @@ export default function CustomsDutiesCalculator() {
                                             key={String(value)}
                                             type="button"
                                             onClick={() => setNationalAgreement(value)}
-                                            className={`rounded-lg border px-4 py-2.5 text-sm font-semibold transition ${nationalAgreement === value
+                                            className={`rounded-none border px-4 py-2.5 text-sm font-semibold transition ${nationalAgreement === value
                                                 ? 'border-sky-500 bg-sky-500 text-white'
                                                 : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50'
                                                 }`}
@@ -489,7 +471,7 @@ export default function CustomsDutiesCalculator() {
                                 <button
                                     type="button"
                                     onClick={reset}
-                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-none border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
                                 >
                                     <RotateCcw size={13} />
                                     Reset
@@ -561,7 +543,7 @@ export default function CustomsDutiesCalculator() {
                                 />
                             </div>
 
-                            <div className="mt-5 rounded-xl bg-gradient-to-r from-slate-950 to-sky-950 p-5 text-white shadow-sm">
+                            <div className="mt-5 rounded-none bg-[#1E3672] p-5 text-white shadow-sm">
                                 <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
                                     Total Estimated Duties
                                 </div>
@@ -606,9 +588,9 @@ function Field({ label, suffix, children }) {
 
 function ResultCard({ icon, title, subtitle, value, iconClass }) {
     return (
-        <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3.5">
+        <div className="flex items-center gap-3 rounded-none border border-slate-200 bg-white p-3.5">
             <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white ${iconClass}`}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-none text-white ${iconClass}`}
             >
                 {icon}
             </div>
@@ -631,7 +613,7 @@ function ResultCard({ icon, title, subtitle, value, iconClass }) {
 
 function BreakdownRow({ label, value }) {
     return (
-        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-3.5 py-3">
+        <div className="flex items-center justify-between rounded-none border border-slate-200 bg-white px-3.5 py-3">
             <span className="text-xs text-slate-600">{label}</span>
             <span className="text-xs font-semibold text-slate-800">{value}</span>
         </div>
@@ -647,4 +629,4 @@ function BoxIcon() {
 }
 
 const inputClass =
-    'h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100';
+    'h-10 w-full rounded-none border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100';

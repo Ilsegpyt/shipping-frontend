@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Link, useSearchParams } from "react-router-dom";
 
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
+import newsHeroImage from "../../../assets/website/news/06deaf3c-354a-4853-a3d6-9a2e79884141.jpg";
 
 import contentService from "../../../services/contentService";
 import { cleanImageUrl } from "../../../utils/mediaUrl";
@@ -238,36 +240,9 @@ export default function News() {
 
   return (
     <main className="min-h-screen bg-white">
-      {/**\\\*** ==================== Hero ==================== **\\\***/}
-
-      <section className="relative overflow-hidden bg-slate-950">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%\\\_35%,rgba(14,165,233,0.22),transparent_35%)]" />
-
-        <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-500/10 to-transparent" />
-
-        <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-10 lg:px-8 lg:pb-24">
-          <div className="mt-16 max-w-3xl">
-            <div className="inline-flex items-center gap-3 rounded-full border border-sky-400/20 bg-sky-400/10 px-4 py-2">
-              <span className="h-2 w-2 rounded-full bg-sky-400" />
-
-              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">
-                Media Room
-              </span>
-            </div>
-
-            <h1 className="mt-6 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
-              Latest from ILS
-            </h1>
-
-            <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
-              Discover the latest news, industry insights and milestones from
-              ILS Egypt.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/**\\\*** ==================== News ==================== **\\\***/}
+      <SharedCmsPageHero label="Media Room" title="Latest from ILS" image={newsHeroImage}>
+        Discover the latest news, industry insights and milestones from ILS Egypt.
+      </SharedCmsPageHero>
 
       <section className="bg-white py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -290,11 +265,11 @@ export default function News() {
           )}
 
           {!loading && !error && newsItems.length > 0 && (
-            <div className="grid gap-7 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
               {newsItems.map((item) => (
                 <article
                   key={item.id}
-                  className="group flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-sky-200 hover:shadow-xl hover:shadow-slate-200/60"
+                  className="group flex h-full flex-col overflow-hidden border border-[#dce9f2] bg-white transition duration-300 hover:border-[#3097BF] hover:shadow-lg"
                 >
                   <Link
                     to={item.to}
@@ -312,14 +287,14 @@ export default function News() {
                       </div>
                     )}
 
-                    <div className="absolute left-5 top-5 rounded-full bg-slate-950/80 px-3 py-1.5 backdrop-blur-sm">
+                    <div className="absolute left-4 top-4 bg-[#1E3672]/90 px-3 py-1.5">
                       <span className="text-xs font-semibold text-white">
                         {item.category}
                       </span>
                     </div>
                   </Link>
 
-                  <div className="flex flex-1 flex-col p-6 sm:p-7">
+                  <div className="flex flex-1 flex-col p-5 sm:p-6">
                     <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                       <span>{item.date}</span>
 
@@ -328,7 +303,7 @@ export default function News() {
                       <span>{item.category}</span>
                     </div>
 
-                    <h2 className="mt-4 text-base font-semibold leading-7 text-slate-900">
+                    <h2 className="mt-4 text-base font-semibold leading-7 text-[#1E3672]">
                       <Link
                         to={item.to}
                         className="transition hover:text-sky-600"
@@ -343,7 +318,7 @@ export default function News() {
 
                     <Link
                       to={item.to}
-                      className="mt-6 inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-900 transition hover:text-sky-600"
+                      className="mt-6 inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#1E3672] transition hover:text-[#3097BF]"
                     >
                       Read more
                       <ArrowUpRight

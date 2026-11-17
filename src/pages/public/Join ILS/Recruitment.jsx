@@ -1,185 +1,283 @@
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import React, { useState } from 'react';
-import recruitmentApplicationsService from '../../../services/recruitmentApplicationsService';
+import agentApplicationsService from '../../../services/agentApplicationsService';
 
-const departments = [
-    'Sales',
-    'Operations',
-    'Finance',
-    'Customer Service',
-    'IT',
-    'Human Resources',
+const countries = [
+    'Egypt',
+    'Saudi Arabia',
+    'United Arab Emirates',
+    'Qatar',
+    'Kuwait',
+    'Bahrain',
+    'Oman',
+    'Jordan',
     'Other',
 ];
 
-const MAX_CV_SIZE = 5 * 1024 * 1024; // 5 MB
+const countryCodes = {
+    Egypt: '+20',
+    'Saudi Arabia': '+966',
+    'United Arab Emirates': '+971',
+    Qatar: '+974',
+    Kuwait: '+965',
+    Bahrain: '+973',
+    Oman: '+968',
+    Jordan: '+962',
+};
+
+const citiesByCountry = {
+    Egypt: ['Cairo', 'Alexandria', 'Giza', 'Port Said', 'Other'],
+    'Saudi Arabia': ['Jeddah', 'Riyadh', 'Dammam', 'Other'],
+    'United Arab Emirates': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Other'],
+    Qatar: ['Doha', 'Other'],
+    Kuwait: ['Kuwait City', 'Other'],
+    Bahrain: ['Manama', 'Other'],
+    Oman: ['Muscat', 'Other'],
+    Jordan: ['Amman', 'Other'],
+    Other: ['Other'],
+};
 
 const inputClass =
-    'mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100';
+    'mt-2 w-full rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15';
 
 const labelClass = 'text-sm font-medium text-slate-700';
 
-export default function Recruitment() {
+export default function AgentOpportunity() {
+    const [country, setCountry] = useState('');
+    const [countryCode, setCountryCode] = useState('+20');
     const [submitted, setSubmitted] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
-    const [cvError, setCvError] = useState('');
+    const [phoneError, setPhoneError] = useState('');
+    const [submissionError, setSubmissionError] = useState('');
 
-    const handleCvChange = (event) => {
-        const file = event.target.files?.[0];
-
-        setCvError('');
-        setErrorMessage('');
-        setSubmitted(false);
-
-        if (file && file.size > MAX_CV_SIZE) {
-            setCvError('CV file size must not exceed 5 MB.');
-            event.target.value = '';
-        }
-    };
+    const cities = country ? citiesByCountry[country] ?? ['Other'] : [];
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
         const form = event.currentTarget;
-        const cvInput = form.elements.namedItem('cv');
-        const cvFile = cvInput?.files?.[0];
-
-        setErrorMessage('');
-        setSubmitted(false);
-
-        if (cvFile && cvFile.size > MAX_CV_SIZE) {
-            setCvError('CV file size must not exceed 5 MB.');
-            cvInput.focus();
-            return;
-        }
-
-        setCvError('');
-
+        setSubmissionError('');
         const formData = new FormData(form);
 
+        const data = {
+            firstName: formData.get('firstName'),
+            lastName: formData.get('lastName'),
+            country: formData.get('country'),
+            city: formData.get('city'),
+            address: formData.get('address'),
+            email: formData.get('email'),
+            countryCode: formData.get('countryCode'),
+            phone: formData.get('cellPhone'),
+            mainIndustry: formData.get('mainIndustry'),
+            message: formData.get('message'),
+        };
+
         try {
-            await recruitmentApplicationsService.create(formData);
+            await agentApplicationsService.create(data);
 
             setSubmitted(true);
+
             form.reset();
-            setCvError('');
+            setCountry('');
+            setCountryCode('+20');
         } catch (error) {
             console.error(
-                'Failed to submit recruitment application:',
+                'Failed to submit agent application:',
                 error
             );
 
-            console.error(
-                'Backend error:',
-                error.response?.data
-            );
-
-            setErrorMessage(
-                typeof error.response?.data === 'string'
-                    ? error.response.data
-                    : error.response?.data?.message ||
-                    error.response?.data?.error ||
-                    'Failed to submit your application.'
+            setSubmitted(false);
+            setSubmissionError(
+                error?.response?.data?.message ||
+                'Your request could not be submitted. Please check your information and try again.'
             );
         }
     };
 
     return (
         <main className="bg-white">
-            {/* ==================== Hero ==================== */}
-            <section className="relative overflow-hidden bg-slate-950 pt-32 pb-20 sm:pt-36 sm:pb-24">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_40%)]" />
-                <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
-                <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
+            {/* Shared public website hero */}
+            <SharedCmsPageHero label="Join ILS" title="Become an Agent">
+                <p>Join our global network of agents and explore new business opportunities with ILS.</p>
+            </SharedCmsPageHero>
 
-                <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-                    <div className="max-w-3xl">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-                            Join ILS
-                        </p>
-
-                        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                            Recruitment
-                        </h1>
-
-                        <p className="mt-6 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
-                            Welcome to our team. Explore opportunities and take the next
-                            step in your career with ILS.
-                        </p>
-                    </div>
-                </div>
-            </section>
-
-            {/* ==================== Application Form ==================== */}
-            <section className="bg-slate-50 py-20 sm:py-24">
+            {/* ==================== Form ==================== */}
+            <section className="bg-[#f6fafc] py-14 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <div className="mb-10 max-w-2xl">
                         <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
-                            Careers
+                            Agent Opportunity
                         </p>
 
                         <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                            Join our team
+                            Tell us about your business
                         </h2>
 
                         <p className="mt-4 text-base leading-7 text-slate-600">
-                            Select the department you are interested in and upload your
-                            CV. You can also leave us a message with any additional
-                            information about your application.
+                            Complete the form below and our team will get back to you
+                            with more information.
                         </p>
                     </div>
 
-                    <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-9">
+                    <div className="rounded-none border border-[#dce9f2] bg-white p-6 shadow-sm sm:p-9">
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            <div>
-                                <label htmlFor="department" className={labelClass}>
-                                    Department
-                                </label>
+                            <div className="grid gap-5 sm:grid-cols-2">
+                                <div>
+                                    <label htmlFor="firstName" className={labelClass}>
+                                        First Name
+                                    </label>
+                                    <input
+                                        id="firstName"
+                                        name="firstName"
+                                        type="text"
+                                        placeholder="First Name"
+                                        required
+                                        className={inputClass}
+                                    />
+                                </div>
 
-                                <select
-                                    id="department"
-                                    name="department"
-                                    required
-                                    defaultValue=""
-                                    className={inputClass}
-                                >
-                                    <option value="" disabled>
-                                        Select Department
-                                    </option>
+                                <div>
+                                    <label htmlFor="lastName" className={labelClass}>
+                                        Last Name
+                                    </label>
+                                    <input
+                                        id="lastName"
+                                        name="lastName"
+                                        type="text"
+                                        placeholder="Last Name"
+                                        required
+                                        className={inputClass}
+                                    />
+                                </div>
 
-                                    {departments.map((department) => (
-                                        <option key={department} value={department}>
-                                            {department}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label htmlFor="cv" className={labelClass}>
-                                    Upload CV (PDF only)
-                                </label>
-
-                                <input
-                                    id="cv"
-                                    name="cv"
-                                    type="file"
-                                    accept=".pdf,application/pdf"
-                                    required
-                                    onChange={handleCvChange}
-                                    aria-invalid={Boolean(cvError)}
-                                    aria-describedby={cvError ? 'cv-error' : undefined}
-                                    className="mt-2 block w-full cursor-pointer rounded-xl border border-slate-200 bg-white text-sm text-slate-700 file:mr-4 file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
-                                />
-
-                                {cvError && (
-                                    <p
-                                        id="cv-error"
-                                        role="alert"
-                                        className="mt-2 text-sm text-red-600"
+                                <div>
+                                    <label htmlFor="country" className={labelClass}>
+                                        Country
+                                    </label>
+                                    <select
+                                        id="country"
+                                        name="country"
+                                        value={country}
+                                        onChange={(event) => {
+                                            const selectedCountry = event.target.value;
+                                            setCountry(selectedCountry);
+                                            setCountryCode(countryCodes[selectedCountry] ?? '+20');
+                                        }}
+                                        required
+                                        className={inputClass}
                                     >
-                                        {cvError}
-                                    </p>
-                                )}
+                                        <option value="">Select Country</option>
+
+                                        {countries.map((item) => (
+                                            <option key={item} value={item}>
+                                                {item}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="city" className={labelClass}>
+                                        City
+                                    </label>
+                                    <select
+                                        id="city"
+                                        name="city"
+                                        disabled={!country}
+                                        required
+                                        className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
+                                    >
+                                        <option value="">
+                                            {country
+                                                ? 'Select City'
+                                                : 'Select Country First'}
+                                        </option>
+
+                                        {cities.map((city) => (
+                                            <option key={city} value={city}>
+                                                {city}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="address" className={labelClass}>
+                                        Address
+                                    </label>
+                                    <input
+                                        id="address"
+                                        name="address"
+                                        type="text"
+                                        placeholder="Address"
+                                        required
+                                        className={inputClass}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="email" className={labelClass}>
+                                        Email
+                                    </label>
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        placeholder="you@company.com"
+                                        required
+                                        className={inputClass}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label htmlFor="cellPhone" className={labelClass}>
+                                        Cell Phone
+                                    </label>
+
+                                    <div className="mt-2 flex gap-3">
+                                        <input
+                                            name="countryCode"
+                                            type="text"
+                                            value={countryCode}
+                                            onChange={(event) => setCountryCode(event.target.value)}
+                                            autoComplete="tel-country-code"
+                                            aria-label="Country code"
+                                            className="w-24 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
+                                        />
+
+                                        <input
+                                            id="cellPhone"
+                                            name="cellPhone"
+                                            type="tel"
+                                            placeholder="Cell Phone"
+                                            autoComplete="tel-national"
+                                            required
+                                            aria-invalid={Boolean(phoneError)}
+                                            aria-describedby={phoneError ? 'cellPhone-error' : undefined}
+                                            onInvalid={() => setPhoneError('Please enter your cell phone number.')}
+                                            onChange={() => setPhoneError('')}
+                                            className="min-w-0 flex-1 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
+                                        />
+                                    </div>
+                                    {phoneError && (
+                                        <p id="cellPhone-error" role="alert" className="mt-2 text-sm text-red-600">
+                                            {phoneError}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label htmlFor="mainIndustry" className={labelClass}>
+                                        Main Industry
+                                    </label>
+                                    <input
+                                        id="mainIndustry"
+                                        name="mainIndustry"
+                                        type="text"
+                                        placeholder="Main Industry"
+                                        required
+                                        className={inputClass}
+                                    />
+                                </div>
                             </div>
 
                             <div>
@@ -191,33 +289,34 @@ export default function Recruitment() {
                                     id="message"
                                     name="message"
                                     rows={6}
-                                    placeholder="Tell us anything you'd like us to know about your application..."
+                                    placeholder="Tell us about your business and opportunity..."
+                                    required
                                     className={`${inputClass} resize-y`}
                                 />
                             </div>
 
                             <div className="flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
                                 <p className="text-sm text-slate-500">
-                                    Please upload your CV in PDF format (maximum 5 MB).
+                                    Our team will review your request and contact you.
                                 </p>
 
                                 <button
                                     type="submit"
-                                    className="inline-flex items-center justify-center rounded-xl bg-sky-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100"
+                                    className="inline-flex items-center justify-center rounded-none bg-[#1E3672] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-[#3097BF] focus:outline-none focus:ring-2 focus:ring-[#3097BF]/20"
                                 >
                                     Submit
                                 </button>
                             </div>
 
-                            {submitted && (
-                                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
-                                    Your application has been submitted successfully.
+                            {submissionError && (
+                                <div role="alert" className="rounded-none border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                                    {submissionError}
                                 </div>
                             )}
 
-                            {errorMessage && (
-                                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-                                    {errorMessage}
+                            {submitted && (
+                                <div className="rounded-none border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                    Your request has been submitted successfully.
                                 </div>
                             )}
                         </form>

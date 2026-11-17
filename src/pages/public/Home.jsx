@@ -601,17 +601,10 @@ function Home() {
             </div>
 
             <a
-              href="#contact"
-              onClick={(e) => {
-                e.preventDefault();
-
-                document.getElementById("contact")?.scrollIntoView({
-                  behavior: "smooth",
-                });
-              }}
+              href="/solutions"
               className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2  border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-brand-primary transition hover:border-sky-200 hover:text-brand-accent sm:px-5"
             >
-              Discuss your requirements
+              Explore Solutions
               <ArrowUpRight size={17} />
             </a>
           </div>

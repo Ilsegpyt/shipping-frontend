@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight } from 'lucide-react';
+import SharedCmsPageHero from '../../../components/common/SharedCmsPageHero';
+import newsHeroImage from '../../../assets/website/news/06deaf3c-354a-4853-a3d6-9a2e79884141.jpg';
 
 import contentService from '../../../services/contentService';
 import { cleanImageUrl, cleanHtmlImages } from '../../../utils/mediaUrl';
@@ -162,61 +164,17 @@ export default function NewsDetails() {
     }, [slug]);
 
     if (loading) {
-        return (
-            <main className="min-h-screen bg-white">
-                <section className="relative overflow-hidden bg-slate-950">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
-                    <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-500/10 to-transparent" />
-
-                    <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pb-20">
-                        <Link
-                            to="/news"
-                            className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white"
-                        >
-                            <ArrowLeft size={17} />
-                            Back to News
-                        </Link>
-
-                        <div className="mt-14">
-                            <p className="text-sm text-slate-400">
-                                Loading news article...
-                            </p>
-                        </div>
-                    </div>
-                </section>
-            </main>
-        );
+        return <main className="min-h-screen bg-white">
+            <SharedCmsPageHero label="Media Room" title="Loading news article..." image={newsHeroImage} />
+        </main>;
     }
 
     if (error || !content) {
-        return (
-            <main className="min-h-screen bg-white">
-                <section className="relative overflow-hidden bg-slate-950">
-                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
-                    <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-500/10 to-transparent" />
-
-                    <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pb-20">
-                        <Link
-                            to="/news"
-                            className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white"
-                        >
-                            <ArrowLeft size={17} />
-                            Back to News
-                        </Link>
-
-                        <div className="mt-14 max-w-4xl">
-                            <h1 className="text-2xl font-semibold text-white sm:text-3xl">
-                                News article not found
-                            </h1>
-
-                            <p className="mt-5 text-slate-400">
-                                {error || 'The requested article could not be found.'}
-                            </p>
-                        </div>
-                    </div>
-                </section>
-            </main>
-        );
+        return <main className="min-h-screen bg-white">
+            <SharedCmsPageHero label="Media Room" title="News article not found" image={newsHeroImage}>
+                {error || 'The requested article could not be found.'}
+            </SharedCmsPageHero>
+        </main>;
     }
 
     const imageUrl = getImageUrl(content.featuredImage);
@@ -225,45 +183,12 @@ export default function NewsDetails() {
 
     return (
         <main className="min-h-screen bg-white">
-            {/* ==================== Hero ==================== */}
-            <section className="relative overflow-hidden bg-slate-950">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_35%,rgba(14,165,233,0.22),transparent_35%)]" />
-                <div className="absolute inset-y-0 right-0 w-1/2 bg-gradient-to-l from-sky-500/10 to-transparent" />
-
-                <div className="relative mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pb-20">
-                    <Link
-                        to="/news"
-                        className="inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white"
-                    >
-                        <ArrowLeft size={17} />
-                        Back to News
-                    </Link>
-
-                    <div className="mt-14 max-w-4xl">
-                        <div className="inline-flex items-center gap-3 rounded-full border border-sky-400/20 bg-sky-400/10 px-4 py-2">
-                            <span className="h-2 w-2 rounded-full bg-sky-400" />
-                            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">
-                                {category}
-                            </span>
-                        </div>
-
-                        {date && (
-                            <p className="mt-6 text-sm font-medium text-slate-400">
-                                {date}
-                            </p>
-                        )}
-
-                        <h1 className="mt-4 max-w-4xl text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
-                            {content.title}
-                        </h1>
-                    </div>
-                </div>
-            </section>
+            <SharedCmsPageHero label="Media Room" title={content.title} image={newsHeroImage} />
 
             {/* ==================== Article ==================== */}
             <section className="bg-white py-16 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
-                    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                    <div className="overflow-hidden border border-[#dce9f2] bg-white">
                         {imageUrl && (
                             <div className="aspect-[16/9] overflow-hidden bg-slate-100">
                                 <img
@@ -275,6 +200,10 @@ export default function NewsDetails() {
                         )}
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
+                            <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-medium text-[#53677c]">
+                                <span className="font-semibold text-[#1E3672]">{category}</span>
+                                {date && <><span aria-hidden="true">·</span><time dateTime={content.publishedAt}>{date}</time></>}
+                            </div>
                             <div
                                 className="prose prose-slate max-w-3xl prose-p:text-base prose-p:leading-8 prose-p:text-slate-600 sm:prose-p:text-sm"
                                 dangerouslySetInnerHTML={{
@@ -285,7 +214,7 @@ export default function NewsDetails() {
                             <div className="mt-10">
                                 <Link
                                     to="/news"
-                                    className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-sky-400"
+                                    className="inline-flex items-center gap-2 bg-[#1E3672] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#3097BF]"
                                 >
                                     Back to News
                                     <ArrowUpRight size={17} />

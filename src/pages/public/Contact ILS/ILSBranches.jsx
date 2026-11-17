@@ -1,3 +1,4 @@
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import { useEffect, useState } from 'react';
 import branchesService from '../../../services/branchesService';
 
@@ -47,54 +48,28 @@ export default function ILSBranches() {
 
     return (
         <main className="bg-white">
-            {/* ==================== Hero ==================== */}
-            <section className="relative overflow-hidden bg-slate-950 pt-32 pb-20 sm:pt-36 sm:pb-24">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_40%)]" />
-                <div className="absolute -left-24 top-20 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl" />
-                <div className="absolute -right-24 bottom-0 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" />
-
-                <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-                    {/* Back to Home */}
-                    {/* <a
-                        href="/"
-                        className="absolute left-6 top-8 inline-flex items-center gap-2 text-sm font-medium text-slate-300 transition hover:text-white lg:left-8"
-                    >
-                        ← Back to Home
-                    </a> */}
-
-                    <div className="text-center">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-400">
-                            Contact ILS
-                        </p>
-
-                        <h1 className="mt-4 text-2xl font-semibold tracking-tight text-white sm:text-3xl lg:text-4xl">
-                            ILS Branches
-                        </h1>
-
-                        <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-sky-400 sm:text-sm">
-                            Find our offices and contact the team at your nearest ILS branch.
-                        </p>
-                    </div>
-                </div>
-            </section>
+            {/* Shared public website hero */}
+            <SharedCmsPageHero label="Contact ILS" title="ILS Branches">
+                <p>Find our offices and contact the team at your nearest ILS branch.</p>
+            </SharedCmsPageHero>
 
             {/* ==================== Branches ==================== */}
-            <section className="bg-slate-50 py-16 sm:py-20">
+            <section className="bg-[#f6fafc] py-14 sm:py-20">
                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
                     {loading && (
-                        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">
+                        <div className="rounded-none border border-[#dce9f2] bg-white p-8 text-center text-sm text-slate-600">
                             Loading branches...
                         </div>
                     )}
 
                     {!loading && error && (
-                        <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-sm font-medium text-red-700">
+                        <div className="rounded-none border border-red-200 bg-red-50 p-8 text-center text-sm font-medium text-red-700">
                             {error}
                         </div>
                     )}
 
                     {!loading && !error && branches.length === 0 && (
-                        <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">
+                        <div className="rounded-none border border-[#dce9f2] bg-white p-8 text-center text-sm text-slate-600">
                             No branches available.
                         </div>
                     )}
@@ -115,9 +90,9 @@ export default function ILSBranches() {
                                                     branch.id
                                                 )
                                             }
-                                            className={`flex min-h-24 min-w-[190px] shrink-0 items-center justify-center rounded-2xl border px-5 py-4 text-center text-sm font-medium transition ${isActive
-                                                    ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-900/10'
-                                                    : 'border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:text-sky-600'
+                                            className={`flex min-h-14 min-w-[120px] shrink-0 items-center justify-center rounded-none border px-3 py-2 text-center text-xs font-medium transition sm:min-h-16 sm:min-w-[145px] sm:px-4 sm:py-3 sm:text-sm lg:min-h-24 lg:min-w-[190px] lg:px-5 lg:py-4 ${isActive
+                                                    ? 'border-[#1E3672] bg-[#1E3672] text-white shadow-lg shadow-slate-900/10'
+                                                    : 'border-[#dce9f2] bg-white text-slate-700 hover:border-sky-200 hover:text-sky-600'
                                                 }`}
                                         >
                                             {branch.name}
@@ -127,7 +102,7 @@ export default function ILSBranches() {
                             </div>
 
                             {selectedBranch && (
-                                <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                                <div className="mt-8 overflow-hidden rounded-none border border-[#dce9f2] bg-white shadow-sm">
                                     <div className="px-6 py-7 text-center sm:px-8">
                                         <h2 className="text-base font-semibold text-slate-900">
                                             {selectedBranch.name}

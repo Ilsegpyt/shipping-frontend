@@ -1,72 +1,33 @@
 import React from "react";
+import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 
 export default function NafezaPlatform() {
     return (
-        <div className="relative min-h-screen overflow-hidden bg-slate-950 px-4 py-12">
-            {/* Site background */}
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(14,165,233,0.18),transparent_35%)]" />
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(30,64,175,0.12),transparent_35%)]" />
-
-            <div className="relative mx-auto max-w-5xl">
-                <div className="rounded-2xl border border-slate-700/60 bg-slate-900/80 p-10 text-center shadow-2xl backdrop-blur-sm">
-                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-sky-500 text-lg font-bold text-white shadow-lg shadow-sky-500/20">
-                        N
+        <main className="min-h-screen bg-[#f7fbfe] text-[#1E3672]">
+            <SharedCmsPageHero label="ILS Resources" title="Nafeza Platform">
+                <p className="text-base leading-7 text-[#53677c] sm:text-lg sm:leading-8">Nafeza is Egypt's Unified Registration System for electronic customs and foreign trade procedures.</p>
+            </SharedCmsPageHero>
+            <section className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
+                <div className="border border-[#dce9f2] bg-white p-5 sm:p-8 lg:p-10">
+                    <div className="mb-7 h-1 w-12 bg-[#3097BF]" aria-hidden="true" />
+                    <h2 className="text-2xl font-semibold text-[#1E3672]">Nafeza Services</h2>
+                    <div className="mt-7 grid gap-4 md:grid-cols-3">
+                        {[
+                            { title: "Electronic Services", description: "Access electronic services and manage your foreign trade transactions." },
+                            { title: "ACI System", description: "Information and services related to Advance Cargo Information." },
+                            { title: "Customs Services", description: "Customs declarations, tariff inquiry and related services." },
+                        ].map((service) => (
+                            <article key={service.title} className="border border-[#dce9f2] bg-[#f7fbfe] p-5 sm:p-6">
+                                <h3 className="font-semibold text-[#1E3672]">{service.title}</h3>
+                                <p className="mt-3 text-sm leading-7 text-[#53677c]">{service.description}</p>
+                            </article>
+                        ))}
                     </div>
-
-                    <h1 className="text-2xl font-bold text-white">
-                        Nafeza Platform
-                    </h1>
-
-                    <p className="mx-auto mt-4 max-w-2xl text-sky-400">
-                        Nafeza is Egypt's Unified Registration System for
-                        electronic customs and foreign trade procedures.
-                    </p>
-
-                    <div className="mt-8 grid gap-4 md:grid-cols-3">
-                        <div className="rounded-xl border border-slate-700/60 bg-slate-800/60 p-6 transition hover:border-sky-500/40 hover:bg-slate-800">
-                            <h2 className="font-semibold text-white">
-                                Electronic Services
-                            </h2>
-
-                            <p className="mt-2 text-sm leading-6 text-slate-400">
-                                Access electronic services and manage your
-                                foreign trade transactions.
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-700/60 bg-slate-800/60 p-6 transition hover:border-sky-500/40 hover:bg-slate-800">
-                            <h2 className="font-semibold text-white">
-                                ACI System
-                            </h2>
-
-                            <p className="mt-2 text-sm leading-6 text-slate-400">
-                                Information and services related to Advance
-                                Cargo Information.
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl border border-slate-700/60 bg-slate-800/60 p-6 transition hover:border-sky-500/40 hover:bg-slate-800">
-                            <h2 className="font-semibold text-white">
-                                Customs Services
-                            </h2>
-
-                            <p className="mt-2 text-sm leading-6 text-slate-400">
-                                Customs declarations, tariff inquiry and
-                                related services.
-                            </p>
-                        </div>
-                    </div>
-
-                    <a
-                        href="https://www.nafeza.gov.eg/en"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-8 inline-block rounded-lg bg-sky-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-sky-400"
-                    >
+                    <a href="https://www.nafeza.gov.eg/en" target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex min-h-11 items-center justify-center bg-[#1E3672] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#3097BF]">
                         Visit Nafeza Platform
                     </a>
                 </div>
-            </div>
-        </div>
+            </section>
+        </main>
     );
 }

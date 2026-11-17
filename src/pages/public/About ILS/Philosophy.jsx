@@ -4,7 +4,7 @@ export default function Philosophy() {
   return (
     <StructuredPublicPage
       parentCategoryTitle="About ILS"
-      pageTitle="ILS Philosophy"
+      pageTitle="Philosophy"
       styleVariant="philosophy"
     />
   );

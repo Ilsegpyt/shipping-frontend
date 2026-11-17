@@ -122,6 +122,20 @@ const getNavGroupLabel = (categoryTitle) => {
   return aliases[normalized] || categoryTitle;
 };
 
+// Keep CMS as the source of navigation labels and content, but use the
+// existing public routes for known Solutions pages (not /cms/:id).
+const SOLUTION_PUBLIC_ROUTES = {
+  "sea freight": "/solutions/sea-freight",
+  "air freight": "/solutions/air-freight",
+  "consolidations": "/solutions/consolidations",
+  "customs clearance": "/solutions/customs-clearance",
+  "road transportation": "/solutions/road-transportation",
+  "projects transport": "/solutions/project-transport",
+  "project transport": "/solutions/project-transport",
+  "warehousing and distribution": "/solutions/warehousing-distribution",
+  "cargo insurance": "/solutions/cargo-insurance",
+};
+
 async function getDynamicPageLinks(rootCategory) {
   const links = [];
   const visited = new Set();
@@ -149,7 +163,8 @@ async function getDynamicPageLinks(rootCategory) {
           : "";
         links.push({
           label: `${prefix}${child.title}`,
-          to: `/cms/${child.id}`,
+          to: (isSolutions && SOLUTION_PUBLIC_ROUTES[normalizeNavTitle(child.title)])
+            || `/cms/${child.id}`,
         });
       }
     }
