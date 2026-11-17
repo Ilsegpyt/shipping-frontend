@@ -183,3 +183,31 @@
     margin-block: 0.75rem;
   }
 }
+
+/* Phase 2 — public CMS section system. Scoped to rendered pages, not editors. */
+.ils-shared-content > section:not(:last-of-type) { background-color: #f6fafd; }
+.ils-shared-content .ils-cms-content-section {
+  position: relative;
+  border-radius: 0 !important;
+  box-shadow: 0 10px 32px rgba(30, 54, 114, 0.035);
+}
+.ils-shared-content .ils-cms-content-section + .ils-cms-content-section { margin-top: 1.5rem; }
+.ils-shared-content .ils-cms-highlight,
+.ils-shared-content .ils-cms-closing {
+  border-radius: 0 !important;
+  box-shadow: none;
+}
+.ils-shared-content .ils-cms-highlight :is(p, li, strong, a) { color: #1e3672; }
+.ils-shared-content .ils-cms-closing :is(p, li, strong) { color: #334b68; }
+@media (max-width: 639px) {
+  .ils-shared-content .ils-cms-content-section { box-shadow: none; }
+}
+
+/* Image-and-text panels should not have a decorative left stripe.
+   Text-only Highlights and Closings retain their existing accent borders. */
+.ils-shared-content .ils-cms-highlight:has(.about-image-layout),
+.ils-shared-content .ils-cms-closing:has(.about-image-layout),
+.ils-shared-content .ils-cms-highlight:has(.structured-image-layout),
+.ils-shared-content .ils-cms-closing:has(.structured-image-layout) {
+  border-left: 0;
+}
