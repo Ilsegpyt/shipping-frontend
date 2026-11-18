@@ -242,8 +242,7 @@ export default function CbmCalculator() {
                                 <ResultRow
                                     icon={<Box size={18} />}
                                     iconClass="bg-blue-500"
-                                    title="Volume (CBM)"
-                                    subtitle="Cubic Meter"
+                                    title="Cubic Meter (CBM)"
                                     value={formatNumber(calculation.cbm)}
                                     unit="m³"
                                 />
@@ -251,8 +250,7 @@ export default function CbmCalculator() {
                                 <ResultRow
                                     icon={<Weight size={18} />}
                                     iconClass="bg-amber-500"
-                                    title="Weight"
-                                    subtitle="Gross Weight"
+                                    title="Gross Weight"
                                     value={formatNumber(
                                         calculation.grossWeight
                                     )}
@@ -263,7 +261,6 @@ export default function CbmCalculator() {
                                     icon={<Send size={18} />}
                                     iconClass="bg-cyan-500"
                                     title="Volumetric Weight Express (Courier)"
-                                    subtitle="L × W × H / 5,000"
                                     value={formatNumber(
                                         calculation.courierVolumetricWeight
                                     )}
@@ -274,7 +271,6 @@ export default function CbmCalculator() {
                                     icon={<Plane size={18} />}
                                     iconClass="bg-emerald-500"
                                     title="Volumetric Weight Air"
-                                    subtitle="L × W × H / 6,000"
                                     value={formatNumber(
                                         calculation.airVolumetricWeight
                                     )}
@@ -362,9 +358,11 @@ function ResultRow({ icon, iconClass, title, subtitle, value, unit }) {
                     {title}
                 </p>
 
-                <p className="mt-0.5 text-[9px] text-slate-400">
-                    {subtitle}
-                </p>
+                {subtitle && (
+                    <p className="mt-0.5 text-[9px] text-slate-400">
+                        {subtitle}
+                    </p>
+                )}
             </div>
 
             <div className="shrink-0 text-right">

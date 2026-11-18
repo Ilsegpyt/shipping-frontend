@@ -26,7 +26,8 @@ export default function Dashboard() {
     // Total Customers is only visible to Super Admin / Customer management roles, NOT operations roles
     const canViewCustomers = Boolean(
         (user?.isSuperAdmin || user?.roleName === 'Super Admin' || user?.permissions?.includes('customers.view')) &&
-        !user?.roleName?.includes('Operations')
+        !user?.roleName?.includes('Operations') &&
+        !user?.roleName?.includes('Maritime Transportation')
     );
 
     const [totalCustomers, setTotalCustomers] = useState(0);

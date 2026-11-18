@@ -82,7 +82,7 @@
   --sky: #5ed0e3
 }
 
-.ftl-root * {
+.ftl-root *:not(#entryArchiveSlot, #entryArchiveSlot *) {
   margin: 0;
   padding: 0;
   box-sizing: border-box
@@ -92,8 +92,7 @@
   font-family: var(--body);
   color: var(--ink);
   font-size: 14px;
-  background: radial-gradient(1000px 500px at 90% -10%, rgba(34, 184, 207, .09), transparent 60%),
-    radial-gradient(800px 500px at -10% 30%, rgba(14, 124, 134, .06), transparent 55%), var(--paper)
+  background: transparent;
 }
 
 .ftl-root[data-theme="dark"] {
@@ -101,7 +100,7 @@
     radial-gradient(800px 500px at -10% 30%, rgba(63, 179, 195, .05), transparent 55%), #0a1420
 }
 
-.ftl-root button {
+.ftl-root button:not(#entryArchiveSlot button) {
   font-family: inherit;
   cursor: pointer
 }
@@ -247,27 +246,102 @@
   background: rgba(11, 79, 122, .15)
 }
 
-/* Inactive and Delivered Tab Badges */
-.ftl-root .ebtn.ebtn-delivered {
-  background: #ecfdf5 !important;
+/* Inactive and Delivered Tab Badges (Matching FCL Design) */
+.ftl-root .etab.etab-delivered {
+  background: rgba(236, 253, 245, 0.7) !important;
   color: #047857 !important;
   border: 1px solid #a7f3d0 !important;
-  font-weight: 700
+  font-weight: 600;
+  transition: all 0.15s ease-in-out;
+}
+.ftl-root .etab.etab-delivered:hover {
+  background: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+}
+.ftl-root .etab.etab-delivered.on {
+  background: #ffffff !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+  box-shadow: inset 0 -2.5px 0 #10b981 !important;
+}
+.ftl-root .etab.etab-delivered .cnt {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+  border: 1px solid #a7f3d0 !important;
+  border-radius: 9999px !important;
+}
+.ftl-root .etab.etab-delivered.on .cnt {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
 }
 
-.ftl-root .ebtn.ebtn-delivered:hover {
-  background: #d1fae5 !important
-}
-
-.ftl-root .ebtn.ebtn-inactive {
-  background: #fff1f2 !important;
+.ftl-root .etab.etab-inactive {
+  background: rgba(255, 241, 242, 0.7) !important;
   color: #be123c !important;
   border: 1px solid #fecdd3 !important;
-  font-weight: 700
+  font-weight: 600;
+  transition: all 0.15s ease-in-out;
+}
+.ftl-root .etab.etab-inactive:hover {
+  background: #fff1f2 !important;
+  border-color: #fda4af !important;
+}
+.ftl-root .etab.etab-inactive.on {
+  background: #ffffff !important;
+  border-color: #f43f5e !important;
+  color: #9f1239 !important;
+  box-shadow: inset 0 -2.5px 0 #f43f5e !important;
+}
+.ftl-root .etab.etab-inactive .cnt {
+  background: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border: 1px solid #fecdd3 !important;
+  border-radius: 9999px !important;
+}
+.ftl-root .etab.etab-inactive.on .cnt {
+  background: #f43f5e !important;
+  color: #ffffff !important;
+  border-color: #f43f5e !important;
 }
 
-.ftl-root .ebtn.ebtn-inactive:hover {
-  background: #ffe4e6 !important
+.ftl-root #entryArchiveSlot {
+  width: 100%;
+  margin-top: 14px;
+  min-height: 58vh;
+  display: block;
+}
+
+/* Explicit styling guarantees for FTL Delivered and Inactive Archives */
+.ftl-root #entryArchiveSlot,
+.ftl-root #entryArchiveSlot * {
+  box-sizing: border-box;
+}
+
+.ftl-root #entryArchiveSlot input,
+.ftl-root #entryArchiveSlot select {
+  font-family: inherit;
+}
+
+.ftl-root #entryArchiveSlot table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ftl-root #entryArchiveSlot th {
+  position: static;
+  z-index: auto;
+}
+
+/* Elevate FTL root when any modal is open so it renders above sticky app headers/sidebars */
+.ftl-root.ftl-has-modal,
+.ftl-root:has(.modal.open) {
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+body.ftl-modal-open {
+  overflow: hidden !important;
 }
 
 /* Manifest & Breakdown Modals */
@@ -280,7 +354,7 @@
   display: none;
   align-items: center !important;
   justify-content: center !important;
-  padding: 30px 20px !important;
+  padding: 24px 16px !important;
   overflow-y: auto !important;
 }
 
@@ -288,26 +362,107 @@
   display: flex !important;
 }
 
+.ftl-root .modal .box {
+  margin: auto !important;
+  max-height: calc(100vh - 48px);
+  position: relative;
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .4);
+}
+
+/* Specific scrollable inner layouts for email, trip export and dev modals */
+.ftl-root #mModal .box,
+.ftl-root #tripExportModal .box,
+.ftl-root #dModal .box {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  max-height: calc(100vh - 48px);
+}
+
+.ftl-root #mModal .box h2,
+.ftl-root #tripExportModal .box h2,
+.ftl-root #dModal .box h2 {
+  flex-shrink: 0 !important;
+  margin-bottom: 12px !important;
+}
+
+.ftl-root #mModal .box h2 button,
+.ftl-root #tripExportModal .box h2 button,
+.ftl-root #dModal .box h2 button {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  line-height: 1;
+  transition: all .15s ease;
+}
+
+.ftl-root #mModal .box h2 button:hover,
+.ftl-root #tripExportModal .box h2 button:hover,
+.ftl-root #dModal .box h2 button:hover {
+  background: rgba(15, 23, 42, 0.08);
+  color: var(--ink);
+}
+
+.ftl-root #mBody,
+.ftl-root #tripExportBody,
+.ftl-root #dBody {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  padding-inline-end: 6px !important;
+}
+
+.ftl-root #mModal .xfoot,
+.ftl-root #tripExportModal .xfoot {
+  flex-shrink: 0 !important;
+  margin-top: 14px !important;
+}
+
+/* To Validation Alert Modal (Matching FCL Ocean) */
+.ftl-root #mToAlertModal {
+  z-index: 10050 !important;
+}
+
+.ftl-root #mToAlertModal .box {
+  animation: ftlModalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ftl-root[data-theme="dark"] #mToAlertModal .box {
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.ftl-root[data-theme="dark"] #mToAlertTitle {
+  color: #fff !important;
+}
+
+.ftl-root[data-theme="dark"] #mToAlertDesc {
+  color: var(--steel) !important;
+}
+
 .ftl-root .manifest-box {
-  max-width: 1440px !important;
-  width: 96% !important;
+  max-width: 1080px !important;
+  width: 92% !important;
+  min-height: 400px;
   margin: auto;
-  border-radius: 22px;
+  border-radius: 20px;
   overflow: hidden;
   padding: 0 !important;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 35px 90px rgba(0, 0, 0, .5);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 25px 70px -10px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.08);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: #ffffff;
   animation: ftlModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes ftlModalPop {
   from {
     opacity: 0;
-    transform: scale(0.96) translateY(12px);
+    transform: scale(0.97) translateY(12px);
   }
 
   to {
@@ -320,18 +475,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 32px;
+  padding: 20px 28px;
   color: #fff;
   flex-shrink: 0;
+  gap: 16px;
+  position: relative;
 }
 
 .ftl-root .manifest-header.truck-theme {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #b45309 100%) !important;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 55%, #78350f 100%) !important;
   border-bottom: 3px solid #f59e0b;
 }
 
 .ftl-root .manifest-header.shipment-theme {
-  background: linear-gradient(135deg, #022c22 0%, #064e3b 50%, #0d9488 100%) !important;
+  background: linear-gradient(135deg, #022c22 0%, #064e3b 55%, #065f46 100%) !important;
   border-bottom: 3px solid #10b981;
 }
 
@@ -342,44 +499,47 @@
 }
 
 .ftl-root .manifest-header h3 {
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 800;
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #fff;
+  gap: 10px;
+  color: #ffffff;
   letter-spacing: -.01em;
+  line-height: 1.3;
 }
 
 .ftl-root .manifest-header .manifest-subtitle {
-  font-size: 13.5px;
-  color: rgba(255, 255, 255, .82);
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
+  line-height: 1.4;
 }
 
 .ftl-root .manifest-header-pills {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .ftl-root .egypt-plate-badge {
-  background: #fff;
+  background: #ffffff;
   color: #0f172a;
   border: 2px solid #0f172a;
-  border-radius: 10px;
-  padding: 4px 16px;
-  font-weight: 800;
-  font-size: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+  border-radius: 8px;
+  padding: 4px 14px;
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  letter-spacing: .04em;
 }
 
 .ftl-root .egypt-plate-badge .plate-egypt {
-  font-size: 12px;
+  font-size: 11px;
   color: #0284c7;
   font-weight: 900;
   border-inline-end: 2px solid #cbd5e1;
@@ -387,128 +547,154 @@
 }
 
 .ftl-root .air-ship-badge {
-  background: rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, .35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   color: #fff;
   border-radius: 999px;
-  padding: 6px 18px;
-  font-size: 15px;
-  font-weight: 700;
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 750;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ftl-root .manifest-header .close-btn {
-  background: rgba(255, 255, 255, .2);
-  border: none;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.25);
   color: #fff;
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all .2s;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
 }
 
 .ftl-root .manifest-header .close-btn:hover {
-  background: rgba(255, 255, 255, .38);
-  transform: rotate(90deg);
+  background: rgba(239, 68, 68, 0.85);
+  border-color: rgba(239, 68, 68, 0.9);
+  transform: scale(1.05);
 }
 
 .ftl-root .manifest-body {
-  padding: 26px 32px;
+  padding: 24px 28px;
   overflow-y: auto;
   flex: 1;
   background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
+/* Manifest Hero Grid & Cards */
 .ftl-root .manifest-hero-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-  margin-bottom: 24px;
+  gap: 16px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .ftl-root .manifest-hero-grid {
     grid-template-columns: 1fr;
   }
 }
 
 .ftl-root .manifest-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 18px 22px;
-  min-height: 130px;
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 16px 18px;
+  min-height: 110px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, .05);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ftl-root .manifest-card:hover {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
 }
 
 .ftl-root .manifest-card.truck-hero-card {
-  border-top: 5px solid #f59e0b;
+  border-top: 4px solid #f59e0b;
 }
 
 .ftl-root .manifest-card.shipment-hero-card {
-  border-top: 5px solid #10b981;
+  border-top: 4px solid #10b981;
 }
 
 .ftl-root .card-top-label {
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 800;
   color: #64748b;
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 8px;
   text-transform: uppercase;
-  letter-spacing: .03em;
+  letter-spacing: .05em;
 }
 
 .ftl-root .card-main-val {
-  font-size: 18px;
-  font-weight: 900;
+  font-size: 16.5px;
+  font-weight: 850;
   color: #0f172a;
-  margin-bottom: 6px;
+  line-height: 1.35;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ftl-root .card-sub-val {
-  font-size: 13.5px;
-  color: #475569;
-  font-weight: 500;
+  font-size: 12.5px;
+  color: #64748b;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ftl-root .card-sub-val b {
+  color: #1e293b;
 }
 
 .ftl-root .driver-call-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: #f1f5f9;
-  color: #0369a1;
-  padding: 5px 12px;
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  padding: 4px 10px;
   border-radius: 8px;
   text-decoration: none;
-  font-weight: 700;
-  font-size: 13.5px;
-  transition: background .2s;
+  font-weight: 750;
+  font-size: 12.5px;
+  transition: all 0.2s;
 }
 
 .ftl-root .driver-call-btn:hover {
-  background: #e0f2fe;
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
 }
 
 .ftl-root .hero-huge-metric {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 900;
-  display: block;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   line-height: 1.1;
-  margin-bottom: 2px;
 }
 
 .ftl-root .hero-huge-metric.amber {
@@ -520,17 +706,17 @@
 }
 
 .ftl-root .hero-huge-metric small {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #64748b;
 }
 
 .ftl-root .shipment-progress-bar {
-  height: 9px;
+  height: 8px;
   background: #e2e8f0;
   border-radius: 999px;
   overflow: hidden;
-  margin: 6px 0 4px;
+  margin: 6px 0 2px;
 }
 
 .ftl-root .shipment-progress-fill {
@@ -549,54 +735,252 @@
   color: #64748b;
 }
 
+/* Manifest Section Header */
+.ftl-root .manifest-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.ftl-root .manifest-section-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ftl-root .manifest-badge-count {
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11.5px;
+  font-weight: 750;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+/* Table Wrapping & Layout */
 .ftl-root .manifest-table-wrap {
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, .04);
+  border-radius: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 }
 
 .ftl-root .manifest-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13px;
   text-align: start;
 }
 
 .ftl-root .manifest-table th {
-  padding: 12px 14px;
-  font-weight: 700;
-  font-size: 12px;
+  padding: 12px 16px;
+  font-weight: 750;
+  font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: .03em;
-  border-bottom: 1px solid #cbd5e1;
+  letter-spacing: .04em;
+  border-bottom: 2px solid #cbd5e1;
   white-space: nowrap;
 }
 
 .ftl-root .manifest-table.truck-theme th {
-  background: #fffbeb;
-  color: #92400e;
+  background: #fefce8;
+  color: #854d0e;
+  border-bottom-color: #fef08a;
 }
 
 .ftl-root .manifest-table.shipment-theme th {
   background: #f0fdf4;
-  color: #065f46;
+  color: #166534;
+  border-bottom-color: #bbf7d0;
 }
 
 .ftl-root .manifest-table td {
-  padding: 12px 14px;
+  padding: 14px 16px !important;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
   vertical-align: middle;
+}
+
+.ftl-root .manifest-table input[type="number"] {
+  width: 82px !important;
+  height: 36px !important;
+  padding: 4px 8px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-weight: 800 !important;
+  font-size: 14px !important;
+  text-align: center !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+  background: #ffffff !important;
+}
+
+.ftl-root .manifest-table input[type="number"]:focus {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2) !important;
+}
+
+.ftl-root .manifest-table select {
+  height: 36px !important;
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  font-weight: 750 !important;
+  font-size: 12.5px !important;
+  outline: none !important;
+  cursor: pointer !important;
+}
+
+.ftl-root .manifest-table .delbtn {
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  font-weight: 750 !important;
+  font-size: 12px !important;
+  transition: all 0.15s ease !important;
+}
+
+.ftl-root .manifest-table .delbtn:hover {
+  background: #fca5a5 !important;
+  color: #991b1b !important;
 }
 
 .ftl-root .manifest-table tr:last-child td {
   border-bottom: none;
 }
 
-.ftl-root .manifest-table tr:hover td {
+.ftl-root .manifest-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.ftl-root .manifest-table tbody tr:hover td {
   background: #f8fafc;
+}
+
+/* Manifest Form Controls & Badges */
+.ftl-root .manifest-idx-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-weight: 750;
+  font-size: 11.5px;
+}
+
+.ftl-root .manifest-select {
+  height: 36px;
+  padding: 4px 10px;
+  border: 1.5px solid #0284c7;
+  border-radius: 8px;
+  font-weight: 750;
+  color: #0369a1;
+  background: #f0f9ff;
+  font-size: 12.5px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+  max-width: 220px;
+}
+
+.ftl-root .manifest-select:focus {
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18);
+}
+
+.ftl-root .manifest-client-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.35;
+  max-width: 240px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ftl-root .manifest-hawb-pill {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  font-size: 12px;
+  color: #334155;
+  background: #f1f5f9;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.ftl-root .manifest-total-pkgs {
+  font-weight: 800;
+  color: #0284c7;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.ftl-root .manifest-input-pkgs {
+  width: 86px;
+  height: 36px;
+  padding: 4px 8px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 14px;
+  text-align: center;
+  color: #b45309;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.ftl-root .manifest-input-pkgs:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.ftl-root .manifest-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 750;
+  font-size: 11.5px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.ftl-root .manifest-status-badge.warning {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.ftl-root .manifest-status-badge.full {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.ftl-root .manifest-status-badge.partial {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.ftl-root .manifest-status-badge.pending {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
 }
 
 .ftl-root .manifest-tag-full {
@@ -610,6 +994,7 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
 }
 
 .ftl-root .manifest-tag-partial {
@@ -623,6 +1008,38 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  white-space: nowrap;
+}
+
+.ftl-root .manifest-loc-pill {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.ftl-root .manifest-del-btn {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-weight: 750;
+  font-size: 11.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ftl-root .manifest-del-btn:hover {
+  background: #fca5a5;
+  color: #991b1b;
 }
 
 .ftl-root .mini-bar-wrap {
@@ -704,29 +1121,256 @@
   }
 }
 
-/* Footer notice inside manifest */
+/* Modern Operation Reconciliation Footer inside manifest */
 .ftl-root .manifest-recon-footer {
-  margin-top: 16px;
-  padding: 12px 18px;
-  border-radius: 12px;
+  margin-top: 6px;
+  padding: 14px 20px;
+  border-radius: 14px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 14px;
   font-size: 13px;
   color: #334155;
   flex-wrap: wrap;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, .03);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+.ftl-root .manifest-recon-items {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .ftl-root .manifest-recon-title {
   font-weight: 800;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
 }
 
-.ftl-root .manifest-recon-stat {
+.ftl-root .manifest-recon-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
   font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.ftl-root .manifest-recon-chip b {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.ftl-root .manifest-recon-chip.amber b {
+  color: #d97706;
+}
+
+.ftl-root .manifest-recon-chip.emerald b {
+  color: #059669;
+}
+
+.ftl-root .manifest-recon-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.ftl-root .manifest-recon-status-badge.balanced {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.ftl-root .manifest-recon-status-badge.overload {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  animation: pulseRecon 1.8s infinite;
+}
+
+.ftl-root .manifest-recon-status-badge.remaining {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.ftl-root .coload-adder-bar {
+  margin-top: 6px;
+  padding: 14px 18px;
+  background: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ftl-root .coload-adder-bar select {
+  height: 36px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-weight: 700;
+  font-size: 12.5px;
+  background: #ffffff;
+  outline: none;
+}
+
+.ftl-root .coload-adder-bar input {
+  height: 36px;
+  width: 110px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-weight: 750;
+  font-size: 13px;
+  background: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ftl-root .coload-adder-bar button {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+/* Dark mode support for Manifest */
+.ftl-root[data-theme="dark"] .manifest-box {
+  background: #0f172a;
+  border-color: #334155;
+  box-shadow: 0 25px 70px -10px rgba(0, 0, 0, 0.7);
+}
+
+.ftl-root[data-theme="dark"] .manifest-body {
+  background: #0b1120;
+}
+
+.ftl-root[data-theme="dark"] .manifest-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.ftl-root[data-theme="dark"] .card-main-val {
+  color: #f8fafc;
+}
+
+.ftl-root[data-theme="dark"] .card-sub-val {
+  color: #94a3b8;
+}
+
+.ftl-root[data-theme="dark"] .card-sub-val b {
+  color: #e2e8f0;
+}
+
+.ftl-root[data-theme="dark"] .manifest-section-title {
+  color: #f8fafc;
+}
+
+.ftl-root[data-theme="dark"] .manifest-badge-count {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.ftl-root[data-theme="dark"] .manifest-table-wrap {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.ftl-root[data-theme="dark"] .manifest-table td {
+  border-bottom-color: #334155;
+  color: #f1f5f9;
+}
+
+.ftl-root[data-theme="dark"] .manifest-table tbody tr:hover td {
+  background: #1e293b;
+}
+
+.ftl-root[data-theme="dark"] .manifest-client-name {
+  color: #f8fafc;
+}
+
+.ftl-root[data-theme="dark"] .manifest-idx-badge {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.ftl-root[data-theme="dark"] .manifest-hawb-pill {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.ftl-root[data-theme="dark"] .manifest-loc-pill {
+  color: #cbd5e1;
+}
+
+.ftl-root[data-theme="dark"] .manifest-input-pkgs {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f59e0b;
+}
+
+.ftl-root[data-theme="dark"] .manifest-select {
+  background: #0f172a;
+  border-color: #0284c7;
+  color: #38bdf8;
+}
+
+.ftl-root[data-theme="dark"] .manifest-recon-footer {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.ftl-root[data-theme="dark"] .manifest-recon-title {
+  color: #f8fafc;
+}
+
+.ftl-root[data-theme="dark"] .manifest-recon-chip {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+.ftl-root[data-theme="dark"] .manifest-recon-chip b {
+  color: #f8fafc;
+}
+
+.ftl-root[data-theme="dark"] .coload-adder-bar {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.ftl-root[data-theme="dark"] .coload-adder-bar select,
+.ftl-root[data-theme="dark"] .coload-adder-bar input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f8fafc;
 }
 
 /* Inactive Archive Modal */
@@ -862,7 +1506,7 @@
 .ftl-root main {
   flex: 1;
   min-width: 0;
-  padding: 20px 22px 60px
+  padding: 0 0 40px;
 }
 
 .ftl-root aside {
@@ -1916,14 +2560,14 @@
   max-height: 430px
 }
 
-.ftl-root table {
+.ftl-root table:not(#entryArchiveSlot table) {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.3px;
   white-space: nowrap
 }
 
-.ftl-root th {
+.ftl-root th:not(#entryArchiveSlot th) {
   background: var(--mist);
   text-align: start;
   padding: 9px 12px;
@@ -1936,17 +2580,17 @@
   z-index: 1
 }
 
-.ftl-root th .arrow {
+.ftl-root th:not(#entryArchiveSlot th) .arrow {
   font-size: 9px;
   color: var(--sea)
 }
 
-.ftl-root td {
+.ftl-root td:not(#entryArchiveSlot td) {
   padding: 8px 12px;
   border-top: 1px solid var(--mist)
 }
 
-.ftl-root tr:hover td {
+.ftl-root tr:not(#entryArchiveSlot tr):hover td:not(#entryArchiveSlot td) {
   background: color-mix(in srgb, var(--aqua) 8%, transparent)
 }
 
@@ -2469,23 +3113,197 @@
   right: 0
 }
 
-.ftl-root .toast {
+/* ==================== FTL NOTIFICATION / TOAST (FCL STYLE) ==================== */
+.ftl-root .toast,
+#toast {
   position: fixed;
-  bottom: 26px;
-  left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: #0b2338;
-  color: #fff;
-  padding: 12px 22px;
-  border-radius: 10px;
-  font-size: 13px;
-  z-index: 500;
-  transition: transform .3s;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  max-width: 500px;
+  min-width: 320px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(24px) scale(0.96);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+  pointer-events: none;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
-.ftl-root .toast.show {
-  transform: translateX(-50%) translateY(0)
+.ftl-root .toast[dir="rtl"],
+.ftl-root[dir="rtl"] .toast,
+#toast[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+.ftl-root .toast.show,
+#toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* 1. ERROR */
+.ftl-root .toast.error,
+.ftl-root .toast.toast-error,
+#toast.error,
+#toast.toast-error {
+  background: rgba(76, 5, 25, 0.95);
+  color: #ffe4e6;
+  border-color: rgba(225, 29, 72, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(76, 5, 25, 0.5), 0 0 0 1px rgba(244, 63, 94, 0.3);
+}
+
+/* 2. WARNING */
+.ftl-root .toast.warning,
+.ftl-root .toast.toast-warning,
+#toast.warning,
+#toast.toast-warning {
+  background: rgba(69, 26, 3, 0.95);
+  color: #fef3c7;
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(69, 26, 3, 0.5), 0 0 0 1px rgba(245, 158, 11, 0.3);
+}
+
+/* 3. SUCCESS */
+.ftl-root .toast.success,
+.ftl-root .toast.toast-success,
+#toast.success,
+#toast.toast-success {
+  background: rgba(6, 78, 59, 0.95);
+  color: #d1fae5;
+  border-color: rgba(16, 185, 129, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(6, 78, 59, 0.5), 0 0 0 1px rgba(16, 185, 129, 0.3);
+}
+
+/* 4. INFO (DEFAULT) */
+.ftl-root .toast.info,
+.ftl-root .toast.toast-info,
+#toast.info,
+#toast.toast-info {
+  background: rgba(15, 23, 42, 0.95);
+  color: #f1f5f9;
+  border-color: rgba(51, 65, 85, 0.8);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5), 0 0 0 1px rgba(71, 85, 105, 0.3);
+}
+
+/* Icon Container */
+.ftl-root .toast .ftl-toast-icon-wrap,
+#toast .ftl-toast-icon-wrap {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ftl-root .toast .ftl-toast-icon-box,
+#toast .ftl-toast-icon-box {
+  padding: 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.error,
+#toast .ftl-toast-icon-box.error {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.warning,
+#toast .ftl-toast-icon-box.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.success,
+#toast .ftl-toast-icon-box.success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.info,
+#toast .ftl-toast-icon-box.info {
+  background: rgba(14, 165, 233, 0.2);
+  color: #7dd3fc;
+}
+
+/* Content Body */
+.ftl-root .toast .ftl-toast-body,
+#toast .ftl-toast-body {
+  flex: 1;
+  min-width: 0;
+  padding-inline-end: 4px;
+}
+
+.ftl-root .toast .ftl-toast-title,
+#toast .ftl-toast-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.ftl-root .toast .ftl-toast-message,
+#toast .ftl-toast-message {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+  user-select: text;
+  -webkit-user-select: text;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* Close Button */
+.ftl-root .toast .ftl-toast-close,
+#toast .ftl-toast-close {
+  flex-shrink: 0;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  line-height: 1;
+}
+
+.ftl-root .toast .ftl-toast-close:hover,
+#toast .ftl-toast-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 640px) {
+  .ftl-root .toast,
+  #toast {
+    right: 12px;
+    left: 12px;
+    bottom: 16px;
+    max-width: none;
+    min-width: 0;
+  }
 }
 
 @media (max-width:1200px) {
@@ -3137,6 +3955,76 @@
   flex: 1
 }
 
+.ftl-root .trip-quick-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  max-width: 620px;
+  min-width: 260px;
+}
+.ftl-root .trip-quick-search-input {
+  width: 100%;
+  height: 32px;
+  padding-inline-start: 32px;
+  padding-inline-end: 62px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink, #1e293b);
+  outline: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.ftl-root .trip-quick-search-input:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+.ftl-root .trip-search-icon {
+  position: absolute;
+  inset-inline-start: 10px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: #94a3b8;
+}
+.ftl-root .trip-quick-search-clear {
+  position: absolute;
+  inset-inline-end: 42px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ftl-root .trip-quick-search-clear:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+.ftl-root .trip-quick-search-kbd {
+  position: absolute;
+  inset-inline-end: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: var(--mist, #f1f5f9);
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .ftl-root .chipst {
   font-size: 11.2px;
   font-weight: 600;
@@ -3491,65 +4379,7 @@
   font-size: 12.6px
 }
 
-/* latest updates cell */
-.ftl-root .updbtn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: transparent;
-  font-family: inherit;
-  color: var(--ink);
-  padding: 6px 10px;
-  text-align: start;
-  border-radius: 10px;
-  min-height: 36px;
-  position: relative
-}
-
-.ftl-root .updbtn:hover {
-  background: color-mix(in srgb, var(--aqua) 10%, transparent)
-}
-
-.ftl-root .updbtn .updtxt {
-  font-size: 12.2px;
-  font-weight: 600;
-  max-width: 150px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block
-}
-
-.ftl-root .updbtn .updtxt.muted {
-  color: var(--steel);
-  font-weight: 500
-}
-
-.ftl-root .updbtn .updby {
-  display: block;
-  font-size: 10.4px;
-  color: var(--sea);
-  font-weight: 600
-}
-
-.ftl-root .updbtn>span:first-child {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0
-}
-
-.ftl-root .updn {
-  background: var(--aqua);
-  color: #06202a;
-  border-radius: 20px;
-  padding: 1px 7px;
-  font-size: 10.5px;
-  font-weight: 800;
-  flex-shrink: 0
-}
+/* latest updates cell - styled via FCL parity rules below */
 
 .ftl-root .floattip {
   display: none;
@@ -3606,100 +4436,316 @@
   margin-top: 2px
 }
 
-.ftl-root .updadd {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px
+/* Modern Updates Modal (FCL Parity) */
+.ftl-root #uModal {
+  background: rgba(15, 23, 42, 0.40) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 10000 !important;
+  padding: 16px !important;
+  transition: opacity 0.15s ease;
 }
 
-.ftl-root .updadd input {
-  flex: 1;
-  padding: 9px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 13px;
-  background: var(--card);
-  color: var(--ink)
+.ftl-root #uModal.open {
+  display: flex !important;
 }
 
-.ftl-root .updadd input:focus {
-  outline: none;
-  border-color: var(--aqua);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--aqua) 22%, transparent)
+.ftl-root #uModal .box {
+  background: #ffffff !important;
+  border-radius: 24px !important;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+  border: 1px solid #f1f5f9 !important;
+  width: 100% !important;
+  max-width: 520px !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 90vh !important;
+  padding: 0 !important;
+  margin: auto !important;
+  animation: ftlModalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-.ftl-root .updmeta {
-  font-size: 11.4px;
-  color: var(--steel);
-  margin: 8px 2px 12px
+.ftl-root[data-theme="dark"] #uModal .box {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6) !important;
 }
 
-.ftl-root .updlist {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  list-style: none;
-  padding: 0;
-  margin: 0
+.ftl-root #uModal .uheader {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 22px 24px 14px 24px !important;
+  border: none !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
 }
 
-.ftl-root .updrow {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 10px 13px;
-  font-size: 12.8px;
-  background: var(--card)
+.ftl-root #uModal .utitle {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 !important;
+  font-family: inherit !important;
 }
 
-.ftl-root .updrow .updn2 {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--brand-2);
-  color: #fff;
-  font-size: 11.5px;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 1px
+.ftl-root[data-theme="dark"] #uModal .utitle {
+  color: #f8fafc !important;
 }
 
-.ftl-root .updrow>div {
-  flex: 1
+.ftl-root #uModal .uclose-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  transition: all 0.15s ease !important;
+  padding: 0 !important;
 }
 
-.ftl-root .updrow .updtext {
-  font-weight: 600;
-  line-height: 1.45
+.ftl-root #uModal .uclose-btn:hover {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
 }
 
-.ftl-root .updrow .updsub {
-  font-size: 11px;
-  color: var(--steel);
-  margin-top: 3px
+.ftl-root[data-theme="dark"] #uModal .uclose-btn:hover {
+  background: #334155 !important;
+  color: #f8fafc !important;
 }
 
-.ftl-root .updrow em {
-  font-style: normal;
-  background: color-mix(in srgb, var(--good) 15%, transparent);
-  color: var(--good);
-  border-radius: 20px;
-  padding: 2px 9px;
-  font-size: 10.5px;
-  font-weight: 700;
-  align-self: center
+.ftl-root #uModal #uBody {
+  display: flex !important;
+  flex-direction: column !important;
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  padding: 0 24px 24px 24px !important;
 }
 
-.ftl-root .updnone {
-  color: var(--steel);
-  padding: 14px 2px;
-  font-size: 12.8px
+.ftl-root #uModal .updadd {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.ftl-root #uModal .updadd input {
+  flex: 1 !important;
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 10px 16px !important;
+  font-size: 14px !important;
+  color: #1e293b !important;
+  background: #ffffff !important;
+  outline: none !important;
+  transition: all 0.15s ease !important;
+  font-family: inherit !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updadd input {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.ftl-root #uModal .updadd input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.ftl-root #uModal .updadd input:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+.ftl-root #uModal .updadd-btn {
+  padding: 10px 20px !important;
+  border-radius: 12px !important;
+  background: #0f4c81 !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, transform 0.05s ease !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  box-shadow: 0 1px 2px rgba(15, 76, 129, 0.2) !important;
+}
+
+.ftl-root #uModal .updadd-btn:hover {
+  background: #0c3c66 !important;
+}
+
+.ftl-root #uModal .updadd-btn:active {
+  transform: scale(0.98) !important;
+}
+
+.ftl-root #uModal .updmeta {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+  margin: 8px 2px 14px 2px !important;
+  line-height: 1.4 !important;
+}
+
+.ftl-root #uModal .updmeta .upduser {
+  font-weight: 600 !important;
+  color: #475569 !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updmeta .upduser {
+  color: #cbd5e1 !important;
+}
+
+.ftl-root #uModal .updlist {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 2px 0 0 0 !important;
+  margin: 0 !important;
+  list-style: none !important;
+  overflow-y: auto !important;
+  max-height: 48vh !important;
+}
+
+.ftl-root #uModal .updrow {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 13px 14px !important;
+  border-radius: 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+  margin: 0 !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updrow {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.ftl-root #uModal .updrow:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updrow:hover {
+  border-color: #475569 !important;
+}
+
+.ftl-root #uModal .updrow .upd-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.ftl-root #uModal .updrow .updn2 {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  border-radius: 9999px !important;
+  background: #0f4c81 !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  margin: 0 !important;
+}
+
+.ftl-root #uModal .updrow .upd-info {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.ftl-root #uModal .updrow .updtext {
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  line-height: 1.3 !important;
+  word-break: break-word !important;
+  margin: 0 !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updrow .updtext {
+  color: #f1f5f9 !important;
+}
+
+.ftl-root #uModal .updrow .updsub {
+  font-size: 11px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  margin-top: 3px !important;
+  line-height: 1.3 !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updrow .updsub {
+  color: #94a3b8 !important;
+}
+
+.ftl-root #uModal .updrow .updby {
+  font-weight: 600 !important;
+  color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updrow .updby {
+  color: #cbd5e1 !important;
+}
+
+.ftl-root #uModal .updrow .updlatest {
+  margin-inline-start: 12px !important;
+  padding: 2px 10px !important;
+  border-radius: 6px !important;
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(167, 243, 208, 0.7) !important;
+  flex-shrink: 0 !important;
+  font-style: normal !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.ftl-root[data-theme="dark"] #uModal .updrow .updlatest {
+  background: rgba(6, 78, 59, 0.4) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(5, 150, 105, 0.4) !important;
+}
+
+.ftl-root #uModal .updnone {
+  padding: 32px 16px !important;
+  text-align: center !important;
+  font-size: 13px !important;
+  color: #94a3b8 !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
 }
 
 @media print {
@@ -4285,14 +5331,14 @@
   max-height: 430px
 }
 
-.ftl-root table {
+.ftl-root table:not(#entryArchiveSlot table) {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.3px;
   white-space: nowrap
 }
 
-.ftl-root th {
+.ftl-root th:not(#entryArchiveSlot th) {
   background: var(--mist);
   text-align: start;
   padding: 9px 12px;
@@ -4305,17 +5351,17 @@
   z-index: 1
 }
 
-.ftl-root th .arrow {
+.ftl-root th:not(#entryArchiveSlot th) .arrow {
   font-size: 9px;
   color: var(--sea)
 }
 
-.ftl-root td {
+.ftl-root td:not(#entryArchiveSlot td) {
   padding: 8px 12px;
   border-top: 1px solid var(--mist)
 }
 
-.ftl-root tr:hover td {
+.ftl-root tr:not(#entryArchiveSlot tr):hover td:not(#entryArchiveSlot td) {
   background: color-mix(in srgb, var(--aqua) 8%, transparent)
 }
 
@@ -4838,23 +5884,197 @@
   right: 0
 }
 
-.ftl-root .toast {
+/* ==================== FTL NOTIFICATION / TOAST (FCL STYLE) ==================== */
+.ftl-root .toast,
+#toast {
   position: fixed;
-  bottom: 26px;
-  left: 50%;
-  transform: translateX(-50%) translateY(80px);
-  background: #0b2338;
-  color: #fff;
-  padding: 12px 22px;
-  border-radius: 10px;
-  font-size: 13px;
-  z-index: 500;
-  transition: transform .3s;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .3)
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  max-width: 500px;
+  min-width: 320px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(24px) scale(0.96);
+  transition: opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.3s;
+  pointer-events: none;
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
-.ftl-root .toast.show {
-  transform: translateX(-50%) translateY(0)
+.ftl-root .toast[dir="rtl"],
+.ftl-root[dir="rtl"] .toast,
+#toast[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+.ftl-root .toast.show,
+#toast.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* 1. ERROR */
+.ftl-root .toast.error,
+.ftl-root .toast.toast-error,
+#toast.error,
+#toast.toast-error {
+  background: rgba(76, 5, 25, 0.95);
+  color: #ffe4e6;
+  border-color: rgba(225, 29, 72, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(76, 5, 25, 0.5), 0 0 0 1px rgba(244, 63, 94, 0.3);
+}
+
+/* 2. WARNING */
+.ftl-root .toast.warning,
+.ftl-root .toast.toast-warning,
+#toast.warning,
+#toast.toast-warning {
+  background: rgba(69, 26, 3, 0.95);
+  color: #fef3c7;
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(69, 26, 3, 0.5), 0 0 0 1px rgba(245, 158, 11, 0.3);
+}
+
+/* 3. SUCCESS */
+.ftl-root .toast.success,
+.ftl-root .toast.toast-success,
+#toast.success,
+#toast.toast-success {
+  background: rgba(6, 78, 59, 0.95);
+  color: #d1fae5;
+  border-color: rgba(16, 185, 129, 0.7);
+  box-shadow: 0 25px 50px -12px rgba(6, 78, 59, 0.5), 0 0 0 1px rgba(16, 185, 129, 0.3);
+}
+
+/* 4. INFO (DEFAULT) */
+.ftl-root .toast.info,
+.ftl-root .toast.toast-info,
+#toast.info,
+#toast.toast-info {
+  background: rgba(15, 23, 42, 0.95);
+  color: #f1f5f9;
+  border-color: rgba(51, 65, 85, 0.8);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5), 0 0 0 1px rgba(71, 85, 105, 0.3);
+}
+
+/* Icon Container */
+.ftl-root .toast .ftl-toast-icon-wrap,
+#toast .ftl-toast-icon-wrap {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ftl-root .toast .ftl-toast-icon-box,
+#toast .ftl-toast-icon-box {
+  padding: 8px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.error,
+#toast .ftl-toast-icon-box.error {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.warning,
+#toast .ftl-toast-icon-box.warning {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fcd34d;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.success,
+#toast .ftl-toast-icon-box.success {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
+
+.ftl-root .toast .ftl-toast-icon-box.info,
+#toast .ftl-toast-icon-box.info {
+  background: rgba(14, 165, 233, 0.2);
+  color: #7dd3fc;
+}
+
+/* Content Body */
+.ftl-root .toast .ftl-toast-body,
+#toast .ftl-toast-body {
+  flex: 1;
+  min-width: 0;
+  padding-inline-end: 4px;
+}
+
+.ftl-root .toast .ftl-toast-title,
+#toast .ftl-toast-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+  opacity: 0.9;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.3;
+}
+
+.ftl-root .toast .ftl-toast-message,
+#toast .ftl-toast-message {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.55;
+  user-select: text;
+  -webkit-user-select: text;
+  word-break: break-word;
+  white-space: pre-line;
+}
+
+/* Close Button */
+.ftl-root .toast .ftl-toast-close,
+#toast .ftl-toast-close {
+  flex-shrink: 0;
+  color: #94a3b8;
+  padding: 4px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  line-height: 1;
+}
+
+.ftl-root .toast .ftl-toast-close:hover,
+#toast .ftl-toast-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 640px) {
+  .ftl-root .toast,
+  #toast {
+    right: 12px;
+    left: 12px;
+    bottom: 16px;
+    max-width: none;
+    min-width: 0;
+  }
 }
 
 @media (max-width:1200px) {
@@ -5506,6 +6726,76 @@
   flex: 1
 }
 
+.ftl-root .trip-quick-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  max-width: 620px;
+  min-width: 260px;
+}
+.ftl-root .trip-quick-search-input {
+  width: 100%;
+  height: 32px;
+  padding-inline-start: 32px;
+  padding-inline-end: 62px;
+  background: var(--card, #ffffff);
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink, #1e293b);
+  outline: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+.ftl-root .trip-quick-search-input:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+.ftl-root .trip-search-icon {
+  position: absolute;
+  inset-inline-start: 10px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: #94a3b8;
+}
+.ftl-root .trip-quick-search-clear {
+  position: absolute;
+  inset-inline-end: 42px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 5px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ftl-root .trip-quick-search-clear:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+.ftl-root .trip-quick-search-kbd {
+  position: absolute;
+  inset-inline-end: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: var(--mist, #f1f5f9);
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: 4px;
+  padding: 1px 5px;
+  pointer-events: none;
+  user-select: none;
+}
+
 .ftl-root .chipst {
   font-size: 11.2px;
   font-weight: 600;
@@ -5832,8 +7122,8 @@
   padding: 10px 12px
 }
 
-.ftl-root select,
-.ftl-root option {
+.ftl-root select:not(#entryArchiveSlot select),
+.ftl-root option:not(#entryArchiveSlot option) {
   background: var(--card);
   color: var(--ink)
 }
@@ -5847,19 +7137,19 @@
 .ftl-root .triptools {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
+  gap: 12px;
+  padding: 10px 14px;
   margin: 0 0 8px;
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 13px;
+  border-radius: 14px;
   flex-wrap: wrap
 }
 
 .ftl-root .tripsearch {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
   min-width: 0
 }
@@ -5876,15 +7166,15 @@
   display: none
 }
 
-.ftl-root input[aria-invalid="true"] {
+.ftl-root input[aria-invalid="true"]:not(#entryArchiveSlot input) {
   border-color: var(--bad) !important
 }
 
 .ftl-root .triprule {
   display: flex;
   align-items: center;
-  gap: 5px;
-  padding: 3px 5px;
+  gap: 6px;
+  padding: 4px 7px;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--paper)
@@ -5893,24 +7183,30 @@
 .ftl-root .triprule select,
 .ftl-root .triprule input {
   font: inherit;
-  font-size: 11.5px;
+  font-size: 12px;
   color: var(--ink);
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 7px;
-  height: 30px;
-  padding: 3px 7px;
-  max-width: 185px
+  border-radius: 8px;
+  height: 32px;
+  padding: 4px 8px;
+}
+
+.ftl-root .triprule .tripkey {
+  min-width: 165px;
+  max-width: 230px
 }
 
 .ftl-root .triprule .tripjoin {
-  width: 61px;
+  width: 65px;
   color: var(--brand-2);
   font-weight: 700
 }
 
 .ftl-root .triprule .tripvalue {
-  width: 145px
+  width: 200px;
+  min-width: 170px;
+  max-width: 260px
 }
 
 .ftl-root .triprule .tripvalue-wrap {
@@ -5994,6 +7290,40 @@
   cursor: default
 }
 
+.ftl-root .trip-page select {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--navy);
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  height: 26px;
+}
+
+.ftl-root .trip-page .trip-page-nums button {
+  min-width: 26px;
+  height: 26px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--navy);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.ftl-root .trip-page .trip-page-nums button.active {
+  background: #0284c7;
+  color: #fff;
+  border-color: #0284c7;
+}
+
 .ftl-root .picklist {
   max-height: 190px;
   overflow: auto;
@@ -6071,13 +7401,19 @@
   align-items: center;
 }
 
-.ftl-root #eTable td[data-k="client"] .cbox {
+.ftl-root #eTable td[data-k="client"] .cbox,
+.ftl-root #eTable td[data-k="line"] .cbox,
+.ftl-root #eTable td[data-k="dest"] .cbox,
+.ftl-root #eTable td[data-k="trucker"] .cbox {
   justify-content: flex-start !important;
   padding-inline-start: 12px !important;
   padding-inline-end: 8px !important;
 }
 
-.ftl-root #eTable td[data-k="client"] .cv {
+.ftl-root #eTable td[data-k="client"] .cv,
+.ftl-root #eTable td[data-k="line"] .cv,
+.ftl-root #eTable td[data-k="dest"] .cv,
+.ftl-root #eTable td[data-k="trucker"] .cv {
   text-align: start !important;
   justify-content: flex-start !important;
   padding: 0 !important;
@@ -6231,13 +7567,15 @@
 
 .ftl-root .tripsort select {
   height: 32px;
-  max-width: 160px;
-  padding: 4px 7px;
+  min-width: 140px;
+  max-width: 200px;
+  padding: 4px 8px;
   border: 1px solid var(--line);
   background: var(--card);
   color: var(--ink);
   border-radius: 8px;
-  font: inherit
+  font: inherit;
+  font-size: 12px
 }
 
 .ftl-root .datetime-control {
@@ -6391,12 +7729,11 @@
 }
 
 .ftl-root #entryView .opfoot {
-  margin-top: 4px;
-  padding-top: 4px
-}
-
-.ftl-root #entryView .opcount input {
-  padding: 3px 6px
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: none;
+  gap: 16px;
+  align-items: flex-end;
 }
 
 .ftl-root #entryView .opopt,
@@ -6792,12 +8129,11 @@
 }
 
 .ftl-root #entryView .opfoot {
-  margin-top: 4px;
-  padding-top: 4px
-}
-
-.ftl-root #entryView .opcount input {
-  padding: 3px 6px
+  margin-top: 6px;
+  padding-top: 0;
+  border-top: none;
+  gap: 16px;
+  align-items: flex-end;
 }
 
 .ftl-root #entryView .opopt,
@@ -7569,155 +8905,921 @@
 }
 
 /* Sub-shipment / Truck picker in Export Excel & Email modals */
-.ftl-root .sub-pick-list {
-  background: #f8fafc;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-  padding: 4px 6px;
-}
-.ftl-root .sub-pick-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 3px 6px;
-  border-radius: 4px;
-  transition: background 0.12s;
-}
-.ftl-root .sub-pick-item:hover {
-  background: #f1f5f9;
+.ftl-root #mModal .box,
+.ftl-root #tripExportModal .box {
+  background: var(--card, #ffffff) !important;
+  border-radius: 18px !important;
+  border: 1px solid var(--line, #e2e8f0) !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35) !important;
+  padding: 24px 28px !important;
+  max-width: 780px !important;
 }
 
-/* Latest Updates Cell - Parity with FCL */
-.ftl-root .updbtn.fcl-updates-cell {
-  width: 100%;
+.ftl-root #mModal .box h2,
+.ftl-root #tripExportModal .box h2 {
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  color: var(--ink, #0f172a) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  padding: 4px 8px;
-  min-height: 34px;
-  height: 100%;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-align: start;
-  transition: all .15s ease;
-}
-.ftl-root .updbtn.fcl-updates-cell:hover {
-  background: rgba(34, 184, 207, 0.08);
-  border-radius: 8px;
-}
-.ftl-root .updbtn.fcl-updates-cell .upd-content {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  text-align: start;
-}
-.ftl-root .updbtn.fcl-updates-cell .updtxt {
-  font-size: 11.5px;
-  font-weight: 650;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.25;
-}
-.ftl-root .updbtn.fcl-updates-cell .updtxt.muted {
-  font-size: 11px;
-  font-style: italic;
-  font-weight: 500;
-  color: var(--steel);
-  opacity: 0.7;
-  text-align: center;
-  width: 100%;
-}
-.ftl-root .updbtn.fcl-updates-cell .updby {
-  font-size: 10px;
-  color: var(--steel);
-  font-weight: 500;
-  white-space: nowrap;
-  line-height: 1.2;
-}
-.ftl-root .updbtn.fcl-updates-cell .updn {
-  margin-inline-start: 6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #0891b2;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 750;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  margin-bottom: 6px !important;
+  padding-bottom: 0 !important;
 }
 
-/* FCL-style Status Card & Popover */
+.ftl-root #mModal .box h2 button.modal-close-btn,
+.ftl-root #tripExportModal .box h2 button.modal-close-btn,
+.ftl-root #mModal .box h2 button,
+.ftl-root #tripExportModal .box h2 button {
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  font-size: 20px !important;
+  color: var(--steel, #64748b) !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: all 0.15s ease !important;
+}
+
+.ftl-root #mModal .box h2 button:hover,
+.ftl-root #tripExportModal .box h2 button:hover {
+  background: rgba(15, 23, 42, 0.08) !important;
+  color: var(--ink, #0f172a) !important;
+}
+
+.ftl-root #mModal .mkind,
+.ftl-root #tripExportModal .mkind {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  color: #0284c7 !important;
+  background: #e0f2fe !important;
+  border: 1px solid #bae6fd !important;
+  border-radius: 6px !important;
+  padding: 2px 10px !important;
+  margin-bottom: 12px !important;
+  letter-spacing: 0.3px !important;
+  text-transform: uppercase !important;
+}
+.ftl-root[data-theme="dark"] #mModal .mkind,
+.ftl-root[data-theme="dark"] #tripExportModal .mkind {
+  background: rgba(2, 132, 199, 0.15) !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+  color: #38bdf8 !important;
+}
+
+.ftl-root #mModal .email-field-sec {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin-top: 10px !important;
+}
+
+.ftl-root #mModal .email-field-lbl {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--ink, #334155) !important;
+  margin-bottom: 5px !important;
+}
+
+.ftl-root #mModal .required-star {
+  color: #ef4444 !important;
+  font-weight: 700 !important;
+}
+
+.ftl-root #mModal .email-input,
+.ftl-root #mModal .email-textarea {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 1px solid var(--line, #cbd5e1) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 12.5px !important;
+  color: var(--ink, #0f172a) !important;
+  background: var(--card, #ffffff) !important;
+  outline: none !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.ftl-root #mModal .email-input:focus,
+.ftl-root #mModal .email-textarea:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+}
+
+.ftl-root #mModal .email-textarea {
+  min-height: 75px !important;
+  resize: vertical !important;
+  font-family: inherit !important;
+  line-height: 1.5 !important;
+}
+
+.ftl-root #tripExportModal .xsec,
+.ftl-root #mModal .xsec:not(.email-field-sec) {
+  border: 1px solid var(--line, #e2e8f0) !important;
+  border-radius: 12px !important;
+  background: var(--mist, #f8fafc) !important;
+  padding: 12px 14px !important;
+  margin-top: 12px !important;
+}
+
+.ftl-root #tripExportModal .xsec-head,
+.ftl-root #mModal .xsec-head {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 8px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px dashed var(--line, #cbd5e1) !important;
+}
+
+.ftl-root #tripExportModal .xsec-head b,
+.ftl-root #mModal .xsec-head b {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--ink, #0f172a) !important;
+}
+
+.ftl-root #tripExportModal .xsec-count,
+.ftl-root #mModal .xsec-count {
+  font-size: 11px !important;
+  color: var(--steel, #64748b) !important;
+  font-weight: 500 !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+}
+
+.ftl-root #tripExportModal .xgrid,
+.ftl-root #mModal .xgrid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 4px 16px !important;
+  margin-top: 6px !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+  max-height: 190px !important;
+  overflow-y: auto !important;
+  padding-inline-end: 6px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+.ftl-root #tripExportModal .xgrid label,
+.ftl-root #mModal .xgrid label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 12px !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  color: var(--ink, #334155) !important;
+  transition: background 0.12s ease !important;
+  user-select: none !important;
+}
+
+.ftl-root #tripExportModal .xgrid label:hover,
+.ftl-root #mModal .xgrid label:hover {
+  background: rgba(15, 23, 42, 0.06) !important;
+  color: var(--ink, #0f172a) !important;
+}
+
+.ftl-root #tripExportModal .xgrid label input[type="checkbox"],
+.ftl-root #mModal .xgrid label input[type="checkbox"] {
+  accent-color: #0284c7 !important;
+  width: 14px !important;
+  height: 14px !important;
+  cursor: pointer !important;
+}
+
+.ftl-root #tripExportModal .pick-filters-wrap,
+.ftl-root #mModal .pick-filters-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+.ftl-root #tripExportModal .pick-search-row,
+.ftl-root #mModal .pick-search-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
+}
+
+.ftl-root #tripExportModal .pick-select-all,
+.ftl-root #mModal .pick-select-all {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: var(--ink, #0f172a) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  user-select: none !important;
+}
+
+.ftl-root #tripExportModal .pick-select-all input[type="checkbox"],
+.ftl-root #mModal .pick-select-all input[type="checkbox"] {
+  accent-color: #0284c7 !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+.ftl-root #tripExportModal .pick-search-box,
+.ftl-root #mModal .pick-search-box {
+  flex: 1 !important;
+  max-width: 380px !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ftl-root #tripExportModal .pick-search-icon,
+.ftl-root #mModal .pick-search-icon {
+  position: absolute !important;
+  inset-inline-start: 10px !important;
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  pointer-events: none !important;
+}
+
+.ftl-root #tripExportModal .pick-search-box input[type="search"],
+.ftl-root #mModal .pick-search-box input[type="search"] {
+  width: 100% !important;
+  padding: 6px 12px !important;
+  padding-inline-start: 28px !important;
+  font-size: 11.5px !important;
+  border: 1px solid var(--line, #cbd5e1) !important;
+  border-radius: 8px !important;
+  outline: none !important;
+  background: var(--card, #ffffff) !important;
+  color: var(--ink, #0f172a) !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+}
+
+.ftl-root #tripExportModal .pick-search-box input[type="search"]:focus,
+.ftl-root #mModal .pick-search-box input[type="search"]:focus {
+  border-color: #0284c7 !important;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15) !important;
+}
+
+.ftl-root #tripExportModal .pickhead.pickcreated,
+.ftl-root #mModal .pickhead.pickcreated {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  background: var(--card, #ffffff) !important;
+  border: 1px solid var(--line, #e2e8f0) !important;
+  border-radius: 8px !important;
+  padding: 6px 10px !important;
+  margin-top: 0 !important;
+  font-size: 11.5px !important;
+}
+
+.ftl-root #tripExportModal .pick-filter-item,
+.ftl-root #mModal .pick-filter-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.ftl-root #tripExportModal .pick-filter-item label,
+.ftl-root #mModal .pick-filter-item label {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: var(--steel, #64748b) !important;
+  white-space: nowrap !important;
+}
+
+.ftl-root #tripExportModal .pick-filter-item select,
+.ftl-root #mModal .pick-filter-item select,
+.ftl-root #tripExportModal .pick-filter-item input[type="date"],
+.ftl-root #mModal .pick-filter-item input[type="date"] {
+  height: 28px !important;
+  padding: 2px 8px !important;
+  border: 1px solid var(--line, #cbd5e1) !important;
+  border-radius: 6px !important;
+  font-size: 11.5px !important;
+  outline: none !important;
+  background: var(--mist, #f8fafc) !important;
+  color: var(--ink, #1e293b) !important;
+}
+
+.ftl-root #tripExportModal .picklist,
+.ftl-root #mModal .picklist {
+  max-height: 280px !important;
+  overflow-y: auto !important;
+  border: 1px solid var(--line, #e2e8f0) !important;
+  border-radius: 10px !important;
+  padding: 8px !important;
+  margin-top: 6px !important;
+  background: var(--card, #ffffff) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #cbd5e1 transparent !important;
+}
+
+.ftl-root #tripExportModal .op-pick-group,
+.ftl-root #mModal .op-pick-group {
+  background: var(--card, #ffffff) !important;
+  border: 1px solid var(--line, #e2e8f0) !important;
+  border-radius: 10px !important;
+  padding: 9px 12px !important;
+  margin-bottom: 0 !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.ftl-root #tripExportModal .op-pick-group:hover,
+.ftl-root #mModal .op-pick-group:hover {
+  border-color: #93c5fd !important;
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.08) !important;
+}
+
+.ftl-root #tripExportModal .op-pick-group:has(.teOp:checked),
+.ftl-root #mModal .op-pick-group:has(.mOp:checked) {
+  border-color: #7dd3fc !important;
+  background: rgba(2, 132, 199, 0.04) !important;
+}
+
+.ftl-root #tripExportModal .op-pick-label,
+.ftl-root #mModal .op-pick-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  width: 100% !important;
+  padding: 0 !important;
+  user-select: none !important;
+}
+
+.ftl-root #tripExportModal .op-pick-label input[type="checkbox"],
+.ftl-root #mModal .op-pick-label input[type="checkbox"] {
+  accent-color: #0284c7 !important;
+  width: 15px !important;
+  height: 15px !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+}
+
+.ftl-root #tripExportModal .op-pick-info,
+.ftl-root #mModal .op-pick-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+  font-size: 12px !important;
+  min-width: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.ftl-root #tripExportModal .op-pick-badge,
+.ftl-root #mModal .op-pick-badge {
+  background: var(--mist, #e2e8f0) !important;
+  color: var(--steel, #475569) !important;
+  font-weight: 700 !important;
+  font-size: 10.5px !important;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+}
+
+.ftl-root #tripExportModal .op-pick-ref,
+.ftl-root #mModal .op-pick-ref {
+  font-weight: 700 !important;
+  color: #0284c7 !important;
+}
+
+.ftl-root #tripExportModal .op-pick-mawb,
+.ftl-root #mModal .op-pick-mawb {
+  font-weight: 600 !important;
+  color: var(--ink, #334155) !important;
+}
+
+.ftl-root #tripExportModal .op-pick-client,
+.ftl-root #mModal .op-pick-client {
+  color: var(--ink, #0f172a) !important;
+  font-weight: 600 !important;
+}
+
+.ftl-root #tripExportModal .op-pick-day,
+.ftl-root #mModal .op-pick-day {
+  color: var(--steel, #64748b) !important;
+  font-size: 11px !important;
+}
+
+.ftl-root #tripExportModal .op-pick-count,
+.ftl-root #mModal .op-pick-count {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  padding: 1px 7px !important;
+  border-radius: 10px !important;
+}
+
+.ftl-root #tripExportModal .sub-pick-list,
+.ftl-root #mModal .sub-pick-list,
+.ftl-root .sub-pick-list {
+  background: var(--mist, #f8fafc) !important;
+  border: 1px solid var(--line, #e2e8f0) !important;
+  border-radius: 8px !important;
+  padding: 6px 8px !important;
+  margin-inline-start: 24px !important;
+  margin-top: 6px !important;
+  margin-bottom: 2px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.ftl-root #tripExportModal .sub-pick-item,
+.ftl-root #mModal .sub-pick-item,
+.ftl-root .sub-pick-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  background: var(--card, #ffffff) !important;
+  border: 1px solid var(--line, #f1f5f9) !important;
+  font-size: 11.5px !important;
+  color: var(--ink, #475569) !important;
+  transition: all 0.12s ease !important;
+  user-select: none !important;
+}
+
+.ftl-root #tripExportModal .sub-pick-item:hover,
+.ftl-root #mModal .sub-pick-item:hover,
+.ftl-root .sub-pick-item:hover {
+  background: rgba(15, 23, 42, 0.05) !important;
+  border-color: var(--line, #cbd5e1) !important;
+  color: var(--ink, #0f172a) !important;
+}
+
+.ftl-root #tripExportModal .sub-pick-item input[type="checkbox"],
+.ftl-root #mModal .sub-pick-item input[type="checkbox"] {
+  accent-color: #0284c7 !important;
+  width: 13px !important;
+  height: 13px !important;
+  cursor: pointer !important;
+}
+
+.ftl-root #mStatus {
+  font-size: 11.5px !important;
+  color: var(--steel, #64748b) !important;
+  background: var(--mist, #f8fafc) !important;
+  border: 1px solid var(--line, #e2e8f0) !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  margin-top: 12px !important;
+  line-height: 1.5 !important;
+  display: block !important;
+}
+
+.ftl-root #mStatus:empty {
+  display: none !important;
+}
+
+.ftl-root #tripExportModal .xfoot,
+.ftl-root #mModal .xfoot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-top: 14px !important;
+  margin-top: 14px !important;
+  border-top: 1px solid var(--line, #e2e8f0) !important;
+  flex-shrink: 0 !important;
+}
+
+.ftl-root #tripExportModal .xcancel,
+.ftl-root #mModal .xcancel {
+  background: var(--mist, #f8fafc) !important;
+  color: var(--steel, #64748b) !important;
+  border: 1px solid var(--line, #cbd5e1) !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.ftl-root #tripExportModal .xcancel:hover,
+.ftl-root #mModal .xcancel:hover {
+  background: rgba(15, 23, 42, 0.08) !important;
+  color: var(--ink, #0f172a) !important;
+}
+
+.ftl-root #tripExportGo,
+.ftl-root #mGo {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  border: 1px solid #0284c7 !important;
+  border-radius: 10px !important;
+  padding: 9px 22px !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.ftl-root #tripExportGo:hover,
+.ftl-root #mGo:hover {
+  background: #0369a1 !important;
+  border-color: #0369a1 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4) !important;
+}
+
+.ftl-root #tripExportGo:disabled,
+.ftl-root #mGo:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Dark Theme Overrides for Modals */
+.ftl-root[data-theme="dark"] #tripExportModal .box,
+.ftl-root[data-theme="dark"] #mModal .box {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .box h2,
+.ftl-root[data-theme="dark"] #mModal .box h2 {
+  color: #f8fafc !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xsec,
+.ftl-root[data-theme="dark"] #mModal .xsec:not(.email-field-sec) {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xsec-head,
+.ftl-root[data-theme="dark"] #mModal .xsec-head {
+  border-bottom-color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xsec-head b,
+.ftl-root[data-theme="dark"] #mModal .xsec-head b {
+  color: #f8fafc !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xgrid label,
+.ftl-root[data-theme="dark"] #mModal .xgrid label {
+  color: #cbd5e1 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xgrid label:hover,
+.ftl-root[data-theme="dark"] #mModal .xgrid label:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .picklist,
+.ftl-root[data-theme="dark"] #mModal .picklist {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .op-pick-group,
+.ftl-root[data-theme="dark"] #mModal .op-pick-group {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .op-pick-group:hover,
+.ftl-root[data-theme="dark"] #mModal .op-pick-group:hover {
+  border-color: #38bdf8 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .op-pick-group:has(.teOp:checked),
+.ftl-root[data-theme="dark"] #mModal .op-pick-group:has(.mOp:checked) {
+  border-color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.12) !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .op-pick-client,
+.ftl-root[data-theme="dark"] #mModal .op-pick-client {
+  color: #f8fafc !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .sub-pick-list,
+.ftl-root[data-theme="dark"] #mModal .sub-pick-list {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .sub-pick-item,
+.ftl-root[data-theme="dark"] #mModal .sub-pick-item {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .sub-pick-item:hover,
+.ftl-root[data-theme="dark"] #mModal .sub-pick-item:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .pickhead.pickcreated,
+.ftl-root[data-theme="dark"] #mModal .pickhead.pickcreated {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .pick-filter-item select,
+.ftl-root[data-theme="dark"] #mModal .pick-filter-item select,
+.ftl-root[data-theme="dark"] #tripExportModal .pick-filter-item input[type="date"],
+.ftl-root[data-theme="dark"] #mModal .pick-filter-item input[type="date"] {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .pick-search-box input[type="search"],
+.ftl-root[data-theme="dark"] #mModal .pick-search-box input[type="search"] {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xcancel,
+.ftl-root[data-theme="dark"] #mModal .xcancel {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.ftl-root[data-theme="dark"] #tripExportModal .xcancel:hover,
+.ftl-root[data-theme="dark"] #mModal .xcancel:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
+.ftl-root[data-theme="dark"] #mStatus {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+/* Latest Updates Cell - Matching Group Color & Centered */
+.ftl-root #eTable td[data-k="updates"] {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.ftl-root #eTable td[data-k="updates"] .cbox {
+  background: color-mix(in srgb, var(--gc, #fff) 10%, var(--card)) !important;
+  border: 1px solid color-mix(in srgb, var(--gc, var(--line)) 32%, var(--line)) !important;
+  box-shadow: 0 1px 2px rgba(6, 42, 74, 0.05), 0 6px 14px -10px rgba(6, 42, 74, 0.16) !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  border-radius: 10px !important;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  transition: all 0.12s ease !important;
+}
+
+.ftl-root #eTable td[data-k="updates"] .cbox:hover {
+  border-color: color-mix(in srgb, var(--gc) 65%, var(--brand-2)) !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15) !important;
+}
+
+.ftl-root .updbtn {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  color: inherit !important;
+}
+
+.ftl-root .updbtn .upd-body {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  flex: 0 1 auto !important;
+  overflow: hidden !important;
+}
+
+.ftl-root .updbtn .updtxt {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+  max-width: 140px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 1.25 !important;
+  text-align: center !important;
+}
+
+.ftl-root .updbtn .updtxt.muted {
+  font-size: 11px !important;
+  font-style: italic !important;
+  font-weight: 500 !important;
+  color: #94a3b8 !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.ftl-root .updbtn .updby {
+  font-size: 10.5px !important;
+  color: #64748b !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.ftl-root .updn {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  min-height: 20px !important;
+  border-radius: 50% !important;
+  background: #0284c7 !important;
+  color: #ffffff !important;
+  font-size: 10.5px !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.3) !important;
+  flex-shrink: 0 !important;
+  margin-inline-start: 4px !important;
+  padding: 0 !important;
+}
+
+/* FCL-style Status Card & Popover - Prominent & Centered */
+.ftl-root #eTable td[data-k="status"] {
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.ftl-root #eTable td[data-k="status"] .cbox {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 38px !important;
+}
+
 .ftl-root .fcl-status-container {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 16px;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  background: linear-gradient(to bottom, #ffffff, rgba(240, 249, 255, 0.4));
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  text-align: center;
-  width: 100%;
-  min-height: 46px;
-  box-sizing: border-box;
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 3px 10px !important;
+  border-radius: 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  background: linear-gradient(to bottom, #ffffff, #f0f9ff) !important;
+  box-shadow: 0 1px 2px rgba(6, 42, 74, 0.04) !important;
+  text-align: center !important;
+  margin: 0 auto !important;
+  width: auto !important;
+  min-width: 135px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  box-sizing: border-box !important;
 }
 
 .ftl-root .fcl-status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 12px;
-  font-size: 11.5px;
-  font-weight: 700;
-  border: 1px solid #7dd3fc;
-  background: #f0f9ff;
-  color: #0369a1;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  padding: 4px 12px !important;
+  border-radius: 9px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  border: 1px solid #7dd3fc !important;
+  background: #f0f9ff !important;
+  color: #0369a1 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  height: 30px !important;
+  letter-spacing: 0.2px !important;
+}
+
+.ftl-root .fcl-status-pill .fcl-status-text {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
 }
 
 .ftl-root .fcl-status-pill:hover {
-  background: #e0f2fe;
-  border-color: #38bdf8;
+  background: #e0f2fe !important;
+  border-color: #38bdf8 !important;
 }
 
 .ftl-root .fcl-status-pill.delivered {
-  background: #ecfdf5;
-  border-color: #86efac;
-  color: #065f46;
+  background: #ecfdf5 !important;
+  border-color: #86efac !important;
+  color: #065f46 !important;
 }
 
 .ftl-root .fcl-status-pill.delivered:hover {
-  background: #d1fae5;
-  border-color: #4ade80;
+  background: #d1fae5 !important;
+  border-color: #4ade80 !important;
 }
 
 .ftl-root .fcl-status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #0284c7;
-  display: inline-block;
-  animation: fclPulse 1.8s infinite;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  background: #0284c7 !important;
+  display: inline-block !important;
+  animation: fclPulse 1.8s infinite !important;
 }
 
 .ftl-root .fcl-status-pill.delivered .fcl-status-dot {
-  background: #10b981;
-  animation: none;
+  background: #10b981 !important;
+  animation: none !important;
+}
+
+.ftl-root .fcl-status-arrow {
+  font-size: 10.5px !important;
+  margin-inline-start: 2px !important;
+  opacity: 0.75 !important;
+}
+
+.ftl-root .fcl-status-history-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.ftl-root .fcl-status-history-btn:hover {
+  color: #0284c7 !important;
+  border-color: #93c5fd !important;
+  background: #f0f9ff !important;
 }
 
 @keyframes fclPulse {

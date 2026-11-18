@@ -42,13 +42,19 @@ export default function InternalSidebar() {
             {/* Navigation */}
             <div className="relative z-10 space-y-6 overflow-y-auto p-4">
                 {internalNavigation.map((section) => {
+                    const isSuperAdmin = Boolean(
+                        user?.isSuperAdmin ||
+                        user?.role === 'SuperAdmin' ||
+                        user?.roleName === 'Super Admin'
+                    );
+
                     const visibleItems = (section.items ?? []).filter((item) => {
                         if (item.subItems) {
                             const visibleSubs = item.subItems.filter((sub) => {
                                 if (typeof sub.isVisible === 'function') {
                                     return sub.isVisible(user);
                                 }
-                                return !sub.permission || user?.permissions?.includes(sub.permission);
+                                return !sub.permission || isSuperAdmin || user?.permissions?.includes(sub.permission);
                             });
                             return visibleSubs.length > 0 || !!item.badge;
                         }
@@ -57,6 +63,7 @@ export default function InternalSidebar() {
                         }
                         return (
                             !item.permission ||
+                            isSuperAdmin ||
                             user?.permissions?.includes(item.permission)
                         );
                     });

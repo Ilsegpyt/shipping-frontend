@@ -50,11 +50,11 @@ export function createHttpApi({
     loadMaster: () => request('GET', '/master'),
     addMaster: (list, value) => request('POST', '/master/' + enc(list), { value }),
     loadPermissions: () => request('GET', '/permissions'),
-    updateShipmentStatus: (ref, status, version) =>
-      request('PATCH', '/shipments/' + enc(ref) + '/status', { status, version }),
+    updateShipmentStatus: (ref, status) =>
+      request('PATCH', '/shipments/' + enc(ref) + '/status', { status }),
     authorizeDeleteShipment: async (ref) =>
       (await request('GET', '/shipments/' + enc(ref) + '/permissions')).delete_shipments === true,
-    deleteShipment: (ref, version) => request('DELETE', '/shipments/' + enc(ref), { version }),
+    deleteShipment: (ref) => request('DELETE', '/shipments/' + enc(ref)),
     addTruckUpdate: (ref, tripId, note) => request('POST', '/operations/' + enc(ref) + '/truck-updates', { tripId, note }),
   };
 }

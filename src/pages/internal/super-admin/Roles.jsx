@@ -224,6 +224,28 @@ const PERMISSION_GROUPS = [
     },
 
     {
+
+        name: 'FTL Operations',
+
+        permissions: [
+
+            'operations.ftl.view',
+
+            'operations.ftl.create',
+
+            'operations.ftl.edit',
+
+            'operations.ftl.delete',
+
+            'operations.ftl.deliver',
+
+            'operations.ftl.reopen',
+
+        ],
+
+    },
+
+    {
         name: 'Reports',
 
         permissions: [
@@ -351,6 +373,8 @@ export default function Roles() {
         'super admin': 'مدير النظام سوبر ادمن ادمنز',
         'operations': 'عمليات تشغيل نقل بحري',
         'operations specialist': 'مسؤول عمليات تشغيل بحري',
+        'supervisor maritime transportation': 'مشرف نقل بحري سوبرفايزر عمليات',
+        'executive maritime transportation': 'مسؤول تنفيذي نقل بحري اخصائي عمليات',
         'customs broker': 'مخلص جمركي تخليص جمارك',
         'account manager': 'مدير حسابات عملاء اكاونت مانجر',
         'sales': 'مبيعات سيلز',

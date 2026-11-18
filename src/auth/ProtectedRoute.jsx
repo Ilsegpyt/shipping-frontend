@@ -36,6 +36,13 @@ function getPortalHome(tokenType, user) {
     switch (tokenType) {
         case 'internal':
             if (
+                user?.permissions?.includes('operations.ftl.view') &&
+                !user?.permissions?.includes('reports.view') &&
+                !user?.permissions?.includes('operations.view')
+            ) {
+                return '/ftl/dashboard';
+            }
+            if (
                 user?.permissions?.includes('operations.view') &&
                 !user?.permissions?.includes('reports.view')
             ) {
@@ -113,6 +120,12 @@ export default function ProtectedRoute({ requiredPermission, customCheck }) {
         );
     }
 
+    const isSuperAdmin = Boolean(
+        user?.isSuperAdmin ||
+        user?.role === 'SuperAdmin' ||
+        user?.roleName === 'Super Admin'
+    );
+
     if (customCheck && !customCheck(user)) {
         const tokenType = getTokenType();
         const portalHome = getPortalHome(tokenType, user);
@@ -121,6 +134,7 @@ export default function ProtectedRoute({ requiredPermission, customCheck }) {
 
     if (
         requiredPermission &&
+        !isSuperAdmin &&
         !user.permissions?.includes(requiredPermission)
     ) {
         const tokenType = getTokenType();

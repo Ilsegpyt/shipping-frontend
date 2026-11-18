@@ -23,7 +23,16 @@ export function createLiveApi({
     async loadMaster() {
       try {
         const res = await api.get('/api/v1/ftl/master');
-        return res.data;
+        const data = res.data || {};
+        return {
+          ...data,
+          client: data.client || data.clients || [],
+          line: data.line || data.lines || [],
+          dest: data.dest || data.destinations || [],
+          aod: data.aod || data.pod || data.pods || [],
+          pol: data.pol || data.pod || data.pods || data.aod || [],
+          trucker: data.trucker || data.truckers || [],
+        };
       } catch (e) {
         console.warn('[FTL Airport] loadMaster fallback:', e);
         return { clients: [], lines: [], truckers: [], destinations: [], drivers: [], vehicles: [] };
@@ -59,10 +68,9 @@ export function createLiveApi({
       return res.data;
     },
 
-    async updateShipmentStatus(ref, status, version) {
+    async updateShipmentStatus(ref, status) {
       const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}/status`, {
         status,
-        version,
       });
       return res.data;
     },
@@ -71,10 +79,8 @@ export function createLiveApi({
       return permissions.delete_shipments === true;
     },
 
-    async deleteShipment(ref, version) {
-      const res = await api.delete(`/api/v1/ftl/operations/${enc(ref)}`, {
-        data: { version },
-      });
+    async deleteShipment(ref) {
+      const res = await api.delete(`/api/v1/ftl/operations/${enc(ref)}`);
       return res.data;
     },
 
@@ -95,6 +101,46 @@ export function createLiveApi({
 
     async getStatusAudits(ref) {
       const res = await api.get(`/api/v1/ftl/operations/${enc(ref)}/status-audits`);
+      return res.data;
+    },
+
+    async getCounts() {
+      const res = await api.get('/api/operations/ftl/counts');
+      return res.data;
+    },
+
+    async getPagedOperations(params = {}) {
+      const query = new URLSearchParams();
+      if (params.page != null) query.append('page', params.page);
+      if (params.pageSize != null) query.append('pageSize', params.pageSize);
+      if (params.operationType) query.append('operationType', params.operationType);
+      if (params.status) query.append('status', params.status);
+      if (params.onlyActive != null) query.append('onlyActive', params.onlyActive);
+      if (params.isDeleted != null) query.append('isDeleted', params.isDeleted);
+      if (params.search) query.append('search', params.search);
+      if (params.client) query.append('client', params.client);
+      if (params.transporter) query.append('transporter', params.transporter);
+      if (params.terminal) query.append('terminal', params.terminal);
+      if (params.createdBy) query.append('createdBy', params.createdBy);
+      if (params.dateType) query.append('dateType', params.dateType);
+      if (params.dateFrom) query.append('dateFrom', params.dateFrom);
+      if (params.dateTo) query.append('dateTo', params.dateTo);
+      if (params.sortBy) query.append('sortBy', params.sortBy);
+      if (params.sortDirection) query.append('sortDirection', params.sortDirection);
+
+      const res = await api.get(`/api/operations/ftl?${query.toString()}`);
+      return res.data;
+    },
+
+    async deliverShipment(ref) {
+      const res = await api.put(`/api/operations/ftl/${enc(ref)}/deliver`);
+      return res.data;
+    },
+
+    async reopenShipment(ref, reason) {
+      const res = await api.put(`/api/operations/ftl/${enc(ref)}/reopen`, {
+        reason: reason || 'Reopened from FTL Data Entry',
+      });
       return res.data;
     },
 

@@ -61,11 +61,25 @@ export const getInternalNavigation = (user) => [
                     {
                         label: "FTL Dashboard",
                         path: "/ftl/dashboard",
+                        permission: "operations.ftl.view",
+                        isVisible: (user) => Boolean(
+                            user?.isSuperAdmin ||
+                            user?.role === "SuperAdmin" ||
+                            user?.roleName === "Super Admin" ||
+                            user?.permissions?.includes("operations.ftl.view")
+                        ),
                         icon: LayoutDashboard,
                     },
                     {
                         label: "FTL Data Entry",
                         path: "/ftl/entry",
+                        permission: "operations.ftl.view",
+                        isVisible: (user) => Boolean(
+                            user?.isSuperAdmin ||
+                            user?.role === "SuperAdmin" ||
+                            user?.roleName === "Super Admin" ||
+                            user?.permissions?.includes("operations.ftl.view")
+                        ),
                         icon: FileSpreadsheet,
                     },
                 ],

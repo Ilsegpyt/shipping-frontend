@@ -1,4 +1,5 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { createFtlEngine } from '../engine/ftlEngine.js';
 import '../styles/ftl-dashboard.css';
 
@@ -17,6 +18,8 @@ import '../styles/ftl-dashboard.css';
  *  api               ILS_API implementation (changing it remounts the engine)
  *  language          'en' | 'ar'                  (controlled, default 'en')
  *  theme             'light' | 'dark'             (controlled, default 'light')
+ *  currentTab        'Import' | 'Export' | 'Delivered' | 'Inactive'
+ *  counts            { activeImportCount, activeExportCount, deliveredCount, inactiveCount }
  *  initialWorkspace  {version, shipments[]}       offline preload (GET /workspace shape)
  *  onSave            (exportPayload, workspace) => void|Promise   offline autosave
  *  mail              { compose(message) => Promise<{url}> }      server-side Outlook drafts
@@ -27,15 +30,25 @@ import '../styles/ftl-dashboard.css';
  *  onThemeChange     (theme) => void              user pressed the theme button
  *  className, style  applied to the outer wrapper
  *
- * Ref (useRef + ref={...}): setLanguage, setTheme, showDashboard, showDataEntry,
- * importFiles(files), loadWorkspace(payload), getWorkspace(), getExportPayload(),
- * getTrips(), getSchema(dir), flush(), reload(), openExport(), openHelp(),
- * openDeveloperPanel(), clear(), toast(msg), isLive(), isDirty(), apiSpec.
+ * Ref (useRef + ref={...}): setLanguage, setTheme, switchDir, setTab, setCounts,
+ * showDashboard, showDataEntry, importFiles(files), loadWorkspace(payload), getWorkspace(),
+ * getExportPayload(), getTrips(), getSchema(dir), flush(), reload(), openExport(),
+ * openHelp(), openDeveloperPanel(), clear(), toast(msg), isLive(), isDirty(), apiSpec.
  */
 const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
-  const { api = null, language = 'en', theme = 'light', className, style } = props;
+  const {
+    api = null,
+    language = 'en',
+    theme = 'light',
+    currentTab,
+    counts,
+    className,
+    style,
+    children,
+  } = props;
   const hostRef = useRef(null);
   const engineRef = useRef(null);
+  const [archiveHost, setArchiveHost] = useState(null);
 
   // Always read the latest callbacks without re-mounting the engine.
   const latest = useRef(props);
@@ -63,12 +76,22 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
         initialWorkspace: latest.current.initialWorkspace,
         onEvent(type, detail) {
           const p = latest.current;
-          if (type === 'ready') p.onReady?.(detail);
+          if (type === 'ready') {
+            const slot = root.querySelector('#entryArchiveSlot');
+            if (slot) setArchiveHost(slot);
+            p.onReady?.(detail);
+          }
           else if (type === 'change') p.onChange?.();
           else if (type === 'language') p.onLanguageChange?.(detail);
           else if (type === 'theme') p.onThemeChange?.(detail);
+          else if (type === 'tabChange') p.onTabChange?.(detail);
+          else if (type === 'requestDelete') p.onRequestDelete?.(detail);
+          else if (type === 'countsChanged' || type === 'statusChanged') p.onCountsRefresh?.();
         },
       });
+
+      const slot = root.querySelector('#entryArchiveSlot');
+      if (slot) setArchiveHost(slot);
     } catch (err) {
       console.error(err);
       root.remove();
@@ -80,6 +103,7 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
     return () => {
       engine.destroy();
       engineRef.current = null;
+      setArchiveHost(null);
       root.remove();
     };
     // initialWorkspace is only read on mount; a new api means a new backend, so remount.
@@ -87,16 +111,33 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
 
   useEffect(() => { engineRef.current?.setLanguage(language); }, [language]);
   useEffect(() => { engineRef.current?.setTheme(theme); }, [theme]);
+  useEffect(() => {
+    if (currentTab) {
+      engineRef.current?.setTab?.(currentTab);
+    }
+  }, [currentTab]);
+  useEffect(() => {
+    if (counts) {
+      engineRef.current?.setCounts?.(counts);
+    }
+  }, [counts]);
 
   useImperativeHandle(ref, () => {
     const call = (name) => (...args) => {
       const e = engineRef.current;
-      if (!e) throw new Error('FTL dashboard is not mounted');
-      return e[name](...args);
+      if (!e) {
+        console.warn(`FTL dashboard is not mounted when calling ${name}`);
+        return undefined;
+      }
+      return e[name]?.(...args);
     };
     return {
       setLanguage: call('setLanguage'),
       setTheme: call('setTheme'),
+      switchDir: call('switchDir'),
+      setTab: call('setTab'),
+      setCounts: call('setCounts'),
+      setArchiveOperations: call('setArchiveOperations'),
       getLanguage: call('getLanguage'),
       getTheme: call('getTheme'),
       showDashboard: call('showDashboard'),
@@ -114,6 +155,8 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       openDeveloperPanel: call('openDeveloperPanel'),
       clear: call('clear'),
       toast: call('toast'),
+      dismissToast: call('dismissToast'),
+      removeShipmentLocally: call('removeShipmentLocally'),
       isLive: call('isLive'),
       isDirty: call('isDirty'),
       get apiSpec() { return engineRef.current?.apiSpec; },
@@ -121,7 +164,11 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
     };
   }, []);
 
-  return <div ref={hostRef} className={className} style={style} data-ftl-dashboard="" />;
+  return (
+    <div ref={hostRef} className={className} style={style} data-ftl-dashboard="">
+      {archiveHost && children ? createPortal(children, archiveHost) : null}
+    </div>
+  );
 });
 
 export default FtlDashboard;

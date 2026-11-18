@@ -1662,11 +1662,15 @@ export default function DataEntryTab({
     user?.role === 'SuperAdmin' ||
     user?.permissions?.includes('reports.download')
   );
-  const isOceanManager = user?.roleName === 'Ocean Operations Manager' || user?.permissions?.includes('operations.reopen');
+  const isOceanManager =
+    user?.roleName === 'Supervisor Maritime Transportation' ||
+    user?.roleName === 'Ocean Operations Manager' ||
+    user?.permissions?.includes('operations.reopen');
   const canTakeOver = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
     user?.roleName === 'Super Admin' ||
+    user?.roleName === 'Supervisor Maritime Transportation' ||
     user?.roleName === 'Ocean Operations Manager' ||
     user?.permissions?.includes('operations.reopen')
   );
@@ -2450,6 +2454,16 @@ export default function DataEntryTab({
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    if (currentDir !== 'Import' && currentDir !== 'Export') {
+      notify(
+        lang === 'ar'
+          ? 'لا يمكن إنشاء عملية جديدة أثناء التواجد في تبويب (المسلّمة) أو (غير النشطة). يرجى اختيار تبويب (وارد) أو (صادر) أولاً.'
+          : 'Cannot create a new operation while in Delivered or Inactive tabs. Please select Import or Export first.',
+        'error'
+      );
+      return;
+    }
+
     if (!newOp.client && !newOp.clientId) {
       notify(lang === 'ar' ? 'يرجى اختيار العميل أولاً' : 'Please select a Client', 'warning');
       return;
@@ -3026,6 +3040,7 @@ export default function DataEntryTab({
         formOpen ? (
           <form
             onSubmit={handleFormSubmit}
+            noValidate
             className={`opcard ${lang === 'ar' ? 'opcard-ar' : ''}`}
             dir={lang === 'ar' ? 'rtl' : 'ltr'}
           >

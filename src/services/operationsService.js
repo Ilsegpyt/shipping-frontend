@@ -348,3 +348,123 @@ export const getVehicleById = (id) => api.get(`/api/operations/vehicles/${id}`).
 export const createVehicle = (data) => { clearLookupsCache(); return api.post('/api/operations/vehicles', data).then(r => r.data); };
 export const updateVehicle = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/vehicles/${id}`, data).then(r => r.data); };
 export const deactivateVehicle = (id) => { clearLookupsCache(); return api.delete(`/api/operations/vehicles/${id}`).then(r => r.data); };
+
+/**
+ * FTL Lookups Full Management
+ */
+export const getFtlDriversFull = (params = true) => api.get(`/api/operations/ftl/drivers${buildLookupQuery(params)}`).then(r => r.data);
+export const getFtlDriverById = (id) => api.get(`/api/operations/ftl/drivers/${id}`).then(r => r.data);
+export const createFtlDriver = (data) => { clearLookupsCache(); return api.post('/api/operations/ftl/drivers', data).then(r => r.data); };
+export const updateFtlDriver = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ftl/drivers/${id}`, data).then(r => r.data); };
+export const deactivateFtlDriver = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ftl/drivers/${id}`).then(r => r.data); };
+
+export const getFtlTransportersFull = (params = true) => api.get(`/api/operations/ftl/transporters${buildLookupQuery(params)}`).then(r => r.data);
+export const getFtlTransporterById = (id) => api.get(`/api/operations/ftl/transporters/${id}`).then(r => r.data);
+export const createFtlTransporter = (data) => { clearLookupsCache(); return api.post('/api/operations/ftl/transporters', data).then(r => r.data); };
+export const updateFtlTransporter = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ftl/transporters/${id}`, data).then(r => r.data); };
+export const deactivateFtlTransporter = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ftl/transporters/${id}`).then(r => r.data); };
+
+export const getFtlVehiclesFull = (params = true) => api.get(`/api/operations/ftl/vehicles${buildLookupQuery(params)}`).then(r => r.data);
+export const getFtlVehicleById = (id) => api.get(`/api/operations/ftl/vehicles/${id}`).then(r => r.data);
+export const createFtlVehicle = (data) => { clearLookupsCache(); return api.post('/api/operations/ftl/vehicles', data).then(r => r.data); };
+export const updateFtlVehicle = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ftl/vehicles/${id}`, data).then(r => r.data); };
+export const deactivateFtlVehicle = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ftl/vehicles/${id}`).then(r => r.data); };
+
+export const getFtlAirportsFull = (params = true) => api.get(`/api/operations/ftl/airports${buildLookupQuery(params)}`).then(r => r.data);
+export const getFtlAirportById = (id) => api.get(`/api/operations/ftl/airports/${id}`).then(r => r.data);
+export const createFtlAirport = (data) => { clearLookupsCache(); return api.post('/api/operations/ftl/airports', data).then(r => r.data); };
+export const updateFtlAirport = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ftl/airports/${id}`, data).then(r => r.data); };
+export const deactivateFtlAirport = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ftl/airports/${id}`).then(r => r.data); };
+
+/**
+ * FTL Operations Endpoints (Counts, Paged Lazy Load, Deliver, Reopen)
+ */
+export const getFtlOperationsCounts = async () => {
+  // 1. Try dedicated counts endpoints
+  try {
+    const response = await api.get('/api/operations/ftl/counts');
+    if (response?.data && (response.data.inactiveCount !== undefined || response.data.InactiveCount !== undefined)) {
+      return response.data;
+    }
+  } catch {
+    // continue to fallback
+  }
+
+  try {
+    const response = await api.get('/api/v1/ftl/counts');
+    if (response?.data && (response.data.inactiveCount !== undefined || response.data.InactiveCount !== undefined)) {
+      return response.data;
+    }
+  } catch {
+    // continue to fallback
+  }
+
+  // 2. Direct fast paged query fallback (guaranteed to match FtlDeliveredArchive and FtlInactiveArchive)
+  try {
+    const [delRes, inactRes] = await Promise.allSettled([
+      getPagedFtlOperations({ page: 1, pageSize: 1, status: 'Delivered', onlyActive: false, isDeleted: false }),
+      getPagedFtlOperations({ page: 1, pageSize: 1, isDeleted: true }),
+    ]);
+
+    const extractCount = (res) => {
+      if (res.status !== 'fulfilled' || !res.value) return 0;
+      const data = res.value;
+      if (typeof data.totalCount === 'number') return data.totalCount;
+      if (typeof data.TotalCount === 'number') return data.TotalCount;
+      if (Array.isArray(data)) return data.length;
+      if (Array.isArray(data.items)) return data.items.length;
+      if (Array.isArray(data.Items)) return data.Items.length;
+      return 0;
+    };
+
+    const deliveredCount = extractCount(delRes);
+    const inactiveCount = extractCount(inactRes);
+
+    return {
+      activeImportCount: 0,
+      activeExportCount: 0,
+      deliveredCount,
+      inactiveCount,
+    };
+  } catch (err) {
+    console.error('[FTL] Failed to fetch operations counts fallback:', err);
+    return null;
+  }
+};
+
+export const getPagedFtlOperations = async (params = {}) => {
+  const query = new URLSearchParams();
+  if (params.page != null) query.append('page', params.page);
+  if (params.pageSize != null) query.append('pageSize', params.pageSize);
+  if (params.operationType) query.append('operationType', params.operationType);
+  if (params.status) query.append('status', params.status);
+  if (params.onlyActive != null) query.append('onlyActive', params.onlyActive);
+  if (params.isDeleted != null) query.append('isDeleted', params.isDeleted);
+  if (params.search) query.append('search', params.search);
+  if (params.client) query.append('client', params.client);
+  if (params.transporter) query.append('transporter', params.transporter);
+  if (params.terminal) query.append('terminal', params.terminal);
+  if (params.createdBy) query.append('createdBy', params.createdBy);
+  if (params.dateType) query.append('dateType', params.dateType);
+  if (params.dateFrom) query.append('dateFrom', params.dateFrom);
+  if (params.dateTo) query.append('dateTo', params.dateTo);
+  if (params.sortBy) query.append('sortBy', params.sortBy);
+  if (params.sortDirection) query.append('sortDirection', params.sortDirection);
+
+  const url = `/api/operations/ftl?${query.toString()}`;
+  const response = await api.get(url);
+  return response.data;
+};
+
+export const deliverFtlOperation = async (reference) => {
+  const response = await api.put(`/api/operations/ftl/${encodeURIComponent(reference)}/deliver`);
+  return response.data;
+};
+
+export const reopenFtlOperation = async (reference, reason) => {
+  const response = await api.put(`/api/operations/ftl/${encodeURIComponent(reference)}/reopen`, {
+    reason: reason || 'Reopened from FTL Data Entry',
+  });
+  return response.data;
+};
+

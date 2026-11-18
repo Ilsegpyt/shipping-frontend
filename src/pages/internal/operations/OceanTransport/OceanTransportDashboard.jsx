@@ -68,7 +68,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const isOceanManager = user?.roleName === 'Ocean Operations Manager' || user?.permissions?.includes('operations.reopen');
+  const isOceanManager =
+    user?.roleName === 'Supervisor Maritime Transportation' ||
+    user?.roleName === 'Ocean Operations Manager' ||
+    user?.permissions?.includes('operations.reopen');
   const canViewDashboard = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
@@ -120,18 +123,11 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   // Within entry: 'Import' | 'Export'
   const [entryDir, setEntryDir] = useState('Import');
 
-  const [lang, setLang] = useState(() => {
-    return localStorage.getItem('operations_lang') || 'ar';
-  });
+  // Default language is English ('en') on open and refresh; user can freely switch to Arabic
+  const [lang, setLang] = useState('en');
 
   const toggleLang = () => {
-    const next = lang === 'ar' ? 'en' : 'ar';
-    setLang(next);
-    try {
-      localStorage.setItem('operations_lang', next);
-    } catch (e) {
-      // Ignore localStorage errors
-    }
+    setLang((prev) => (prev === 'ar' ? 'en' : 'ar'));
   };
 
   // Core Data State - Clean production empty state
@@ -477,6 +473,16 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
   // Handlers
   const handleCreateOperation = async (dir, opData) => {
+    if (!['Import', 'Export'].includes(dir)) {
+      showToast(
+        lang === 'ar'
+          ? 'لا يمكن إنشاء عملية جديدة إلا داخل تبويب (وارد) أو (صادر).'
+          : 'New operations can only be created within Import or Export tabs.',
+        'error'
+      );
+      return false;
+    }
+
     const isImport = dir === 'Import';
 
     // 1. Resolve IDs from Lookups with strict GUID validation

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { parseExcelFile, exportValidationReport } from '../tptEngine';
 
-export default function UploadModal({ isOpen, onClose, onUploadSuccess, lang = 'ar' }) {
+export default function UploadModal({ isOpen, onClose, onUploadSuccess, lang = 'en' }) {
   const [step, setStep] = useState('upload'); // 'upload' | 'review'
   const [dragActive, setDragActive] = useState(false);
   const [loading, setLoading] = useState(false);

@@ -48,24 +48,58 @@ export const getMarkup = () => `
       <div class="etabs">
         <button class="etab on" data-dir="Import"><span class="ico">↓</span><span class="lbl"></span><span class="cnt"></span></button>
         <button class="etab" data-dir="Export"><span class="ico">↑</span><span class="lbl"></span><span class="cnt"></span></button>
-        <button type="button" class="ebtn ebtn-delivered" id="deliveredOpen" onclick="__FTL__.openDelivered()">Delivered shipments (0)</button>
-        <button type="button" class="ebtn ebtn-inactive" id="inactiveOpen" onclick="__FTL__.openInactive()">Inactive shipments (0)</button>
-        <button type="button" class="ebtn" id="entryUpload" onclick="__FTL__.openTptUpload()">Upload File</button>
+        <button type="button" class="etab etab-delivered" id="deliveredOpen" onclick="__FTL__.openDelivered()">
+          <span class="ico">✓</span>
+          <span class="lbl" id="deliveredOpenLbl">Delivered shipments</span>
+          <span class="cnt" id="deliveredOpenCnt">0</span>
+        </button>
+        <button type="button" class="etab etab-inactive" id="inactiveOpen" onclick="__FTL__.openInactive()">
+          <span class="ico">🗑</span>
+          <span class="lbl" id="inactiveOpenLbl">Inactive</span>
+          <span class="cnt" id="inactiveOpenCnt">0</span>
+        </button>
+        <button type="button" class="ebtn" id="entryUpload" onclick="__FTL__.openTptUpload()" style="display:none">Upload File</button>
       </div>
       <div class="espacer"></div>
-      <div id="eStatus" class="estatus"></div>
+      <div id="eStatus" class="estatus" style="display:none"></div>
       <button class="ebtn" onclick="__FTL__.openTripExport()" id="eSave"></button>
       <button class="ebtn" onclick="__FTL__.emailEntry()" id="eMail"></button>
       <button class="ebtn" onclick="__FTL__.toggleLang()" id="ebarLang">عربي</button>
       <button class="ebtn go" id="eApply" onclick="__FTL__.applyEntry()" style="display:none"></button>
     </div>
-    <div class="sysbar">
-      <span class="chipst muted" id="sysOps"></span>
-      <span class="spacer"></span>
+    <div id="entryGridWrap">
+      <div class="sysbar">
+        <span class="chipst muted" id="sysOps"></span>
+        <div class="trip-quick-search-wrap" id="entryQuickSearchWrap">
+          <span class="trip-search-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="text" id="entryQuickSearch" class="trip-quick-search-input" placeholder="Search by Shipment #, MAWB, HAWB, Client, Transporter, Truck Plate, Driver... (Ctrl + K)" autocomplete="off" />
+          <button type="button" id="entryQuickSearchClear" class="trip-quick-search-clear" title="Clear search" style="display:none">✕</button>
+          <kbd class="trip-quick-search-kbd">Ctrl K</kbd>
+        </div>
+        <span class="spacer"></span>
+      </div>
+      <div class="triptools"><div class="tripsearch" id="tripSearch"></div><span id="tripSearchCount" class="tripcount"></span><div class="tripsort"><label for="tripSortKey" id="tripSortLabel">Sort by</label><select id="tripSortKey"></select><select id="tripSortDir" aria-label="Sort direction"><option value="asc">A → Z</option><option value="desc">Z → A</option></select></div><span class="tripgrow"></span><button class="ebtn" id="tripCopy" onclick="__FTL__.copySelectedTrips()" disabled></button></div>
+      <div class="trip-page" id="tripPage" hidden>
+        <span id="tripPageInfo"></span>
+        <span class="psize-wrap" style="display:inline-flex;align-items:center;gap:4px;margin:0 6px">
+          <label for="tripPageSize" id="tripPageSizeLbl" style="font-size:11px;color:var(--steel)">Per page:</label>
+          <select id="tripPageSize" aria-label="Page size">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="70">70</option>
+            <option value="100">100</option>
+          </select>
+        </span>
+        <button type="button" id="tripPagePrev" aria-label="Previous shipments">‹</button>
+        <div id="tripPageNums" class="trip-page-nums" style="display:inline-flex;gap:4px"></div>
+        <button type="button" id="tripPageNext" aria-label="Next shipments">›</button>
+      </div>
+      <div class="egrid"><table id="eTable"><thead id="eHead"></thead><tbody id="eBody"></tbody></table><div id="eEmpty" class="eempty" style="display:none"></div></div>
     </div>
-    <div class="triptools"><div class="tripsearch" id="tripSearch"></div><span id="tripSearchCount" class="tripcount"></span><div class="tripsort"><label for="tripSortKey" id="tripSortLabel">Sort by</label><select id="tripSortKey"></select><select id="tripSortDir" aria-label="Sort direction"><option value="asc">A → Z</option><option value="desc">Z → A</option></select></div><span class="tripgrow"></span><button class="ebtn" id="tripCopy" onclick="__FTL__.copySelectedTrips()" disabled></button></div>
-    <div class="trip-page" id="tripPage" hidden><span id="tripPageInfo"></span><button type="button" id="tripPagePrev" aria-label="Previous shipments">‹</button><button type="button" id="tripPageNext" aria-label="Next shipments">›</button></div>
-    <div class="egrid"><table id="eTable"><thead id="eHead"></thead><tbody id="eBody"></tbody></table><div id="eEmpty" class="eempty" style="display:none"></div></div>
+    <div id="entryArchiveSlot" style="display:none"></div>
     <div id="eLists" hidden></div>
     <div class="modal" id="deliveredModal"><div class="box delivered-box"><div class="delivered-title"><h2 id="deliveredTitle">Delivered shipments</h2><button type="button" class="ebtn" onclick="__FTL__.closeM('deliveredModal')" aria-label="Close">✕</button></div><p id="deliveredCount"></p><div class="delivered-tools"><button type="button" class="ebtn" id="deliveredSelectAll" onclick="__FTL__.toggleAllDelivered()"></button><button type="button" class="ebtn" id="deliveredCopy" onclick="__FTL__.copyDeliveredTrips()" disabled></button><button type="button" class="ebtn" id="deliveredExport" onclick="__FTL__.openTripExport('delivered')"></button><button type="button" class="ebtn" id="deliveredMail" onclick="__FTL__.openMail('excel','delivered')"></button></div><div class="triptools delivered-filters"><div class="tripsearch" id="deliveredSearch"></div><span class="tripgrow"></span><div class="tripsort"><label for="deliveredSortKey" id="deliveredSortLabel">Sort by</label><select id="deliveredSortKey"></select><select id="deliveredSortDir" aria-label="Sort direction"><option value="asc">Ascending ↑</option><option value="desc">Descending ↓</option></select></div></div><div class="delivered-actions" id="deliveredActions" hidden><label id="reopenLabel" for="reopenShipment"></label><select id="reopenShipment"></select><button type="button" class="ebtn" id="reopenAction" onclick="__FTL__.reopenSelectedShipment()"></button></div><div class="trip-page" id="deliveredPage"><button type="button" id="deliveredPrev" onclick="__FTL__.pageDelivered(-1);__FTL__.renderDelivered()">‹</button><span id="deliveredPageInfo"></span><button type="button" id="deliveredNext" onclick="__FTL__.pageDelivered(1);__FTL__.renderDelivered()">›</button></div><div class="delivered-scroll"><table id="deliveredTable"><thead id="deliveredHead"></thead><tbody id="deliveredBody"></tbody></table></div></div></div>
   </section>
@@ -186,11 +220,25 @@ export const getMarkup = () => `
 <div id="exportRoot"></div>
 <div class="modal" id="dModal"><div class="box wide"><h2><span id="dTitleTxt"></span><button onclick="__FTL__.closeM('dModal')">×</button></h2>
   <div id="dBody"></div></div></div>
-<div class="modal" id="mModal"><div class="box" style="max-width:760px"><h2><span id="mTitleTxt"></span><button onclick="__FTL__.closeM('mModal')">×</button></h2>
+<div class="modal" id="mModal"><div class="box" style="max-width:760px"><h2><span id="mTitleTxt"></span><button onclick="__FTL__.closeM('mModal')" class="modal-close-btn" aria-label="Close">×</button></h2>
   <div id="mBody"></div>
-  <div class="xfoot"><button class="hbtn primary xgo" id="mGo" onclick="__FTL__.sendMail()"></button></div></div></div>
-<div class="modal" id="tripExportModal"><div class="box" style="max-width:760px"><h2><span id="tripExportTitle"></span><button onclick="__FTL__.closeM('tripExportModal')">×</button></h2><div id="tripExportBody"></div><div class="xfoot"><button class="hbtn primary" onclick="__FTL__.saveTripExport()" id="tripExportGo"></button></div></div></div>
-<div class="modal" id="uModal"><div class="box" style="max-width:520px"><h2><span id="uTitleTxt"></span><button onclick="__FTL__.closeM('uModal')">×</button></h2><div id="uBody"></div></div></div>
+  <div class="xfoot">
+    <button type="button" class="hbtn xcancel" id="mCancel" onclick="__FTL__.closeM('mModal')">Cancel</button>
+    <button class="hbtn primary xgo" id="mGo" onclick="__FTL__.sendMail()"></button>
+  </div></div></div>
+<div class="modal" id="mToAlertModal" style="z-index:10050"><div class="box" style="max-width:390px;text-align:center;padding:26px 22px;border-radius:20px;background:#fff;box-shadow:0 30px 70px rgba(0,0,0,0.35)">
+  <div style="width:48px;height:48px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#ffe4e6;color:#e11d48">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+  </div>
+  <h4 id="mToAlertTitle" style="font-size:16px;font-weight:700;color:#0f172a;margin-bottom:8px"></h4>
+  <p id="mToAlertDesc" style="font-size:12.5px;color:#64748b;line-height:1.6;margin-bottom:20px"></p>
+  <button type="button" class="hbtn primary" id="mToAlertOk" onclick="__FTL__.closeMToAlert()" style="width:100%;height:40px;border-radius:12px;font-weight:700;font-size:13px;background:#0284c7;color:#fff;border:none;cursor:pointer;display:inline-flex;align-items:center;justify-content:center"></button>
+</div></div>
+<div class="modal" id="tripExportModal"><div class="box" style="max-width:760px"><h2><span id="tripExportTitle"></span><button onclick="__FTL__.closeM('tripExportModal')" class="modal-close-btn" aria-label="Close">×</button></h2><div id="tripExportBody"></div><div class="xfoot">
+    <button type="button" class="hbtn xcancel" id="tripExportCancel" onclick="__FTL__.closeM('tripExportModal')">Cancel</button>
+    <button class="hbtn primary xgo" onclick="__FTL__.saveTripExport()" id="tripExportGo"></button>
+  </div></div></div>
+<div class="modal ftl-modern-modal" id="uModal"><div class="box ubox-modern"><div class="uheader"><h3 class="utitle" id="uTitleTxt"></h3><button type="button" class="uclose-btn" onclick="__FTL__.closeM('uModal')" title="Close" aria-label="Close">✕</button></div><div id="uBody"></div></div></div>
 <div class="modal" id="truckManifestModal">
   <div class="box manifest-box">
     <div class="manifest-header truck-theme">
@@ -229,6 +277,8 @@ export const getMarkup = () => `
     <div class="delivered-tools">
       <button type="button" class="ebtn" id="inactiveSelectAll" onclick="__FTL__.toggleAllInactive()"></button>
       <button type="button" class="ebtn" id="inactiveCopy" onclick="__FTL__.copyInactiveTrips()" disabled></button>
+      <button type="button" class="ebtn" id="inactiveExport" onclick="__FTL__.openTripExport('inactive')"></button>
+      <button type="button" class="ebtn" id="inactiveMail" onclick="__FTL__.openMail('excel','inactive')"></button>
     </div>
     <div class="triptools delivered-filters">
       <div class="tripsearch" id="inactiveSearch"></div>
@@ -326,5 +376,5 @@ export const getMarkup = () => `
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 `;

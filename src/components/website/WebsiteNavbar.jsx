@@ -367,7 +367,7 @@ export default function WebsiteNavbar() {
             to={portalPath}
             className="hidden shrink-0 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100 lg:inline-flex"
           >
-            Portal
+            My ILS
           </Link>
 
           {/* Mobile controls */}
@@ -376,7 +376,7 @@ export default function WebsiteNavbar() {
               to={portalPath}
               className="rounded-lg bg-white px-3 py-2 text-xs font-semibold text-slate-900 transition hover:bg-slate-100 sm:px-4 sm:text-sm"
             >
-              Portal
+              My ILS
             </Link>
 
             <button

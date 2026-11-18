@@ -244,19 +244,19 @@ export default function AppRoutes() {
           </Route>
           <Route
             path="/ftl/dashboard"
-            element={<ProtectedRoute />}
+            element={<ProtectedRoute requiredPermission="operations.ftl.view" />}
           >
             <Route index element={<FtlAirportPage defaultView="dashboard" />} />
           </Route>
           <Route
             path="/ftl/entry"
-            element={<ProtectedRoute />}
+            element={<ProtectedRoute requiredPermission="operations.ftl.view" />}
           >
             <Route index element={<FtlAirportPage defaultView="entry" />} />
           </Route>
           <Route
             path="/ftl"
-            element={<ProtectedRoute />}
+            element={<ProtectedRoute requiredPermission="operations.ftl.view" />}
           >
             <Route index element={<FtlAirportPage defaultView="dashboard" />} />
           </Route>
