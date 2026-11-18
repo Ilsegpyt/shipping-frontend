@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import contentService from "../../services/contentService";
+import useSolutionHeroImages from "../../hooks/useSolutionHeroImages";
 import contactInquiriesService from "../../services/contactInquiriesService";
 import { cleanImageUrl } from "../../utils/mediaUrl";
 
@@ -192,6 +193,7 @@ async function getAllContent() {
 }
 
 function Home() {
+  const solutionImage = useSolutionHeroImages();
   const { hash } = useLocation();
   const [newsItems, setNewsItems] = useState([]);
 
@@ -600,8 +602,7 @@ function Home() {
               </p>
             </div>
 
-            <a
-              href="/solutions"
+            <a href="/solutions"              
               className="inline-flex min-h-12 w-fit max-w-full items-center justify-center gap-2  border border-slate-200 px-4 py-3 text-center text-sm font-semibold text-brand-primary transition hover:border-sky-200 hover:text-brand-accent sm:px-5"
             >
               Explore Solutions
@@ -611,43 +612,43 @@ function Home() {
 
           <div className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-5 lg:mt-14">
             <SolutionCard
-              image={seaFreight}
+              image={solutionImage("Sea Freight", seaFreight)}
               title={seaFreightContent?.title || "Sea Freight"}
               to="/solutions/sea-freight"
             />
 
             <SolutionCard
-              image={airFreight}
+              image={solutionImage("Air Freight", airFreight)}
               title={airFreightContent?.title || "Air Freight"}
               to="/solutions/air-freight"
             />
 
             <SolutionCard
-              image={roadTransportation}
+              image={solutionImage("Road Transportation", roadTransportation)}
               title={roadTransportationContent?.title || "Road Transportation"}
               to="/solutions/road-transportation"
             />
 
             <SolutionCard
-              image={customsClearance}
+              image={solutionImage("Customs Clearance", customsClearance)}
               title={customsClearanceContent?.title || "Customs Clearance"}
               to="/solutions/customs-clearance"
             />
 
             <SolutionCard
-              image={consolidations}
+              image={solutionImage("Consolidations", consolidations)}
               title={consolidationsContent?.title || "Consolidations"}
               to="/solutions/consolidations"
             />
 
             <SolutionCard
-              image={projectTransportation}
+              image={solutionImage("Project Transport", projectTransportation)}
               title={projectTransportContent?.title || "Project Transport"}
               to="/solutions/project-transport"
             />
 
             <SolutionCard
-              image={warehousing}
+              image={solutionImage("Warehousing and Distribution", warehousing)}
               title={
                 warehousingDistributionContent?.title ||
                 "Warehousing and Distribution"
@@ -656,7 +657,7 @@ function Home() {
             />
 
             <SolutionCard
-              image={cargo}
+              image={solutionImage("Cargo Insurance", cargo)}
               title={cargoInsuranceContent?.title || "Cargo Insurance"}
               to="/solutions/cargo-insurance"
             />

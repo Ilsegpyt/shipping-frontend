@@ -62,11 +62,11 @@ export default function BreakbulkShipment() {
                                     A new milestone by the ILS Projects Team in Alexandria!
                                 </p>
 
-                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-sm">
+                                <p className="mt-7 text-sm leading-8 text-slate-600 sm:text-base">
                                     We successfully shipped, cleared, and transported a 186-ton Breakbulk shipment with unmatched precision and seamless coordination.
                                 </p>
 
-                                <p className="mt-6 text-base leading-8 text-slate-600 sm:text-sm">
+                                <p className="mt-6 text-sm leading-8 text-slate-600 sm:text-base">
                                     Another step in our commitment to smart, global supply chain solutions.
                                 </p>
 

@@ -147,27 +147,27 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
       closings: item.type === "closing" ? data.closings.filter((entry) => entry.id !== item.id) : data.closings,
     });
   };
-  const field = "mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100";
+  const field = "mt-1 w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20";
   return (
-    <div className="space-y-6 rounded-2xl border border-sky-200 bg-sky-50/30 p-4 sm:p-5">
+    <div className="space-y-6 rounded-2xl border border-brand-accent/30 bg-brand-bg/30 p-4 sm:p-5">
       <header>
-        <h3 className="text-lg font-semibold text-slate-900">
+        <h3 className="text-lg font-semibold text-brand-text">
           {pageTitle} — Structured Content
         </h3>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="mt-1 text-sm text-brand-muted">
           Edit the page using the same ordered rich-content model as Philosophy.
           Add, remove, and reorder any section.
         </p>
       </header>
-      <section className="space-y-3 rounded-xl border border-slate-200 bg-white p-4">
-        <h4 className="font-semibold text-slate-900">Page Intro</h4>
-        <div><label className="mb-2 block text-sm font-medium text-slate-700">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
+      <section className="space-y-3 rounded-xl border border-brand-border bg-brand-surface p-4">
+        <h4 className="font-semibold text-brand-text">Page Intro</h4>
+        <div><label className="mb-2 block text-sm font-medium text-brand-primary-hover">Page Intro Text (optional)</label><RichTextEditor value={data.introText || ""} onChange={(introText) => update({ introText })} /></div>
       </section>
-      <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+      <section className="space-y-4 rounded-xl border border-brand-border bg-brand-surface p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h4 className="font-semibold text-slate-900">Page Content Order</h4>
-            <p className="mt-1 text-sm text-slate-500">
+            <h4 className="font-semibold text-brand-text">Page Content Order</h4>
+            <p className="mt-1 text-sm text-brand-muted">
               The public page follows this exact order.
             </p>
           </div>
@@ -175,28 +175,28 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
             <button
               type="button"
               onClick={() => add("section")}
-              className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
+              className="rounded-lg bg-brand-primary px-3 py-2 text-xs font-semibold text-brand-inverse"
             >
               + Add Section
             </button>
             <button
               type="button"
               onClick={() => add("highlight")}
-              className="rounded-lg border border-sky-300 bg-white px-3 py-2 text-xs font-semibold text-sky-800"
+              className="rounded-lg border border-brand-accent bg-brand-surface px-3 py-2 text-xs font-semibold text-brand-primary-hover"
             >
               + Page Highlight
             </button>
             <button
               type="button"
               onClick={() => add("closing")}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+              className="rounded-lg border border-brand-secondary bg-brand-surface px-3 py-2 text-xs font-semibold text-brand-primary-hover"
             >
               + Page Closing
             </button>
           </div>
         </div>
         {!data.pageOrder.length && (
-          <p className="rounded-lg border border-dashed border-slate-300 p-5 text-center text-sm text-slate-500">
+          <p className="rounded-lg border border-dashed border-brand-secondary p-5 text-center text-sm text-brand-muted">
             No content yet. Add a section, highlight, or closing.
           </p>
         )}
@@ -217,9 +217,9 @@ export function StructuredAboutEditor({ value, onChange, pageTitle = "About ILS 
           )
             return null;
           const blocks = section?.contentBlocks || [];
-          return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-sky-200 bg-white" : item.type === "closing" ? "border-slate-200 bg-white" : "border-slate-200 bg-slate-50/70"}`}>
-            <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-slate-500">Section {index + 1}</span><h5 className="font-semibold text-slate-900">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-white px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-red-600">Remove</button></div></div>
-            {section ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-slate-700">Section Label<input className={field} value={section.label || ""} onChange={(e) => updateSection(item.id, { label: e.target.value })} /></label><label className="block text-sm font-medium text-slate-700">Section Title <span className="text-red-600">*</span><input required aria-required="true" className={field} value={section.title || ""} onChange={(e) => updateSection(item.id, { title: e.target.value })} /></label></div><label className="block text-sm font-medium text-slate-700">Subtitle<input className={field} value={section.subtitle || ""} onChange={(e) => updateSection(item.id, { subtitle: e.target.value })} /></label><ContentBlockEditor blocks={blocks.length ? blocks : [{ id: `${section.id}-text`, type: "text", text: "" }]} onChange={(contentBlocks) => updateSection(item.id, { contentBlocks })} /></div> : <RichTextEditor value={global.text || ""} onChange={(text) => update({ [item.type === "highlight" ? "highlights" : "closings"]: (item.type === "highlight" ? data.highlights : data.closings).map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />}
+          return <article key={`${item.type}-${item.id}`} className={`space-y-3 rounded-xl border p-4 ${item.type === "highlight" ? "border-brand-accent/30 bg-brand-surface" : item.type === "closing" ? "border-brand-border bg-brand-surface" : "border-brand-border bg-brand-bg/70"}`}>
+            <div className="flex flex-wrap items-center justify-between gap-2"><div><span className="text-xs uppercase tracking-wide text-brand-muted">Section {index + 1}</span><h5 className="font-semibold text-brand-text">{item.type === "section" ? section.title || `Section ${index + 1}` : item.type === "highlight" ? "Page Highlight" : "Page Closing"}</h5></div><div className="flex gap-1"><button type="button" disabled={index === 0} onClick={() => move(index, -1)} className="rounded border bg-brand-surface px-2 py-1 text-xs disabled:opacity-30">↑ Up</button><button type="button" disabled={index === data.pageOrder.length - 1} onClick={() => move(index, 1)} className="rounded border bg-brand-surface px-2 py-1 text-xs disabled:opacity-30">↓ Down</button><button type="button" onClick={() => remove(item)} className="rounded px-2 py-1 text-xs font-medium text-brand-accent">Remove</button></div></div>
+            {section ? <div className="space-y-3"><div className="grid gap-3 sm:grid-cols-2"><label className="block text-sm font-medium text-brand-primary-hover">Section Label<input className={field} value={section.label || ""} onChange={(e) => updateSection(item.id, { label: e.target.value })} /></label><label className="block text-sm font-medium text-brand-primary-hover">Section Title <span className="text-brand-accent">*</span><input required aria-required="true" className={field} value={section.title || ""} onChange={(e) => updateSection(item.id, { title: e.target.value })} /></label></div><label className="block text-sm font-medium text-brand-primary-hover">Subtitle<input className={field} value={section.subtitle || ""} onChange={(e) => updateSection(item.id, { subtitle: e.target.value })} /></label><ContentBlockEditor blocks={blocks.length ? blocks : [{ id: `${section.id}-text`, type: "text", text: "" }]} onChange={(contentBlocks) => updateSection(item.id, { contentBlocks })} /></div> : <RichTextEditor value={global.text || ""} onChange={(text) => update({ [item.type === "highlight" ? "highlights" : "closings"]: (item.type === "highlight" ? data.highlights : data.closings).map((entry) => entry.id === item.id ? { ...entry, text } : entry) })} />}
           </article>;
         })}
       </section>
@@ -544,7 +544,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       imageCopy.setAttribute("class", "about-certificate-image");
       imageCopy.setAttribute(
         "style",
-        "display:block;width:100%;height:auto;max-width:100%;max-height:520px;object-fit:contain;object-position:center;background:#f8fafc;box-sizing:border-box;",
+        "display:block;width:100%;height:auto;max-width:100%;max-height:520px;object-fit:contain;object-position:center;background:var(--color-bg);box-sizing:border-box;",
       );
       card.appendChild(imageCopy);
 
@@ -740,11 +740,11 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
   };
 
   return (
-    <main className="ils-shared-content min-h-screen bg-white text-slate-900">
-      <SharedCmsPageHero label={data.introLabel} title={page?.title || "About ILS"}>
+    <main className="ils-shared-content min-h-screen bg-brand-surface text-brand-text">
+      <SharedCmsPageHero label={data.introLabel} title={page?.title || "About ILS"} image={page?.featuredImage || undefined}>
         {renderRich(
           data.introText,
-          "intro-rich mt-5 max-w-3xl text-base leading-7 text-[#224980] sm:text-sm sm:leading-8",
+          "intro-rich mt-5 max-w-3xl text-sm leading-7 text-inherit sm:text-base sm:leading-8",
         )}
       </SharedCmsPageHero>
       <section className="px-4 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">
@@ -758,7 +758,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
             />
           ))}
           {!data.pageOrder.length && (
-            <p className="rounded-none border border-brand-border bg-white p-8 text-center text-brand-muted">
+            <p className="rounded-none border border-brand-border bg-brand-surface p-8 text-center text-brand-muted">
               No content is available for this page in the CMS.
             </p>
           )}
@@ -770,7 +770,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
         <div className="mx-auto flex max-w-7xl justify-center">
           <a
             href="/"
-            className="inline-flex items-center justify-center gap-2 rounded-none border border-brand-border bg-white px-6 py-3 text-sm font-semibold text-slate-800  transition hover:border-brand-accent hover:bg-brand-bg hover:text-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-offset-2"
+            className="inline-flex items-center justify-center gap-2 rounded-none border border-brand-border bg-brand-surface px-6 py-3 text-sm font-semibold text-brand-primary-hover  transition hover:border-brand-accent hover:bg-brand-bg hover:text-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-offset-2"
           >
             <span aria-hidden="true">←</span>
             Back to Home
@@ -779,14 +779,6 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       </section>
 
       <style>{`
-  /* New light CMS hero: override legacy intro colors without changing stored HTML. */
-  .ils-cms-hero .about-rich.intro-rich,
-  .ils-cms-hero .about-rich.intro-rich * {
-    color: #224980 !important;
-  }
-  .ils-cms-hero .about-rich.intro-rich a {
-    color: #1E3672 !important;
-  }
 .about-rich {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -799,19 +791,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
   font-weight: 700;
 }
 
-.about-rich a {
-  color: #0369a1;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  overflow-wrap: anywhere;
-}
-
-.about-rich a:hover {
-  color: #075985;
-}
-
-
-  /* Paragraphs */
+/* Paragraphs */
   .about-rich h1 { font-size: 2rem; line-height: 1.2; }
 
 .about-rich p {
@@ -932,17 +912,17 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     min-width: 0;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--color-border);
     border-radius: 0;
-    background: #fff;
+    background: var(--color-surface);
     padding: 0.75rem;
-    box-shadow: 0 8px 24px rgb(15 23 42 / 0.07);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--color-primary) 7%, transparent);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
   .about-rich .about-certificate-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 14px 30px rgb(15 23 42 / 0.12);
+    box-shadow: 0 14px 30px color-mix(in srgb, var(--color-primary) 12%, transparent);
   }
 
   .about-rich img.about-certificate-image {
@@ -953,7 +933,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     max-height: 520px !important;
     object-fit: contain !important;
     object-position: center !important;
-    background: #f8fafc;
+    background: var(--color-bg);
     border-radius: 0;
     margin: 0;
     padding: 0.5rem;
@@ -965,7 +945,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
     text-align: center;
     font-size: 0.875rem;
     font-weight: 600;
-    color: #334155;
+    color: var(--color-text);
   }
 
   /* Responsive gallery */
@@ -1002,14 +982,14 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
   /* Links */
   .about-rich a {
-    color: #0284c7;
+    color: var(--color-accent);
     text-decoration: underline;
     text-underline-offset: 3px;
     overflow-wrap: anywhere;
   }
 
   .about-rich a:hover {
-    color: #0369a1;
+    color: var(--color-primary-hover);
   }
     
 
@@ -1109,6 +1089,13 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
 
 
+  /* Hero description inherits its color from SharedCmsPageHero */
+.ils-cms-hero .about-rich.intro-rich,
+.ils-cms-hero .about-rich.intro-rich * {
+  color: inherit;
+}
+  
+
   /* Reduced motion */
   @media (prefers-reduced-motion: reduce) {
     .about-rich .about-certificate-card {
@@ -1125,7 +1112,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
 
       {certificateViewer && (
         <div
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/95 p-3 backdrop-blur-sm sm:p-6"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-brand-primary/95 p-3 backdrop-blur-sm sm:p-6"
           onClick={() => setCertificateViewer(null)}
           role="dialog"
           aria-modal="true"
@@ -1134,7 +1121,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
           <button
             type="button"
             onClick={() => setCertificateViewer(null)}
-            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20"
+            className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-brand-inverse/10 text-xl text-brand-inverse hover:bg-brand-inverse/20"
             aria-label="Close image viewer"
           >
             ×
@@ -1151,7 +1138,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                   current.images.length,
               }));
             }}
-            className="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20 sm:left-6 sm:h-14 sm:w-14"
+            className="absolute left-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-brand-inverse/10 text-xl text-brand-inverse hover:bg-brand-inverse/20 sm:left-6 sm:h-14 sm:w-14"
             aria-label="Previous certificate"
           >
             ‹
@@ -1168,12 +1155,12 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
             />
 
             {certificateViewer.images[certificateViewer.index].caption && (
-              <p className="mt-4 text-center text-sm font-medium text-white sm:text-base">
+              <p className="mt-4 text-center text-sm font-medium text-brand-inverse sm:text-base">
                 {certificateViewer.images[certificateViewer.index].caption}
               </p>
             )}
 
-            <p className="mt-2 text-sm text-slate-300">
+            <p className="mt-2 text-sm text-brand-secondary-l">
               {certificateViewer.index + 1} / {certificateViewer.images.length}
             </p>
           </div>
@@ -1187,7 +1174,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
                 index: (current.index + 1) % current.images.length,
               }));
             }}
-            className="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-xl text-white hover:bg-white/20 sm:right-6 sm:h-14 sm:w-14"
+            className="absolute right-2 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-brand-inverse/10 text-xl text-brand-inverse hover:bg-brand-inverse/20 sm:right-6 sm:h-14 sm:w-14"
             aria-label="Next certificate"
           >
             ›

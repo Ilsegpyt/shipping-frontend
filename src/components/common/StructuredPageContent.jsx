@@ -287,10 +287,10 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
   const hasIntro = Boolean(data.introLabel || data.introTitle || data.introText);
   return (
     <main className="ils-shared-content min-h-screen bg-slate-50 text-sky-800">
-      <SharedCmsPageHero label={data.introLabel || parentTitle} title={data.introTitle || page?.title || "About ILS"}>
+      <SharedCmsPageHero label={data.introLabel || parentTitle} title={data.introTitle || page?.title || "About ILS"} image={page?.featuredImage || undefined}>
         {data.introText && (
           <div
-            className="structured-rich mt-5 max-w-3xl text-base leading-7 text-slate-100 sm:text-sm sm:leading-8"
+            className="structured-rich mt-5 max-w-3xl text-sm leading-7 text-slate-100 sm:text-base sm:leading-8"
             dangerouslySetInnerHTML={{ __html: prepareStructuredRichHtml(data.introText) }}
           />
         )}

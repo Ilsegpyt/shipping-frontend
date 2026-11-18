@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import SharedCmsPageHero from '../../../components/common/SharedCmsPageHero';
+import useSolutionHeroImages from '../../../hooks/useSolutionHeroImages';
 
 import airfreight from '../../../assets/website/solutions/airfreight.webp';
 import seafreight from '../../../assets/website/solutions/seafreight.webp';
@@ -54,6 +55,7 @@ const solutions = [
 ];
 
 function Solutions() {
+    const solutionImage = useSolutionHeroImages();
     return (
         <main className="min-h-screen bg-white text-slate-900">
             {/* Shared public-site hero: same height and visual identity as CMS pages */}
@@ -83,7 +85,7 @@ function Solutions() {
                             >
                                 <div className="relative aspect-[16/10] overflow-hidden">
                                     <img
-                                        src={solution.image}
+                                        src={solutionImage(solution.title, solution.image)}
                                         alt={solution.title}
                                         className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
                                     />

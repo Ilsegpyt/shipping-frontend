@@ -57,7 +57,7 @@ export default function GFSPartnership() {
                         </div>
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
-                            <div className="max-w-3xl space-y-7 text-base leading-8 text-slate-600 sm:text-sm">
+                            <div className="max-w-3xl space-y-7 text-sm leading-8 text-slate-600 sm:text-base">
                                 <p className="text-base font-semibold leading-8 text-slate-900 sm:text-lg sm:leading-9">
                                     Exclusive Partnership and Deep Cooperation Announcement
                                 </p>

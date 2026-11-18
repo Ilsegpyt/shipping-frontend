@@ -139,6 +139,8 @@ const SOLUTION_PUBLIC_ROUTES = {
 async function getDynamicPageLinks(rootCategory) {
   const links = [];
   const visited = new Set();
+  const isSolutions =
+  normalizeNavTitle(rootCategory?.title || "") === "solutions";
 
   async function walk(category, categoryTrail = []) {
     if (!category?.id || visited.has(String(category.id))) return;

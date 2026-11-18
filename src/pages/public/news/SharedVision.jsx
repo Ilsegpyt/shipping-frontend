@@ -58,7 +58,7 @@ export default function SharedVision() {
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
                             <div className="max-w-3xl">
-                                <p className="text-base leading-8 text-slate-600 sm:text-sm">
+                                <p className="text-sm leading-8 text-slate-600 sm:text-base">
                                     The collaboration between ILS Egypt and{' '}
                                     <a
                                         href="https://www.linkedin.com/company/gmcc-welling/"

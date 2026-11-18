@@ -60,7 +60,7 @@ export default function SharedDynamicSection({ item, data, renderRich }) {
               </div>
             ) : renderRich(
               block.text,
-              block.type === "closing" ? "" : "text-base leading-7 sm:text-sm sm:leading-8 lg:text-base"
+              block.type === "closing" ? "" : "text-sm leading-7 sm:text-base sm:leading-8 lg:text-base"
             )}
           </div>
         ))}

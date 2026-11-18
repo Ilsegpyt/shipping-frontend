@@ -62,11 +62,11 @@ export default function WelcomeAboard() {
                                     We are thrilled to announce two new distinguished members joining our team at ILS Egypt.
                                 </p>
 
-                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-sm">
+                                <p className="mt-7 text-sm leading-8 text-slate-600 sm:text-base">
                                     we are welcoming Mr. Mohamed Al Amrousy, who will be taking on the role of Commercial Manager, and Mr. Mohamed Al shabassy, who will be stepping into the position of Business Development Manager.
                                 </p>
 
-                                <p className="mt-7 text-base leading-8 text-slate-600 sm:text-sm">
+                                <p className="mt-7 text-sm leading-8 text-slate-600 sm:text-base">
                                     We are excited about the dynamic future ahead and look forward to the contributions both Mr. Mohamed Al Amrousy and Mr. Mohamed Al shabassy will bring to our company.
                                 </p>
 

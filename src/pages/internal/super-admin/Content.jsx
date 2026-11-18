@@ -773,7 +773,7 @@ export default function Content() {
 
       pageContentOrder,
 
-      featuredImage: form.type === "Post" ? form.featuredImage || null : null,
+      featuredImage: ["Page", "Post"].includes(form.type) ? form.featuredImage || null : null,
 
       linkUrl: form.type === "Link" ? form.linkUrl || null : null,
 
@@ -1292,10 +1292,10 @@ export default function Content() {
 
             {/* Post Featured Image */}
 
-            {form.type === "Post" && (
+            {(form.type === "Page" || form.type === "Post") && (
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  Featured Image
+                  {form.type === "Page" ? "Hero Image" : "Featured Image"}
                 </label>
 
                 <input
@@ -1316,7 +1316,7 @@ export default function Content() {
                   <div className="relative mt-3 w-fit">
                     <img
                       src={cleanImageUrl(form.featuredImage, API_BASE_URL)}
-                      alt="Featured preview"
+                      alt="Hero / featured image preview"
                       className="h-32 w-48 rounded-lg border border-slate-200 object-cover"
                     />
 
