@@ -133,6 +133,7 @@ export default function AppRoutes() {
       <Route element={<WebsiteLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/cms/:contentId" element={<CmsPublicPage />} />
+        <Route path="/pages/*" element={<CmsPublicPage />} />
         <Route path="/about-ils/philosophy" element={<Philosophy />} />
         <Route
           path="/about-ils/purpose-and-strategy"

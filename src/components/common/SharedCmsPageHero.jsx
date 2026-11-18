@@ -4,7 +4,7 @@ import seaFreightImage from "../../assets/website/solutions/seafreight.webp";
 
 /** Presentation-only hero. CMS parsing, routing, and persistence remain unchanged. */
 export default function SharedCmsPageHero({ label, title, children, image = seaFreightImage }) {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const resolvedImage = image ? cleanImageUrl(image, import.meta.env.VITE_API_BASE_URL || "") : seaFreightImage;
   const normalizedPath = pathname.replace(/\/$/, "");
   const isNewsIndex = normalizedPath === "/news";
@@ -14,6 +14,9 @@ export default function SharedCmsPageHero({ label, title, children, image = seaF
   const heading = String(title || "ILS Egypt");
   const section = typeof label === "string" ? label.trim() : "";
   const showSection = section && section.toLowerCase() !== heading.toLowerCase();
+  const newsCategory = isNewsIndex
+  ? new URLSearchParams(search).get("category")?.trim()
+  : null;
 
   return (
     <header className="ils-cms-hero relative isolate min-h-[240px] overflow-hidden bg-brand-bg sm:min-h-[280px] lg:min-h-[300px]">
@@ -38,17 +41,41 @@ export default function SharedCmsPageHero({ label, title, children, image = seaF
           <nav aria-label="Breadcrumb" className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold tracking-wide text-inherit sm:text-sm">
             <Link to="/" className="text-inherit transition-opacity hover:opacity-75">Home</Link>
             {isNewsIndex ? (
-              <>
-                <span aria-hidden="true">/</span>
-                <span aria-current="page" className="text-inherit">Media Room</span>
-              </>
-            ) : isNewsDetail ? (
-              <>
-                <span aria-hidden="true">/</span>
-                <Link to="/news" className="text-inherit transition-opacity hover:opacity-75">Media Room</Link>
-                <span aria-hidden="true">/</span>
-                <span aria-current="page" className="text-inherit">{heading}</span>
-              </>
+  <>
+    <span aria-hidden="true">/</span>
+
+    {newsCategory ? (
+      <>
+        <Link
+          to="/news"
+          className="text-inherit transition-opacity hover:opacity-75"
+        >
+          Media Room
+        </Link>
+
+        <span aria-hidden="true">/</span>
+
+        <span aria-current="page" className="text-inherit">
+          {newsCategory}
+        </span>
+      </>
+    ) : (
+      <span aria-current="page" className="text-inherit">
+        Media Room
+      </span>
+    )}
+  </>
+) : isNewsDetail ? (
+  <>
+    <span aria-hidden="true">/</span>
+    <Link to="/news" className="text-inherit transition-opacity hover:opacity-75">
+      Media Room
+    </Link>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page" className="text-inherit">
+      {heading}
+    </span>
+  </>
             ) : isSolutionsPage ? (
               <>
                 <span aria-hidden="true">/</span>
@@ -70,10 +97,10 @@ export default function SharedCmsPageHero({ label, title, children, image = seaF
             )}
           </nav>
           <div aria-hidden="true" className="mb-3 h-1 w-12 bg-brand-accent" />
-          <h1 className="max-w-3xl text-[clamp(2.1rem,4vw,3.8rem)] font-bold leading-[1.08] tracking-[-0.035em] text-inherit">
+          <h1 className="max-w-3xl ils-type-hero font-bold leading-[1.08] tracking-[-0.035em] text-inherit">
             {heading}
           </h1>
-          {children && <div className="ils-cms-hero-description mt-3 max-w-2xl text-sm leading-8 text-inherit sm:text-base">{children}</div>}
+          {children && <div className="ils-cms-hero-description mt-3 max-w-2xl ils-type-body leading-8 text-inherit">{children}</div>}
         </div>
       </div>
     </header>

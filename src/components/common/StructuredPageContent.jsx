@@ -66,17 +66,17 @@ export function StructuredPageEditor({ value, onChange }) {
     if (target < 0 || target >= data.sections.length) return;
     const sections = [...data.sections]; [sections[index], sections[target]] = [sections[target], sections[index]]; update({ sections });
   };
-  const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100";
+  const inputClass = "w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm focus:border-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-bg";
   return (
     <div className="space-y-5">
-      <section className="space-y-3 rounded-2xl border border-sky-200 bg-sky-50/40 p-4">
+      <section className="space-y-3 rounded-2xl border border-brand-accent bg-brand-bg/40 p-4">
         <div>
-          <h3 className="font-semibold text-sky-800">Shared Page Intro</h3>
-          <p className="mt-1 text-sm text-slate-500">
+          <h3 className="font-semibold text-brand-primary-hover">Shared Page Intro</h3>
+          <p className="mt-1 text-sm text-brand-muted">
             This common editor is used by About ILS pages.
           </p>
         </div>
-        <label className="block text-sm font-medium text-sky-800">
+        <label className="block text-sm font-medium text-brand-primary-hover">
           Intro Label
           <input
             className={`${inputClass} mt-1`}
@@ -85,7 +85,7 @@ export function StructuredPageEditor({ value, onChange }) {
             placeholder="e.g. About ILS"
           />
         </label>
-        <label className="block text-sm font-medium text-sky-800">
+        <label className="block text-sm font-medium text-brand-primary-hover">
           Intro Title
           <input
             className={`${inputClass} mt-1`}
@@ -95,7 +95,7 @@ export function StructuredPageEditor({ value, onChange }) {
           />
         </label>
         <div>
-          <label className="mb-2 block text-sm font-medium text-sky-800">
+          <label className="mb-2 block text-sm font-medium text-brand-primary-hover">
             Intro Content
           </label>
           <RichTextEditor
@@ -107,10 +107,10 @@ export function StructuredPageEditor({ value, onChange }) {
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h3 className="font-semibold text-sky-800">
+            <h3 className="font-semibold text-brand-primary-hover">
               Ordered Page Sections
             </h3>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-brand-muted">
               Add, edit, remove, and reorder content. Changes are saved in the
               CMS body.
             </p>
@@ -118,20 +118,20 @@ export function StructuredPageEditor({ value, onChange }) {
           <button
             type="button"
             onClick={addSection}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+            className="rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-inverse hover:bg-brand-primary-hover"
           >
             + Add Section
           </button>
         </div>
         {!data.sections.length && (
-          <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+          <p className="rounded-xl border border-dashed border-brand-border p-6 text-center text-sm text-brand-muted">
             No sections yet. Add a section to begin.
           </p>
         )}
         {data.sections.map((section, index) => (
           <article
             key={section.id || index}
-            className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4"
+            className="space-y-3 rounded-2xl border border-brand-border bg-brand-surface p-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h4 className="font-semibold text-slate-800">
@@ -168,7 +168,7 @@ export function StructuredPageEditor({ value, onChange }) {
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-sm font-medium text-sky-800">
+              <label className="block text-sm font-medium text-brand-primary-hover">
                 Label
                 <input
                   className={`${inputClass} mt-1`}
@@ -179,7 +179,7 @@ export function StructuredPageEditor({ value, onChange }) {
                   placeholder="Optional small label"
                 />
               </label>
-              <label className="block text-sm font-medium text-sky-800">
+              <label className="block text-sm font-medium text-brand-primary-hover">
                 Section Title
                 <input
                   className={`${inputClass} mt-1`}
@@ -191,7 +191,7 @@ export function StructuredPageEditor({ value, onChange }) {
                 />
               </label>
             </div>
-            <label className="block text-sm font-medium text-sky-800">
+            <label className="block text-sm font-medium text-brand-primary-hover">
               Subtitle
               <input
                 className={`${inputClass} mt-1`}
@@ -203,7 +203,7 @@ export function StructuredPageEditor({ value, onChange }) {
               />
             </label>
             <div>
-              <label className="mb-2 block text-sm font-medium text-sky-800">
+              <label className="mb-2 block text-sm font-medium text-brand-primary-hover">
                 Rich Content
               </label>
               <RichTextEditor
@@ -286,11 +286,11 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
   catch { data = parseStructuredPage(body); }
   const hasIntro = Boolean(data.introLabel || data.introTitle || data.introText);
   return (
-    <main className="ils-shared-content min-h-screen bg-slate-50 text-sky-800">
+    <main className="ils-shared-content min-h-screen bg-brand-bg text-brand-primary-hover">
       <SharedCmsPageHero label={data.introLabel || parentTitle} title={data.introTitle || page?.title || "About ILS"} image={page?.featuredImage || undefined}>
         {data.introText && (
           <div
-            className="structured-rich mt-5 max-w-3xl text-sm leading-7 text-slate-100 sm:text-base sm:leading-8"
+            className="structured-rich mt-5 max-w-3xl ils-type-body leading-7 text-brand-inverse sm:leading-8"
             dangerouslySetInnerHTML={{ __html: prepareStructuredRichHtml(data.introText) }}
           />
         )}
@@ -298,7 +298,7 @@ export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
       <section className="px-6 py-12 sm:px-8 sm:py-16 lg:px-12">
         <div className="mx-auto max-w-7xl space-y-6">
           {!hasIntro && !data.sections?.length && (
-            <p className="rounded-none border border-brand-border bg-white p-8 text-center text-brand-primary">
+            <p className="rounded-none border border-brand-border bg-brand-surface p-8 text-center text-brand-primary">
               No content is available for this page in the CMS.
             </p>
           )}

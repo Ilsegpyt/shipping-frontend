@@ -164,13 +164,13 @@ export default function NewsDetails() {
     }, [slug]);
 
     if (loading) {
-        return <main className="min-h-screen bg-white">
+        return <main className="min-h-screen bg-brand-surface">
             <SharedCmsPageHero label="Media Room" title="Loading news article..." image={newsHeroImage} />
         </main>;
     }
 
     if (error || !content) {
-        return <main className="min-h-screen bg-white">
+        return <main className="min-h-screen bg-brand-surface">
             <SharedCmsPageHero label="Media Room" title="News article not found" image={newsHeroImage}>
                 {error || 'The requested article could not be found.'}
             </SharedCmsPageHero>
@@ -182,15 +182,15 @@ export default function NewsDetails() {
     const date = formatDate(content.publishedAt);
 
     return (
-        <main className="min-h-screen bg-white">
+        <main className="min-h-screen bg-brand-surface">
             <SharedCmsPageHero label="Media Room" title={content.title} image={newsHeroImage} />
 
             {/* ==================== Article ==================== */}
-            <section className="bg-white py-16 sm:py-20">
+            <section className="bg-brand-surface py-16 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
-                    <div className="overflow-hidden border border-[#dce9f2] bg-white">
+                    <div className="overflow-hidden border border-brand-primary-hover bg-brand-surface">
                         {imageUrl && (
-                            <div className="aspect-[16/9] overflow-hidden bg-slate-100">
+                            <div className="aspect-[16/9] overflow-hidden bg-brand-surface">
                                 <img
                                     src={imageUrl}
                                     alt={content.title}
@@ -200,12 +200,12 @@ export default function NewsDetails() {
                         )}
 
                         <article className="px-6 py-10 sm:px-10 sm:py-12 lg:px-14 lg:py-14">
-                            <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-medium text-[#53677c]">
-                                <span className="font-semibold text-[#1E3672]">{category}</span>
+                            <div className="mb-8 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm font-medium text-brand-primary-hover">
+                                <span className="font-semibold text-brand-primary">{category}</span>
                                 {date && <><span aria-hidden="true">·</span><time dateTime={content.publishedAt}>{date}</time></>}
                             </div>
                             <div
-                                className="prose prose-slate max-w-3xl prose-p:text-base prose-p:leading-8 prose-p:text-slate-600 sm:prose-p:text-sm"
+                                className="prose prose-slate max-w-3xl prose-p:text-base prose-p:leading-8 prose-p:text-brand-muted sm:prose-p:text-sm"
                                 dangerouslySetInnerHTML={{
                                     __html: cleanHtmlImages(content.body, API_BASE_URL),
                                 }}
@@ -214,7 +214,7 @@ export default function NewsDetails() {
                             <div className="mt-10">
                                 <Link
                                     to="/news"
-                                    className="inline-flex items-center gap-2 bg-[#1E3672] px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-[#3097BF]"
+                                    className="inline-flex items-center gap-2 bg-brand-primary px-6 py-3.5 text-sm font-semibold text-brand-surface transition hover:bg-brand-accent"
                                 >
                                     Back to News
                                     <ArrowUpRight size={17} />

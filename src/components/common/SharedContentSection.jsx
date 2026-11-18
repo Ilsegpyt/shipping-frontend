@@ -6,7 +6,7 @@ export default function SharedContentSection({ children, className = "", ...prop
   return (
     <article
       {...props}
-      className={`ils-cms-content-section overflow-hidden border border-[#dce9f2] bg-white ${className}`.trim()}
+      className={`ils-cms-content-section overflow-hidden border border-brand-primary-hover bg-brand-surface ${className}`.trim()}
     >
       {children}
     </article>

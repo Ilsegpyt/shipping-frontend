@@ -38,9 +38,9 @@ const citiesByCountry = {
 };
 
 const inputClass =
-    'mt-2 w-full rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15';
+    'mt-2 w-full rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15';
 
-const labelClass = 'text-sm font-medium text-slate-700';
+const labelClass = 'text-sm font-medium text-brand-text';
 
 export default function AgentOpportunity() {
     const [country, setCountry] = useState('');
@@ -94,31 +94,31 @@ export default function AgentOpportunity() {
     };
 
     return (
-        <main className="bg-white">
+        <main className="bg-brand-surface">
             {/* Shared public website hero */}
             <SharedCmsPageHero label="Join ILS" title="Become an Agent">
                 <p>Join our global network of agents and explore new business opportunities with ILS.</p>
             </SharedCmsPageHero>
 
             {/* ==================== Form ==================== */}
-            <section className="bg-[#f6fafc] py-14 sm:py-20">
+            <section className="bg-brand-bg py-14 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <div className="mb-10 max-w-2xl">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                             Agent Opportunity
                         </p>
 
-                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-text sm:text-2xl">
                             Tell us about your business
                         </h2>
 
-                        <p className="mt-4 text-base leading-7 text-slate-600">
+                        <p className="mt-4 text-base leading-7 text-brand-muted">
                             Complete the form below and our team will get back to you
                             with more information.
                         </p>
                     </div>
 
-                    <div className="rounded-none border border-[#dce9f2] bg-white p-6 shadow-sm sm:p-9">
+                    <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-6 shadow-sm sm:p-9">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
@@ -184,7 +184,7 @@ export default function AgentOpportunity() {
                                         name="city"
                                         disabled={!country}
                                         required
-                                        className={`${inputClass} disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400`}
+                                        className={`${inputClass} disabled:cursor-not-allowed disabled:bg-brand-surface disabled:text-brand-muted`}
                                     >
                                         <option value="">
                                             {country
@@ -241,7 +241,7 @@ export default function AgentOpportunity() {
                                             onChange={(event) => setCountryCode(event.target.value)}
                                             autoComplete="tel-country-code"
                                             aria-label="Country code"
-                                            className="w-24 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
+                                            className="w-24 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
 
                                         <input
@@ -255,7 +255,7 @@ export default function AgentOpportunity() {
                                             aria-describedby={phoneError ? 'cellPhone-error' : undefined}
                                             onInvalid={() => setPhoneError('Please enter your cell phone number.')}
                                             onChange={() => setPhoneError('')}
-                                            className="min-w-0 flex-1 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
+                                            className="min-w-0 flex-1 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
                                     </div>
                                     {phoneError && (
@@ -295,14 +295,14 @@ export default function AgentOpportunity() {
                                 />
                             </div>
 
-                            <div className="flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-slate-500">
+                            <div className="flex flex-col gap-4 border-t border-brand-surface pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-brand-muted">
                                     Our team will review your request and contact you.
                                 </p>
 
                                 <button
                                     type="submit"
-                                    className="inline-flex items-center justify-center rounded-none bg-[#1E3672] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-[#3097BF] focus:outline-none focus:ring-2 focus:ring-[#3097BF]/20"
+                                    className="inline-flex items-center justify-center rounded-none bg-brand-primary px-7 py-3.5 text-sm font-semibold text-brand-surface shadow-lg shadow-sky-950/10 transition hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
                                 >
                                     Submit
                                 </button>
@@ -315,7 +315,7 @@ export default function AgentOpportunity() {
                             )}
 
                             {submitted && (
-                                <div className="rounded-none border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                <div className="rounded-none border border-brand-accent bg-brand-bg px-4 py-3 text-sm font-medium text-brand-accent">
                                     Your request has been submitted successfully.
                                 </div>
                             )}

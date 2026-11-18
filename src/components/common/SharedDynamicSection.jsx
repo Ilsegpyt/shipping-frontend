@@ -4,11 +4,11 @@ import SharedSectionHeading from "./SharedSectionHeading";
 // Shared presentation styles for page-level and section-level CMS blocks.
 // Keep CMS content, ordering, and rich-text/image rendering unchanged.
 const HIGHLIGHT_CONTAINER_CLASS =
-  "ils-cms-highlight rounded-none border-l-4 border-l-[#3097BF] bg-[#eaf5fb] px-5 py-6 sm:px-8 sm:py-8 lg:px-10";
+  "ils-cms-highlight rounded-none border-l-4 border-l-brand-accent bg-brand-bg px-5 py-6 sm:px-8 sm:py-8 lg:px-10";
 const HIGHLIGHT_CONTENT_CLASS =
-  "max-w-6xl text-base leading-7 text-[#1E3672] sm:text-base sm:leading-8 lg:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
+  "max-w-6xl text-base leading-7 text-brand-primary sm:text-base sm:leading-8 lg:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
 const CLOSING_CLASS =
-  "ils-cms-closing rounded-none border-l-4 border-l-[#1E3672] bg-[#f4f8fc] p-5 text-base leading-7 text-[#334b68] sm:p-8 sm:text-base sm:leading-8 lg:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
+  "ils-cms-closing rounded-none border-l-4 border-l-brand-primary bg-brand-bg p-5 text-base leading-7 text-brand-primary-hover sm:p-8 sm:text-base sm:leading-8 lg:text-lg [&_ul]:my-3 [&_ul]:ml-6 [&_ul]:list-disc [&_ol]:my-3 [&_ol]:ml-6 [&_ol]:list-decimal [&_li]:mb-1 [&_p]:mb-2";
 
 /** Presentation only. Accepts normalized CMS data; never changes or saves it. */
 export default function SharedDynamicSection({ item, data, renderRich }) {
@@ -60,7 +60,7 @@ export default function SharedDynamicSection({ item, data, renderRich }) {
               </div>
             ) : renderRich(
               block.text,
-              block.type === "closing" ? "" : "text-sm leading-7 sm:text-base sm:leading-8 lg:text-base"
+              block.type === "closing" ? "" : "text-sm leading-7 sm:text-base sm:leading-8 lg:text-lg"
             )}
           </div>
         ))}

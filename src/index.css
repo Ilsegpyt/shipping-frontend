@@ -31,6 +31,8 @@
   --color-surface-dark: var(--ils-navy);
 
   --color-border: var(--ils-light-gray);
+  --color-surface-tint: #f6fafc;
+  --color-surface-blue: #eaf5fb;
 }
 
 /* Tailwind CSS v4 theme */
@@ -50,6 +52,8 @@
   --color-brand-surface-dark: var(--color-surface-dark);
 
   --color-brand-border: var(--color-border);
+  --color-brand-surface-tint: var(--color-surface-tint);
+  --color-brand-surface-blue: var(--color-surface-blue);
 }
 
 /* =========================================
@@ -125,3 +129,16 @@
 img[src*="/uploads/content/"] {
   border-radius: 0 !important;
 }
+
+/* Shared responsive typography for the public website only.
+   Rich text headings/lists retain their own hierarchy and editor formatting. */
+.ils-website {
+  --ils-font-hero: clamp(2rem, 4vw, 3.8rem);
+  --ils-font-section-title: clamp(1.5rem, 2.5vw, 1.875rem);
+  --ils-font-body: clamp(0.875rem, 1.1vw, 1rem);
+  --ils-font-small: clamp(0.75rem, 0.95vw, 0.875rem);
+}
+.ils-website .ils-type-hero { font-size: var(--ils-font-hero); }
+.ils-website .ils-type-section-title { font-size: var(--ils-font-section-title); }
+.ils-website .ils-type-body { font-size: var(--ils-font-body); }
+.ils-website .ils-type-small { font-size: var(--ils-font-small); }

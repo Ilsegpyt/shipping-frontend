@@ -185,7 +185,7 @@
 }
 
 /* Phase 2 — public CMS section system. Scoped to rendered pages, not editors. */
-.ils-shared-content > section:not(:last-of-type) { background-color: #f6fafd; }
+.ils-shared-content > section:not(:last-of-type) { background-color: var(--color-surface); }
 .ils-shared-content .ils-cms-content-section {
   position: relative;
   border-radius: 0 !important;
@@ -197,8 +197,8 @@
   border-radius: 0 !important;
   box-shadow: none;
 }
-.ils-shared-content .ils-cms-highlight :is(p, li, strong, a) { color: #1e3672; }
-.ils-shared-content .ils-cms-closing :is(p, li, strong) { color: #334b68; }
+.ils-shared-content .ils-cms-highlight :is(p, li, strong, a) { color: var(--color-primary); }
+.ils-shared-content .ils-cms-closing :is(p, li, strong) { color: var(--color-primary-hover); }
 @media (max-width: 639px) {
   .ils-shared-content .ils-cms-content-section { box-shadow: none; }
 }
@@ -210,4 +210,20 @@
 .ils-shared-content .ils-cms-highlight:has(.structured-image-layout),
 .ils-shared-content .ils-cms-closing:has(.structured-image-layout) {
   border-left: 0;
+}
+
+/* Public CMS typography: mobile < tablet < desktop.
+   Only the shared presentation layer; no portal/dashboard/editor rules. */
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich):not(.intro-rich) {
+  font-size: clamp(0.875rem, 1.15vw, 1.125rem);
+  line-height: 1.75;
+}
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) h1 {
+  font-size: clamp(1.75rem, 2.6vw, 2.5rem);
+}
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) :is(h2, h3) {
+  font-size: clamp(1.25rem, 1.9vw, 1.875rem);
+}
+.ils-shared-content .ils-cms-content-section > article > div > h2 {
+  font-size: clamp(1.5rem, 2.2vw, 2rem);
 }

@@ -112,7 +112,7 @@ export default function StructuredAboutPage({
   return (
     <>
       {loading ? (
-        <main className="min-h-screen bg-slate-50" />
+        <main className="min-h-screen bg-brand-surface" />
       ) : error ? (
         <main className="flex min-h-[60vh] items-center justify-center px-6">
           <p className="text-center text-red-600">{error}</p>

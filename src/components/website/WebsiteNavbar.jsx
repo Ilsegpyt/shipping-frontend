@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ilsLogo from "../../assets/branding/ILS_Egypt_navy_transparent.png";
 import contentService from "../../services/contentService";
+import { cmsPagePath } from "../../utils/cmsPageRoutes";
 
 // Temporarily hide Certificates from public navigation, including CMS-generated links.
 // Set to true to restore navigation when the page is re-enabled.
@@ -166,7 +167,7 @@ async function getDynamicPageLinks(rootCategory) {
         links.push({
           label: `${prefix}${child.title}`,
           to: (isSolutions && SOLUTION_PUBLIC_ROUTES[normalizeNavTitle(child.title)])
-            || `/cms/${child.id}`,
+            || cmsPagePath([rootCategory.title, ...categoryTrail], child),
         });
       }
     }

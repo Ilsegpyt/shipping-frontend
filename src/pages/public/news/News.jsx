@@ -239,15 +239,15 @@ export default function News() {
   }, [allPosts, selectedCategory]);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-brand-surface">
       <SharedCmsPageHero label="Media Room" title="Latest from ILS" image={newsHeroImage}>
         Discover the latest news, industry insights and milestones from ILS Egypt.
       </SharedCmsPageHero>
 
-      <section className="bg-white py-20 sm:py-24">
+      <section className="bg-brand-surface py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           {loading && (
-            <div className="py-16 text-center text-sm text-slate-500">
+            <div className="py-16 text-center text-sm text-brand-muted">
               Loading news...
             </div>
           )}
@@ -259,7 +259,7 @@ export default function News() {
           )}
 
           {!loading && !error && newsItems.length === 0 && (
-            <div className="py-16 text-center text-sm text-slate-500">
+            <div className="py-16 text-center text-sm text-brand-muted">
               No news available.
             </div>
           )}
@@ -269,11 +269,11 @@ export default function News() {
               {newsItems.map((item) => (
                 <article
                   key={item.id}
-                  className="group flex h-full flex-col overflow-hidden border border-[#dce9f2] bg-white transition duration-300 hover:border-[#3097BF] hover:shadow-lg"
+                  className="group flex h-full flex-col overflow-hidden border border-brand-primary-hover bg-brand-surface transition duration-300 hover:border-brand-accent hover:shadow-lg"
                 >
                   <Link
                     to={item.to}
-                    className="relative block aspect-[16/10] overflow-hidden bg-slate-100"
+                    className="relative block aspect-[16/10] overflow-hidden bg-brand-surface"
                   >
                     {item.image ? (
                       <img
@@ -282,43 +282,43 @@ export default function News() {
                         className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-slate-100 text-sm text-slate-400">
+                      <div className="flex h-full w-full items-center justify-center bg-brand-surface text-sm text-brand-muted">
                         No image
                       </div>
                     )}
 
-                    <div className="absolute left-4 top-4 bg-[#1E3672]/90 px-3 py-1.5">
-                      <span className="text-xs font-semibold text-white">
+                    <div className="absolute left-4 top-4 bg-brand-primary/90 px-3 py-1.5">
+                      <span className="text-xs font-semibold text-brand-surface">
                         {item.category}
                       </span>
                     </div>
                   </Link>
 
                   <div className="flex flex-1 flex-col p-5 sm:p-6">
-                    <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
+                    <div className="flex items-center gap-2 text-xs font-medium text-brand-muted">
                       <span>{item.date}</span>
 
-                      <span className="h-1 w-1 rounded-full bg-slate-300" />
+                      <span className="h-1 w-1 rounded-full bg-brand-border" />
 
                       <span>{item.category}</span>
                     </div>
 
-                    <h2 className="mt-4 text-base font-semibold leading-7 text-[#1E3672]">
+                    <h2 className="mt-4 text-base font-semibold leading-7 text-brand-primary">
                       <Link
                         to={item.to}
-                        className="transition hover:text-sky-600"
+                        className="transition hover:text-brand-accent"
                       >
                         {item.title}
                       </Link>
                     </h2>
 
-                    <p className="mt-4 flex-1 text-sm leading-6 text-slate-600">
+                    <p className="mt-4 flex-1 text-sm leading-6 text-brand-muted">
                       {item.excerpt}
                     </p>
 
                     <Link
                       to={item.to}
-                      className="mt-6 inline-flex w-fit items-center gap-2 text-sm font-semibold text-[#1E3672] transition hover:text-[#3097BF]"
+                      className="mt-6 inline-flex w-fit items-center gap-2 text-sm font-semibold text-brand-primary transition hover:text-brand-accent"
                     >
                       Read more
                       <ArrowUpRight

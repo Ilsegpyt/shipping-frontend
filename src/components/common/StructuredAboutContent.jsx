@@ -744,7 +744,7 @@ export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
       <SharedCmsPageHero label={data.introLabel} title={page?.title || "About ILS"} image={page?.featuredImage || undefined}>
         {renderRich(
           data.introText,
-          "intro-rich mt-5 max-w-3xl text-sm leading-7 text-inherit sm:text-base sm:leading-8",
+          "intro-rich mt-5 max-w-3xl ils-type-body leading-7 text-inherit sm:leading-8",
         )}
       </SharedCmsPageHero>
       <section className="px-4 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16">

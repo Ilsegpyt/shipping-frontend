@@ -15,12 +15,12 @@ const countries = [
 ];
 
 const inputClass =
-    'mt-2 w-full rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15';
+    'mt-2 w-full rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15';
 
-const labelClass = 'text-sm font-medium text-slate-700';
+const labelClass = 'text-sm font-medium text-brand-text';
 
 const optionClass =
-    'relative flex min-h-12 cursor-pointer items-center justify-center border border-[#dce9f2] bg-white px-4 py-3 text-center text-sm font-semibold text-slate-700 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700';
+    'relative flex min-h-12 cursor-pointer items-center justify-center border border-brand-primary-hover bg-brand-surface px-4 py-3 text-center text-sm font-semibold text-brand-text transition hover:border-brand-accent hover:bg-brand-bg hover:text-brand-accent';
 
 export default function GetAQuote() {
     const [interests, setInterests] = useState([]);
@@ -110,31 +110,31 @@ export default function GetAQuote() {
     };
 
     return (
-        <main className="bg-white">
+        <main className="bg-brand-surface">
             {/* Shared public website hero */}
             <SharedCmsPageHero label="Contact ILS" title="Get A Quote">
                 <p>Fill in the form and our experts will contact you.</p>
             </SharedCmsPageHero>
 
             {/* ==================== Quote Form ==================== */}
-            <section className="bg-[#f6fafc] py-14 sm:py-20">
+            <section className="bg-brand-bg py-14 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <div className="mb-10 max-w-2xl">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                             Quote Request
                         </p>
 
-                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-text sm:text-2xl">
                             Tell us about your shipment
                         </h2>
 
-                        <p className="mt-4 text-base leading-7 text-slate-600">
+                        <p className="mt-4 text-base leading-7 text-brand-muted">
                             Share your requirements and our logistics team will get in
                             touch with you.
                         </p>
                     </div>
 
-                    <div className="rounded-none border border-[#dce9f2] bg-white p-6 shadow-sm sm:p-9">
+                    <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-6 shadow-sm sm:p-9">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
@@ -235,7 +235,7 @@ export default function GetAQuote() {
                                             type="text"
                                             placeholder="+20"
                                             aria-label="Country code"
-                                            className="w-24 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
+                                            className="w-24 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
 
                                         <input
@@ -244,7 +244,7 @@ export default function GetAQuote() {
                                             type="tel"
                                             placeholder="Cell Phone"
                                             required
-                                            className="min-w-0 flex-1 rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15"
+                                            className="min-w-0 flex-1 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
                                     </div>
                                 </div>
@@ -292,7 +292,7 @@ export default function GetAQuote() {
                                             What are you interested in?
                                         </p>
 
-                                        <span className="text-xs text-slate-400">
+                                        <span className="text-xs text-brand-muted">
                                             Select all that apply
                                         </span>
                                     </div>
@@ -340,12 +340,12 @@ export default function GetAQuote() {
                                                                 ? 'rounded-r-xl'
                                                                 : ''
                                                             } ${isSelected
-                                                                ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
+                                                                ? 'z-10 border-brand-accent bg-brand-bg text-brand-accent shadow-sm'
                                                                 : ''
                                                             }`}
                                                     >
                                                         {isSelected && (
-                                                            <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
+                                                            <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-[11px] font-bold text-brand-surface">
                                                                 ✓
                                                             </span>
                                                         )}
@@ -395,12 +395,12 @@ export default function GetAQuote() {
                                                             ? 'rounded-r-xl'
                                                             : ''
                                                         } ${isSelected
-                                                            ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
+                                                            ? 'z-10 border-brand-accent bg-brand-bg text-brand-accent shadow-sm'
                                                             : ''
                                                         }`}
                                                 >
                                                     {isSelected && (
-                                                        <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
+                                                        <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-[11px] font-bold text-brand-surface">
                                                             ✓
                                                         </span>
                                                     )}
@@ -438,12 +438,12 @@ export default function GetAQuote() {
                                                             ? 'rounded-r-xl'
                                                             : ''
                                                         } ${isSelected
-                                                            ? 'z-10 border-sky-500 bg-sky-50 text-sky-700 shadow-sm'
+                                                            ? 'z-10 border-brand-accent bg-brand-bg text-brand-accent shadow-sm'
                                                             : ''
                                                         }`}
                                                 >
                                                     {isSelected && (
-                                                        <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-sky-500 text-[11px] font-bold text-white">
+                                                        <span className="absolute left-3 flex h-5 w-5 items-center justify-center rounded-full bg-brand-accent text-[11px] font-bold text-brand-surface">
                                                             ✓
                                                         </span>
                                                     )}
@@ -456,21 +456,21 @@ export default function GetAQuote() {
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-slate-500">
+                            <div className="flex flex-col gap-4 border-t border-brand-surface pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-brand-muted">
                                     Our experts will review your requirements and contact you.
                                 </p>
 
                                 <button
                                     type="submit"
-                                    className="inline-flex items-center justify-center rounded-none bg-sky-500 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-100"
+                                    className="inline-flex items-center justify-center rounded-none bg-brand-accent px-7 py-3.5 text-sm font-semibold text-brand-surface shadow-lg shadow-sky-950/10 transition hover:bg-brand-accent focus:outline-none focus:ring-4 focus:ring-brand-bg"
                                 >
                                     Submit
                                 </button>
                             </div>
 
                             {submitted && (
-                                <div className="rounded-none border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                <div className="rounded-none border border-brand-accent bg-brand-bg px-4 py-3 text-sm font-medium text-brand-accent">
                                     Your quote request has been submitted successfully.
                                 </div>
                             )}

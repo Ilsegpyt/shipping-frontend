@@ -15,9 +15,9 @@ const departments = [
 const MAX_CV_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const inputClass =
-    'mt-2 w-full rounded-none border border-[#dce9f2] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#3097BF] focus:ring-2 focus:ring-[#3097BF]/15';
+    'mt-2 w-full rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15';
 
-const labelClass = 'text-sm font-medium text-slate-700';
+const labelClass = 'text-sm font-medium text-brand-text';
 
 export default function Recruitment() {
     const [submitted, setSubmitted] = useState(false);
@@ -85,32 +85,32 @@ export default function Recruitment() {
     };
 
     return (
-        <main className="bg-white">
+        <main className="bg-brand-surface">
             {/* Shared public website hero */}
             <SharedCmsPageHero label="Join ILS" title="Recruitment">
                 <p>Welcome to our team. Explore opportunities and take the next step in your career with ILS.</p>
             </SharedCmsPageHero>
 
             {/* ==================== Application Form ==================== */}
-            <section className="bg-[#f6fafc] py-14 sm:py-20">
+            <section className="bg-brand-bg py-14 sm:py-20">
                 <div className="mx-auto max-w-5xl px-6 lg:px-8">
                     <div className="mb-10 max-w-2xl">
-                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-sky-600">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-accent">
                             Careers
                         </p>
 
-                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                        <h2 className="mt-3 text-xl font-semibold tracking-tight text-brand-text sm:text-2xl">
                             Join our team
                         </h2>
 
-                        <p className="mt-4 text-base leading-7 text-slate-600">
+                        <p className="mt-4 text-base leading-7 text-brand-muted">
                             Select the department you are interested in and upload your
                             CV. You can also leave us a message with any additional
                             information about your application.
                         </p>
                     </div>
 
-                    <div className="rounded-none border border-[#dce9f2] bg-white p-6 shadow-sm sm:p-9">
+                    <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-6 shadow-sm sm:p-9">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div>
                                 <label htmlFor="department" className={labelClass}>
@@ -150,7 +150,7 @@ export default function Recruitment() {
                                     onChange={handleCvChange}
                                     aria-invalid={Boolean(cvError)}
                                     aria-describedby={cvError ? 'cv-error' : undefined}
-                                    className="mt-2 block w-full cursor-pointer rounded-none border border-[#dce9f2] bg-white text-sm text-slate-700 file:mr-4 file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:text-sm file:font-medium file:text-slate-700 hover:file:bg-slate-200"
+                                    className="mt-2 block w-full cursor-pointer rounded-none border border-brand-primary-hover bg-brand-surface text-sm text-brand-text file:mr-4 file:border-0 file:bg-brand-surface file:px-4 file:py-3 file:text-sm file:font-medium file:text-brand-text hover:file:bg-brand-border"
                                 />
 
                                 {cvError && (
@@ -178,21 +178,21 @@ export default function Recruitment() {
                                 />
                             </div>
 
-                            <div className="flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-slate-500">
+                            <div className="flex flex-col gap-4 border-t border-brand-surface pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-brand-muted">
                                     Please upload your CV in PDF format (maximum 5 MB).
                                 </p>
 
                                 <button
                                     type="submit"
-                                    className="inline-flex items-center justify-center rounded-none bg-[#1E3672] px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-sky-950/10 transition hover:bg-[#3097BF] focus:outline-none focus:ring-2 focus:ring-[#3097BF]/20"
+                                    className="inline-flex items-center justify-center rounded-none bg-brand-primary px-7 py-3.5 text-sm font-semibold text-brand-surface shadow-lg shadow-sky-950/10 transition hover:bg-brand-accent focus:outline-none focus:ring-2 focus:ring-brand-accent/20"
                                 >
                                     Submit
                                 </button>
                             </div>
 
                             {submitted && (
-                                <div className="rounded-none border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+                                <div className="rounded-none border border-brand-accent bg-brand-bg px-4 py-3 text-sm font-medium text-brand-accent">
                                     Your application has been submitted successfully.
                                 </div>
                             )}

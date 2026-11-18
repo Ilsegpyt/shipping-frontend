@@ -231,18 +231,18 @@ export default function CustomsDutiesCalculator() {
     };
 
     return (
-        <main className="min-h-screen bg-slate-50 text-slate-900">
+        <main className="min-h-screen bg-brand-surface text-brand-text">
             <SharedCmsPageHero label="ILS Resources" title="Customs Duties Calculator">
-                <p className="text-base leading-7 text-[#53677c] sm:text-lg sm:leading-8">Estimate import taxes, VAT & duties for shipments to Egypt.</p>
+                <p className="text-base leading-7 text-brand-primary-hover sm:text-lg sm:leading-8">Estimate import taxes, VAT & duties for shipments to Egypt.</p>
             </SharedCmsPageHero>
 
             <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-                <div className="overflow-hidden rounded-none border border-slate-200 bg-white shadow-sm">
-                    <div className="bg-[#1E3672] px-5 py-3 text-xs font-semibold text-white">
+                <div className="overflow-hidden rounded-none border border-brand-border bg-brand-surface shadow-sm">
+                    <div className="bg-brand-primary px-5 py-3 text-xs font-semibold text-brand-surface">
                         All monetary values converted to EGP
                     </div>
 
-                    <div className="border-b border-slate-200 px-5 py-5 sm:px-6">
+                    <div className="border-b border-brand-border px-5 py-5 sm:px-6">
                         <SectionTitle icon={<Ship size={14} />}>
                             Incoterms
                         </SectionTitle>
@@ -254,8 +254,8 @@ export default function CustomsDutiesCalculator() {
                                     type="button"
                                     onClick={() => setIncoterm(item)}
                                     className={`rounded-none border px-4 py-2.5 text-sm font-semibold transition ${incoterm === item
-                                        ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
-                                        : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50'
+                                        ? 'border-brand-accent bg-brand-accent text-brand-surface shadow-sm'
+                                        : 'border-brand-border bg-brand-surface text-brand-muted hover:border-brand-accent hover:bg-brand-bg'
                                         }`}
                                 >
                                     {item}
@@ -265,7 +265,7 @@ export default function CustomsDutiesCalculator() {
                     </div>
 
                     <div className="grid lg:grid-cols-2">
-                        <div className="border-b border-slate-200 p-5 lg:border-b-0 lg:border-r sm:p-6">
+                        <div className="border-b border-brand-border p-5 lg:border-b-0 lg:border-r sm:p-6">
                             <section>
                                 <SectionTitle icon={<FileText size={14} />}>
                                     Invoice &amp; Costs
@@ -286,13 +286,13 @@ export default function CustomsDutiesCalculator() {
                                         </select>
 
                                         {isLoadingRate && (
-                                            <span className="mt-1 block text-[10px] text-sky-600">
+                                            <span className="mt-1 block text-[10px] text-brand-accent">
                                                 Loading exchange rate...
                                             </span>
                                         )}
 
                                         {!isLoadingRate && !rateError && (
-                                            <span className="mt-1 block text-[10px] text-slate-400">
+                                            <span className="mt-1 block text-[10px] text-brand-muted">
                                                 1 {currency} = {formatNumber(exchangeRate)} EGP
                                             </span>
                                         )}
@@ -370,8 +370,8 @@ export default function CustomsDutiesCalculator() {
                                             type="button"
                                             onClick={() => setGoodsType(item)}
                                             className={`rounded-none border px-3 py-2.5 text-xs font-semibold transition ${goodsType === item
-                                                ? 'border-sky-500 bg-sky-50 text-sky-700'
-                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300'
+                                                ? 'border-brand-accent bg-brand-bg text-brand-accent'
+                                                : 'border-brand-border bg-brand-surface text-brand-muted hover:border-brand-accent'
                                                 }`}
                                         >
                                             {item}
@@ -392,8 +392,8 @@ export default function CustomsDutiesCalculator() {
                                             type="button"
                                             onClick={() => setNationalAgreement(value)}
                                             className={`rounded-none border px-4 py-2.5 text-sm font-semibold transition ${nationalAgreement === value
-                                                ? 'border-sky-500 bg-sky-500 text-white'
-                                                : 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50'
+                                                ? 'border-brand-accent bg-brand-accent text-brand-surface'
+                                                : 'border-brand-border bg-brand-surface text-brand-muted hover:border-brand-accent hover:bg-brand-bg'
                                                 }`}
                                         >
                                             {value ? 'Yes' : 'No'}
@@ -425,12 +425,12 @@ export default function CustomsDutiesCalculator() {
                                             className={inputClass}
                                         />
                                         {isLookingUpHs && (
-                                            <span className="mt-1 block text-[10px] text-sky-600">
+                                            <span className="mt-1 block text-[10px] text-brand-accent">
                                                 Looking up HS Code...
                                             </span>
                                         )}
                                         {!isLookingUpHs && commodityName && (
-                                            <span className="mt-1 block text-[10px] text-slate-500">
+                                            <span className="mt-1 block text-[10px] text-brand-muted">
                                                 {commodityName}
                                             </span>
                                         )}
@@ -471,7 +471,7 @@ export default function CustomsDutiesCalculator() {
                                 <button
                                     type="button"
                                     onClick={reset}
-                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-none border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50"
+                                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-none border border-brand-border bg-brand-surface px-4 py-2.5 text-xs font-semibold text-brand-muted transition hover:border-brand-border hover:bg-brand-surface"
                                 >
                                     <RotateCcw size={13} />
                                     Reset
@@ -479,7 +479,7 @@ export default function CustomsDutiesCalculator() {
                             </section>
                         </div>
 
-                        <div className="bg-slate-50/60 p-5 sm:p-6">
+                        <div className="bg-brand-surface/60 p-5 sm:p-6">
                             <SectionTitle icon={<ReceiptText size={14} />}>
                                 Calculation Results
                             </SectionTitle>
@@ -490,7 +490,7 @@ export default function CustomsDutiesCalculator() {
                                     title="Invoice Value"
                                     subtitle="Converted Invoice Value"
                                     value={`${formatNumber(calculations.invoiceEGP)} EGP`}
-                                    iconClass="bg-blue-500"
+                                    iconClass="bg-brand-primary-hover"
                                 />
 
                                 <ResultCard
@@ -498,7 +498,7 @@ export default function CustomsDutiesCalculator() {
                                     title="THC"
                                     subtitle="Terminal Handling Charges"
                                     value={`${formatNumber(calculations.thcEGP)} EGP`}
-                                    iconClass="bg-amber-500"
+                                    iconClass="bg-brand-accent"
                                 />
 
                                 <ResultCard
@@ -506,7 +506,7 @@ export default function CustomsDutiesCalculator() {
                                     title="Insurance Value"
                                     subtitle="Insurance Premium"
                                     value={`${formatNumber(calculations.insuranceEGP)} EGP`}
-                                    iconClass="bg-cyan-500"
+                                    iconClass="bg-brand-accent"
                                 />
 
                                 <ResultCard
@@ -514,11 +514,11 @@ export default function CustomsDutiesCalculator() {
                                     title="Freight"
                                     subtitle="Shipping Cost"
                                     value={`${formatNumber(calculations.freightEGP)} EGP`}
-                                    iconClass="bg-emerald-500"
+                                    iconClass="bg-brand-accent"
                                 />
                             </div>
 
-                            <div className="my-7 h-px bg-slate-200" />
+                            <div className="my-7 h-px bg-brand-border" />
 
                             <SectionTitle icon={<Percent size={14} />}>
                                 Duties &amp; Taxes Breakdown
@@ -543,8 +543,8 @@ export default function CustomsDutiesCalculator() {
                                 />
                             </div>
 
-                            <div className="mt-5 rounded-none bg-[#1E3672] p-5 text-white shadow-sm">
-                                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-sky-300">
+                            <div className="mt-5 rounded-none bg-brand-primary p-5 text-brand-surface shadow-sm">
+                                <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-accent">
                                     Total Estimated Duties
                                 </div>
                                 <div className="mt-2 text-xl font-semibold tracking-tight">
@@ -561,7 +561,7 @@ export default function CustomsDutiesCalculator() {
 
 function SectionTitle({ icon, children }) {
     return (
-        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-sky-600">
+        <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-brand-accent">
             {icon}
             {children}
         </div>
@@ -571,13 +571,13 @@ function SectionTitle({ icon, children }) {
 function Field({ label, suffix, children }) {
     return (
         <label className="block">
-            <span className="mb-1.5 block text-xs font-medium text-slate-600">
+            <span className="mb-1.5 block text-xs font-medium text-brand-muted">
                 {label}
             </span>
             <div className="relative">
                 {children}
                 {suffix && (
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-slate-400">
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-brand-muted">
                         {suffix}
                     </span>
                 )}
@@ -588,23 +588,23 @@ function Field({ label, suffix, children }) {
 
 function ResultCard({ icon, title, subtitle, value, iconClass }) {
     return (
-        <div className="flex items-center gap-3 rounded-none border border-slate-200 bg-white p-3.5">
+        <div className="flex items-center gap-3 rounded-none border border-brand-border bg-brand-surface p-3.5">
             <div
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-none text-white ${iconClass}`}
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-none text-brand-surface ${iconClass}`}
             >
                 {icon}
             </div>
 
             <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-slate-800">
+                <div className="text-xs font-semibold text-brand-text">
                     {title}
                 </div>
-                <div className="mt-0.5 text-[10px] text-slate-400">
+                <div className="mt-0.5 text-[10px] text-brand-muted">
                     {subtitle}
                 </div>
             </div>
 
-            <div className="text-right text-xs font-semibold text-blue-600">
+            <div className="text-right text-xs font-semibold text-brand-primary-hover">
                 {value}
             </div>
         </div>
@@ -613,9 +613,9 @@ function ResultCard({ icon, title, subtitle, value, iconClass }) {
 
 function BreakdownRow({ label, value }) {
     return (
-        <div className="flex items-center justify-between rounded-none border border-slate-200 bg-white px-3.5 py-3">
-            <span className="text-xs text-slate-600">{label}</span>
-            <span className="text-xs font-semibold text-slate-800">{value}</span>
+        <div className="flex items-center justify-between rounded-none border border-brand-border bg-brand-surface px-3.5 py-3">
+            <span className="text-xs text-brand-muted">{label}</span>
+            <span className="text-xs font-semibold text-brand-text">{value}</span>
         </div>
     );
 }
@@ -629,4 +629,4 @@ function BoxIcon() {
 }
 
 const inputClass =
-    'h-10 w-full rounded-none border border-slate-200 bg-white px-3 text-xs text-slate-700 outline-none transition placeholder:text-slate-300 focus:border-sky-400 focus:ring-2 focus:ring-sky-100';
+    'h-10 w-full rounded-none border border-brand-border bg-brand-surface px-3 text-xs text-brand-text outline-none transition placeholder:text-brand-border focus:border-brand-accent focus:ring-2 focus:ring-brand-bg';
