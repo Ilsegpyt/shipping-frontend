@@ -6,7 +6,7 @@ import api from '../../../../../services/api';
  */
 export function createLiveApi({
   user = { id: 'u-1', displayName: 'Operations Team' },
-  permissions = { reopen_shipments: true, delete_shipments: true },
+  permissions = { reopen_shipments: true, delete_shipments: true, deliver_shipments: true },
 } = {}) {
   const enc = encodeURIComponent;
 
@@ -69,6 +69,33 @@ export function createLiveApi({
     },
 
     async updateShipmentStatus(ref, status) {
+      if (status === 'Delivered') {
+        try {
+          const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}/deliver`);
+          return res.data;
+        } catch (err) {
+          // Fallback to direct status update if deliver route fails
+          const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}/status`, {
+            status: 'Delivered',
+          });
+          return res.data;
+        }
+      }
+
+      if (status === 'Open') {
+        try {
+          const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}/reopen`, {
+            reason: 'Reopened from status menu',
+          });
+          return res.data;
+        } catch {
+          const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}/status`, {
+            status: 'Open',
+          });
+          return res.data;
+        }
+      }
+
       const res = await api.put(`/api/v1/ftl/operations/${enc(ref)}/status`, {
         status,
       });

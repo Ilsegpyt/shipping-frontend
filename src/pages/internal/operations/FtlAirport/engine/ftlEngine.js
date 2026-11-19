@@ -143,6 +143,7 @@ export function createFtlEngine(root, options = {}) {
         opCount: 'Containers in this operation', optional: '(optional)', powHint: 'Leave empty to use the POL',
         emptyTable: 'No operations yet — create one from the form above and its container rows will appear here.',
         lockedTip: 'Set in the operation form or calculated automatically — read only', lockedToast: 'This field is set in the operation form or calculated automatically; it cannot be edited here',
+        editFirstToast: 'Please click "Edit" first to modify this operation',
         mergeTip: 'Merge this column across the shipment (one value)', unmergeTip: 'Un-merge: give each container its own value',
         merged: 'Merged — one value for the whole shipment', unmerged: 'Un-merged — each container has its own value now',
         delShip: 'Delete this operation and its containers', confirmDelShip: 'Delete this whole operation (all its container rows)?',
@@ -337,6 +338,7 @@ export function createFtlEngine(root, options = {}) {
         opCount: 'عدد الحاويات في العملية', optional: '(اختياري)', powHint: 'سيبها فاضية عشان تاخد قيمة POL',
         emptyTable: 'مفيش عمليات لسه — أنشئ عملية من النموذج اللي فوق وصفوف حاوياتها هتظهر هنا.',
         lockedTip: 'من نموذج العملية أو محسوبة تلقائيًا — غير قابلة للتعديل', lockedToast: 'الخانة دي من نموذج العملية أو محسوبة تلقائيًا، ومش بتتعدل من الجدول',
+        editFirstToast: 'اضغط على زر "تعديل" أولاً لبدء تعديل بيانات هذه العملية',
         mergeTip: 'دمج العمود ده على مستوى الشحنة (قيمة واحدة)', unmergeTip: 'فك الدمج: كل حاوية بقيمتها',
         merged: 'تم الدمج — قيمة واحدة للشحنة كلها', unmerged: 'تم فك الدمج — كل حاوية ليها قيمتها دلوقتي',
         delShip: 'حذف العملية وحاوياتها', confirmDelShip: 'حذف العملية كلها (كل صفوف حاوياتها)؟',
@@ -2234,6 +2236,22 @@ export function createFtlEngine(root, options = {}) {
   const SAVING_SHIPS = new Set();
   const OP_SNAPSHOTS = {};
   const LOCK_HEARTBEATS = {};
+  let LAST_OPEN_MANIFEST = null;
+  let MANIFEST_GRID_SCROLL = null;
+  const ACTIVE_MODAL_EDIT = { ref: null, type: null, rowIndex: null };
+
+  const isModalEditActive = (ref, rowIndex, type) => {
+    if (!ref) return false;
+    if (ACTIVE_EDIT_SHIPS.has(ref)) return true;
+    if (ACTIVE_MODAL_EDIT.ref !== ref) return false;
+    if (type && ACTIVE_MODAL_EDIT.type && ACTIVE_MODAL_EDIT.type !== type) return false;
+    return true;
+  };
+
+  const canMutateOperation = (ref) => {
+    if (!ref) return false;
+    return ACTIVE_EDIT_SHIPS.has(ref) || ACTIVE_MODAL_EDIT.ref === ref;
+  };
 
   const isLocked = (dir, c, i) => {
     if (!c) return true;
@@ -2856,6 +2874,19 @@ export function createFtlEngine(root, options = {}) {
     return false;
   }
 
+  function computeAllocLoadStatus(ship, dir, allocations, sum) {
+    if (!sum || sum <= 0 || !Array.isArray(allocations) || !allocations.length) return '';
+    const rows = ENTRY[dir] || [];
+    const allFull = allocations.every(a => {
+      const sIdx = a.shpIdx;
+      const sSpan = ship?.shpSpans?.[sIdx];
+      const sRow = sSpan ? rows[ship.rows[sSpan[0]]] : null;
+      const sTot = parseInt(normalizeDigits(sRow?.packages || '0'), 10) || 0;
+      return sTot > 0 && (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0) >= sTot;
+    });
+    return allFull ? 'Full' : 'Partial';
+  }
+
   function layoutShip(dir, ship, opts = {}) {
     const inShpSpans = opts.shpSpans || ship.shpSpans;
     const inTrkSpans = opts.trkSpans || ship.trkSpans;
@@ -2863,9 +2894,10 @@ export function createFtlEngine(root, options = {}) {
     const shp = Number(opts.shp) || Number(ship.initialShipCount || 0) || (Array.isArray(inShpSpans) ? inShpSpans.length : 0);
     const trk = Number(opts.trk) || Number(ship.targetTruckCount || 0) || (Array.isArray(inTrkSpans) ? inTrkSpans.length : 0);
 
-    // In Shipments > Trucks: ensure the main table rows never exceed the shipment count!
-    if (shp > 0 && trk > 0 && shp > trk && ship.rows && ship.rows.length > shp) {
-      ship.rows = ship.rows.slice(0, shp);
+    // Universal invariant: ensure the main table rows NEVER exceed max(shp, trk)!
+    const maxAllowedRows = Math.max(shp || 0, trk || 0);
+    if (maxAllowedRows > 0 && ship.rows && ship.rows.length > maxAllowedRows) {
+      ship.rows = ship.rows.slice(0, maxAllowedRows);
     }
     const R = ship.rows.length; ship.unmerged = ship.unmerged || new Set();
     if (!R) { ship.shpSpans = []; ship.trkSpans = []; ship.trkOf = []; ship.per = 1; return ship; }
@@ -3129,21 +3161,28 @@ export function createFtlEngine(root, options = {}) {
           const tot = parseInt(normalizeDigits(row.packages || '0'), 10) || 0;
           const lod = parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0;
           if (isSGreater) {
-            row.loadStatus = lod > 0 ? 'Full' : '';
-            if (k === 'loadedPackages') {
-              if (row.assignedShp != null) {
-                const curShp = parseInt(row.assignedShp, 10);
-                if (!row._allocations || !row._allocations.length) {
-                  row._allocations = [{ shpIdx: curShp, pkgs: lod }];
-                } else if (row._allocations.length === 1) {
-                  row._allocations[0].pkgs = lod;
-                }
-              } else if (row._allocations && row._allocations.length === 1) {
-                row._allocations[0].pkgs = lod;
-              }
+            if (lod <= 0) {
+              row.loadStatus = '';
+            } else if (Array.isArray(row._allocations) && row._allocations.length > 1) {
+              row.loadStatus = computeAllocLoadStatus(ship, dir, row._allocations, lod);
+            } else {
+              row.loadStatus = lod > 0 ? (tot > 0 && lod === tot ? 'Full' : lod > tot ? 'Overload' : 'Partial') : '';
             }
           } else {
             row.loadStatus = lod > 0 ? (tot > 0 && lod === tot ? 'Full' : lod > tot ? 'Overload' : 'Partial') : '';
+          }
+          if (k === 'loadedPackages') {
+            if (row.assignedShp != null) {
+              const curShp = parseInt(row.assignedShp, 10);
+              if (!row._allocations || !row._allocations.length) {
+                row._allocations = [{ shpIdx: curShp, pkgs: lod }];
+              } else if (row._allocations.length === 1) {
+                row._allocations[0].pkgs = lod;
+              }
+            } else if (row._allocations && row._allocations.length === 1) {
+              row._allocations[0].pkgs = lod;
+            }
+            if (ship) saveShipmentAllocationsDraft(ship.ref, dir);
           }
         }
       });
@@ -3280,11 +3319,18 @@ export function createFtlEngine(root, options = {}) {
   });
   async function setShipmentStatus(ref, next) {
     const ship = SHIPS[EDIR][ref]; if (!ship || !['Open', 'Delivered'].includes(next)) return;
-    if (next === 'Open' && (ship.status !== 'Delivered' || !LIVE || !REOPEN_GRANTED)) return;
-    if (next === 'Delivered' && ship.status !== 'Open') return;
+    if (next === 'Open' && ((ship.status || '').toLowerCase() !== 'delivered' || !LIVE || !REOPEN_GRANTED)) return;
+    if (next === 'Delivered' && (ship.status || 'Open').toLowerCase() !== 'open') return;
     if (LIVE) {
       if (!ILS.api?.updateShipmentStatus) { toast(AR() ? 'ربط تغيير الحالة غير مكتمل' : 'Status endpoint unavailable'); return; }
-      try { await ILS.api.updateShipmentStatus(ref, next); } catch (e) { toast(AR() ? 'تعذّر حفظ الحالة' : 'Could not save status'); return; }
+      try {
+        await ILS.api.updateShipmentStatus(ref, next);
+      } catch (e) {
+        console.error('[FTL] Status update failed:', e);
+        const errMsg = e?.response?.data?.error || e?.message || (AR() ? 'تعذّر حفظ الحالة' : 'Could not save status');
+        toast(errMsg, 'error');
+        return;
+      }
     }
     ship.status = next;
     if (next === 'Delivered') {
@@ -3509,7 +3555,7 @@ export function createFtlEngine(root, options = {}) {
       }
 
       if (!audits) {
-        const token = localStorage.getItem('token') || '';
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
         const headers = { 'Accept': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
@@ -3806,7 +3852,9 @@ export function createFtlEngine(root, options = {}) {
       totalShipmentPkgs += shpPkgs;
 
       let loadedForThisShp = 0;
-      if (isSGreater) {
+      const hasAnyAlloc = ship.rows.some(rx => (Array.isArray(ENTRY[dir][rx]?._allocations) && ENTRY[dir][rx]._allocations.length) || (ENTRY[dir][rx]?.assignedShp != null && ENTRY[dir][rx]?.assignedShp !== ''));
+      const isMultiShip = shpSpans.length > 1;
+      if (isSGreater || hasAnyAlloc || isMultiShip) {
         const seenTrucks = new Set();
         ship.rows.forEach(rx => {
           const row = ENTRY[dir][rx];
@@ -3896,6 +3944,8 @@ export function createFtlEngine(root, options = {}) {
       sourceRow.assignedShp = null;
       sourceRow.loadedPackages = '';
       sourceRow.loadStatus = '';
+      sourceRow._allocations = [];
+      saveShipmentAllocationsDraft(ship.ref, dir);
       markDirty();
       renderEntry();
       scheduleSave();
@@ -3926,6 +3976,10 @@ export function createFtlEngine(root, options = {}) {
       const totTargetPkgs = parseInt(normalizeDigits(targetMasterRow?.packages || sourceRow.packages || '0'), 10) || 0;
       const loaded = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
       sourceRow.loadStatus = loaded > 0 ? (totTargetPkgs > 0 && loaded >= totTargetPkgs ? 'Full' : 'Partial') : '';
+      if (!Array.isArray(sourceRow._allocations) || sourceRow._allocations.length <= 1) {
+        sourceRow._allocations = [{ shpIdx: targetShpIdx, pkgs: loaded }];
+      }
+      saveShipmentAllocationsDraft(ship.ref, dir);
 
       markDirty();
       renderEntry();
@@ -3944,6 +3998,10 @@ export function createFtlEngine(root, options = {}) {
       const totTargetPkgs = parseInt(normalizeDigits(shpRow.packages || '0'), 10) || 0;
       const loaded = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
       sourceRow.loadStatus = loaded > 0 ? (totTargetPkgs > 0 && loaded >= totTargetPkgs ? 'Full' : 'Partial') : '';
+      if (!Array.isArray(sourceRow._allocations) || sourceRow._allocations.length <= 1) {
+        sourceRow._allocations = [{ shpIdx: targetShpIdx, pkgs: loaded }];
+      }
+      saveShipmentAllocationsDraft(ship.ref, dir);
       markDirty();
       renderEntry();
       scheduleSave();
@@ -3981,6 +4039,11 @@ export function createFtlEngine(root, options = {}) {
         const tmpAssigned = sourceRow.assignedShp;
         sourceRow.assignedShp = swapRow.assignedShp;
         swapRow.assignedShp = targetShpIdx;
+
+        const tmpAlloc = sourceRow._allocations;
+        sourceRow._allocations = swapRow._allocations;
+        swapRow._allocations = tmpAlloc;
+        saveShipmentAllocationsDraft(ship.ref, dir);
 
         if (Array.isArray(ship.trkOf)) {
           const tmpTrk = ship.trkOf[ri];
@@ -4034,6 +4097,7 @@ export function createFtlEngine(root, options = {}) {
       d.loadStatus = row.loadStatus ?? '';
       d.metaUpdates = (ROWMETA[dir][rowIdx]?.updates || []).map(u => ({ ...u }));
       d.assignedShp = (k === ri) ? targetShpIdx : newAssignments[k];
+      d._allocations = Array.isArray(row._allocations) ? row._allocations.map(a => ({ ...a })) : [];
       d.trkNo = ship.trkOf ? ship.trkOf[k] : (k + 1);
       d.isTargetTruck = (k === ri);
       return d;
@@ -4061,6 +4125,7 @@ export function createFtlEngine(root, options = {}) {
       ENTRY[dir][rIdx].loadedPackages = td.loadedPackages;
       ENTRY[dir][rIdx].loadStatus = td.loadStatus;
       ENTRY[dir][rIdx].assignedShp = td.assignedShp;
+      ENTRY[dir][rIdx]._allocations = td._allocations;
       if (ROWMETA[dir][rIdx]) {
         ROWMETA[dir][rIdx].updates = td.metaUpdates;
       }
@@ -4078,6 +4143,7 @@ export function createFtlEngine(root, options = {}) {
 
     ship.shpSpans = newSpans;
     ship.per = newSpans.length;
+    saveShipmentAllocationsDraft(ship.ref, dir);
     markDirty();
     renderEntry();
     scheduleSave();
@@ -4095,6 +4161,10 @@ export function createFtlEngine(root, options = {}) {
     const ship = SHIPS[dir]?.[ref];
     if (!ship || !Array.isArray(ship.shpSpans) || !ship.rows.length) return false;
     if (EDITING && !commitEdit()) return false;
+    if (!canMutateOperation(ref)) {
+      toast(AR() ? '⚠️ يجب تفعيل وضع التعديل أولاً لإجراء أي تغييرات' : 'Please enable Edit mode first to make changes', 'error');
+      return false;
+    }
 
     const rows = ENTRY[dir];
     const sourceRow = rows[truckRowIndex];
@@ -4106,174 +4176,54 @@ export function createFtlEngine(root, options = {}) {
     const S = ship.shpSpans.length;
     if (targetShpIdx < 0 || targetShpIdx >= S) return false;
 
-    // In Shipments > Trucks mode (e.g. 4 shipments, 3 trucks):
-    // Main table has exactly S shipment rows and T truck spans.
-    // Co-load allocations are tracked cleanly on the truck's allocations array WITHOUT creating duplicate rows in the table!
-    if (S > truckCount(ship)) {
-      if (!Array.isArray(sourceRow._allocations) || !sourceRow._allocations.length) {
-        if (sourceRow.assignedShp != null) {
-          const curShp = parseInt(sourceRow.assignedShp, 10);
-          const curP = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
-          sourceRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
-        } else {
-          sourceRow._allocations = [];
-        }
+    // In all modes: Co-load allocations are tracked cleanly on the truck's allocations array
+    if (!Array.isArray(sourceRow._allocations)) {
+      sourceRow._allocations = [];
+    }
+    if (!sourceRow._allocations.length) {
+      if (sourceRow.assignedShp != null) {
+        const curShp = parseInt(sourceRow.assignedShp, 10);
+        const curP = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
+        if (curP > 0) sourceRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
+      } else if (S === 1) {
+        const curP = parseInt(normalizeDigits(sourceRow.loadedPackages || '0'), 10) || 0;
+        sourceRow._allocations = [{ shpIdx: 0, pkgs: curP }];
+        sourceRow.assignedShp = 0;
       }
-      if (sourceRow.assignedShp == null) {
-        sourceRow.assignedShp = targetShpIdx;
-      }
-
-      const existing = sourceRow._allocations.find(a => a.shpIdx === targetShpIdx);
-      const pkgsNum = parseInt(normalizeDigits(String(loadedPkgs || '0')), 10) || 0;
-      if (existing) {
-        existing.pkgs = pkgsNum;
-      } else {
-        sourceRow._allocations.push({ shpIdx: targetShpIdx, pkgs: pkgsNum });
-      }
-
-      const sum = sourceRow._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
-      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
-      grp.forEach(r => {
-        const row = rows[r];
-        if (row) {
-          row._allocations = sourceRow._allocations.map(a => ({ ...a }));
-          row.loadedPackages = sum > 0 ? String(sum) : '';
-          row.loadStatus = sum > 0 ? 'Full' : '';
-          row.assignedShp = sourceRow.assignedShp;
-        }
-      });
-
-      markDirty();
-      renderEntry();
-      scheduleSave();
-      if (reopenManifest) openTruckManifest(sourceRow.cntr || '', truckRowIndex);
-
-      const targetRow = rows[ship.rows[ship.shpSpans[targetShpIdx][0]]];
-      const targetShpName = targetRow?.shipNo || `SHP-${targetShpIdx + 1}`;
-      toast(AR() ? `✓ تم إضافة حمولة من (${targetShpName}) للشاحنة بنجاح!` : `✓ Shipment allocation added to truck!`);
-      return true;
+    }
+    if (sourceRow.assignedShp == null) {
+      sourceRow.assignedShp = targetShpIdx;
     }
 
-    // Check if this truck already has an allocation under target shipment
-    const targetSpan = ship.shpSpans[targetShpIdx];
-    const [tStart, tLen] = targetSpan;
-    const existingInTarget = ship.rows.slice(tStart, tStart + tLen).find(ix => {
-      const r = rows[ix];
-      if (sourceRow.cntr && r.cntr && String(r.cntr).trim().toUpperCase() === String(sourceRow.cntr).trim().toUpperCase()) return true;
-      const r_ri = ship.rows.indexOf(ix);
-      return r_ri >= 0 && ship.trkOf?.[r_ri] === ship.trkOf?.[ri];
-    });
-
-    if (existingInTarget !== undefined) {
-      toast(AR() ? 'هذه الشاحنة محملة بالفعل من هذه الشحنة! يمكنك تعديل الطرود من الجدول أو بيان الشاحنة.' : 'This truck is already allocated to this shipment!');
-      return false;
-    }
-
-    // Capture target shipment template fields
-    const targetMasterRow = rows[ship.rows[tStart]] || {};
-    const newRow = {};
-    COLS[dir].forEach(c => {
-      newRow[c.k] = '';
-    });
-
-    laneKeys(dir, 'shp').forEach(k => {
-      newRow[k] = targetMasterRow[k] ?? '';
-    });
-    FIXED_MERGE[dir].forEach(k => {
-      newRow[k] = targetMasterRow[k] ?? '';
-    });
-
-    // Copy truck-level fields from source truck
-    laneKeys(dir, 'trk').forEach(k => {
-      newRow[k] = sourceRow[k] ?? '';
-    });
-
+    const existing = sourceRow._allocations.find(a => a.shpIdx === targetShpIdx);
     const pkgsNum = parseInt(normalizeDigits(String(loadedPkgs || '0')), 10) || 0;
-    newRow.loadedPackages = pkgsNum > 0 ? String(pkgsNum) : '';
-    const totTargetPkgs = parseInt(normalizeDigits(newRow.packages || '0'), 10) || 0;
-    newRow.loadStatus = pkgsNum > 0 ? (totTargetPkgs > 0 && pkgsNum >= totTargetPkgs ? 'Full' : 'Partial') : '';
-    newRow.status = ship.status || 'Open';
-    newRow.movement = dir;
-    newRow.assignedShp = targetShpIdx;
-
-    const srcShpIdx = ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l);
-    if (srcShpIdx >= 0 && (sourceRow.assignedShp === undefined || sourceRow.assignedShp === null)) {
-      sourceRow.assignedShp = srcShpIdx;
+    if (existing) {
+      existing.pkgs = pkgsNum;
+    } else {
+      sourceRow._allocations.push({ shpIdx: targetShpIdx, pkgs: pkgsNum });
     }
 
-    const coId = sourceRow._coLoadId || ('cl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
-    sourceRow._coLoadId = coId;
-    newRow._coLoadId = coId;
-
-    const newRowIdx = rows.length;
-    rows.push(newRow);
-
-    const newTripId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('trip-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7));
-    ROWMETA[dir][newRowIdx] = {
-      id: newTripId,
-      ref,
-      user: OP_USER,
-      day: today(),
-      at: nowHM(),
-      updates: []
-    };
-
-    // Insert immediately adjacent to source truck so the truck is contiguous and merged:
-    const plate = (sourceRow.cntr || '').trim().toUpperCase();
-    const trkNo = ship.trkOf?.[ri] || (truckNumbers(ship).length + 1);
-
-    let lastSrcRelIdx = ri;
-    ship.rows.forEach((rx, idx) => {
-      const r = rows[rx];
-      if (plate && (r?.cntr || '').trim().toUpperCase() === plate) {
-        lastSrcRelIdx = Math.max(lastSrcRelIdx, idx);
-      } else if (ship.trkOf?.[idx] === trkNo) {
-        lastSrcRelIdx = Math.max(lastSrcRelIdx, idx);
+    const sum = sourceRow._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
+    const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+    const calcStatus = computeAllocLoadStatus(ship, dir, sourceRow._allocations, sum) || (sum > 0 ? 'Full' : '');
+    grp.forEach(r => {
+      const row = rows[r];
+      if (row) {
+        row._allocations = sourceRow._allocations.map(a => ({ ...a }));
+        row.loadedPackages = sum > 0 ? String(sum) : '';
+        row.loadStatus = calcStatus;
+        row.assignedShp = sourceRow.assignedShp;
       }
     });
 
-    const insertRelPos = lastSrcRelIdx + 1;
-    ship.rows.splice(insertRelPos, 0, newRowIdx);
-
-    const newTrkOf = (ship.trkOf || trkOfFromSpans(ship.trkSpans, ship.rows.length - 1)).slice();
-    newTrkOf.splice(insertRelPos, 0, trkNo);
-    ship.trkOf = newTrkOf;
-    ship.trkSpans = spansFromTrkOf(newTrkOf);
-
-    // Recompute shpSpans:
-    const newShpSpans = [];
-    let sStart = 0;
-    for (let r = 1; r <= ship.rows.length; r++) {
-      const pShp = (rows[ship.rows[r - 1]]?.shipNo || '').trim();
-      const cShp = r < ship.rows.length ? (rows[ship.rows[r]]?.shipNo || '').trim() : null;
-      const same = pShp && cShp && pShp === cShp;
-      if (r === ship.rows.length || !same) {
-        newShpSpans.push([sStart, r - sStart]);
-        sStart = r;
-      }
-    }
-    if (newShpSpans.length === S && validSpans(newShpSpans, ship.rows.length)) {
-      ship.shpSpans = newShpSpans;
-    } else {
-      const updated = ship.shpSpans.map(([st, len], sIx) => {
-        if (sIx === targetShpIdx) return [st, len + 1];
-        if (sIx > targetShpIdx) return [st + 1, len];
-        return [st, len];
-      });
-      if (validSpans(updated, ship.rows.length)) {
-        ship.shpSpans = updated;
-      }
-    }
-    ship.per = ship.shpSpans.length;
-    if (S <= truckCount(ship)) {
-      ensureContiguousTrucks(dir, ship);
-    }
-
+    saveShipmentAllocationsDraft(dir, ship.ref);
     markDirty();
     renderEntry();
     scheduleSave();
+    if (reopenManifest) openTruckManifest(sourceRow.cntr || '', truckRowIndex);
 
-    const targetShpName = targetMasterRow.shipNo || `SHP-${targetShpIdx + 1}`;
+    const targetRow = rows[ship.rows[ship.shpSpans[targetShpIdx][0]]];
+    const targetShpName = targetRow?.shipNo || `SHP-${targetShpIdx + 1}`;
     toast(AR() ? `✓ تم إضافة حمولة من (${targetShpName}) للشاحنة بنجاح!` : `✓ Shipment allocation added to truck!`);
     return true;
   }
@@ -4283,6 +4233,10 @@ export function createFtlEngine(root, options = {}) {
     const ship = SHIPS[dir]?.[ref];
     if (!ship || !ship.rows.length) return false;
     if (EDITING && !commitEdit()) return false;
+    if (!canMutateOperation(ref)) {
+      toast(AR() ? '⚠️ يجب تفعيل وضع التعديل أولاً لإجراء أي تغييرات' : 'Please enable Edit mode first to make changes', 'error');
+      return false;
+    }
 
     const ri = ship.rows.indexOf(truckRowIndex);
     if (ri < 0) return false;
@@ -4291,94 +4245,46 @@ export function createFtlEngine(root, options = {}) {
     const targetRow = rows[truckRowIndex];
     if (!targetRow) return false;
 
-    // In Shipments > Trucks mode (e.g. 4 shipments, 3 trucks):
-    // Allocations are tracked on targetRow._allocations: remove the allocation without touching table rows!
-    if (ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship)) {
-      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
-      if (Array.isArray(targetRow._allocations) && targetRow._allocations.length > 1) {
-        const idx = typeof allocIdx === 'number' ? allocIdx : (targetRow._allocations.length - 1);
-        if (idx >= 0 && idx < targetRow._allocations.length) {
-          targetRow._allocations.splice(idx, 1);
-        }
-        const sum = targetRow._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
-        grp.forEach(r => {
-          const row = rows[r];
-          if (row) {
-            row._allocations = targetRow._allocations.map(a => ({ ...a }));
-            row.loadedPackages = sum > 0 ? String(sum) : '';
-            row.loadStatus = sum > 0 ? 'Full' : '';
-          }
-        });
-      } else {
-        grp.forEach(r => {
-          const row = rows[r];
-          if (row) {
-            laneKeys(dir, 'trk').forEach(k => {
-              row[k] = '';
-            });
-            row.loadedPackages = '';
-            row.loadStatus = '';
-            row.assignedShp = null;
-            row._coLoadId = null;
-            row._allocations = null;
-          }
-        });
+    const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+    if (Array.isArray(targetRow._allocations) && targetRow._allocations.length > 1) {
+      const idx = typeof allocIdx === 'number' ? allocIdx : (targetRow._allocations.length - 1);
+      if (idx >= 0 && idx < targetRow._allocations.length) {
+        targetRow._allocations.splice(idx, 1);
       }
-
-      markDirty();
-      renderEntry();
-      scheduleSave();
-      openTruckManifest(targetRow.cntr || '', truckRowIndex);
-
-      toast(AR() ? '✓ تم إزالة حصة الشحنة من الشاحنة.' : '✓ Shipment allocation removed from truck.');
-      return true;
+      const sum = targetRow._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
+      const calcStatus = computeAllocLoadStatus(ship, dir, targetRow._allocations, sum) || (sum > 0 ? 'Full' : '');
+      grp.forEach(r => {
+        const row = rows[r];
+        if (row) {
+          row._allocations = targetRow._allocations.map(a => ({ ...a }));
+          row.loadedPackages = sum > 0 ? String(sum) : '';
+          row.loadStatus = calcStatus;
+          if (row.assignedShp != null && !targetRow._allocations.some(a => a.shpIdx === row.assignedShp)) {
+            row.assignedShp = targetRow._allocations[0]?.shpIdx ?? null;
+          }
+        }
+      });
+    } else {
+      grp.forEach(r => {
+        const row = rows[r];
+        if (row) {
+          row.loadedPackages = '';
+          row.loadStatus = '';
+          row._allocations = [];
+          row.assignedShp = null;
+        }
+      });
+      targetRow.loadedPackages = '';
+      targetRow.loadStatus = '';
+      targetRow._allocations = [];
+      targetRow.assignedShp = null;
     }
 
-    const trkNo = ship.trkOf?.[ri];
-    const plate = (targetRow.cntr || '').trim().toUpperCase();
-
-    const truckAllocations = ship.rows.filter((ix, k) => {
-      const r = rows[ix];
-      if (plate && (r.cntr || '').trim().toUpperCase() === plate) return true;
-      if (targetRow._coLoadId && r._coLoadId && r._coLoadId === targetRow._coLoadId) return true;
-      return false;
-    });
-
-    if (truckAllocations.length <= 1) {
-      toast(AR() ? 'لا يمكن حذف الحصة الوحيدة المتبقية للشاحنة.' : 'Cannot delete the only allocation for this truck.');
-      return false;
-    }
-
-    const sIdx = ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l);
-    if (sIdx < 0) return false;
-
-    const [sStart, sLen] = ship.shpSpans[sIdx];
-    if (sLen <= 1) {
-      toast(AR() ? 'لا يمكن حذف هذا الصف لأن الشحنة تحتوي على صف واحد فقط.' : 'Cannot remove the only row for this shipment.');
-      return false;
-    }
-
-    ship.rows.splice(ri, 1);
-    const newTrkOf = ship.trkOf.slice();
-    newTrkOf.splice(ri, 1);
-
-    const newShpSpans = ship.shpSpans.map(([start, len], idx) => {
-      if (idx === sIdx) return [start, len - 1];
-      if (idx > sIdx) return [start - 1, len];
-      return [start, len];
-    });
-
-    ship.shpSpans = newShpSpans;
-    ship.trkOf = newTrkOf;
-    ship.trkSpans = spansFromTrkOf(newTrkOf);
-    ship.per = ship.shpSpans.length;
-    if (S <= truckCount(ship)) {
-      ensureContiguousTrucks(dir, ship);
-    }
-
+    saveShipmentAllocationsDraft(dir, ship.ref);
     markDirty();
     renderEntry();
     scheduleSave();
+    openTruckManifest(targetRow.cntr || '', truckRowIndex);
 
     toast(AR() ? '✓ تم إزالة حصة الشحنة من الشاحنة.' : '✓ Shipment allocation removed from truck.');
     return true;
@@ -4389,44 +4295,44 @@ export function createFtlEngine(root, options = {}) {
     const row = ENTRY[dir]?.[truckRowIndex];
     if (!row) return;
     const ship = SHIPS[dir]?.[ref];
-    const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
-    const val = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
-
-    if (isSGreater) {
-      if (!Array.isArray(row._allocations) || !row._allocations.length) {
-        if (row.assignedShp != null) {
-          const curShp = parseInt(row.assignedShp, 10);
-          row._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: val }];
-        } else {
-          row._allocations = [];
-        }
-      } else {
-        const idx = (typeof allocIdx === 'number' && allocIdx >= 0 && allocIdx < row._allocations.length) ? allocIdx : 0;
-        if (row._allocations[idx]) row._allocations[idx].pkgs = val;
-      }
-      const sum = row._allocations.reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
-      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
-      grp.forEach(r => {
-        const rx = ENTRY[dir]?.[r];
-        if (rx) {
-          rx._allocations = row._allocations.map(a => ({ ...a }));
-          rx.loadedPackages = sum > 0 ? String(sum) : '';
-          rx.loadStatus = sum > 0 ? 'Full' : '';
-        }
-      });
-      markDirty();
-      renderEntry();
-      scheduleSave();
-      openTruckManifest(row.cntr || '', truckRowIndex);
+    if (!ship || !canMutateOperation(ref)) {
+      toast(AR() ? '⚠️ يجب تفعيل وضع التعديل أولاً لإجراء أي تغييرات' : 'Please enable Edit mode first to make changes', 'error');
       return;
     }
+    const val = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
+    const S = ship?.shpSpans?.length || 1;
 
-    let tot = parseInt(normalizeDigits(row.packages || '0'), 10) || 0;
-    row.loadedPackages = val > 0 ? String(val) : '';
-    row.loadStatus = val > 0 ? (tot > 0 && val === tot ? 'Full' : val > tot ? 'Overload' : 'Partial') : '';
+    if (!Array.isArray(row._allocations) || !row._allocations.length) {
+      if (row.assignedShp != null) {
+        const curShp = parseInt(row.assignedShp, 10);
+        row._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: val }];
+      } else if (S === 1) {
+        row._allocations = [{ shpIdx: 0, pkgs: val }];
+        row.assignedShp = 0;
+      } else {
+        row._allocations = [];
+      }
+    } else {
+      const idx = (typeof allocIdx === 'number' && allocIdx >= 0 && allocIdx < row._allocations.length) ? allocIdx : 0;
+      if (row._allocations[idx]) row._allocations[idx].pkgs = val;
+    }
+    const sum = (row._allocations || []).reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0);
+    const grp = ship ? groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex) : [truckRowIndex];
+    const calcStatus = computeAllocLoadStatus(ship, dir, row._allocations, sum) || (sum > 0 ? 'Full' : '');
+    grp.forEach(r => {
+      const rx = ENTRY[dir]?.[r];
+      if (rx) {
+        rx._allocations = (row._allocations || []).map(a => ({ ...a }));
+        rx.loadedPackages = sum > 0 ? String(sum) : '';
+        rx.loadStatus = calcStatus;
+        rx.assignedShp = row.assignedShp;
+      }
+    });
+    saveShipmentAllocationsDraft(dir, ship?.ref);
     markDirty();
     renderEntry();
     scheduleSave();
+    openTruckManifest(row.cntr || '', truckRowIndex);
   }
 
   function changeTruckAllocShp(ref, truckRowIndex, allocIdx, newShpIdx) {
@@ -4434,15 +4340,24 @@ export function createFtlEngine(root, options = {}) {
     const row = ENTRY[dir]?.[truckRowIndex];
     if (!row || !Array.isArray(row._allocations)) return;
     const ship = SHIPS[dir]?.[ref];
+    if (!ship || !canMutateOperation(ref)) {
+      toast(AR() ? '⚠️ يجب تفعيل وضع التعديل أولاً لإجراء أي تغييرات' : 'Please enable Edit mode first to make changes', 'error');
+      return;
+    }
     if (row._allocations[allocIdx]) {
       row._allocations[allocIdx].shpIdx = newShpIdx;
+      if (allocIdx === 0) row.assignedShp = newShpIdx;
       if (ship) {
         const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
         grp.forEach(r => {
           const rx = ENTRY[dir]?.[r];
-          if (rx) rx._allocations = row._allocations.map(a => ({ ...a }));
+          if (rx) {
+            rx._allocations = row._allocations.map(a => ({ ...a }));
+            if (allocIdx === 0) rx.assignedShp = newShpIdx;
+          }
         });
       }
+      saveShipmentAllocationsDraft(dir, ship?.ref);
       markDirty();
       renderEntry();
       scheduleSave();
@@ -4466,6 +4381,14 @@ export function createFtlEngine(root, options = {}) {
     const S = ship?.shpSpans?.length || 0;
     const T = ship ? truckCount(ship) : 0;
     const isSGreater = S > T;
+    const ref = ship?.ref || '';
+    const isEditMode = Boolean(ref && isModalEditActive(ref, rowIndex, 'truck'));
+    const isSaving = Boolean(ref && SAVING_SHIPS.has(ref));
+    LAST_OPEN_MANIFEST = { type: 'truck', ident: plateOrVal, rowIndex, ref };
+    if (!MANIFEST_GRID_SCROLL) {
+      const g = root.querySelector('.egrid');
+      if (g) MANIFEST_GRID_SCROLL = { left: g.scrollLeft, top: g.scrollTop };
+    }
 
     let truckRows = shipRows.filter(r => {
       const ix = rows.indexOf(r);
@@ -4484,21 +4407,23 @@ export function createFtlEngine(root, options = {}) {
     const truckType = targetRow.truckType || truckRows.find(r => r.truckType)?.truckType || '—';
     const trucker = targetRow.trucker || truckRows.find(r => r.trucker)?.trucker || '—';
 
-    if (isSGreater) {
-      if (!Array.isArray(targetRow._allocations) || !targetRow._allocations.length) {
-        if (targetRow.assignedShp != null) {
-          const curShp = parseInt(targetRow.assignedShp, 10);
-          const curP = parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0;
-          targetRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
-        } else {
-          targetRow._allocations = [];
-        }
+    if (!Array.isArray(targetRow._allocations) || !targetRow._allocations.length) {
+      if (targetRow.assignedShp != null) {
+        const curShp = parseInt(targetRow.assignedShp, 10);
+        const curP = parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0;
+        targetRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
+      } else if (S === 1) {
+        const curP = parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0;
+        targetRow._allocations = [{ shpIdx: 0, pkgs: curP }];
+        targetRow.assignedShp = 0;
+      } else {
+        targetRow._allocations = [];
+        targetRow.assignedShp = null;
       }
     }
 
-    const totalTruckPkgs = isSGreater
-      ? (targetRow._allocations || []).reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
-      : truckRows.reduce((acc, r) => acc + (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0), 0);
+    const totalTruckPkgs = (targetRow._allocations || []).reduce((acc, a) => acc + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
+      || parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0;
     const totalTruckWt = truckRows.reduce((acc, r) => acc + (parseFloat(normalizeDigits(r.weight || '0')) || 0), 0);
 
     const trkLabel = (plate && plate !== '—') ? plate : (AR() ? `شاحنة ${trkNo || 1}` : `Truck ${trkNo || 1}`);
@@ -4510,104 +4435,52 @@ export function createFtlEngine(root, options = {}) {
         : `<div class="egypt-plate-badge"><span class="plate-code">${AR() ? 'شاحنة ' + (trkNo || 1) : 'Truck ' + (trkNo || 1)}</span></div>`;
     }
 
+    const actionsEl = $('truckManifestActions');
+    if (actionsEl) {
+      if (!isEditMode) {
+        actionsEl.innerHTML = `
+          <button type="button" class="manifest-action-btn edit" onclick="__FTL__.startEditFromManifest('${esc(ref)}', '${esc(plate)}', ${rowIndex}, 'truck')" title="${AR() ? 'تفعيل وضع التعديل لتعديل الحمولات وتوزيع الطرود' : 'Enable edit mode'}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:750;background:#ffffff;color:#0369a1;border:1.5px solid #7dd3fc;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.12);transition:all 0.15s">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            <span>${AR() ? 'تعديل التوزيع' : 'Edit Allocation'}</span>
+          </button>
+        `;
+      } else if (ACTIVE_EDIT_SHIPS.has(ref)) {
+        actionsEl.innerHTML = `
+          <button type="button" class="manifest-action-btn done" onclick="__FTL__.closeM('truckManifestModal')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:8px;font-size:12.5px;font-weight:750;background:#0284c7;color:#ffffff;border:none;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);transition:all 0.15s">
+            <span>✓ ${AR() ? 'تم وتطبيق التوزيع' : 'Done & Apply'}</span>
+          </button>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button type="button" class="manifest-action-btn save" onclick="__FTL__.saveFromManifest('${esc(ref)}', '${esc(plate)}', ${rowIndex}, 'truck')" ${isSaving ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:750;background:#10b981;color:#ffffff;border:none;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);transition:all 0.15s">
+            ${isSaving ? (AR() ? '⏳ جاري الحفظ...' : 'Saving...') : '💾 ' + (AR() ? 'حفظ التوزيع' : 'Save Allocation')}
+          </button>
+          <button type="button" class="manifest-cancel-btn" onclick="__FTL__.cancelFromManifest('${esc(ref)}', '${esc(plate)}', ${rowIndex}, 'truck')" ${isSaving ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:650;background:#ffffff;color:#475569;border:1px solid #cbd5e1;cursor:pointer">
+            ✕ ${AR() ? 'إلغاء' : 'Cancel'}
+          </button>
+        `;
+      }
+    }
+
     const isMultiShip = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1;
 
     let tblRows = '';
-    if (isSGreater) {
-      if (!(targetRow._allocations || []).length) {
-        tblRows = `<tr><td colspan="10" style="text-align:center;color:#64748b;padding:16px;font-weight:700">⏳ ${AR() ? 'لم يتم تعيين أي شحنة لهذه الشاحنة بعد — يمكنك اختيار شحنة وإدخال الطرود من الأسفل' : 'No shipments assigned to this truck yet — select a shipment below'}</td></tr>`;
-      } else {
-        tblRows = (targetRow._allocations || []).map((alloc, allocIdx) => {
-          const curShpIdx = alloc.shpIdx;
-          const shpSpan = (curShpIdx >= 0 && ship?.shpSpans) ? ship.shpSpans[curShpIdx] : null;
-          const shpRow = (ship && shpSpan) ? rows[ship.rows[shpSpan[0]]] || null : null;
-
-          const effectiveShipNo = shpRow?.shipNo || (AR() ? `شحنة ${curShpIdx + 1}` : `Shipment ${curShpIdx + 1}`);
-          const hawb = shpRow?.hawb || '—';
-          const client = shpRow?.client || '—';
-          const loadedPkgs = parseInt(normalizeDigits(String(alloc.pkgs || '0')), 10) || 0;
-          const totalShipmentPkgs = parseInt(normalizeDigits(shpRow?.packages || '0'), 10) || 0;
-
-          let statusHtml = '';
-          if (loadedPkgs === 0) {
-            statusHtml = `<span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px">📦 ${AR() ? 'لم يتم إدخال الطرود' : 'Pkgs not entered'}</span>`;
-          } else if (totalShipmentPkgs > 0 && loadedPkgs >= totalShipmentPkgs) {
-            statusHtml = `<span class="manifest-tag-full">✓ ${AR() ? 'حمولة كاملة (100%)' : 'Full (100%)'}</span>`;
-          } else if (totalShipmentPkgs > 0 && loadedPkgs < totalShipmentPkgs) {
-            const pct = Math.round((loadedPkgs / totalShipmentPkgs) * 100);
-            statusHtml = `<span class="manifest-tag-partial">⚡ ${AR() ? `جزء من الشحنة (${loadedPkgs} من ${totalShipmentPkgs} · ${pct}%)` : `Partial (${loadedPkgs}/${totalShipmentPkgs} · ${pct}%)`}</span>`;
-          } else {
-            statusHtml = `<span class="manifest-tag-full">${loadedPkgs} ${AR() ? 'طرد' : 'pkgs'}</span>`;
-          }
-
-          const term = shpRow?.line || shpRow?.aod || 'CAI';
-          const dest = shpRow?.dest || '—';
-          const canDeleteAllocation = (targetRow._allocations || []).length > 1;
-
-          const shpOptionsHtml = (ship && Array.isArray(ship.shpSpans)) ? ship.shpSpans.map(([start, len], sIdx) => {
-            const sRow = rows[ship.rows[start]] || {};
-            const isPl = plate && plate !== '—' && sRow.shipNo && sRow.shipNo.trim().toUpperCase() === plate;
-            const sName = (sRow.shipNo && !isPl) ? sRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
-            const sClient = sRow.client ? ` · ${sRow.client}` : '';
-            const sPkgs = sRow.packages ? ` (${sRow.packages} طرد)` : '';
-            const isSelected = (sIdx === curShpIdx);
-            return `<option value="${sIdx}" ${isSelected ? 'selected' : ''}>${esc(sName)}${esc(sClient)}${esc(sPkgs)}</option>`;
-          }).join('') : '';
-
-          const shpSelectHtml = `<select style="padding:4px 8px;border:1px solid #0284c7;border-radius:6px;font-weight:750;color:#0b4f7a;background:#f0f9ff;font-size:12px;cursor:pointer" onchange="__FTL__.changeTruckAllocShp('${esc(ship.ref)}', ${rowIndex}, ${allocIdx}, parseInt(this.value, 10));">
-          ${shpOptionsHtml}
-        </select>`;
-
-          return `<tr>
-          <td style="font-weight:700;color:#64748b;text-align:center">${allocIdx + 1}</td>
-          <td style="font-weight:700;color:#0b4f7a">${shpSelectHtml}</td>
-          <td style="font-weight:700">${esc(client)}</td>
-          <td style="font-weight:600;font-family:monospace">${esc(hawb)}</td>
-          <td style="font-weight:800;color:#0284c7;font-size:14px">${totalShipmentPkgs > 0 ? `${totalShipmentPkgs} ${AR() ? 'طرد' : 'pkgs'}` : '<span style="color:#94a3b8">—</span>'}</td>
-          <td style="font-weight:800;color:#b45309;font-size:14px">
-            <input type="number" min="0" value="${loadedPkgs > 0 ? loadedPkgs : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#b45309" onchange="__FTL__.updateTruckAllocationPkgs('${esc(ship ? ship.ref : '')}',${rowIndex},this.value,${allocIdx})">
-          </td>
-          <td>${statusHtml}</td>
-          <td>${esc(term)}</td>
-          <td>${esc(dest)}</td>
-          <td style="text-align:center">
-            ${canDeleteAllocation ? `<button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeTruckCoLoad('${esc(ship ? ship.ref : '')}',${rowIndex},${allocIdx})" title="${AR() ? 'إزالة هذه الشحنة من الشاحنة' : 'Remove shipment from truck'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>` : '<span style="color:#94a3b8;font-size:11px">—</span>'}
-          </td>
-        </tr>`;
-        }).join('');
-      }
+    if (!(targetRow._allocations || []).length) {
+      tblRows = `<tr><td colspan="10" style="text-align:center;color:#64748b;padding:16px;font-weight:700">⏳ ${AR() ? 'لم يتم تعيين أي شحنة لهذه الشاحنة بعد — يمكنك اختيار شحنة وإدخال الطرود من الأسفل' : 'No shipments assigned to this truck yet — select a shipment below'}</td></tr>`;
     } else {
-      tblRows = truckRows.map((r, idx) => {
-        const rIdx = rows.indexOf(r);
-        const ri = ship ? ship.rows.indexOf(rIdx) : 0;
-
-        let curShpIdx = -1;
-        if (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '') {
-          curShpIdx = parseInt(r.assignedShp, 10);
-        } else if (r.assignedShp === undefined && ship && Array.isArray(ship.shpSpans)) {
-          curShpIdx = ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l);
-        }
-
-        const isAssigned = curShpIdx >= 0 && curShpIdx < (ship?.shpSpans?.length || 0);
-        if (!isAssigned) {
-          curShpIdx = -1;
-        }
-
+      tblRows = (targetRow._allocations || []).map((alloc, allocIdx) => {
+        const curShpIdx = alloc.shpIdx;
         const shpSpan = (curShpIdx >= 0 && ship?.shpSpans) ? ship.shpSpans[curShpIdx] : null;
         const shpRow = (ship && shpSpan) ? rows[ship.rows[shpSpan[0]]] || null : null;
 
-        const isPlateVal = plate && plate !== '—' && (r.shipNo || shpRow?.shipNo) && (r.shipNo || shpRow.shipNo).trim().toUpperCase() === plate;
-        const effectiveShipNo = isAssigned ? ((shpRow?.shipNo && !isPlateVal) ? shpRow.shipNo : (r.shipNo && !isPlateVal ? r.shipNo : '')) : '';
-        const shRef = effectiveShipNo || (isAssigned ? (AR() ? `شحنة ${curShpIdx + 1}` : `Shipment ${curShpIdx + 1}`) : (AR() ? '-- اختر الشحنة --' : '-- Select Shipment --'));
-        const hawb = isAssigned ? (shpRow?.hawb || r.hawb || '—') : '—';
-        const client = isAssigned ? (shpRow?.client || r.client || '—') : '—';
-        const loadedPkgs = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
-        const totalShipmentPkgs = isAssigned ? ((parseInt(normalizeDigits(shpRow?.packages || r.packages || '0'), 10) || 0)) : 0;
+        const effectiveShipNo = shpRow?.shipNo || (AR() ? `شحنة ${curShpIdx + 1}` : `Shipment ${curShpIdx + 1}`);
+        const hawb = shpRow?.hawb || '—';
+        const client = shpRow?.client || '—';
+        const loadedPkgs = parseInt(normalizeDigits(String(alloc.pkgs || '0')), 10) || 0;
+        const totalShipmentPkgs = parseInt(normalizeDigits(shpRow?.packages || '0'), 10) || 0;
 
         let statusHtml = '';
-        if (!isAssigned) {
-          statusHtml = `<span style="background:#f1f5f9;color:#64748b;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px">⏳ ${AR() ? 'في انتظار تحديد الشحنة' : 'Select shipment'}</span>`;
-        } else if (loadedPkgs === 0) {
+        if (loadedPkgs === 0) {
           statusHtml = `<span style="background:#fef3c7;color:#92400e;padding:3px 8px;border-radius:4px;font-weight:700;font-size:11px">📦 ${AR() ? 'لم يتم إدخال الطرود' : 'Pkgs not entered'}</span>`;
         } else if (totalShipmentPkgs > 0 && loadedPkgs >= totalShipmentPkgs) {
           statusHtml = `<span class="manifest-tag-full">✓ ${AR() ? 'حمولة كاملة (100%)' : 'Full (100%)'}</span>`;
@@ -4618,44 +4491,50 @@ export function createFtlEngine(root, options = {}) {
           statusHtml = `<span class="manifest-tag-full">${loadedPkgs} ${AR() ? 'طرد' : 'pkgs'}</span>`;
         }
 
-        const term = isAssigned ? (shpRow?.line || shpRow?.aod || r.line || r.aod || 'CAI') : '—';
-        const dest = isAssigned ? (shpRow?.dest || r.dest || '—') : '—';
-        const canDeleteAllocation = truckRows.length > 1 && (shpSpan && shpSpan[1] > 1);
+        const term = shpRow?.line || shpRow?.aod || 'CAI';
+        const dest = shpRow?.dest || '—';
+        const canDeleteAllocation = S > 1 ? (targetRow._allocations || []).length > 0 : (targetRow._allocations || []).length > 1;
 
-        const shpOptionsHtml = (ship && Array.isArray(ship.shpSpans)) ? [
-          `<option value="" ${curShpIdx < 0 ? 'selected' : ''}>${AR() ? '-- اختر الشحنة --' : '-- Select Shipment --'}</option>`,
-          ...ship.shpSpans.map(([start, len], sIdx) => {
-            const sRow = rows[ship.rows[start]] || {};
-            const isPl = plate && plate !== '—' && sRow.shipNo && sRow.shipNo.trim().toUpperCase() === plate;
-            const sName = (sRow.shipNo && !isPl) ? sRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
-            const sClient = sRow.client ? ` · ${sRow.client}` : '';
-            const sPkgs = sRow.packages ? ` (${sRow.packages} طرد)` : '';
-            const isSelected = isAssigned && (sIdx === curShpIdx);
-            return `<option value="${sIdx}" ${isSelected ? 'selected' : ''}>${esc(sName)}${esc(sClient)}${esc(sPkgs)}</option>`;
-          })
-        ].join('') : '';
+        const shpOptionsHtml = (ship && Array.isArray(ship.shpSpans)) ? ship.shpSpans.map(([start, len], sIdx) => {
+          const sRow = rows[ship.rows[start]] || {};
+          const isPl = plate && plate !== '—' && sRow.shipNo && sRow.shipNo.trim().toUpperCase() === plate;
+          const sName = (sRow.shipNo && !isPl) ? sRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
+          const sClient = sRow.client ? ` · ${sRow.client}` : '';
+          const sPkgs = sRow.packages ? ` (${sRow.packages} طرد)` : '';
+          const isSelected = (sIdx === curShpIdx);
+          return `<option value="${sIdx}" ${isSelected ? 'selected' : ''}>${esc(sName)}${esc(sClient)}${esc(sPkgs)}</option>`;
+        }).join('') : '';
 
         const shpSelectHtml = isMultiShip
-          ? `<select style="padding:4px 8px;border:1px solid #0284c7;border-radius:6px;font-weight:750;color:#0b4f7a;background:#f0f9ff;font-size:12px;cursor:pointer" onchange="__FTL__.setTruckShipment('${esc(ship.ref)}', ${ri}, this.value, ${trkNo});">
-            ${shpOptionsHtml}
-           </select>`
-          : `<span style="font-weight:700;color:#0b4f7a">${esc(shRef)}</span>`;
+          ? (isEditMode
+            ? `<select class="manifest-select" style="max-width:220px;width:100%;padding:4px 8px;border:1.5px solid #0284c7;border-radius:8px;font-weight:750;color:#0b4f7a;background:#f0f9ff;font-size:12px;cursor:pointer;text-overflow:ellipsis" onchange="__FTL__.changeTruckAllocShp('${esc(ship.ref)}', ${rowIndex}, ${allocIdx}, parseInt(this.value, 10));">
+                ${shpOptionsHtml}
+              </select>`
+            : `<span style="display:inline-block;max-width:220px;padding:4px 10px;background:#f1f5f9;color:#0b4f7a;border-radius:6px;font-weight:750;font-size:12px;border:1px solid #cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(effectiveShipNo)}">${esc(effectiveShipNo)}</span>`
+          )
+          : `<span style="font-weight:700;color:#0b4f7a;white-space:nowrap">${esc(effectiveShipNo)}</span>`;
+
+        const pkgsCellHtml = isEditMode
+          ? `<input type="number" min="0" value="${loadedPkgs > 0 ? loadedPkgs : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#b45309" onchange="__FTL__.updateTruckAllocationPkgs('${esc(ship ? ship.ref : '')}',${rowIndex},this.value,${allocIdx})">`
+          : `<span style="display:inline-block;min-width:55px;padding:3px 8px;border-radius:6px;font-weight:800;font-size:13.5px;text-align:center;color:#b45309;background:#fef3c7;border:1px solid #fde68a">${loadedPkgs > 0 ? `${loadedPkgs} ${AR() ? 'طرد' : 'pkgs'}` : `<span style="color:#94a3b8">—</span>`}</span>`;
+
+        const actionCellHtml = isEditMode
+          ? (canDeleteAllocation
+            ? `<button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeTruckCoLoad('${esc(ship ? ship.ref : '')}',${rowIndex},${allocIdx})" title="${AR() ? 'إزالة هذه الشحنة من الشاحنة' : 'Remove shipment from truck'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>`
+            : '<span style="color:#94a3b8;font-size:11px">—</span>')
+          : `<span style="color:#94a3b8;font-size:11px;font-weight:600">🔒 ${AR() ? 'للعرض فقط' : 'View only'}</span>`;
 
         return `<tr>
-        <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
-        <td style="font-weight:700;color:#0b4f7a">${shpSelectHtml}</td>
-        <td style="font-weight:700">${esc(client)}</td>
-        <td style="font-weight:600;font-family:monospace">${esc(hawb)}</td>
-        <td style="font-weight:800;color:#0284c7;font-size:14px">${totalShipmentPkgs > 0 ? `${totalShipmentPkgs} ${AR() ? 'طرد' : 'pkgs'}` : '<span style="color:#94a3b8">—</span>'}</td>
-        <td style="font-weight:800;color:#b45309;font-size:14px">
-          <input type="number" min="0" value="${loadedPkgs > 0 ? loadedPkgs : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#b45309" onchange="__FTL__.updateTruckAllocationPkgs('${esc(ship ? ship.ref : '')}',${rIdx},this.value);__FTL__.openTruckManifest('${esc(plate)}',${rowIndex})">
-        </td>
-        <td>${statusHtml}</td>
-        <td>${esc(term)}</td>
-        <td>${esc(dest)}</td>
-        <td style="text-align:center">
-          ${canDeleteAllocation ? `<button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeTruckCoLoad('${esc(ship ? ship.ref : '')}',${rIdx});__FTL__.openTruckManifest('${esc(plate)}',${rowIndex})" title="${AR() ? 'إزالة هذه الشحنة من الشاحنة' : 'Remove shipment from truck'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>` : '<span style="color:#94a3b8;font-size:11px">—</span>'}
-        </td>
+        <td style="font-weight:700;color:#64748b;text-align:center;width:38px">${allocIdx + 1}</td>
+        <td style="font-weight:700;color:#0b4f7a;white-space:nowrap">${shpSelectHtml}</td>
+        <td><div class="manifest-client-name" title="${esc(client)}">${esc(client)}</div></td>
+        <td style="font-weight:600;font-family:monospace;white-space:nowrap">${esc(hawb)}</td>
+        <td style="font-weight:800;color:#0284c7;font-size:13.5px;white-space:nowrap">${totalShipmentPkgs > 0 ? `${totalShipmentPkgs} ${AR() ? 'طرد' : 'pkgs'}` : '<span style="color:#94a3b8">—</span>'}</td>
+        <td style="font-weight:800;color:#b45309;font-size:14px;white-space:nowrap">${pkgsCellHtml}</td>
+        <td style="white-space:nowrap">${statusHtml}</td>
+        <td style="font-weight:600;font-size:12px;white-space:nowrap">${esc(term)}</td>
+        <td style="font-weight:600;font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(dest)}">${esc(dest)}</td>
+        <td style="text-align:center;white-space:nowrap">${actionCellHtml}</td>
       </tr>`;
       }).join('');
     }
@@ -4664,43 +4543,58 @@ export function createFtlEngine(root, options = {}) {
     let reconNotice = '';
     if (recon && recon.totalShipmentPkgs > 0) {
       reconNotice = `<div class="manifest-recon-footer">
-        <span class="manifest-recon-title">📦 ${AR() ? 'ميزان طرود العملية ككل:' : 'Full Operation Package Balance:'}</span>
-        <span class="manifest-recon-stat"><b>${recon.totalShipmentPkgs}</b> ${AR() ? 'طرد إجمالي الشحنات' : 'total shipment pkgs'}</span>
-        <span>·</span>
-        <span class="manifest-recon-stat" style="color:#d97706"><b>${recon.totalLoadedPkgs}</b> ${AR() ? 'محمل على جميع السيارات' : 'loaded on all trucks'}</span>
-        <span>·</span>
-        <span class="manifest-recon-stat" style="color:${recon.status === 'balanced' ? '#059669' : recon.status === 'overload' ? '#b91c1c' : '#b45309'}">
-          <b>${recon.status === 'balanced' ? (AR() ? '✓ تم توزيع كل الطرود بالكامل والميزان سليم' : '✓ Fully balanced') : recon.status === 'overload' ? (AR() ? '🚨 تحذير: يوجد حمولة زائدة عن إجمالي البوليصة' : '🚨 Overload alert') : (AR() ? `⚡ متبقي ${recon.diff} طرد لم يُحمل بعد` : `⚡ ${recon.diff} pkgs remaining`)}</b>
-        </span>
+        <div class="manifest-recon-title">📦 ${AR() ? 'ميزان طرود العملية ككل:' : 'Full Operation Package Balance:'}</div>
+        <div class="manifest-recon-items">
+          <span class="manifest-recon-chip"><b>${recon.totalShipmentPkgs}</b> ${AR() ? 'طرد إجمالي الشحنات' : 'total shipment pkgs'}</span>
+          <span class="manifest-recon-chip amber"><b>${recon.totalLoadedPkgs}</b> ${AR() ? 'محمل على السيارات' : 'loaded on all trucks'}</span>
+          <span class="manifest-recon-status-badge ${recon.status === 'balanced' ? 'balanced' : recon.status === 'overload' ? 'overload' : 'remaining'}">
+            <b>${recon.status === 'balanced' ? (AR() ? '✓ تم توزيع كل الطرود بالكامل والميزان سليم' : '✓ Fully balanced') : recon.status === 'overload' ? (AR() ? '🚨 تحذير: يوجد حمولة زائدة عن إجمالي البوليصة' : '🚨 Overload alert') : (AR() ? `⚡ متبقي ${recon.diff} طرد لم يُحمل بعد` : `⚡ ${recon.diff} pkgs remaining`)}</b>
+          </span>
+        </div>
       </div>`;
     }
 
     let coloadAdderHtml = '';
     if (ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1) {
-      const shpOptions = ship.shpSpans.map(([start, len], sIdx) => {
-        const shRow = rows[ship.rows[start]] || {};
-        const isPlateVal = plate && plate !== '—' && shRow.shipNo && shRow.shipNo.trim().toUpperCase() === plate;
-        const sRef = (shRow.shipNo && !isPlateVal) ? shRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
-        const sClient = shRow.client ? ` · ${shRow.client}` : '';
-        const sPkgs = shRow.packages ? ` (${shRow.packages} طرد)` : '';
-        return `<option value="${sIdx}">${esc(sRef)}${esc(sClient)}${esc(sPkgs)}</option>`;
-      }).join('');
+      if (isEditMode) {
+        const hasAllocs = (targetRow._allocations || []).length > 0;
+        const adderLabel = hasAllocs
+          ? `➕ ${AR() ? 'تحميل شحنة أخرى على هذه الشاحنة (Co-load):' : 'Co-load Another Shipment on this Truck:'}`
+          : `➕ ${AR() ? 'تعيين شحنة وحمولة لهذه الشاحنة:' : 'Assign Shipment & Load to this Truck:'}`;
+        const adderBtn = hasAllocs
+          ? `➕ ${AR() ? 'إضافة الحصة للعربة' : 'Add to Truck'}`
+          : `➕ ${AR() ? 'تعيين للشاحنة' : 'Assign to Truck'}`;
 
-      coloadAdderHtml = `
-        <div class="coload-adder-bar" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-weight:800;color:#0369a1;font-size:13px">➕ ${AR() ? 'تحميل شحنة أخرى على هذه الشاحنة (Co-load):' : 'Co-load Another Shipment on this Truck:'}</span>
-          <select id="coloadShpSelect" style="padding:6px 10px;border-radius:6px;border:1px solid #94a3b8;font-weight:700;font-size:12px">
-            ${shpOptions}
-          </select>
-          <input type="number" id="coloadPkgsInput" placeholder="${AR() ? 'عدد الطرود' : 'Pkgs count'}" style="width:110px;padding:6px 10px;border-radius:6px;border:1px solid #94a3b8;font-weight:700;font-size:12px">
-          <button type="button" class="ebtn" style="background:#0284c7;color:#fff;font-weight:800;border:none;border-radius:6px;padding:6px 14px;cursor:pointer" onclick="const sEl=document.getElementById('coloadShpSelect');const pEl=document.getElementById('coloadPkgsInput');if(sEl&&pEl&&pEl.value){__FTL__.addTruckCoLoad('${esc(ship ? ship.ref : '')}',${rowIndex},parseInt(sEl.value,10),parseInt(pEl.value,10));__FTL__.openTruckManifest('${esc(plate)}',${rowIndex});}">➕ ${AR() ? 'إضافة الحصة للعربة' : 'Add to Truck'}</button>
-        </div>
-      `;
+        const shpOptions = ship.shpSpans.map(([start, len], sIdx) => {
+          const shRow = rows[ship.rows[start]] || {};
+          const isPlateVal = plate && plate !== '—' && shRow.shipNo && shRow.shipNo.trim().toUpperCase() === plate;
+          const sRef = (shRow.shipNo && !isPlateVal) ? shRow.shipNo : (AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`);
+          const sClient = shRow.client ? ` · ${shRow.client}` : '';
+          const sPkgs = shRow.packages ? ` (${shRow.packages} طرد)` : '';
+          return `<option value="${sIdx}">${esc(sRef)}${esc(sClient)}${esc(sPkgs)}</option>`;
+        }).join('');
+
+        coloadAdderHtml = `
+          <div class="coload-adder-bar" style="margin-top:14px;padding:12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-weight:800;color:#0369a1;font-size:13px">${adderLabel}</span>
+            <select id="coloadShpSelect" style="padding:6px 10px;border-radius:6px;border:1px solid #94a3b8;font-weight:700;font-size:12px">
+              ${shpOptions}
+            </select>
+            <input type="number" id="coloadPkgsInput" placeholder="${AR() ? 'عدد الطرود' : 'Pkgs count'}" style="width:110px;padding:6px 10px;border-radius:6px;border:1px solid #94a3b8;font-weight:700;font-size:12px">
+            <button type="button" class="ebtn" style="background:#0284c7;color:#fff;font-weight:800;border:none;border-radius:6px;padding:6px 14px;cursor:pointer" onclick="const sEl=document.getElementById('coloadShpSelect');const pEl=document.getElementById('coloadPkgsInput');if(sEl&&pEl&&pEl.value){__FTL__.addTruckCoLoad('${esc(ship ? ship.ref : '')}',${rowIndex},parseInt(sEl.value,10),parseInt(pEl.value,10));__FTL__.openTruckManifest('${esc(plate)}',${rowIndex});}">${adderBtn}</button>
+          </div>
+        `;
+      } else {
+        coloadAdderHtml = `
+          <div class="coload-adder-bar view-only" style="margin-top:14px;padding:10px 16px;background:rgba(241, 245, 249, 0.7);border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <span style="font-weight:650;color:#64748b;font-size:12.5px">🔒 ${AR() ? 'بيان الشاحنة في وضع القراءة فقط. اضغط على زر "تعديل التوزيع" بالأعلى لإضافة أو تعديل الحمولات.' : 'Truck manifest is in view-only mode. Click "Edit Allocation" above to modify loads.'}</span>
+            <button type="button" onclick="__FTL__.startEditFromManifest('${esc(ref)}', '${esc(plate)}', ${rowIndex}, 'truck')" style="background:#0284c7;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-weight:750;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px">✏️ ${AR() ? 'تعديل التوزيع الآن' : 'Edit Allocation Now'}</button>
+          </div>
+        `;
+      }
     }
 
-    const carryingCount = isSGreater
-      ? (targetRow._allocations || []).length
-      : truckRows.filter(r => isMultiShip ? (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '') : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) > 0 || r.cntr)).length;
+    const carryingCount = (targetRow._allocations || []).length;
     $('truckManifestBody').innerHTML = `
       <div class="manifest-hero-grid">
         <div class="manifest-card truck-hero-card">
@@ -4756,69 +4650,95 @@ export function createFtlEngine(root, options = {}) {
     const dir = EDIR, ship = SHIPS[dir]?.[ref], rows = ENTRY[dir];
     const targetRow = rows?.[truckRowIndex];
     if (!targetRow || !ship) return;
-    const val = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
-    const isSGreater = ship.shpSpans && ship.shpSpans.length > truckCount(ship);
-    if (isSGreater) {
-      if (!Array.isArray(targetRow._allocations)) targetRow._allocations = [];
-      const a = targetRow._allocations.find(x => x.shpIdx === shpIdx);
-      if (a) {
-        a.pkgs = val;
-      } else {
-        targetRow._allocations.push({ shpIdx, pkgs: val });
-      }
-      if (targetRow.assignedShp == null) {
-        targetRow.assignedShp = shpIdx;
-      }
-      const sum = targetRow._allocations.reduce((acc, x) => acc + (parseInt(normalizeDigits(String(x.pkgs || '0')), 10) || 0), 0);
-      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
-      grp.forEach(r => {
-        const rx = rows[r];
-        if (rx) {
-          rx._allocations = targetRow._allocations.map(x => ({ ...x }));
-          rx.loadedPackages = sum > 0 ? String(sum) : '';
-          rx.loadStatus = sum > 0 ? 'Full' : '';
-          rx.assignedShp = targetRow.assignedShp;
-        }
-      });
-      markDirty(); renderEntry(); scheduleSave();
-    } else {
-      targetRow.loadedPackages = val > 0 ? String(val) : '';
-      markDirty(); renderEntry(); scheduleSave();
+    if (!canMutateOperation(ref)) {
+      toast(AR() ? '⚠️ يجب تفعيل وضع التعديل أولاً لإجراء أي تغييرات' : 'Please enable Edit mode first to make changes', 'error');
+      return;
     }
+    const val = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
+    const S = ship.shpSpans?.length || 1;
+
+    if (!Array.isArray(targetRow._allocations) || !targetRow._allocations.length) {
+      if (targetRow.assignedShp != null) {
+        const curShp = parseInt(targetRow.assignedShp, 10);
+        const curP = parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0;
+        targetRow._allocations = [{ shpIdx: Math.max(0, curShp), pkgs: curP }];
+      } else if (S === 1) {
+        targetRow._allocations = [{ shpIdx: 0, pkgs: parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0 }];
+        targetRow.assignedShp = 0;
+      } else {
+        targetRow._allocations = [];
+      }
+    }
+
+    const a = targetRow._allocations.find(x => x.shpIdx === shpIdx);
+    if (a) {
+      a.pkgs = val;
+    } else {
+      targetRow._allocations.push({ shpIdx, pkgs: val });
+    }
+    if (targetRow.assignedShp == null) {
+      targetRow.assignedShp = shpIdx;
+    }
+    const sum = targetRow._allocations.reduce((acc, x) => acc + (parseInt(normalizeDigits(String(x.pkgs || '0')), 10) || 0), 0);
+    const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+    const calcStatus = computeAllocLoadStatus(ship, dir, targetRow._allocations, sum) || (sum > 0 ? 'Full' : '');
+    grp.forEach(r => {
+      const rx = rows[r];
+      if (rx) {
+        rx._allocations = targetRow._allocations.map(x => ({ ...x }));
+        rx.loadedPackages = sum > 0 ? String(sum) : '';
+        rx.loadStatus = calcStatus;
+        rx.assignedShp = targetRow.assignedShp;
+      }
+    });
+    saveShipmentAllocationsDraft(dir, ship?.ref);
+    markDirty(); renderEntry(); scheduleSave();
   }
 
   function removeShipmentTruckAllocation(ref, shpIdx, truckRowIndex) {
     const dir = EDIR, ship = SHIPS[dir]?.[ref], rows = ENTRY[dir];
     const targetRow = rows?.[truckRowIndex];
     if (!targetRow || !ship) return;
-    const isSGreater = ship.shpSpans && ship.shpSpans.length > truckCount(ship);
-    if (isSGreater) {
-      if (Array.isArray(targetRow._allocations)) {
-        const idx = targetRow._allocations.findIndex(x => x.shpIdx === shpIdx);
-        if (idx >= 0) targetRow._allocations.splice(idx, 1);
-      }
-      const hasAllocs = Array.isArray(targetRow._allocations) && targetRow._allocations.length > 0;
-      const sum = hasAllocs ? targetRow._allocations.reduce((acc, x) => acc + (parseInt(normalizeDigits(String(x.pkgs || '0')), 10) || 0), 0) : 0;
-      const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
-      grp.forEach(r => {
-        const rx = rows[r];
-        if (rx) {
-          rx._allocations = hasAllocs ? targetRow._allocations.map(x => ({ ...x })) : null;
-          rx.loadedPackages = sum > 0 ? String(sum) : '';
-          rx.loadStatus = sum > 0 ? 'Full' : '';
-          if (!hasAllocs) {
-            rx.assignedShp = null;
-          } else if (rx.assignedShp === shpIdx) {
-            rx.assignedShp = targetRow._allocations[0].shpIdx;
-          }
-        }
-      });
-      markDirty(); renderEntry(); scheduleSave();
-    } else {
-      targetRow.loadedPackages = '';
-      targetRow.loadStatus = '';
-      markDirty(); renderEntry(); scheduleSave();
+    if (!canMutateOperation(ref)) {
+      toast(AR() ? '⚠️ يجب تفعيل وضع التعديل أولاً لإجراء أي تغييرات' : 'Please enable Edit mode first to make changes', 'error');
+      return;
     }
+    const S = ship.shpSpans?.length || 1;
+
+    if (!Array.isArray(targetRow._allocations) || !targetRow._allocations.length) {
+      if (targetRow.assignedShp != null) {
+        const curShp = parseInt(targetRow.assignedShp, 10);
+        targetRow._allocations = [{ shpIdx: curShp, pkgs: parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0 }];
+      } else if (S === 1) {
+        targetRow._allocations = [{ shpIdx: 0, pkgs: parseInt(normalizeDigits(targetRow.loadedPackages || '0'), 10) || 0 }];
+        targetRow.assignedShp = 0;
+      } else {
+        targetRow._allocations = [];
+      }
+    }
+
+    const idx = targetRow._allocations.findIndex(x => x.shpIdx === shpIdx);
+    if (idx >= 0) targetRow._allocations.splice(idx, 1);
+
+    const hasAllocs = targetRow._allocations.length > 0;
+    const sum = hasAllocs ? targetRow._allocations.reduce((acc, x) => acc + (parseInt(normalizeDigits(String(x.pkgs || '0')), 10) || 0), 0) : 0;
+    const grp = groupRows(ship, COLS[dir].find(c => c.k === 'loadedPackages'), truckRowIndex);
+    const calcStatus = computeAllocLoadStatus(ship, dir, targetRow._allocations, sum) || (sum > 0 ? 'Full' : '');
+    grp.forEach(r => {
+      const rx = rows[r];
+      if (rx) {
+        rx._allocations = hasAllocs ? targetRow._allocations.map(x => ({ ...x })) : [];
+        rx.loadedPackages = sum > 0 ? String(sum) : '';
+        rx.loadStatus = calcStatus;
+        if (!hasAllocs) {
+          rx.assignedShp = null;
+        } else if (rx.assignedShp === shpIdx) {
+          rx.assignedShp = targetRow._allocations[0].shpIdx;
+        }
+      }
+    });
+    saveShipmentAllocationsDraft(dir, ship?.ref);
+    markDirty(); renderEntry(); scheduleSave();
   }
 
   function openShipmentBreakdown(shipNoOrVal, rowIndex) {
@@ -4844,6 +4764,14 @@ export function createFtlEngine(root, options = {}) {
     const S = ship?.shpSpans?.length || 0;
     const T = ship ? truckCount(ship) : 0;
     const isSGreater = S > T;
+    const ref = ship?.ref || '';
+    const isEditMode = Boolean(ref && isModalEditActive(ref, rowIndex, 'shipment'));
+    const isSaving = Boolean(ref && SAVING_SHIPS.has(ref));
+    LAST_OPEN_MANIFEST = { type: 'shipment', ident: shipNoOrVal, rowIndex, ref };
+    if (!MANIFEST_GRID_SCROLL) {
+      const g = root.querySelector('.egrid');
+      if (g) MANIFEST_GRID_SCROLL = { left: g.scrollLeft, top: g.scrollTop };
+    }
 
     if ($('shipmentBreakdownTitle')) {
       $('shipmentBreakdownTitle').textContent = AR()
@@ -4855,11 +4783,38 @@ export function createFtlEngine(root, options = {}) {
       pillsEl.innerHTML = `<div class="air-ship-badge">✈️ HAWB ${esc(hawb || '—')}</div>`;
     }
 
+    const actionsEl = $('shipmentBreakdownActions');
+    if (actionsEl) {
+      if (!isEditMode) {
+        actionsEl.innerHTML = `
+          <button type="button" class="manifest-action-btn edit" onclick="__FTL__.startEditFromManifest('${esc(ref)}', '${esc(shpIdent)}', ${rowIndex}, 'shipment')" title="${AR() ? 'تفعيل وضع التعديل لتوزيع طرود الشحنة على الشاحنات' : 'Enable edit mode'}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:750;background:#ffffff;color:#166534;border:1.5px solid #86efac;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.12);transition:all 0.15s">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            <span>${AR() ? 'تعديل التوزيع' : 'Edit Allocation'}</span>
+          </button>
+        `;
+      } else if (ACTIVE_EDIT_SHIPS.has(ref)) {
+        actionsEl.innerHTML = `
+          <button type="button" class="manifest-action-btn done" onclick="__FTL__.closeM('shipmentBreakdownModal')" style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:8px;font-size:12.5px;font-weight:750;background:#16a34a;color:#ffffff;border:none;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);transition:all 0.15s">
+            <span>✓ ${AR() ? 'تم وتطبيق التوزيع' : 'Done & Apply'}</span>
+          </button>
+        `;
+      } else {
+        actionsEl.innerHTML = `
+          <button type="button" class="manifest-action-btn save" onclick="__FTL__.saveFromManifest('${esc(ref)}', '${esc(shpIdent)}', ${rowIndex}, 'shipment')" ${isSaving ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:750;background:#10b981;color:#ffffff;border:none;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.15);transition:all 0.15s">
+            ${isSaving ? (AR() ? '⏳ جاري الحفظ...' : 'Saving...') : '💾 ' + (AR() ? 'حفظ التوزيع' : 'Save Allocation')}
+          </button>
+          <button type="button" class="manifest-cancel-btn" onclick="__FTL__.cancelFromManifest('${esc(ref)}', '${esc(shpIdent)}', ${rowIndex}, 'shipment')" ${isSaving ? 'disabled' : ''} style="display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:650;background:#ffffff;color:#475569;border:1px solid #cbd5e1;cursor:pointer">
+            ✕ ${AR() ? 'إلغاء' : 'Cancel'}
+          </button>
+        `;
+      }
+    }
+
     let totalLoadedAcrossTrucks = 0;
     let tblRows = '';
     let carryingTrucksCount = 0;
 
-    if (isSGreater && curShpIdx >= 0) {
+    if (curShpIdx >= 0) {
       const breakdownTrucks = [];
       const seen = new Set();
       ship.rows.forEach((rx, k) => {
@@ -4880,6 +4835,9 @@ export function createFtlEngine(root, options = {}) {
             hasAlloc = true;
             pkgsOnTruck = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
           }
+        } else if (S === 1 && ship && shpSpan && k >= shpSpan[0] && k < shpSpan[0] + shpSpan[1]) {
+          hasAlloc = true;
+          pkgsOnTruck = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
         }
         if (hasAlloc) {
           breakdownTrucks.push({ r, pkgsOnTruck, trkNo, rx });
@@ -4901,24 +4859,28 @@ export function createFtlEngine(root, options = {}) {
           const mob = r.mob || '—';
           const pkgsOnTruck = item.pkgsOnTruck;
           const sharePct = totalShipmentPkgs > 0 ? Math.round((pkgsOnTruck / totalShipmentPkgs) * 100) : 0;
+          const pkgsCellHtml = isEditMode
+            ? `<input type="number" min="0" value="${pkgsOnTruck > 0 ? pkgsOnTruck : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#059669" onchange="__FTL__.updateShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, ${item.rx}, this.value);__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex})">`
+            : `<span style="display:inline-block;min-width:55px;padding:3px 8px;border-radius:6px;font-weight:800;font-size:13.5px;text-align:center;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0">${pkgsOnTruck > 0 ? `${pkgsOnTruck} ${AR() ? 'طرد' : 'pkgs'}` : `<span style="color:#94a3b8">—</span>`}</span>`;
+
+          const actionCellHtml = isEditMode
+            ? `<button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, ${item.rx});__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex})" title="${AR() ? 'إزالة هذه الشاحنة من الشحنة' : 'Remove truck from shipment'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>`
+            : `<span style="color:#94a3b8;font-size:11px;font-weight:600">🔒 ${AR() ? 'للعرض فقط' : 'View only'}</span>`;
+
           return `<tr>
-            <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
-            <td style="font-weight:700;color:#0b4f7a">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
-            <td style="font-weight:600">🏢 ${esc(trucker)}</td>
-            <td style="font-weight:700">👤 ${esc(driver)}</td>
-            <td>${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '—'}</td>
-            <td style="font-weight:800;color:#059669;font-size:14px">
-              <input type="number" min="0" value="${pkgsOnTruck > 0 ? pkgsOnTruck : ''}" placeholder="${AR() ? 'أدخل الطرود' : '0'}" style="width:75px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:4px;font-weight:800;text-align:center;color:#059669" onchange="__FTL__.updateShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, ${item.rx}, this.value);__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex})">
-            </td>
-            <td>
+            <td style="font-weight:700;color:#64748b;text-align:center;width:38px">${idx + 1}</td>
+            <td style="font-weight:700;color:#0b4f7a;white-space:nowrap">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
+            <td style="font-weight:600;white-space:nowrap">🏢 ${esc(trucker)}</td>
+            <td style="font-weight:700;white-space:nowrap">👤 ${esc(driver)}</td>
+            <td style="white-space:nowrap">${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '<span style="color:#94a3b8">—</span>'}</td>
+            <td style="font-weight:800;color:#059669;font-size:14px;white-space:nowrap">${pkgsCellHtml}</td>
+            <td style="white-space:nowrap">
               <div class="mini-bar-wrap">
                 <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${sharePct}%"></div></div>
                 <span class="mini-bar-text">${sharePct}%</span>
               </div>
             </td>
-            <td style="text-align:center">
-              <button type="button" class="delbtn" style="background:#fee2e2;border:none;border-radius:4px;color:#dc2626;cursor:pointer;padding:3px 8px;font-weight:700;font-size:11px" onclick="__FTL__.removeShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, ${item.rx});__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex})" title="${AR() ? 'إزالة هذه الشاحنة من الشحنة' : 'Remove truck from shipment'}">🗑️ ${AR() ? 'إزالة' : 'Remove'}</button>
-            </td>
+            <td style="text-align:center;white-space:nowrap">${actionCellHtml}</td>
           </tr>`;
         }).join('');
       }
@@ -4934,13 +4896,13 @@ export function createFtlEngine(root, options = {}) {
         const pkgsOnTruck = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
         const sharePct = totalShipmentPkgs > 0 ? Math.round((pkgsOnTruck / totalShipmentPkgs) * 100) : (shpRows.length === 1 ? 100 : 0);
         return `<tr>
-          <td style="font-weight:700;color:#64748b;text-align:center">${idx + 1}</td>
-          <td style="font-weight:700;color:#0b4f7a">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
-          <td style="font-weight:600">🏢 ${esc(trucker)}</td>
-          <td style="font-weight:700">👤 ${esc(driver)}</td>
-          <td>${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '—'}</td>
-          <td style="font-weight:800;color:#059669;font-size:14px">${pkgsOnTruck} ${AR() ? 'طرد' : 'pkgs'}</td>
-          <td>
+          <td style="font-weight:700;color:#64748b;text-align:center;width:38px">${idx + 1}</td>
+          <td style="font-weight:700;color:#0b4f7a;white-space:nowrap">🚚 ${esc(plate)} · <small style="font-weight:600;color:#64748b">${esc(truckType)}</small></td>
+          <td style="font-weight:600;white-space:nowrap">🏢 ${esc(trucker)}</td>
+          <td style="font-weight:700;white-space:nowrap">👤 ${esc(driver)}</td>
+          <td style="white-space:nowrap">${mob && mob !== '—' ? `<a href="tel:${esc(mob)}" class="driver-call-btn">📞 ${esc(mob)}</a>` : '<span style="color:#94a3b8">—</span>'}</td>
+          <td style="font-weight:800;color:#059669;font-size:14px;white-space:nowrap">${pkgsOnTruck} ${AR() ? 'طرد' : 'pkgs'}</td>
+          <td style="white-space:nowrap">
             <div class="mini-bar-wrap">
               <div class="mini-bar-track"><div class="mini-bar-fill" style="width:${sharePct}%"></div></div>
               <span class="mini-bar-text">${sharePct}%</span>
@@ -4957,43 +4919,52 @@ export function createFtlEngine(root, options = {}) {
     let reconNotice = '';
     if (recon && recon.totalShipmentPkgs > 0) {
       reconNotice = `<div class="manifest-recon-footer">
-        <span class="manifest-recon-title">📦 ${AR() ? 'ميزان طرود العملية ككل:' : 'Full Operation Package Balance:'}</span>
-        <span class="manifest-recon-stat"><b>${recon.totalShipmentPkgs}</b> ${AR() ? 'طرد إجمالي الشحنات' : 'total shipment pkgs'}</span>
-        <span>·</span>
-        <span class="manifest-recon-stat" style="color:#059669"><b>${recon.totalLoadedPkgs}</b> ${AR() ? 'محمل على جميع السيارات' : 'loaded on all trucks'}</span>
-        <span>·</span>
-        <span class="manifest-recon-stat" style="color:${recon.diff > 0 ? '#b45309' : recon.diff < 0 ? '#b91c1c' : '#059669'}">
-          <b>${recon.diff > 0 ? (AR() ? `متبقي ${recon.diff} طرد لم يُحمل بعد` : `${recon.diff} pkgs remaining`) : recon.diff < 0 ? (AR() ? `تحذير: زائد +${Math.abs(recon.diff)} طرد` : `+${Math.abs(recon.diff)} pkgs overload`) : (AR() ? '✓ تم توزيع كل الطرود بالكامل' : '✓ Fully balanced')}</b>
-        </span>
+        <div class="manifest-recon-title">📦 ${AR() ? 'ميزان طرود العملية ككل:' : 'Full Operation Package Balance:'}</div>
+        <div class="manifest-recon-items">
+          <span class="manifest-recon-chip"><b>${recon.totalShipmentPkgs}</b> ${AR() ? 'طرد إجمالي الشحنات' : 'total shipment pkgs'}</span>
+          <span class="manifest-recon-chip emerald"><b>${recon.totalLoadedPkgs}</b> ${AR() ? 'محمل على السيارات' : 'loaded on all trucks'}</span>
+          <span class="manifest-recon-status-badge ${recon.diff === 0 ? 'balanced' : recon.diff < 0 ? 'overload' : 'remaining'}">
+            <b>${recon.diff > 0 ? (AR() ? `متبقي ${recon.diff} طرد لم يُحمل بعد` : `${recon.diff} pkgs remaining`) : recon.diff < 0 ? (AR() ? `تحذير: زائد +${Math.abs(recon.diff)} طرد` : `+${Math.abs(recon.diff)} pkgs overload`) : (AR() ? '✓ تم توزيع كل الطرود بالكامل' : '✓ Fully balanced')}</b>
+          </span>
+        </div>
       </div>`;
     }
 
     let truckAdderHtml = '';
     if (ship && Array.isArray(ship.shpSpans)) {
-      const distinctTrucks = [];
-      const seenT = new Set();
-      ship.rows.forEach((rx, k) => {
-        const r = rows[rx];
-        const tNo = ship.trkOf?.[k] || (k + 1);
-        if (seenT.has(tNo)) return;
-        seenT.add(tNo);
-        const pl = (r?.cntr && r.cntr.trim()) ? r.cntr.trim() : (AR() ? `شاحنة ${tNo}` : `Truck ${tNo}`);
-        const dr = (r?.driver && r.driver.trim()) ? ` · ${r.driver.trim()}` : '';
-        distinctTrucks.push({ rx, tNo, label: pl + dr });
-      });
+      if (isEditMode) {
+        const distinctTrucks = [];
+        const seenT = new Set();
+        ship.rows.forEach((rx, k) => {
+          const r = rows[rx];
+          const tNo = ship.trkOf?.[k] || (k + 1);
+          if (seenT.has(tNo)) return;
+          seenT.add(tNo);
+          const pl = (r?.cntr && r.cntr.trim()) ? r.cntr.trim() : (AR() ? `شاحنة ${tNo}` : `Truck ${tNo}`);
+          const dr = (r?.driver && r.driver.trim()) ? ` · ${r.driver.trim()}` : '';
+          distinctTrucks.push({ rx, tNo, label: pl + dr });
+        });
 
-      const trkOptions = distinctTrucks.map(t => `<option value="${t.rx}">${esc(t.label)}</option>`).join('');
+        const trkOptions = distinctTrucks.map(t => `<option value="${t.rx}">${esc(t.label)}</option>`).join('');
 
-      truckAdderHtml = `
-        <div class="coload-adder-bar" style="margin-top:14px;padding:12px;background:#f0fdf4;border:1px dashed #86efac;border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <span style="font-weight:800;color:#166534;font-size:13px">➕ ${AR() ? 'تحميل طرود من هذه الشحنة على سيارة:' : 'Allocate packages to a truck:'}</span>
-          <select id="shipAllocTruckSelect" style="padding:6px 10px;border-radius:6px;border:1px solid #86efac;font-weight:700;font-size:12px">
-            ${trkOptions}
-          </select>
-          <input type="number" id="shipAllocPkgsInput" placeholder="${AR() ? 'عدد الطرود' : 'Pkgs count'}" style="width:110px;padding:6px 10px;border-radius:6px;border:1px solid #86efac;font-weight:700;font-size:12px">
-          <button type="button" class="ebtn" style="background:#16a34a;color:#fff;font-weight:800;border:none;border-radius:6px;padding:6px 14px;cursor:pointer" onclick="const tEl=document.getElementById('shipAllocTruckSelect');const pEl=document.getElementById('shipAllocPkgsInput');if(tEl&&pEl&&pEl.value){__FTL__.addShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, parseInt(tEl.value, 10), parseInt(pEl.value, 10));__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex});}">➕ ${AR() ? 'إضافة للشاحنة' : 'Add to Truck'}</button>
-        </div>
-      `;
+        truckAdderHtml = `
+          <div class="coload-adder-bar" style="margin-top:14px;padding:12px;background:#f0fdf4;border:1px dashed #86efac;border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-weight:800;color:#166534;font-size:13px">➕ ${AR() ? 'تحميل طرود من هذه الشحنة على سيارة:' : 'Allocate packages to a truck:'}</span>
+            <select id="shipAllocTruckSelect" style="padding:6px 10px;border-radius:6px;border:1px solid #86efac;font-weight:700;font-size:12px">
+              ${trkOptions}
+            </select>
+            <input type="number" id="shipAllocPkgsInput" placeholder="${AR() ? 'عدد الطرود' : 'Pkgs count'}" style="width:110px;padding:6px 10px;border-radius:6px;border:1px solid #86efac;font-weight:700;font-size:12px">
+            <button type="button" class="ebtn" style="background:#16a34a;color:#fff;font-weight:800;border:none;border-radius:6px;padding:6px 14px;cursor:pointer" onclick="const tEl=document.getElementById('shipAllocTruckSelect');const pEl=document.getElementById('shipAllocPkgsInput');if(tEl&&pEl&&pEl.value){__FTL__.addShipmentTruckAllocation('${esc(ship ? ship.ref : '')}', ${curShpIdx}, parseInt(tEl.value, 10), parseInt(pEl.value, 10));__FTL__.openShipmentBreakdown('${esc(shpIdent)}', ${rowIndex});}">➕ ${AR() ? 'إضافة للشاحنة' : 'Add to Truck'}</button>
+          </div>
+        `;
+      } else {
+        truckAdderHtml = `
+          <div class="coload-adder-bar view-only" style="margin-top:14px;padding:10px 16px;background:rgba(240, 253, 244, 0.7);border:1px dashed #86efac;border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+            <span style="font-weight:650;color:#166534;font-size:12.5px">🔒 ${AR() ? 'كشف الشحنة في وضع القراءة فقط. اضغط على زر "تعديل التوزيع" بالأعلى لإضافة أو تعديل الحمولات على الشاحنات.' : 'Shipment distribution is in view-only mode. Click "Edit Allocation" above to modify truck allocations.'}</span>
+            <button type="button" onclick="__FTL__.startEditFromManifest('${esc(ref)}', '${esc(shpIdent)}', ${rowIndex}, 'shipment')" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:5px 14px;font-weight:750;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:5px">✏️ ${AR() ? 'تعديل التوزيع الآن' : 'Edit Allocation Now'}</button>
+          </div>
+        `;
+      }
     }
 
     $('shipmentBreakdownBody').innerHTML = `
@@ -5032,7 +5003,7 @@ export function createFtlEngine(root, options = {}) {
               <th>${AR() ? 'رقم الموبايل' : 'Mobile'}</th>
               <th>${AR() ? 'الطرود مع السائق' : 'Packages on Truck'}</th>
               <th>${AR() ? 'نسبة المساهمة' : 'Share'}</th>
-              ${isSGreater ? `<th style="width:70px;text-align:center">${AR() ? 'إجراء' : 'Action'}</th>` : ''}
+              ${curShpIdx >= 0 ? `<th style="width:70px;text-align:center">${AR() ? 'إجراء' : 'Action'}</th>` : ''}
             </tr>
           </thead>
           <tbody>${tblRows}</tbody>
@@ -5054,6 +5025,9 @@ export function createFtlEngine(root, options = {}) {
   }
   function renderEntry() {
     const dir = EDIR, cols = COLS[dir], E = t('entry');
+    const gridEl = root.querySelector('.egrid');
+    const prevScrollLeft = gridEl ? gridEl.scrollLeft : null;
+    const prevScrollTop = gridEl ? gridEl.scrollTop : null;
     const searchFocused = !!document.activeElement?.closest('.tripsearch');
     if (TRIP_SEARCH_DIR !== dir + LANG) renderTripSearch();
     renderOpForm(); renderTripSort(); renderSysBar();
@@ -5165,7 +5139,10 @@ export function createFtlEngine(root, options = {}) {
           inner = editorHTML(c, v, i);
         } else if (c.k === 'cntr') {
           let extraBadges = '';
-          const isMergedTruck = merged && sp.len > 1;
+          const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+          const isMergedTruck = isSGreater
+            ? (Array.isArray(r._allocations) && r._allocations.length > 1)
+            : (merged && sp.len > 1);
           const cleanPlate = v.trim().toUpperCase();
           const trkNo = ship?.trkOf?.[ri];
           const isUnassignedTruck = !cleanPlate && (!trkNo || trkNo === 0);
@@ -5179,8 +5156,9 @@ export function createFtlEngine(root, options = {}) {
           const shareIdx = isUnassignedTruck ? 0 : allTruckRows.indexOf(i) + 1;
 
           if (isMergedTruck) {
-            extraBadges += `<span class="shared-truck-tag" style="background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1;font-size:9.5px;font-weight:750;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `عربة موحدة مدموجة بين ${sp.len} شحنات` : `Unified truck carrying ${sp.len} shipments`}"><span class="shared-truck-dot" style="background:#3b82f6;width:5px;height:5px;border-radius:50%;display:inline-block"></span>🚚 ${AR() ? `عربة موحدة مدموجة` : `Merged Truck`}</span>`;
-          } else if (totalShares > 1) {
+            const trkShipCount = isSGreater ? (r._allocations?.length || sp.len) : sp.len;
+            extraBadges += `<span class="shared-truck-tag" style="background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1;font-size:9.5px;font-weight:750;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `عربة موحدة مدموجة بين ${trkShipCount} شحنات` : `Unified truck carrying ${trkShipCount} shipments`}"><span class="shared-truck-dot" style="background:#3b82f6;width:5px;height:5px;border-radius:50%;display:inline-block"></span>🚚 ${AR() ? `عربة موحدة مدموجة` : `Merged Truck`}</span>`;
+          } else if (totalShares > 1 && !isSGreater) {
             extraBadges += `<span class="shared-truck-tag multi" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:9.5px;font-weight:750;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `هذه الشاحنة مشتركة في ${totalShares} شحنات [حصة ${shareIdx} من ${totalShares}]` : `Shared truck (${shareIdx} of ${totalShares})`}"><span class="shared-truck-dot" style="background:#2563eb;width:5px;height:5px;border-radius:50%;display:inline-block"></span>${AR() ? `مشتركة [${shareIdx}/${totalShares}]` : `Shared [${shareIdx}/${totalShares}]`}</span>`;
           }
 
@@ -5188,8 +5166,9 @@ export function createFtlEngine(root, options = {}) {
             ? `<button type="button" class="quick-coload-btn" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'تحميل مشترك / تقسيم حمولة العربة' : 'Co-load / Split truck load'}" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:9.5px;font-weight:750;border-radius:4px;padding:1px 5px;cursor:pointer">+ ${AR() ? 'مشترك' : 'Co-load'}</button>`
             : '';
 
-          const isSGreaterTruck = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
-          const trkLoadedTotal = isUnassignedTruck ? 0 : (isSGreaterTruck ? (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0) : allTruckRows.reduce((acc, rx) => acc + (parseInt(normalizeDigits(rows[rx]?.loadedPackages || '0'), 10) || 0), 0));
+          const trkLoadedTotal = isUnassignedTruck ? 0 : ((Array.isArray(r._allocations) && r._allocations.length)
+            ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
+            : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0));
           const trkLoadBadge = trkLoadedTotal > 0
             ? `<span class="trk-total-pkgs-pill" style="font-size:9.5px;font-weight:750;color:#0369a1;background:#f0f9ff;border:1px solid #7dd3fc;border-radius:5px;padding:1px 5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `إجمالي ما تحمله الشاحنة: ${trkLoadedTotal} طرد` : `Truck total cargo: ${trkLoadedTotal} pkgs`}">📦 ${AR() ? 'الحمولة:' : 'Load:'} <b>${trkLoadedTotal}</b></span>`
             : '';
@@ -5206,23 +5185,19 @@ export function createFtlEngine(root, options = {}) {
 
           inner = `<span class="cv" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:4px"><div style="display:inline-flex;align-items:center;justify-content:center;gap:5px"><span class="clickable-cell-badge" ${badgeClick} title="${badgeTitle}" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-weight:750;border-radius:9px;font-size:12px;background:#f0f9ff;border:1px solid #7dd3fc;color:#0369a1;cursor:pointer;white-space:nowrap"><span ${iconClick} style="cursor:pointer" title="${clickTitle}">🚚</span> <span>${trkText}</span></span>${quickColoadBtn}</div>${badgesRow}</span>`;
         } else if (c.k === 'loadedPackages') {
-          const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
-          let trkLoadedTotal = 0;
-          if (isSGreater) {
-            trkLoadedTotal = (Array.isArray(r._allocations) && r._allocations.length)
-              ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
-              : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0);
-          } else {
-            trkLoadedTotal = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
-          }
+          const trkLoadedTotal = (Array.isArray(r._allocations) && r._allocations.length)
+            ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
+            : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0);
           const disp = trkLoadedTotal > 0 ? trkLoadedTotal : (v || '');
           inner = `<span class="cv">${esc(displayValue(c, disp)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>`;
         } else if (c.k === 'packages') {
           const totalPkgs = parseInt(normalizeDigits(r.packages || '0'), 10) || 0;
           const sIdx = ship?.shpSpans ? ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l) : -1;
           const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+          const isMultiShip = ship?.shpSpans && ship.shpSpans.length > 1;
+          const hasAnyAlloc = ship && ship.rows && ship.rows.some(rx => (Array.isArray(rows[rx]?._allocations) && rows[rx]._allocations.length > 0) || (rows[rx]?.assignedShp != null && rows[rx]?.assignedShp !== ''));
           let shpLoadedTotal = 0;
-          if (isSGreater && sIdx >= 0) {
+          if ((isSGreater || hasAnyAlloc || isMultiShip) && sIdx >= 0) {
             const seenTrucks = new Set();
             ship.rows.forEach(rx => {
               const row = rows[rx];
@@ -5238,6 +5213,14 @@ export function createFtlEngine(root, options = {}) {
               } else if (row && row.assignedShp !== undefined && row.assignedShp !== null && row.assignedShp !== '') {
                 if (parseInt(row.assignedShp, 10) === sIdx) {
                   shpLoadedTotal += (parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0);
+                }
+              } else if (!isMultiShip) {
+                const trkRi = ship.rows.indexOf(rx);
+                if (ship.shpSpans && sIdx >= 0) {
+                  const spSpan = ship.shpSpans[sIdx];
+                  if (spSpan && trkRi >= spSpan[0] && trkRi < spSpan[0] + spSpan[1]) {
+                    shpLoadedTotal += (parseInt(normalizeDigits(row?.loadedPackages || '0'), 10) || 0);
+                  }
                 }
               }
             });
@@ -5263,17 +5246,45 @@ export function createFtlEngine(root, options = {}) {
         } else if (c.k === 'loadStatus') {
           const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
           if (isSGreater) {
-            const loaded = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
-            if (loaded > 0) {
-              inner = `<span class="cv"><span class="manifest-tag-full" title="${AR() ? 'حمولة كاملة (Full)' : 'Full Load'}">✓ ${AR() ? 'كلي' : 'Full'}</span></span>`;
+            const rawAllocs = Array.isArray(r._allocations) && r._allocations.length ? r._allocations : null;
+            const activeAllocs = rawAllocs ? rawAllocs.filter(a => (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0) > 0) : [];
+            let allocsToUse = null;
+            if (activeAllocs.length > 0) {
+              allocsToUse = activeAllocs;
+            } else if (rawAllocs && rawAllocs.length > 0) {
+              allocsToUse = rawAllocs;
+            } else if (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '') {
+              const p = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+              allocsToUse = [{ shpIdx: parseInt(r.assignedShp, 10), pkgs: p }];
             } else {
-              inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
+              const curSpanIdx = (ship && Array.isArray(ship.shpSpans))
+                ? ship.shpSpans.findIndex(([a, l]) => ri >= a && ri < a + l)
+                : -1;
+              const p = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
+              allocsToUse = [{ shpIdx: curSpanIdx >= 0 ? curSpanIdx : 0, pkgs: p }];
             }
-          } else {
-            let loaded = parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0;
-            let totalPkgs = parseInt(normalizeDigits(r.packages || '0'), 10) || 0;
 
-            if (loaded > 0) {
+            const getShpTotal = (sIdx) => {
+              if (ship && Array.isArray(ship.shpSpans) && sIdx >= 0 && sIdx < ship.shpSpans.length) {
+                const sStart = ship.shpSpans[sIdx][0];
+                const sRow = rows[ship.rows[sStart]];
+                return parseInt(normalizeDigits(sRow?.packages || '0'), 10) || 0;
+              }
+              return parseInt(normalizeDigits(r.packages || '0'), 10) || 0;
+            };
+
+            const trkLoadedTotal = (Array.isArray(r._allocations) && r._allocations.length)
+              ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
+              : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0);
+
+            if (trkLoadedTotal <= 0) {
+              inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
+            } else if (allocsToUse.length === 1) {
+              const alloc = allocsToUse[0];
+              const sIdx = alloc.shpIdx !== undefined && alloc.shpIdx !== null ? parseInt(alloc.shpIdx, 10) : 0;
+              const loaded = parseInt(normalizeDigits(String(alloc.pkgs || trkLoadedTotal)), 10) || trkLoadedTotal;
+              const totalPkgs = getShpTotal(sIdx);
+
               if (totalPkgs > 0 && loaded > totalPkgs) {
                 const extra = loaded - totalPkgs;
                 inner = `<span class="cv"><span class="manifest-tag-overload" style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;font-weight:800;border-radius:5px;padding:2px 8px;font-size:11px" title="${AR() ? `حمولة زائدة عن إجمالي بوليصة الشحنة (${loaded} من أصل ${totalPkgs} · زيادة ${extra} طرد)` : `Overload: +${extra} pkgs`}">🚨 ${AR() ? `فائض (+${extra})` : `Over (+${extra})`}</span></span>`;
@@ -5286,8 +5297,48 @@ export function createFtlEngine(root, options = {}) {
                 inner = `<span class="cv"><span class="manifest-tag-full">${loaded} ${AR() ? 'طرد' : 'pkgs'}</span></span>`;
               }
             } else {
-              inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
+              const pctParts = [];
+              const tipParts = [];
+              const badges = [];
+
+              allocsToUse.forEach(alloc => {
+                const sIdx = alloc.shpIdx !== undefined && alloc.shpIdx !== null ? parseInt(alloc.shpIdx, 10) : 0;
+                const p = parseInt(normalizeDigits(String(alloc.pkgs || '0')), 10) || 0;
+                const tot = getShpTotal(sIdx);
+                const sLabel = AR() ? `شحنة ${sIdx + 1}` : `Shipment ${sIdx + 1}`;
+
+                if (tot > 0) {
+                  if (p > tot) {
+                    const extra = p - tot;
+                    pctParts.push(`+${extra}`);
+                    tipParts.push(`${sLabel}: ${p}/${tot} (${AR() ? `فائض +${extra}` : `+${extra}`})`);
+                    badges.push(`<span class="manifest-tag-overload" style="background:#fef2f2;border:1px solid #fca5a5;color:#b91c1c;font-weight:800;border-radius:5px;padding:2px 7px;font-size:10.5px" title="${esc(sLabel)}: ${p}/${tot}">🚨 ${AR() ? 'فائض' : 'Over'}</span>`);
+                  } else if (p === tot) {
+                    pctParts.push('100%');
+                    tipParts.push(`${sLabel}: ${p}/${tot} (100%)`);
+                    badges.push(`<span class="manifest-tag-full" style="padding:2px 7px;font-size:10.5px" title="${esc(sLabel)}: ${p}/${tot} (100%)">✓ ${AR() ? 'كلي' : 'Full'}</span>`);
+                  } else {
+                    const pct = Math.round((p / tot) * 100);
+                    pctParts.push(`${pct}%`);
+                    tipParts.push(`${sLabel}: ${p}/${tot} (${pct}%)`);
+                    badges.push(`<span class="manifest-tag-partial" style="padding:2px 7px;font-size:10.5px" title="${esc(sLabel)}: ${p}/${tot} (${pct}%)">⚡ ${AR() ? `جزئي (${pct}%)` : `Partial (${pct}%)`}</span>`);
+                  }
+                } else if (p > 0) {
+                  pctParts.push(`${p}p`);
+                  tipParts.push(`${sLabel}: ${p} ${AR() ? 'طرد' : 'pkgs'}`);
+                  badges.push(`<span class="manifest-tag-full" style="padding:2px 7px;font-size:10.5px" title="${esc(sLabel)}: ${p} pkgs">${p} ${AR() ? 'طرد' : 'p'}</span>`);
+                }
+              });
+
+              const tipStr = tipParts.join(' · ');
+              if (badges.length > 0) {
+                inner = `<span class="cv"><div style="display:inline-flex;align-items:center;justify-content:center;gap:4px;flex-wrap:wrap" title="${esc(tipStr)}">${badges.join('')}</div></span>`;
+              } else {
+                inner = `<span class="cv"><span class="ph" style="color:#94a3b8;font-size:12px">—</span></span>`;
+              }
             }
+          } else {
+            inner = `<span class="cv" ${cellTip ? `title="${esc(cellTip)}"` : ''}>${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>`;
           }
         } else {
           inner = `<span class="cv" ${cellTip ? `title="${esc(cellTip)}"` : ''}>${esc(displayValue(c, v)) || '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'}</span>`;
@@ -5388,6 +5439,10 @@ export function createFtlEngine(root, options = {}) {
     });
     $('eBody').innerHTML = html.join('');
     fitEntryGrid();
+    if (gridEl && prevScrollLeft !== null) {
+      gridEl.scrollLeft = prevScrollLeft;
+      gridEl.scrollTop = prevScrollTop;
+    }
     NAV_CELLS = [...$('eBody').querySelectorAll('td.c[tabindex="0"]')].map(td => ({ r: +td.dataset.r, k: td.dataset.k, el: td }));
     $('tripSearchCount').textContent = TRIP_SEARCH[dir].some(r => r.v) ? (AR() ? `${visible.length} من ${Object.keys(SHIPS[dir]).length} شحنة` : `${visible.length} of ${Object.keys(SHIPS[dir]).length} shipments`) : '';
     $('tripCopy').textContent = AR() ? `نسخ المحدد (${TRIP_SELECTED[dir].size})` : `Copy selected (${TRIP_SELECTED[dir].size})`;
@@ -5399,7 +5454,7 @@ export function createFtlEngine(root, options = {}) {
       setCounts(LAST_COUNTS);
     }
     if (EDITING) { const el = root.querySelector(`#eBody td[data-r="${EDITING.r}"][data-k="${EDITING.k}"] .ed`); if (el) { el.focus(); if (el.select) try { el.select(); } catch (e) { } } }
-    else if (CURSOR.r >= 0 && !searchFocused) { const td = root.querySelector(`#eBody td[data-r="${CURSOR.r}"][data-k="${CURSOR.k}"]`); if (td) td.focus({ preventScroll: false }); }
+    else if (CURSOR.r >= 0 && !searchFocused) { const td = root.querySelector(`#eBody td[data-r="${CURSOR.r}"][data-k="${CURSOR.k}"]`); if (td) td.focus({ preventScroll: true }); }
   }
   /* ---------- drag a truck separator to change how many shipments each truck carries ---------- */
   let SEP_DRAG = null;
@@ -5597,6 +5652,14 @@ export function createFtlEngine(root, options = {}) {
     if (!ship) return;
     if (EDITING && !commitEdit()) return;
 
+    for (const r of (ship.rows || [])) {
+      const conflictMsg = shipmentConflict(dir, ENTRY[dir][r], ref, r);
+      if (conflictMsg) {
+        toast(conflictMsg, 'error');
+        return;
+      }
+    }
+
     SAVING_SHIPS.add(ref);
     renderEntry();
 
@@ -5627,7 +5690,18 @@ export function createFtlEngine(root, options = {}) {
         renderEntry();
         return;
       } else {
-        toast(AR() ? '⚠️ تعذر الاتصال بالسيرفر. تم الاحتفاظ بتعديلاتك في مسودة محلية بأمان. اضغط حفظ لإعادة المحاولة.' : 'Could not save. Changes preserved in local draft.');
+        console.error('[FTL saveShipmentEdits error]', err);
+        const status = err.status || err.response?.status;
+        const serverMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+        if (status === 401) {
+          toast(AR() ? '⚠️ انتهت جلسة تسجيل الدخول (401 Unauthorized). تم حفظ تعديلاتك في المسودة، سجّل الدخول مجدداً ثم اضغط حفظ.' : 'Session expired (401 Unauthorized). Changes saved in local draft; please log in again and click Save.', 'error');
+        } else if (status === 403) {
+          toast(AR() ? '⚠️ لا توجد صلاحية لحفظ تعديلات FTL (403 Forbidden).' : 'You do not have permission to edit FTL operations (403 Forbidden).', 'error');
+        } else if (serverMsg && serverMsg !== 'Error') {
+          toast((AR() ? '⚠️ تعذر الحفظ: ' : 'Could not save: ') + serverMsg, 'error');
+        } else {
+          toast(AR() ? '⚠️ تعذر الاتصال بالسيرفر. تم الاحتفاظ بتعديلاتك في مسودة محلية بأمان. اضغط حفظ لإعادة المحاولة.' : 'Could not save. Changes preserved in local draft.');
+        }
         SAVING_SHIPS.delete(ref);
         renderEntry();
         return;
@@ -5635,6 +5709,7 @@ export function createFtlEngine(root, options = {}) {
     }
 
     if (saveSuccess) {
+      saveShipmentAllocationsDraft(dir, ref);
       try {
         localStorage.removeItem(`ftl_draft_${ref}`);
       } catch (e) { }
@@ -5654,11 +5729,21 @@ export function createFtlEngine(root, options = {}) {
 
       delete OP_SNAPSHOTS[ref];
       ACTIVE_EDIT_SHIPS.delete(ref);
+      ACTIVE_MODAL_EDIT.ref = null;
+      ACTIVE_MODAL_EDIT.type = null;
+      ACTIVE_MODAL_EDIT.rowIndex = null;
       SAVING_SHIPS.delete(ref);
       SAVED_AT = new Date();
       DIRTY = false;
 
       renderEntry();
+      if (LAST_OPEN_MANIFEST && LAST_OPEN_MANIFEST.ref === ref) {
+        if (LAST_OPEN_MANIFEST.type === 'truck' && $('truckManifestModal')?.classList.contains('open')) {
+          openTruckManifest(LAST_OPEN_MANIFEST.ident, LAST_OPEN_MANIFEST.rowIndex);
+        } else if (LAST_OPEN_MANIFEST.type === 'shipment' && $('shipmentBreakdownModal')?.classList.contains('open')) {
+          openShipmentBreakdown(LAST_OPEN_MANIFEST.ident, LAST_OPEN_MANIFEST.rowIndex);
+        }
+      }
       toast(AR() ? `✓ تم حفظ تعديلات العملية (${ref}) بنجاح وفك القفل` : `Saved ${ref} successfully`);
     }
   }
@@ -5666,13 +5751,13 @@ export function createFtlEngine(root, options = {}) {
   async function cancelEditShipment(ref) {
     const dir = EDIR;
     const ship = SHIPS[dir][ref];
-    if (!ship) return;
+    if (!ship) return false;
 
     if (OP_SNAPSHOTS[ref]) {
       const isDirty = JSON.stringify(ship.rows.map(idx => ENTRY[dir][idx])) !== JSON.stringify(OP_SNAPSHOTS[ref]);
       if (isDirty) {
         if (!confirm(AR() ? 'هل أنت متأكد من إلغاء التعديلات والتراجع عن التغييرات غير المحفوظة؟' : 'Discard unsaved changes?')) {
-          return;
+          return false;
         }
       }
       ship.rows.forEach((idx, rIdx) => {
@@ -5681,6 +5766,7 @@ export function createFtlEngine(root, options = {}) {
         }
       });
       delete OP_SNAPSHOTS[ref];
+      saveShipmentAllocationsDraft(dir, ref);
     }
 
     try {
@@ -5701,21 +5787,105 @@ export function createFtlEngine(root, options = {}) {
     }
 
     ACTIVE_EDIT_SHIPS.delete(ref);
+    ACTIVE_MODAL_EDIT.ref = null;
+    ACTIVE_MODAL_EDIT.type = null;
+    ACTIVE_MODAL_EDIT.rowIndex = null;
     SAVING_SHIPS.delete(ref);
     EDITING = null;
     renderEntry();
+    if (LAST_OPEN_MANIFEST && LAST_OPEN_MANIFEST.ref === ref) {
+      if (LAST_OPEN_MANIFEST.type === 'truck' && $('truckManifestModal')?.classList.contains('open')) {
+        openTruckManifest(LAST_OPEN_MANIFEST.ident, LAST_OPEN_MANIFEST.rowIndex);
+      } else if (LAST_OPEN_MANIFEST.type === 'shipment' && $('shipmentBreakdownModal')?.classList.contains('open')) {
+        openShipmentBreakdown(LAST_OPEN_MANIFEST.ident, LAST_OPEN_MANIFEST.rowIndex);
+      }
+    }
     toast(AR() ? `تم إلغاء التعديل وفك قفل العملية (${ref})` : `Edit cancelled for ${ref}`);
+    return true;
   }
 
   function restoreDraft(ref) {
     startEditShipment(ref);
   }
 
+  async function startEditFromManifest(ref, ident, rowIndex, type) {
+    if (!ref) return;
+    const dir = EDIR;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship) return;
+
+    if (LIVE && ILS.api?.lockOperation) {
+      try {
+        const lockRes = await ILS.api.lockOperation(ref);
+        if (lockRes && lockRes.isLocked === false) {
+          showConflictModal({
+            title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
+            message: AR() ? `العملية (${ref}) مقفولة ومحجوزة للتعديل بواسطة: ${lockRes.lockedByName || 'موظف آخر'}` : `Operation is currently locked by ${lockRes.lockedByName || 'another user'}`,
+            conflictType: 'LOCKED_BY_OTHER',
+            lockerName: lockRes.lockedByName
+          });
+          return;
+        }
+      } catch (err) {
+        const errMsg = err?.message || String(err);
+        if (errMsg.includes('locked by') || errMsg.includes('مقفولة')) {
+          showConflictModal({
+            title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
+            message: errMsg,
+            conflictType: 'LOCKED_BY_OTHER'
+          });
+          return;
+        }
+        console.warn('lockOperation error:', err);
+      }
+    }
+
+    if (!OP_SNAPSHOTS[ref]) {
+      OP_SNAPSHOTS[ref] = JSON.parse(JSON.stringify(ship.rows.map(idx => ({ ...ENTRY[dir][idx] }))));
+    }
+
+    ACTIVE_MODAL_EDIT.ref = ref;
+    ACTIVE_MODAL_EDIT.type = type;
+    ACTIVE_MODAL_EDIT.rowIndex = rowIndex;
+
+    if (LOCK_HEARTBEATS[ref]) clearInterval(LOCK_HEARTBEATS[ref]);
+    LOCK_HEARTBEATS[ref] = setInterval(() => {
+      if ((ACTIVE_EDIT_SHIPS.has(ref) || ACTIVE_MODAL_EDIT.ref === ref) && LIVE && ILS.api?.lockOperation) {
+        ILS.api.lockOperation(ref).catch(err => console.warn('Heartbeat lock renewal failed:', err));
+      }
+    }, 210000);
+
+    toast(AR() ? `✏️ تم فتح وضع تعديل التوزيع للعملية (${ref})` : `Allocation edit mode opened for ${ref}`);
+    if (type === 'truck') {
+      openTruckManifest(ident, rowIndex);
+    } else {
+      openShipmentBreakdown(ident, rowIndex);
+    }
+  }
+
+  async function saveFromManifest(ref, ident, rowIndex, type) {
+    if (!ref) return;
+    SAVING_SHIPS.add(ref);
+    if (type === 'truck') {
+      openTruckManifest(ident, rowIndex);
+    } else {
+      openShipmentBreakdown(ident, rowIndex);
+    }
+    await saveShipmentEdits(ref);
+  }
+
+  async function cancelFromManifest(ref, ident, rowIndex, type) {
+    if (!ref) return;
+    await cancelEditShipment(ref);
+  }
+
   __on(window, 'pagehide', () => {
-    if (ACTIVE_EDIT_SHIPS.size > 0 && LIVE) {
+    if ((ACTIVE_EDIT_SHIPS.size > 0 || ACTIVE_MODAL_EDIT.ref) && LIVE) {
       const token = localStorage.getItem('accessToken');
       const apiBase = (import.meta.env?.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
-      for (const ref of ACTIVE_EDIT_SHIPS) {
+      const refs = new Set([...ACTIVE_EDIT_SHIPS]);
+      if (ACTIVE_MODAL_EDIT.ref) refs.add(ACTIVE_MODAL_EDIT.ref);
+      for (const ref of refs) {
         try {
           fetch(`${apiBase}/api/v1/ftl/operations/${encodeURIComponent(ref)}/unlock`, {
             method: 'POST',
@@ -5745,20 +5915,72 @@ export function createFtlEngine(root, options = {}) {
     });
   }
 
-  function removeShipmentLocally(ref, i) {
-    const dir = EDIR, ship = SHIPS[dir][ref], drop = ship ? new Set(ship.rows) : new Set([i]), remap = {}, keep = [];
-    ENTRY[dir].forEach((r, ix) => { if (!drop.has(ix)) { remap[ix] = keep.length; keep.push(r); } });
-    const meta = {}; Object.entries(ROWMETA[dir]).forEach(([ix, m]) => { if (remap[ix] !== undefined) meta[remap[ix]] = m; });
-    ENTRY[dir] = keep; ROWMETA[dir] = meta; delete SHIPS[dir][ref]; TRIP_SELECTED[dir].delete(ref);
-    Object.values(SHIPS[dir]).forEach(sh => sh.rows = sh.rows.map(ix => remap[ix]).filter(ix => ix !== undefined));
+  function removeShipmentLocally(ref, dirOrIndex) {
+    let dir = typeof dirOrIndex === 'string' ? dirOrIndex : null;
+    if (!dir) {
+      if (SHIPS.Import && SHIPS.Import[ref]) dir = 'Import';
+      else if (SHIPS.Export && SHIPS.Export[ref]) dir = 'Export';
+      else dir = EDIR;
+    }
+    const ship = SHIPS[dir]?.[ref];
+    const drop = new Set();
+    if (ship && Array.isArray(ship.rows)) {
+      ship.rows.forEach(ix => drop.add(ix));
+    }
+    if (ROWMETA[dir]) {
+      Object.entries(ROWMETA[dir]).forEach(([ix, m]) => {
+        if (m?.ref === ref) drop.add(Number(ix));
+      });
+    }
+    if (typeof dirOrIndex === 'number') {
+      drop.add(dirOrIndex);
+    }
+
+    const remap = {}, keep = [];
+    (ENTRY[dir] || []).forEach((r, ix) => {
+      if (!drop.has(ix)) {
+        remap[ix] = keep.length;
+        keep.push(r);
+      }
+    });
+
+    const meta = {};
+    Object.entries(ROWMETA[dir] || {}).forEach(([ix, m]) => {
+      if (remap[ix] !== undefined) meta[remap[ix]] = m;
+    });
+
+    ENTRY[dir] = keep;
+    ROWMETA[dir] = meta;
+    if (SHIPS[dir]) {
+      delete SHIPS[dir][ref];
+      TRIP_SELECTED[dir]?.delete(ref);
+      Object.values(SHIPS[dir]).forEach(sh => {
+        if (sh && Array.isArray(sh.rows)) {
+          sh.rows = sh.rows.map(ix => remap[ix]).filter(ix => ix !== undefined);
+        }
+      });
+    }
+
     DATA = DATA.filter(r => r._ref !== ref && !(ship?.uploadGroup && r._uploadGroup === ship.uploadGroup));
+
     if (LAST_COUNTS) {
       LAST_COUNTS.inactiveCount = (LAST_COUNTS.inactiveCount || 0) + 1;
       if (dir === 'Import') LAST_COUNTS.activeImportCount = Math.max(0, (LAST_COUNTS.activeImportCount || 0) - 1);
       if (dir === 'Export') LAST_COUNTS.activeExportCount = Math.max(0, (LAST_COUNTS.activeExportCount || 0) - 1);
       setCounts(LAST_COUNTS);
     }
-    CURSOR = { r: -1, k: null }; EDITING = null; markDirty(); renderEntry();
+
+    if (TRIP_PAGE && TRIP_PAGE[dir] > 0) {
+      const activeOps = Object.values(SHIPS[dir] || {}).filter(s => s.status !== 'Delivered' && s.status !== 'Inactive');
+      const maxPages = Math.ceil(activeOps.length / (TRIPS_PER_PAGE || 20));
+      if (TRIP_PAGE[dir] >= maxPages) {
+        TRIP_PAGE[dir] = Math.max(0, maxPages - 1);
+      }
+    }
+
+    CURSOR = { r: -1, k: null };
+    EDITING = null;
+    renderEntry();
     __emit('countsChanged');
   }
   /* ---------- keyboard-first navigation ---------- */
@@ -5868,7 +6090,17 @@ export function createFtlEngine(root, options = {}) {
     if (e.target.closest('.mg') || e.target.closest('.updbtn') || e.target.closest('.ed') || e.target.closest('.status-select')) return;
     const td = e.target.closest('td.c'); if (!td) return;
     if (td.classList.contains('dimmed')) { toast(td.dataset.k === 'cert' ? (AR() ? 'التخليص بوليصة (BOSLA) — خانة رقم الشهادة مش مستخدمة' : 'BOSLA clearance — Certificate Number is not used') : (AR() ? 'التخليص شهادة (CERT) — منطقة الجمارك محددة تلقائياً بـ Cairo Airport Customs وغير قابلة للتعديل' : 'CERT clearance — Customs Area is fixed to Cairo Airport Customs and locked')); return; }
-    if (td.classList.contains('locked')) { toast(t('entry').lockedToast); return; }
+    if (td.classList.contains('locked')) {
+      const r = +td.dataset.r;
+      const ship = !isNaN(r) ? rowShip(EDIR, r) : null;
+      const isEditing = ship?.ref && ACTIVE_EDIT_SHIPS.has(ship.ref);
+      if (!isEditing) {
+        toast(t('entry').editFirstToast || (AR() ? 'اضغط على زر "تعديل" أولاً لبدء تعديل بيانات هذه العملية' : 'Please click "Edit" first to modify this operation'));
+      } else {
+        toast(t('entry').lockedToast);
+      }
+      return;
+    }
     if (EDITING && !commitEdit()) return;
     const same = CURSOR.r === +td.dataset.r && CURSOR.k === td.dataset.k;
     CURSOR = { r: +td.dataset.r, k: td.dataset.k };
@@ -6352,9 +6584,40 @@ export function createFtlEngine(root, options = {}) {
     if (row.updDate !== undefined && row.updDate !== null) fields.updDate = String(row.updDate);
     return fields;
   }
+  function getShipmentAllocationsMap(dir, ref) {
+    const sh = SHIPS[dir]?.[ref];
+    if (!sh || !sh.rows) return {};
+    const map = {};
+    sh.rows.forEach((rIdx, ord) => {
+      const r = ENTRY[dir][rIdx];
+      if (r) {
+        const allocs = Array.isArray(r._allocations) ? r._allocations : [];
+        const assigned = (r.assignedShp !== undefined && r.assignedShp !== null && r.assignedShp !== '')
+          ? parseInt(r.assignedShp, 10)
+          : null;
+        if (allocs.length > 0 || assigned !== null) {
+          map[ord] = {
+            assignedShp: assigned,
+            allocations: allocs.map(a => ({ shpIdx: parseInt(a.shpIdx, 10), pkgs: parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0 }))
+          };
+        }
+      }
+    });
+    return map;
+  }
+  function saveShipmentAllocationsDraft(arg1, arg2) {
+    const dir = (arg1 === 'Import' || arg1 === 'Export') ? arg1 : ((arg2 === 'Import' || arg2 === 'Export') ? arg2 : EDIR);
+    const ref = (arg1 !== 'Import' && arg1 !== 'Export') ? arg1 : arg2;
+    if (!ref) return;
+    try {
+      const map = getShipmentAllocationsMap(dir, ref);
+      localStorage.setItem(`ftl_allocations_${ref}`, JSON.stringify(map));
+    } catch (e) { }
+  }
   function serializeSingleShipment(dir, ref) {
     const sh = SHIPS[dir]?.[ref];
     if (!sh) return null;
+    const truckAllocations = getShipmentAllocationsMap(dir, ref);
     return {
       ref: sh.ref,
       direction: dir,
@@ -6365,6 +6628,7 @@ export function createFtlEngine(root, options = {}) {
       shpSpans: sh.shpSpans || [],
       trkSpans: sh.trkSpans || [],
       trkOf: sh.trkOf || [],
+      allocations: truckAllocations,
       day: sh.day || '',
       at: sh.at || '',
       enteredBy: { id: OP_USER_ID || 'local', displayName: sh.user || OP_USER },
@@ -6387,7 +6651,7 @@ export function createFtlEngine(root, options = {}) {
   }
   function workspaceShipments() {
     return ['Import', 'Export'].flatMap(direction => Object.values(SHIPS[direction]).map(sh => ({
-      ref: sh.ref, direction, status: sh.status, per: sh.per || 1, shp: (sh.shpSpans || []).length || 1, trk: truckCount(sh), shpSpans: sh.shpSpans || [], trkSpans: sh.trkSpans || [], trkOf: sh.trkOf || [], day: sh.day || '', at: sh.at || '',
+      ref: sh.ref, direction, status: sh.status, per: sh.per || 1, shp: (sh.shpSpans || []).length || 1, trk: truckCount(sh), shpSpans: sh.shpSpans || [], trkSpans: sh.trkSpans || [], trkOf: sh.trkOf || [], allocations: getShipmentAllocationsMap(direction, sh.ref), day: sh.day || '', at: sh.at || '',
       enteredBy: { id: OP_USER_ID || 'local', displayName: sh.user || OP_USER },
       unmerged: [...sh.unmerged],
       trips: sh.rows.map((i, ordinal) => ({
@@ -6506,6 +6770,8 @@ export function createFtlEngine(root, options = {}) {
     if (slot) slot.style.display = 'none';
     const opForm = $('opForm');
     if (opForm) opForm.style.display = '';
+    const opWrap = root.querySelector('.opwrap');
+    if (opWrap) opWrap.style.display = '';
     $('deliveredOpen')?.classList.remove('on');
     $('inactiveOpen')?.classList.remove('on');
     renderEntry();
@@ -6619,10 +6885,12 @@ export function createFtlEngine(root, options = {}) {
     const wrap = $('entryGridWrap');
     const slot = $('entryArchiveSlot');
     const opForm = $('opForm');
+    const opWrap = root.querySelector('.opwrap');
     if (tab === 'Import' || tab === 'Export') {
       if (wrap) wrap.style.display = '';
       if (slot) slot.style.display = 'none';
       if (opForm) opForm.style.display = '';
+      if (opWrap) opWrap.style.display = '';
       if (EDIR !== tab) {
         if (EDITING && !commitEdit()) return;
         EDIR = tab;
@@ -6636,14 +6904,16 @@ export function createFtlEngine(root, options = {}) {
     } else if (tab === 'Delivered') {
       if (wrap) wrap.style.display = 'none';
       if (slot) slot.style.display = '';
-      if (opForm) opForm.style.display = '';
+      if (opForm) opForm.style.display = 'none';
+      if (opWrap) opWrap.style.display = 'none';
       root.querySelectorAll('.etab[data-dir]').forEach(b => b.classList.remove('on'));
       $('deliveredOpen')?.classList.add('on');
       $('inactiveOpen')?.classList.remove('on');
     } else if (tab === 'Inactive') {
       if (wrap) wrap.style.display = 'none';
       if (slot) slot.style.display = '';
-      if (opForm) opForm.style.display = '';
+      if (opForm) opForm.style.display = 'none';
+      if (opWrap) opWrap.style.display = 'none';
       root.querySelectorAll('.etab[data-dir]').forEach(b => b.classList.remove('on'));
       $('deliveredOpen')?.classList.remove('on');
       $('inactiveOpen')?.classList.add('on');
@@ -6806,7 +7076,47 @@ export function createFtlEngine(root, options = {}) {
     });
     $('qModal').classList.add('open');
   }
-  function closeM(id) { $(id)?.classList.remove('open'); }
+  function closeM(id) {
+    $(id)?.classList.remove('open');
+    if (id === 'truckManifestModal' || id === 'shipmentBreakdownModal') {
+      LAST_OPEN_MANIFEST = null;
+      if (ACTIVE_MODAL_EDIT.ref) {
+        const ref = ACTIVE_MODAL_EDIT.ref;
+        if (OP_SNAPSHOTS[ref] && !ACTIVE_EDIT_SHIPS.has(ref)) {
+          const dir = EDIR;
+          const ship = SHIPS[dir]?.[ref];
+          if (ship) {
+            ship.rows.forEach((idx, rIdx) => {
+              if (OP_SNAPSHOTS[ref][rIdx]) {
+                ENTRY[dir][idx] = { ...OP_SNAPSHOTS[ref][rIdx] };
+              }
+            });
+            saveShipmentAllocationsDraft(dir, ref);
+          }
+          delete OP_SNAPSHOTS[ref];
+        }
+        if (!ACTIVE_EDIT_SHIPS.has(ref) && LIVE && ILS.api?.unlockOperation) {
+          try { ILS.api.unlockOperation(ref); } catch (e) { }
+        }
+        if (!ACTIVE_EDIT_SHIPS.has(ref) && LOCK_HEARTBEATS[ref]) {
+          clearInterval(LOCK_HEARTBEATS[ref]);
+          delete LOCK_HEARTBEATS[ref];
+        }
+        ACTIVE_MODAL_EDIT.ref = null;
+        ACTIVE_MODAL_EDIT.type = null;
+        ACTIVE_MODAL_EDIT.rowIndex = null;
+        renderEntry();
+      }
+      if (MANIFEST_GRID_SCROLL) {
+        const grid = root.querySelector('.egrid');
+        if (grid) {
+          grid.scrollLeft = MANIFEST_GRID_SCROLL.left;
+          grid.scrollTop = MANIFEST_GRID_SCROLL.top;
+        }
+        MANIFEST_GRID_SCROLL = null;
+      }
+    }
+  }
   function closeMToAlert() {
     closeM('mToAlertModal');
     setTimeout(() => {
@@ -7230,74 +7540,35 @@ export function createFtlEngine(root, options = {}) {
         }
         ROWMETA[d][idx] = { id: tr.id, ref: sh.ref, user: sh.enteredBy?.displayName || sh.enteredBy || '', day: sh.day || '', at: sh.at || '', updates: parsedUpdates };
       }
-      SHIPS[d][sh.ref] = { ref: sh.ref, dir: d, rows: idxs, per: Math.max(1, Number(sh.per) || 1), unmerged: new Set((sh.unmerged || []).filter(k => canToggleMerge(d, COLS[d].find(c => c.k === k)))), at: sh.at || '', day: sh.day || '', user: sh.enteredBy?.displayName || sh.enteredBy || '', status };
+      SHIPS[d][sh.ref] = { ref: sh.ref, dir: d, rows: idxs, per: Math.max(1, Number(sh.per) || 1), unmerged: new Set((sh.unmerged || []).filter(k => canToggleMerge(d, COLS[d].find(c => c.k === k)))), at: sh.at || '', day: sh.day || '', user: sh.enteredBy?.displayName || sh.enteredBy || '', status, targetTruckCount: sh.trk, initialShipCount: sh.shp };
       layoutShip(d, SHIPS[d][sh.ref], { shpSpans: sh.shpSpans, trkSpans: sh.trkSpans, trkOf: sh.trkOf, shp: sh.shp, trk: sh.trk });
+      const numShipments = (sh.shpSpans ? sh.shpSpans.length : (Number(sh.shp) || Number(sh.per) || 1));
+      let savedAllocs = sh.allocations;
+      if (!savedAllocs) {
+        try {
+          const raw = localStorage.getItem(`ftl_allocations_${sh.ref}`);
+          if (raw) savedAllocs = JSON.parse(raw);
+        } catch (e) { }
+      }
+      idxs.forEach((rIdx, ord) => {
+        const row = ENTRY[d][rIdx];
+        const allocData = savedAllocs ? (savedAllocs[ord] || savedAllocs[String(ord)]) : null;
+        if (allocData) {
+          row._allocations = Array.isArray(allocData.allocations) ? allocData.allocations.map(a => ({ ...a })) : [];
+          row.assignedShp = (allocData.assignedShp !== undefined && allocData.assignedShp !== null && allocData.assignedShp !== '')
+            ? parseInt(allocData.assignedShp, 10)
+            : null;
+        } else if (numShipments === 1) {
+          const p = parseInt(normalizeDigits(row.loadedPackages || '0'), 10) || 0;
+          row.assignedShp = 0;
+          row._allocations = [{ shpIdx: 0, pkgs: p }];
+        } else {
+          row._allocations = [];
+          row.assignedShp = null;
+        }
+      });
     }
     const rep = []; DATA = enrich(['Import', 'Export'].flatMap(d => entryToTrips(d, rep))); QREPORT = rep; RAW = [];
-  }
-  function hydrateSingleShipment(sh) {
-    if (!sh || !sh.direction || !sh.ref) return false;
-    const d = sh.direction;
-    if (!SHIPS[d] || SHIPS[d][sh.ref]) return false;
-    if (!Array.isArray(sh.trips) || !sh.trips.length) return false;
-    const idxs = [], status = sh.status === 'Delivered' ? 'Delivered' : 'Open';
-    for (const tr of sh.trips) {
-      if (!tr.id || !tr.fields) continue;
-      const row = {};
-      COLS[d].forEach(c => {
-        let val = tr.fields[c.k];
-        if (c.k === 'vol' && (val === undefined || val === null || val === '')) {
-          val = sh.shp || sh.per || sh.totalShipments || (sh.shpSpans ? sh.shpSpans.length : 1);
-        }
-        if (c.k === 'mawb' && (val === undefined || val === null || val === '')) {
-          val = tr.fields.mawb || tr.fields.bl || tr.fields.booking || '';
-        }
-        if (c.k === 'cntr' && (val === undefined || val === null || val === '')) {
-          val = tr.fields.cntr || tr.fields.car || '';
-        }
-        if (c.k === 'clrType' && val) {
-          val = normClr(val);
-        }
-        if (d === 'Export' && c.k === 'customs') {
-          const clr = normClr(tr.fields?.clrType || row.clrType);
-          if (clr === 'CERT' && !val) val = 'Cairo Airport Customs';
-        }
-        if (d === 'Export' && c.k === 'cert' && isBoslaClr(tr.fields?.clrType || row.clrType)) {
-          val = '';
-        }
-        row[c.k] = c.k === 'missDoc' ? cleanDocValue(val) : String(val ?? '');
-      });
-      row.status = status;
-      const idx = ENTRY[d].length;
-      ENTRY[d].push(row);
-      idxs.push(idx);
-      const parsedUpdates = (tr.updates || []).map(u => ({
-        id: u.id,
-        text: u.text || u.note || '',
-        day: u.day || (u.at && u.at.length >= 10 ? u.at.slice(0, 10) : sh.day || ''),
-        at: (u.at && u.at.length > 10 ? u.at.slice(11, 16) : u.at) || '',
-        user: u.user || u.by || '',
-        by: u.by || u.user || ''
-      }));
-      if (parsedUpdates.length > 0) {
-        const lastU = parsedUpdates[parsedUpdates.length - 1];
-        if (!row.updDate) row.updDate = `${fmtDay(lastU.day)} ${lastU.at}`.trim();
-        if (!row.updates) row.updates = lastU.text;
-      } else if (row.updates) {
-        parsedUpdates.push({
-          id: '',
-          text: row.updates,
-          day: sh.day || today(),
-          at: sh.at || nowHM(),
-          user: sh.enteredBy?.displayName || sh.enteredBy || 'User',
-          by: sh.enteredBy?.displayName || sh.enteredBy || 'User'
-        });
-      }
-      ROWMETA[d][idx] = { id: tr.id, ref: sh.ref, user: sh.enteredBy?.displayName || sh.enteredBy || '', day: sh.day || '', at: sh.at || '', updates: parsedUpdates };
-    }
-    SHIPS[d][sh.ref] = { ref: sh.ref, dir: d, rows: idxs, per: Math.max(1, Number(sh.per) || 1), unmerged: new Set((sh.unmerged || []).filter(k => canToggleMerge(d, COLS[d].find(c => c.k === k)))), at: sh.at || '', day: sh.day || '', user: sh.enteredBy?.displayName || sh.enteredBy || '', status };
-    layoutShip(d, SHIPS[d][sh.ref], { shpSpans: sh.shpSpans, trkSpans: sh.trkSpans, trkOf: sh.trkOf, shp: sh.shp, trk: sh.trk });
-    return true;
   }
   async function ilsBoot() {
     if (typeof ILS.api !== 'object' || !ILS.api) return false;   /* offline / one-time mode */
@@ -7305,10 +7576,16 @@ export function createFtlEngine(root, options = {}) {
       const api = ILS.api;
       for (const name of ['getCurrentUser', 'loadMaster', 'load', 'createOperation', 'updateOperation', 'updateShipmentStatus', 'loadPermissions', 'addMaster', 'importTrips'])
         if (typeof api[name] !== 'function') throw Error('Missing ILS_API.' + name);
-      const [identity, m, d] = await Promise.all([api.getCurrentUser(), api.loadMaster(), api.load()]);
+      const [identity, m, d, perms] = await Promise.all([
+        api.getCurrentUser(),
+        api.loadMaster(),
+        api.load(),
+        api.loadPermissions ? api.loadPermissions().catch(() => ({})) : Promise.resolve({})
+      ]);
       if (destroyed) return false;
       if (!identity?.id || !identity?.displayName) throw Error('Missing signed-in identity');
       OP_USER_ID = identity.id; OP_USER = identity.displayName;
+      if (perms?.reopen_shipments != null) REOPEN_GRANTED = Boolean(perms.reopen_shipments);
       Object.keys(MASTER).forEach(k => { if (Array.isArray(m?.[k]) && m[k].length) MASTER[k] = m[k]; });
       if (Array.isArray(m?.aod) && m.aod.length) MASTER.aod = m.aod;
       else if (Array.isArray(m?.pod) && m.pod.length) MASTER.aod = m.pod;
@@ -7750,7 +8027,7 @@ export function createFtlEngine(root, options = {}) {
   function applyStatic() {
     const L = T[LANG];
     $('hTitle').textContent = L.title; $('hSub').textContent = L.sub; $('hKicker').textContent = L.kicker; $('clearBtn').textContent = L.clear; $('entryBtn').textContent = L.entryBtn; $('dashBtn').textContent = L.dashBtn; $('exportBtn').textContent = L.exportBtn; $('uploadBtn').textContent = L.upload; $('entryUpload').textContent = L.upload;
-    $('helpBtn').textContent = L.help; $('langBtn').textContent = L.langBtn; $('panelToggle').textContent = L.fields;
+    $('helpBtn').textContent = L.help; $('langBtn').textContent = L.langBtn; if ($('ebarLang')) $('ebarLang').textContent = L.langBtn; $('panelToggle').textContent = L.fields;
     const E = L.entry;
     $('eSave').textContent = E.save; $('eMail').textContent = E.mail; $('xMail').textContent = t('mail').title; $('eApply').textContent = E.apply;
     if ($('entryView').style.display !== 'none') { TRIP_SEARCH_DIR = null; renderEntry(); }
@@ -8132,18 +8409,48 @@ export function createFtlEngine(root, options = {}) {
 
     shipmentKeys = function (dir, row) {
       const id = v => normalizeDigits(v ?? '').trim().toUpperCase().replace(/\s+/g, '');
-      const no = id(row.shipNo), mawb = id(dir === 'Import' ? row.bl : row.booking), hawb = id(row.hawb), cert = id(row.cert);
-      return { no, pair: mawb && hawb ? JSON.stringify([mawb, hawb]) : null, cert: cert || null };
+      const no = id(row.shipNo);
+      const mawbVal = id(row.mawb || (dir === 'Export' ? row.booking : row.bl));
+      const hawb = id(row.hawb);
+      const cert = id(row.cert);
+      return {
+        no: no || null,
+        hawb: hawb || null,
+        cert: cert || null,
+        pair: mawbVal && hawb ? JSON.stringify([mawbVal, hawb]) : null,
+        certShip: cert && no ? JSON.stringify([cert, no]) : null
+      };
     };
-    shipmentConflict = function (dir, candidate, excludeRef) {
-      const wanted = shipmentKeys(dir, candidate); if (!wanted.no && !wanted.pair && !wanted.cert) return null;
-      const hit = ENTRY[dir].find((row, i) => { if (rowShip(dir, i)?.ref === excludeRef) return false; const other = shipmentKeys(dir, row); return (wanted.no && other.no && wanted.no === other.no) || (wanted.pair && other.pair && wanted.pair === other.pair) || (wanted.cert && other.cert && wanted.cert === other.cert); });
-      if (!hit) return null; const other = shipmentKeys(dir, hit);
-      if (wanted.no && other.no && wanted.no === other.no) return AR() ? 'رقم الشحنة موجود في شحنة أخرى' : 'Shipment Number already exists in another shipment';
-      if (wanted.cert && other.cert && wanted.cert === other.cert) return AR() ? 'رقم الشهادة موجود في شحنة أخرى' : 'Certificate Number already exists in another shipment';
-      return AR() ? 'نفس MAWB + HAWB موجود في شحنة أخرى' : 'The same MAWB + HAWB already belongs to another shipment';
+    shipmentConflict = function (dir, candidate, excludeRef, excludeRowIndex) {
+      const wanted = shipmentKeys(dir, candidate);
+      if (!wanted.no && !wanted.hawb && !wanted.pair && !wanted.cert) return null;
+      const candShipIdx = excludeRowIndex !== undefined && excludeRowIndex !== null ? rowShipIndex(dir, excludeRowIndex) : -1;
+      for (const d of ['Import', 'Export']) {
+        const hit = (ENTRY[d] || []).find((row, i) => {
+          if (excludeRef && rowShip(d, i)?.ref === excludeRef) {
+            if (candShipIdx >= 0 && rowShipIndex(d, i) === candShipIdx) return false;
+            if (candShipIdx < 0) return false;
+          }
+          const other = shipmentKeys(d, row);
+          return (wanted.no && other.no && wanted.no === other.no) ||
+            (wanted.hawb && other.hawb && wanted.hawb === other.hawb) ||
+            (wanted.pair && other.pair && wanted.pair === other.pair) ||
+            (wanted.cert && wanted.no && other.cert && other.no && wanted.cert === other.cert && wanted.no === other.no);
+        });
+        if (hit) {
+          const other = shipmentKeys(d, hit);
+          if (wanted.no && other.no && wanted.no === other.no) return AR() ? `رقم الشحنة "${candidate.shipNo}" موجود بالفعل في شحنة أخرى` : `Shipment Number "${candidate.shipNo}" already exists in another shipment`;
+          if (wanted.hawb && other.hawb && wanted.hawb === other.hawb) return AR() ? `رقم البوليصة الفرعية (HAWB) "${candidate.hawb}" موجود بالفعل في شحنة أخرى` : `HAWB "${candidate.hawb}" already belongs to another shipment`;
+          if (wanted.pair && other.pair && wanted.pair === other.pair) return AR() ? 'نفس بوليصة MAWB و HAWB مسجلان معاً بالفعل في شحنة أخرى' : 'The same MAWB + HAWB already belongs to another shipment';
+          if (wanted.cert && wanted.no && other.cert && other.no && wanted.cert === other.cert && wanted.no === other.no) return AR() ? `رقم الشهادة "${candidate.cert}" مع رقم الشحنة "${candidate.shipNo}" مسجلان معاً بالفعل في شحنة أخرى` : `Certificate Number "${candidate.cert}" with Shipment Number "${candidate.shipNo}" already belongs to another shipment`;
+        }
+      }
+      return null;
     };
-    cellIdentityConflict = function (dir, i, k, value) { if (!['shipNo', 'bl', 'booking', 'hawb', 'cert'].includes(k)) return null; return shipmentConflict(dir, { ...ENTRY[dir][i], [k]: value }, rowShip(dir, i)?.ref); };
+    cellIdentityConflict = function (dir, i, k, value) {
+      if (!['shipNo', 'mawb', 'bl', 'booking', 'hawb', 'cert'].includes(k)) return null;
+      return shipmentConflict(dir, { ...ENTRY[dir][i], [k]: value }, rowShip(dir, i)?.ref, i);
+    };
 
     let AIR_PREVIEW = null;
     __extra.stepOpShip = function (delta) { const el = $('op_vol'); if (!el) return; const cur = Math.max(1, Math.min(200, Number(String(el.value || '').replace(/[^0-9]/g, '')) || 1)); el.value = String(Math.max(1, Math.min(200, cur + Number(delta || 0)))); el.dispatchEvent(new Event('input', { bubbles: true })); };
@@ -8346,6 +8653,7 @@ export function createFtlEngine(root, options = {}) {
     addShipmentTruckAllocation, updateShipmentTruckAllocation, removeShipmentTruckAllocation,
     openInactive, renderInactive, toggleAllInactive, toggleInactiveSelection, copyInactiveTrips, delShip,
     startEditShipment, saveShipmentEdits, cancelEditShipment, restoreDraft,
+    startEditFromManifest, saveFromManifest, cancelFromManifest,
     pageInactive: (d) => { INACTIVE_PAGE += d; },
     stepOpShip: (d) => __extra.stepOpShip && __extra.stepOpShip(d),
     setRawTab: (i) => { rawTab = i; },
@@ -8410,6 +8718,8 @@ export function createFtlEngine(root, options = {}) {
     openDeveloperPanel: () => openDev(),
     setArchiveOperations: (tab, ops, dir, totalCount) => setArchiveOperations(tab, ops, dir, totalCount),
     setTab: (tab) => setTab(tab),
+    switchDir: (dir) => switchEntryDir(dir),
+    removeShipmentLocally: (ref, dir) => removeShipmentLocally(ref, dir),
     clear: () => clearData(),
     toast: (msg, type, options) => toast(msg, type, options),
     dismissToast: () => dismissToast(),

@@ -7,20 +7,16 @@ import {
   ChevronLeft,
   Eye,
   History,
-  RotateCcw,
   Truck,
   RotateCcw as ResetIcon,
-  Lock,
 } from 'lucide-react';
 import api from '../../../../../services/api';
 import {
   getPagedFtlOperations,
-  reopenFtlOperation,
 } from '../../../../../services/operationsService';
 import {
   fmtUpdateDateTime,
   FtlStatusHistoryModal,
-  FtlReopenModal,
   FtlFullDetailsDrawer,
 } from './FtlArchiveShared';
 
@@ -73,7 +69,6 @@ export default function FtlInactiveArchive({
   // Modals state
   const [viewDetailOp, setViewDetailOp] = useState(null);
   const [historyOp, setHistoryOp] = useState(null);
-  const [reopenOp, setReopenOp] = useState(null);
   const [knownUsers, setKnownUsers] = useState([]);
 
   // Stale-While-Revalidate in-memory cache
@@ -223,14 +218,6 @@ export default function FtlInactiveArchive({
     if (onCountsRefresh) onCountsRefresh();
   };
 
-  const handleReopenConfirm = async (ref, reason) => {
-    await reopenFtlOperation(ref, reason);
-    setReopenOp(null);
-    cacheRef.current = {};
-    await fetchPage(false);
-    if (onCountsRefresh) onCountsRefresh();
-  };
-
   // Unique list of creators / deleted-by users
   const uniqueUsers = useMemo(() => {
     const names = new Set(knownUsers);
@@ -249,9 +236,8 @@ export default function FtlInactiveArchive({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="relative flex-1 max-w-2xl">
             <span
-              className={`absolute inset-y-0 ${
-                lang === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'
-              } flex items-center pointer-events-none text-slate-400`}
+              className={`absolute inset-y-0 ${lang === 'ar' ? 'right-0 pr-3' : 'left-0 pl-3'
+                } flex items-center pointer-events-none text-slate-400`}
             >
               <Search size={16} />
             </span>
@@ -267,14 +253,12 @@ export default function FtlInactiveArchive({
                   ? 'بحث شامل بالشحنة، البوليصة MAWB/HAWB، العميل، الناقل، رقم السيارة، السائق... (Ctrl + K)'
                   : 'Search by Shipment #, MAWB, HAWB, Client, Transporter, Truck Plate, Driver... (Ctrl + K)'
               }
-              className={`w-full ${
-                lang === 'ar' ? 'pr-9 pl-20' : 'pl-9 pr-20'
-              } py-2 rounded-xl border border-slate-300 bg-slate-50/70 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition shadow-2xs`}
+              className={`w-full ${lang === 'ar' ? 'pr-9 pl-20' : 'pl-9 pr-20'
+                } py-2 rounded-xl border border-slate-300 bg-slate-50/70 text-xs font-medium text-slate-800 outline-none focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition shadow-2xs`}
             />
             <div
-              className={`absolute inset-y-0 ${
-                lang === 'ar' ? 'left-0 pl-2.5' : 'right-0 pr-2.5'
-              } flex items-center gap-1.5`}
+              className={`absolute inset-y-0 ${lang === 'ar' ? 'left-0 pl-2.5' : 'right-0 pr-2.5'
+                } flex items-center gap-1.5`}
             >
               {searchTerm && (
                 <button
@@ -388,11 +372,10 @@ export default function FtlInactiveArchive({
               setFilters({ ...filters, createdBy: e.target.value });
               setPage(1);
             }}
-            className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[135px] max-w-[165px] font-medium transition ${
-              filters.createdBy
+            className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[135px] max-w-[165px] font-medium transition ${filters.createdBy
                 ? 'border-rose-500 bg-rose-50 text-rose-900 font-bold shadow-2xs'
                 : 'border-slate-300 bg-white text-slate-700 focus:border-rose-500'
-            }`}
+              }`}
           >
             <option value="">{lang === 'ar' ? 'تم الإيقاف بواسطة: الكل' : 'Inactive By: All'}</option>
             {uniqueUsers.map((u) => (
@@ -468,15 +451,13 @@ export default function FtlInactiveArchive({
               <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
                 {debouncedSearch || activeFiltersCount > 0
                   ? lang === 'ar'
-                    ? `${serverTotalCount} من أصل ${
-                        counts?.inactiveCount ?? serverTotalCount
-                      } شحنة غير نشطة`
-                    : `${serverTotalCount} of ${
-                        counts?.inactiveCount ?? serverTotalCount
-                      } inactive`
+                    ? `${serverTotalCount} من أصل ${counts?.inactiveCount ?? serverTotalCount
+                    } شحنة غير نشطة`
+                    : `${serverTotalCount} of ${counts?.inactiveCount ?? serverTotalCount
+                    } inactive`
                   : lang === 'ar'
-                  ? `${serverTotalCount} شحنة غير نشطة`
-                  : `${serverTotalCount} inactive`}
+                    ? `${serverTotalCount} شحنة غير نشطة`
+                    : `${serverTotalCount} inactive`}
               </span>
             </div>
             <p className="text-xs text-slate-500">
@@ -590,8 +571,8 @@ export default function FtlInactiveArchive({
                 ? 'لم يتم العثور على أي شحنات غير نشطة تطابق معايير البحث أو الفلتر المحددة.'
                 : 'No inactive operations matched search or filter criteria.'
               : lang === 'ar'
-              ? 'لم يتم العثور على أي شحنات غير نشطة مسجلة في الأرشيف.'
-              : 'No inactive operations found in the archive.'}
+                ? 'لم يتم العثور على أي شحنات غير نشطة مسجلة في الأرشيف.'
+                : 'No inactive operations found in the archive.'}
           </p>
           {(debouncedSearch || activeFiltersCount > 0) && (
             <button
@@ -608,242 +589,217 @@ export default function FtlInactiveArchive({
         <div className="space-y-3">
           <div className="overflow-x-auto bg-white rounded-2xl border border-slate-200/90 shadow-xs">
             <table className="w-full text-start border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-3 text-start"># / {lang === 'ar' ? 'رقم الشحنة' : 'Shipment No'}</th>
-                <th className="py-3 px-3 text-start">{lang === 'ar' ? 'النوع' : 'Type'}</th>
-                <th className="py-3 px-3 text-start">{lang === 'ar' ? 'البوليصة / المستند' : 'MAWB / HAWB'}</th>
-                <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والناقل' : 'Client & Transporter'}</th>
-                <th className="py-3 px-3 text-start">{lang === 'ar' ? 'السيارات والنقلات' : 'Trucks & Trips'}</th>
-                <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-950 border-x border-rose-100">
-                  {lang === 'ar' ? 'تم الإيقاف بواسطة' : 'Inactive By'}
-                </th>
-                <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-950">
-                  {lang === 'ar' ? 'تاريخ وساعة الإيقاف' : 'Inactive At'}
-                </th>
-                <th className="py-3 px-3 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {operations.map((op, idx) => {
-                const trips = op.trips || [];
-                const firstTrip = trips[0] || {};
-                const fields = firstTrip.fields || {};
+              <thead>
+                <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-3 px-3 text-start"># / {lang === 'ar' ? 'رقم الشحنة' : 'Shipment No'}</th>
+                  <th className="py-3 px-3 text-start">{lang === 'ar' ? 'النوع' : 'Type'}</th>
+                  <th className="py-3 px-3 text-start">{lang === 'ar' ? 'البوليصة / المستند' : 'MAWB / HAWB'}</th>
+                  <th className="py-3 px-3 text-start">{lang === 'ar' ? 'العميل والناقل' : 'Client & Transporter'}</th>
+                  <th className="py-3 px-3 text-start">{lang === 'ar' ? 'السيارات والنقلات' : 'Trucks & Trips'}</th>
+                  <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-950 border-x border-rose-100">
+                    {lang === 'ar' ? 'تم الإيقاف بواسطة' : 'Inactive By'}
+                  </th>
+                  <th className="py-3 px-3 text-start bg-rose-50/60 text-rose-950">
+                    {lang === 'ar' ? 'تاريخ وساعة الإيقاف' : 'Inactive At'}
+                  </th>
+                  <th className="py-3 px-3 text-center">{lang === 'ar' ? 'الإجراءات' : 'Actions'}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {operations.map((op, idx) => {
+                  const trips = op.trips || [];
+                  const firstTrip = trips[0] || {};
+                  const fields = firstTrip.fields || {};
 
-                const shipNo = fields.shipNo || op.ref;
-                const isImport = (op.direction || 'Import').toLowerCase() === 'import';
-                const mawb = fields.mawb || fields.bl || fields.booking || '—';
-                const hawb = fields.hawb || '';
-                const client = fields.client || '—';
-                const trucker = fields.trucker || '—';
+                  const shipNo = fields.shipNo || op.ref;
+                  const isImport = (op.direction || 'Import').toLowerCase() === 'import';
+                  const mawb = fields.mawb || fields.bl || fields.booking || '—';
+                  const hawb = fields.hawb || '';
+                  const client = fields.client || '—';
+                  const trucker = fields.trucker || '—';
 
-                // Extract truck plate pills
-                const truckPlates = trips
-                  .map((t) => t.fields?.car || t.fields?.cntr)
-                  .filter(Boolean);
+                  // Extract truck plate pills
+                  const truckPlates = trips
+                    .map((t) => t.fields?.car || t.fields?.cntr)
+                    .filter(Boolean);
 
-                return (
-                  <tr key={op.ref || idx} className="hover:bg-rose-50/20 transition-colors">
-                    <td className="py-3 px-3 font-semibold text-slate-800" title={`${shipNo} (${op.ref})`}>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900 text-xs" title={shipNo}>{shipNo}</span>
-                        <span className="text-[10px] text-slate-400 font-mono" title={op.ref}>{op.ref}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          isImport
-                            ? 'bg-sky-50 text-sky-700 border border-sky-200'
-                            : 'bg-purple-50 text-purple-700 border border-purple-200'
-                        }`}
-                        title={isImport ? 'Import Operation' : 'Export Operation'}
-                      >
-                        {isImport ? 'Import' : 'Export'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 font-medium text-slate-900" title={`${mawb}${hawb ? ` - HAWB: ${hawb}` : ''}`}>
-                      <div className="flex flex-col font-mono text-[11px]">
-                        <span className="font-semibold text-slate-800" title={mawb}>{mawb}</span>
-                        {hawb && <span className="text-slate-500 text-[10px]" title={`HAWB: ${hawb}`}>HAWB: {hawb}</span>}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3" title={`${client}${trucker ? ` / ${trucker}` : ''}`}>
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-800 text-xs" title={client}>{client}</span>
-                        <span className="text-[11px] text-slate-500" title={trucker}>{trucker}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="inline-flex items-center gap-1 font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded text-xs">
-                          <Truck size={12} className="text-slate-600" />
-                          <span>
-                            {trips.length}{' '}
-                            {trips.length === 1
-                              ? lang === 'ar'
-                                ? 'سيارة'
-                                : 'truck'
-                              : lang === 'ar'
-                              ? 'سيارات'
-                              : 'trucks'}
-                          </span>
+                  return (
+                    <tr key={op.ref || idx} className="hover:bg-rose-50/20 transition-colors">
+                      <td className="py-3 px-3 font-semibold text-slate-800" title={`${shipNo} (${op.ref})`}>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900 text-xs" title={shipNo}>{shipNo}</span>
+                          <span className="text-[10px] text-slate-400 font-mono" title={op.ref}>{op.ref}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${isImport
+                              ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                              : 'bg-purple-50 text-purple-700 border border-purple-200'
+                            }`}
+                          title={isImport ? 'Import Operation' : 'Export Operation'}
+                        >
+                          {isImport ? 'Import' : 'Export'}
                         </span>
-                        {truckPlates.slice(0, 3).map((car, cIdx) => (
-                          <span
-                            key={cIdx}
-                            className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-700 font-mono font-medium"
-                          >
-                            {car}
+                      </td>
+                      <td className="py-3 px-3 font-medium text-slate-900" title={`${mawb}${hawb ? ` - HAWB: ${hawb}` : ''}`}>
+                        <div className="flex flex-col font-mono text-[11px]">
+                          <span className="font-semibold text-slate-800" title={mawb}>{mawb}</span>
+                          {hawb && <span className="text-slate-500 text-[10px]" title={`HAWB: ${hawb}`}>HAWB: {hawb}</span>}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3" title={`${client}${trucker ? ` / ${trucker}` : ''}`}>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-800 text-xs" title={client}>{client}</span>
+                          <span className="text-[11px] text-slate-500" title={trucker}>{trucker}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="inline-flex items-center gap-1 font-bold text-slate-800 bg-slate-100 px-1.5 py-0.5 rounded text-xs">
+                            <Truck size={12} className="text-slate-600" />
+                            <span>
+                              {trips.length}{' '}
+                              {trips.length === 1
+                                ? lang === 'ar'
+                                  ? 'سيارة'
+                                  : 'truck'
+                                : lang === 'ar'
+                                  ? 'سيارات'
+                                  : 'trucks'}
+                            </span>
                           </span>
-                        ))}
-                        {truckPlates.length > 3 && (
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            +{truckPlates.length - 3}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 bg-rose-50/30 border-x border-rose-100">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-rose-200 text-rose-800 font-bold shadow-2xs">
-                        <span className="w-2 h-2 rounded-full bg-rose-500" />
-                        <span>{op.deletedByName || (lang === 'ar' ? 'مستخدم' : 'User')}</span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 bg-rose-50/30 font-medium text-slate-700">
-                      <span className="font-semibold text-slate-800">
-                        {fmtUpdateDateTime(op.deletedAtUtc)}
-                      </span>
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setViewDetailOp(op)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
-                          title={lang === 'ar' ? 'عرض تفاصيل العملية المحذوفة بالكامل' : 'View Full Details'}
-                        >
-                          <Eye size={13} className="text-sky-400" />
-                          <span>{lang === 'ar' ? 'عرض التفاصيل' : 'Details'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setHistoryOp({ ...op, isDeleted: true, status: 'Inactive' })}
-                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
-                          title={lang === 'ar' ? 'سجل وتاريخ تغيرات الحالة' : 'Status History'}
-                        >
-                          <History size={12} className="text-sky-600" />
-                          <span>{lang === 'ar' ? 'السجل' : 'History'}</span>
-                        </button>
-                        {canReopen ? (
+                          {truckPlates.slice(0, 3).map((car, cIdx) => (
+                            <span
+                              key={cIdx}
+                              className="px-1.5 py-0.5 rounded bg-slate-100 text-[10px] text-slate-700 font-mono font-medium"
+                            >
+                              {car}
+                            </span>
+                          ))}
+                          {truckPlates.length > 3 && (
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              +{truckPlates.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 bg-rose-50/30 border-x border-rose-100">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-rose-200 text-rose-800 font-bold shadow-2xs">
+                          <span className="w-2 h-2 rounded-full bg-rose-500" />
+                          <span>{op.deletedByName || (lang === 'ar' ? 'مستخدم' : 'User')}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 bg-rose-50/30 font-medium text-slate-700">
+                        <span className="font-semibold text-slate-800">
+                          {fmtUpdateDateTime(op.deletedAtUtc)}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
                             type="button"
-                            onClick={() => setReopenOp(op)}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
-                            title={lang === 'ar' ? 'استعادة العملية المحذوفة' : 'Restore Operation'}
+                            onClick={() => setViewDetailOp(op)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                            title={lang === 'ar' ? 'عرض تفاصيل العملية المحذوفة بالكامل' : 'View Full Details'}
                           >
-                            <RotateCcw size={12} className="text-amber-700" />
-                            <span>{lang === 'ar' ? 'استعادة' : 'Restore'}</span>
+                            <Eye size={13} className="text-sky-400" />
+                            <span>{lang === 'ar' ? 'عرض التفاصيل' : 'Details'}</span>
                           </button>
-                        ) : (
-                          <div
-                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200 select-none cursor-not-allowed"
-                            title={
-                              lang === 'ar'
-                                ? 'العملية غير نشطة. لا تملك صلاحية الاستعادة'
-                                : 'Inactive. You do not have permission to restore'
-                            }
+                          <button
+                            type="button"
+                            onClick={() => setHistoryOp({ ...op, isDeleted: true, status: 'Inactive' })}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                            title={lang === 'ar' ? 'سجل وتاريخ تغيرات الحالة' : 'Status History'}
                           >
-                            <Lock size={12} className="text-slate-400" />
-                            <span>{lang === 'ar' ? 'غير نشط' : 'Inactive'}</span>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                            <History size={12} className="text-sky-600" />
+                            <span>{lang === 'ar' ? 'السجل' : 'History'}</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
 
-        {/* 6. Inactive Pagination Controls (Server-Side + Instant Client-Side Cache) */}
-        {operations.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-xl border border-slate-200 text-xs shadow-2xs">
-            <div className="flex items-center gap-3 text-slate-500 font-medium">
-              <span>
-                {lang === 'ar'
-                  ? `الصفحة ${page} من ${serverTotalPages} (${serverTotalCount} عملية غير نشطة · ${serverTotalTrucks} نقلة)`
-                  : `Page ${page} of ${serverTotalPages} (${serverTotalCount} inactive ops · ${serverTotalTrucks} trucks)`}
-              </span>
-              <div className="flex items-center gap-1.5 border-s border-slate-200 ps-3">
-                <span className="text-slate-400">{lang === 'ar' ? 'لكل صفحة:' : 'Per page:'}</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setPage(1);
-                  }}
-                  className="bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-slate-700 font-semibold cursor-pointer focus:outline-none focus:border-sky-500"
+          {/* 6. Inactive Pagination Controls (Server-Side + Instant Client-Side Cache) */}
+          {operations.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-xl border border-slate-200 text-xs shadow-2xs">
+              <div className="flex items-center gap-3 text-slate-500 font-medium">
+                <span>
+                  {lang === 'ar'
+                    ? `الصفحة ${page} من ${serverTotalPages} (${serverTotalCount} عملية غير نشطة · ${serverTotalTrucks} نقلة)`
+                    : `Page ${page} of ${serverTotalPages} (${serverTotalCount} inactive ops · ${serverTotalTrucks} trucks)`}
+                </span>
+                <div className="flex items-center gap-1.5 border-s border-slate-200 ps-3">
+                  <span className="text-slate-400">{lang === 'ar' ? 'لكل صفحة:' : 'Per page:'}</span>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPage(1);
+                    }}
+                    className="bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-slate-700 font-semibold cursor-pointer focus:outline-none focus:border-sky-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium text-slate-700 transition"
                 >
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
+                  {lang === 'ar' ? 'السابق' : 'Previous'}
+                </button>
+
+                {Array.from({ length: Math.min(5, serverTotalPages) }, (_, i) => {
+                  let pNum;
+                  if (serverTotalPages <= 5) {
+                    pNum = i + 1;
+                  } else if (page <= 3) {
+                    pNum = i + 1;
+                  } else if (page >= serverTotalPages - 2) {
+                    pNum = serverTotalPages - 4 + i;
+                  } else {
+                    pNum = page - 2 + i;
+                  }
+                  const isActive = pNum === page;
+                  return (
+                    <button
+                      key={pNum}
+                      type="button"
+                      onClick={() => setPage(pNum)}
+                      className={`min-w-7 h-7 px-2 rounded-lg font-bold text-xs transition cursor-pointer ${isActive
+                          ? 'bg-rose-600 text-white shadow-2xs'
+                          : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                        }`}
+                    >
+                      {pNum}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  disabled={page >= serverTotalPages}
+                  onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
+                  className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium text-slate-700 transition"
+                >
+                  {lang === 'ar' ? 'التالي' : 'Next'}
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium text-slate-700 transition"
-              >
-                {lang === 'ar' ? 'السابق' : 'Previous'}
-              </button>
-
-              {Array.from({ length: Math.min(5, serverTotalPages) }, (_, i) => {
-                let pNum;
-                if (serverTotalPages <= 5) {
-                  pNum = i + 1;
-                } else if (page <= 3) {
-                  pNum = i + 1;
-                } else if (page >= serverTotalPages - 2) {
-                  pNum = serverTotalPages - 4 + i;
-                } else {
-                  pNum = page - 2 + i;
-                }
-                const isActive = pNum === page;
-                return (
-                  <button
-                    key={pNum}
-                    type="button"
-                    onClick={() => setPage(pNum)}
-                    className={`min-w-7 h-7 px-2 rounded-lg font-bold text-xs transition cursor-pointer ${
-                      isActive
-                        ? 'bg-rose-600 text-white shadow-2xs'
-                        : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
-                    }`}
-                  >
-                    {pNum}
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                disabled={page >= serverTotalPages}
-                onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
-                className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium text-slate-700 transition"
-              >
-                {lang === 'ar' ? 'التالي' : 'Next'}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       )}
 
       {/* Modals & Drawers */}
@@ -858,14 +814,6 @@ export default function FtlInactiveArchive({
         op={historyOp}
         onClose={() => setHistoryOp(null)}
         lang={lang}
-      />
-      <FtlReopenModal
-        op={reopenOp}
-        isOpen={Boolean(reopenOp)}
-        onClose={() => setReopenOp(null)}
-        onConfirm={handleReopenConfirm}
-        lang={lang}
-        mode="inactive"
       />
     </div>
   );

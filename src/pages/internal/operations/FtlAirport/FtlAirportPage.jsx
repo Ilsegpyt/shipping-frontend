@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import FtlDashboard from './components/FtlDashboard';
+import FtlDashboardView from './components/FtlDashboardView';
 import FtlDeliveredArchive from './components/FtlDeliveredArchive';
 import FtlInactiveArchive from './components/FtlInactiveArchive';
 import { FtlConfirmDeleteModal, FtlStatusHistoryModal } from './components/FtlArchiveShared';
@@ -39,24 +40,41 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
     return () => window.removeEventListener('ftl:open-status-history', handleOpenHistory);
   }, []);
 
-  const canReopen = Boolean(
+  const isSuperAdmin = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
     user?.roleName === 'Super Admin' ||
+    user?.roleName?.toLowerCase()?.includes('admin')
+  );
+
+  const isFtlExec = Boolean(
+    user?.roleName === 'FTL Operation Executive' ||
+    user?.role === 'FTL Operation Executive'
+  );
+
+  const canReopen = Boolean(
+    isSuperAdmin ||
+    isFtlExec ||
     user?.roleName === 'Supervisor Maritime Transportation' ||
     user?.roleName === 'Ocean Operations Manager' ||
-    user?.roleName === 'FTL Operation Executive' ||
     user?.permissions?.includes('operations.ftl.reopen') ||
     user?.permissions?.includes('operations.reopen')
   );
 
   const canDelete = Boolean(
-    user?.isSuperAdmin ||
-    user?.role === 'SuperAdmin' ||
-    user?.roleName === 'Super Admin' ||
-    user?.roleName === 'FTL Operation Executive' ||
+    isSuperAdmin ||
+    isFtlExec ||
     user?.permissions?.includes('operations.ftl.delete') ||
     user?.permissions?.includes('operations.delete')
+  );
+
+  const canDeliver = Boolean(
+    isSuperAdmin ||
+    isFtlExec ||
+    user?.roleName === 'Supervisor Maritime Transportation' ||
+    user?.roleName === 'Ocean Operations Manager' ||
+    user?.permissions?.includes('operations.ftl.deliver') ||
+    user?.permissions?.includes('operations.deliver')
   );
 
   const api = useMemo(() => {
@@ -75,9 +93,10 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
       permissions: {
         reopen_shipments: canReopen,
         delete_shipments: canDelete,
+        deliver_shipments: canDeliver,
       },
     });
-  }, [user, canReopen, canDelete]);
+  }, [user, canReopen, canDelete, canDeliver]);
 
   // Initial lightweight counts load
   const fetchCounts = useCallback(async () => {
@@ -159,21 +178,58 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
     if (!deleteTarget?.ref) return;
     setIsDeleting(true);
     setDeleteError(null);
+    const targetRef = deleteTarget.ref;
+    const targetDir = deleteTarget.dir;
     try {
-      await api.deleteShipment(deleteTarget.ref);
-      dashboardRef.current?.removeShipmentLocally?.(deleteTarget.ref);
+      // Optimistically remove from grid so row disappears immediately
+      dashboardRef.current?.removeShipmentLocally?.(targetRef, targetDir);
+      await api.deleteShipment(targetRef);
       dashboardRef.current?.toast?.(language === 'ar' ? 'تم نقل العملية إلى سجل المحذوفات بنجاح' : 'Operation moved to Inactive Archive');
       await fetchCounts();
       setDeleteTarget(null);
     } catch (err) {
       console.error('Failed to delete operation:', err);
-      const errMsg = err.message || (language === 'ar' ? 'فشل حذف العملية' : 'Failed to delete operation');
-      setDeleteError(errMsg);
-      dashboardRef.current?.toast?.(errMsg, 'error');
+      const isAlreadyDeleted =
+        err?.message?.toLowerCase().includes('not found') ||
+        err?.response?.data?.error?.toLowerCase?.().includes('not found') ||
+        err?.response?.status === 400 ||
+        err?.status === 400;
+
+      if (isAlreadyDeleted) {
+        dashboardRef.current?.removeShipmentLocally?.(targetRef, targetDir);
+        dashboardRef.current?.toast?.(
+          language === 'ar'
+            ? 'تم إزالة العملية (تم حذفها مسبقاً)'
+            : 'Operation already deleted, table updated',
+          'info'
+        );
+        await fetchCounts();
+        setDeleteTarget(null);
+      } else {
+        const errMsg = err.message || (language === 'ar' ? 'فشل حذف العملية' : 'Failed to delete operation');
+        setDeleteError(errMsg);
+        dashboardRef.current?.toast?.(errMsg, 'error');
+        dashboardRef.current?.reload?.();
+      }
     } finally {
       setIsDeleting(false);
     }
   };
+
+  if (defaultView === 'dashboard') {
+    return (
+      <div className="min-h-full space-y-6 flex flex-col" dir={language === 'ar' ? 'rtl' : 'ltr'}>
+        <div className="w-full flex-1">
+          <FtlDashboardView
+            language={language}
+            theme={theme}
+            onLanguageChange={setLanguage}
+            onThemeChange={setTheme}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-full space-y-6 flex flex-col" dir={language === 'ar' ? 'rtl' : 'ltr'}>

@@ -247,6 +247,7 @@ export const getMarkup = () => `
         <span class="manifest-subtitle">كشف تفصيلي بالبضائع والطرود المحملة على هذه الشاحنة</span>
       </div>
       <div class="manifest-header-pills" id="truckManifestPills"></div>
+      <div class="manifest-header-actions" id="truckManifestActions" style="display:flex;align-items:center;gap:8px"></div>
       <button type="button" class="close-btn" onclick="__FTL__.closeM('truckManifestModal')" aria-label="Close">✕</button>
     </div>
     <div class="manifest-body" id="truckManifestBody"></div>
@@ -261,6 +262,7 @@ export const getMarkup = () => `
         <span class="manifest-subtitle">أين شحنتي؟ كشف توزيع طرود الشحنة على سيارات النقل والسائقين</span>
       </div>
       <div class="manifest-header-pills" id="shipmentBreakdownPills"></div>
+      <div class="manifest-header-actions" id="shipmentBreakdownActions" style="display:flex;align-items:center;gap:8px"></div>
       <button type="button" class="close-btn" onclick="__FTL__.closeM('shipmentBreakdownModal')" aria-label="Close">✕</button>
     </div>
     <div class="manifest-body" id="shipmentBreakdownBody"></div>

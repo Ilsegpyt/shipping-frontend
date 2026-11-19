@@ -443,16 +443,16 @@ body.ftl-modal-open {
 }
 
 .ftl-root .manifest-box {
-  max-width: 1080px !important;
-  width: 92% !important;
-  min-height: 400px;
+  max-width: 1440px !important;
+  width: 96% !important;
+  min-height: 420px;
   margin: auto;
   border-radius: 20px;
   overflow: hidden;
   padding: 0 !important;
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 25px 70px -10px rgba(15, 23, 42, 0.45), 0 0 0 1px rgba(15, 23, 42, 0.08);
-  max-height: 90vh;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   background: #ffffff;
@@ -769,6 +769,26 @@ body.ftl-modal-open {
   overflow-y: hidden;
   background: #ffffff;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.ftl-root .manifest-table-wrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.ftl-root .manifest-table-wrap::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 999px;
+}
+
+.ftl-root .manifest-table-wrap::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
+
+.ftl-root .manifest-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .ftl-root .manifest-table {
@@ -780,7 +800,7 @@ body.ftl-modal-open {
 }
 
 .ftl-root .manifest-table th {
-  padding: 12px 16px;
+  padding: 11px 14px !important;
   font-weight: 750;
   font-size: 11.5px;
   text-transform: uppercase;
@@ -802,7 +822,7 @@ body.ftl-modal-open {
 }
 
 .ftl-root .manifest-table td {
-  padding: 14px 16px !important;
+  padding: 11px 14px !important;
   border-bottom: 1px solid #f1f5f9;
   color: #1e293b;
   vertical-align: middle;
@@ -889,6 +909,9 @@ body.ftl-modal-open {
   outline: none;
   transition: all 0.2s;
   max-width: 220px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 .ftl-root .manifest-select:focus {
@@ -8024,11 +8047,12 @@ body.ftl-modal-open {
 }
 
 .ftl-root .rail .rrow:first-child {
-  display: grid;
-  grid-template-columns: minmax(165px, 1.2fr) minmax(130px, 1fr) minmax(130px, 1fr) auto auto;
-  gap: 12px;
-  align-items: end;
-  overflow-x: auto
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+  align-items: flex-end;
+  overflow-x: visible;
+  padding-bottom: 2px
 }
 
 .ftl-root .rail .fld {
@@ -8087,7 +8111,9 @@ body.ftl-modal-open {
   }
 
   .ftl-root .rail .rrow:first-child {
-    grid-template-columns: 165px 140px 140px auto auto
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px
   }
 }
 
@@ -9835,33 +9861,36 @@ body.ftl-modal-open {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
-  padding: 4px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.06);
+  padding: 6px;
   z-index: 100;
-  min-width: 120px;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
 }
 
 .ftl-root .fcl-status-menu button {
-  padding: 6px 12px;
-  font-size: 11.5px;
+  padding: 8px 12px;
+  font-size: 12px;
   font-weight: 650;
   text-align: start;
   border-radius: 8px;
-  border: none;
-  background: transparent;
+  border: 1px solid transparent;
+  background: #f8fafc;
   color: #334155;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
-  transition: background 0.12s;
+  gap: 8px;
+  transition: all 0.15s ease-in-out;
 }
 
 .ftl-root .fcl-status-menu button:hover {
   background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+  transform: translateY(-1px);
 }
 
 /* FCL-style Operation / Entered Card */
@@ -10375,5 +10404,262 @@ body.ftl-modal-open {
   background: #f1f5f9;
   color: #0f172a;
 }
+
+/* =============================================================================
+   FTL Dashboard Spacing, Alignment & Formatting Polish
+   Resolves layout issues:
+   1. Direction Tabs & Rail connection (breathing room, uniform radius)
+   2. Filter Rail single-row alignment (Date basis, From, To, Presets, Created from/to, Delivery, Reset)
+   3. KPI card spacing, vertical alignment, and sparkline clearance
+   ============================================================================= */
+
+/* Page top breathing room */
+.ftl-root #dash {
+  padding-top: 10px;
+}
+
+/* Direction Tabs: sleek pills above rail */
+.ftl-root .dtabs {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 12px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+}
+
+.ftl-root .dtab {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 12px !important;
+  padding: 8px 16px 9px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  color: var(--steel) !important;
+  position: relative !important;
+  transition: all 0.18s ease !important;
+  box-shadow: 0 1px 3px rgba(4, 26, 50, 0.04) !important;
+}
+
+.ftl-root .dtab:hover {
+  color: var(--ink) !important;
+  border-color: var(--aqua) !important;
+}
+
+.ftl-root .dtab.on {
+  color: var(--ink) !important;
+  background: var(--card) !important;
+  border-color: var(--brand-2) !important;
+  box-shadow: 0 2px 6px rgba(11, 79, 122, 0.12) !important;
+}
+
+.ftl-root .dtab::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: -1px !important;
+  height: 3px !important;
+  border-radius: 3px !important;
+  background: transparent !important;
+  transition: background 0.18s !important;
+}
+
+.ftl-root .dtab.on::after {
+  background: linear-gradient(90deg, var(--brand-2), var(--aqua)) !important;
+}
+
+/* Filter Rail Container */
+.ftl-root .rail {
+  background: color-mix(in srgb, var(--card) 92%, transparent) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  padding: 16px 20px !important;
+  margin-bottom: 14px !important;
+  box-shadow: 0 2px 10px rgba(4, 26, 50, 0.05) !important;
+}
+
+/* Rail Row 1: Flex layout ensuring single-row or balanced wrap for all 8 items */
+.ftl-root .rail .rrow:first-child {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 12px 14px !important;
+  align-items: flex-end !important;
+  overflow-x: visible !important;
+  padding-bottom: 2px !important;
+}
+
+.ftl-root .rail .rrow:first-child .fld {
+  flex: 0 0 auto !important;
+  min-width: 0 !important;
+}
+
+.ftl-root .rail .rrow:first-child #dateBasis {
+  min-width: 165px !important;
+  width: auto !important;
+}
+
+.ftl-root .rail .rrow:first-child input[type="date"] {
+  min-width: 130px !important;
+  width: auto !important;
+}
+
+.ftl-root .rail .rrow:first-child #deliveryFilter {
+  min-width: 140px !important;
+  width: auto !important;
+}
+
+.ftl-root .rail .rrow:first-child .presets {
+  height: 39px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+}
+
+.ftl-root .rail .rrow:first-child .reset {
+  margin-inline-start: auto !important;
+  flex: 0 0 auto !important;
+  height: 39px !important;
+  white-space: nowrap !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 0 8px !important;
+  background: none !important;
+  border: none !important;
+  color: var(--sea) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+.ftl-root .rail .rrow:first-child .reset:hover {
+  text-decoration: underline !important;
+  color: var(--brand-2) !important;
+}
+
+/* Rail Row 2: Dropdowns evenly balanced */
+.ftl-root .rail .rrow:last-child {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)) !important;
+  gap: 12px 14px !important;
+  overflow: visible !important;
+}
+
+.ftl-root .rail .rsep {
+  height: 1px !important;
+  background: var(--line) !important;
+  margin: 14px 0 !important;
+  opacity: 0.8 !important;
+}
+
+.ftl-root #activeNote {
+  font-size: 12px !important;
+  color: var(--steel) !important;
+  margin: 2px 4px 16px !important;
+  line-height: 1.45 !important;
+}
+
+/* KPI Grid & Cards Polish */
+.ftl-root .kpis {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 14px !important;
+  margin-bottom: 20px !important;
+}
+
+.ftl-root .kpi {
+  --acc: var(--sea);
+  background: var(--card) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 16px !important;
+  padding: 16px 18px 40px !important;
+  min-height: 128px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 1px 3px rgba(4, 26, 50, 0.05), 0 10px 24px -14px rgba(4, 26, 50, 0.12) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  box-sizing: border-box !important;
+}
+
+.ftl-root .kpi:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 8px rgba(4, 26, 50, 0.06), 0 16px 32px -12px rgba(4, 26, 50, 0.2) !important;
+}
+
+.ftl-root .kpi .k-top {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.ftl-root .kpi .k-val {
+  font-family: var(--disp) !important;
+  font-weight: 800 !important;
+  font-size: 25px !important;
+  line-height: 1.15 !important;
+  margin-top: 8px !important;
+  margin-bottom: 4px !important;
+  letter-spacing: -0.015em !important;
+  position: relative !important;
+  z-index: 2 !important;
+}
+
+.ftl-root .kpi .k-sub {
+  font-size: 11.5px !important;
+  line-height: 1.4 !important;
+  color: var(--steel) !important;
+  position: relative !important;
+  z-index: 2 !important;
+  word-break: break-word !important;
+}
+
+/* Subtle sparkline ambient at the bottom, never obscuring text */
+.ftl-root .kpi .spark {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: 16px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  gap: 3px !important;
+  padding: 0 16px !important;
+  opacity: 0.18 !important;
+  pointer-events: none !important;
+  z-index: 1 !important;
+}
+
+.ftl-root .kpi .spark i {
+  flex: 1 !important;
+  border-radius: 3px 3px 0 0 !important;
+  background: linear-gradient(180deg, var(--acc), color-mix(in srgb, var(--acc) 40%, transparent)) !important;
+  min-height: 2px !important;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .ftl-root .kpis {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ftl-root .kpis {
+    grid-template-columns: 1fr !important;
+  }
+  .ftl-root .rail .rrow:first-child {
+    gap: 10px 12px !important;
+  }
+}
+
 
 

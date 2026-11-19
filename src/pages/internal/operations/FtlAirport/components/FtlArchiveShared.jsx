@@ -287,8 +287,8 @@ export function FtlStatusHistoryModal({ op, onClose, lang = 'en' }) {
   const currentStatusText = isInactive
     ? (lang === 'ar' ? 'غير نشطة' : 'Inactive')
     : isDelivered
-    ? (lang === 'ar' ? 'تم التسليم' : 'Delivered')
-    : (lang === 'ar' ? 'مفتوحة' : 'Open');
+      ? (lang === 'ar' ? 'تم التسليم' : 'Delivered')
+      : (lang === 'ar' ? 'مفتوحة' : 'Open');
 
   return createPortal(
     <div
@@ -351,22 +351,20 @@ export function FtlStatusHistoryModal({ op, onClose, lang = 'en' }) {
               {lang === 'ar' ? 'الحالة الحالية' : 'Current'}
             </span>
             <span
-              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                currentStatusCode === 'Delivered'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                  : currentStatusCode === 'Inactive'
+              className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${currentStatusCode === 'Delivered'
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : currentStatusCode === 'Inactive'
                   ? 'bg-rose-50 text-rose-800 border-rose-300'
                   : 'bg-sky-50 text-sky-800 border-sky-300'
-              }`}
+                }`}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  currentStatusCode === 'Delivered'
-                    ? 'bg-emerald-500'
-                    : currentStatusCode === 'Inactive'
+                className={`w-1.5 h-1.5 rounded-full ${currentStatusCode === 'Delivered'
+                  ? 'bg-emerald-500'
+                  : currentStatusCode === 'Inactive'
                     ? 'bg-rose-500'
                     : 'bg-sky-500'
-                }`}
+                  }`}
               />
               {currentStatusText}
             </span>
@@ -409,15 +407,14 @@ export function FtlStatusHistoryModal({ op, onClose, lang = 'en' }) {
                     >
                       {/* Timeline Node Badge */}
                       <div
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-xs border-2 transition ${
-                          itemIsDelivered
-                            ? 'bg-emerald-50 border-emerald-500 text-emerald-600'
-                            : itemIsReopened
+                        className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 z-10 shadow-xs border-2 transition ${itemIsDelivered
+                          ? 'bg-emerald-50 border-emerald-500 text-emerald-600'
+                          : itemIsReopened
                             ? 'bg-amber-50 border-amber-500 text-amber-600'
                             : itemIsDeleted
-                            ? 'bg-rose-50 border-rose-500 text-rose-600'
-                            : 'bg-sky-50 border-sky-500 text-sky-600'
-                        }`}
+                              ? 'bg-rose-50 border-rose-500 text-rose-600'
+                              : 'bg-sky-50 border-sky-500 text-sky-600'
+                          }`}
                       >
                         {itemIsDelivered && <CheckCircle2 size={18} />}
                         {itemIsReopened && <RotateCcw size={18} />}
@@ -430,15 +427,14 @@ export function FtlStatusHistoryModal({ op, onClose, lang = 'en' }) {
                       <div className="flex-1 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs transition">
                         <div className="flex items-center justify-between gap-2 mb-1.5">
                           <span
-                            className={`text-xs font-bold ${
-                              itemIsDelivered
-                                ? 'text-emerald-800'
-                                : itemIsReopened
+                            className={`text-xs font-bold ${itemIsDelivered
+                              ? 'text-emerald-800'
+                              : itemIsReopened
                                 ? 'text-amber-800'
                                 : itemIsDeleted
-                                ? 'text-rose-800'
-                                : 'text-sky-800'
-                            }`}
+                                  ? 'text-rose-800'
+                                  : 'text-sky-800'
+                              }`}
                           >
                             {item.title}
                           </span>
@@ -619,12 +615,12 @@ export function FtlConfirmDeleteModal({
  * Reopen / Restore Confirmation Modal
  */
 export function FtlReopenModal({ op, isOpen, onConfirm, onClose, lang = 'en', mode = 'delivered' }) {
-  const [reason, setReason] = useState('Reopened for modifications');
+  const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (op) {
-      setReason(mode === 'inactive' ? 'Restored operation' : 'Reopened for modifications');
+      setReason('');
     }
   }, [op, mode]);
 
@@ -632,10 +628,11 @@ export function FtlReopenModal({ op, isOpen, onConfirm, onClose, lang = 'en', mo
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!op?.ref) return;
+    const trimmedReason = reason.trim();
+    if (!op?.ref || !trimmedReason) return;
     setSubmitting(true);
     try {
-      await onConfirm(op.ref, reason);
+      await onConfirm(op.ref, trimmedReason);
       onClose();
     } catch (err) {
       console.error(err);
@@ -796,8 +793,8 @@ export function FtlFullDetailsDrawer({ op, onClose, isDelivered = true, lang = '
         {/* Audit Banner */}
         <div
           className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 shrink-0 ${isDelivered
-              ? 'bg-emerald-50/80 border-emerald-100 text-emerald-950'
-              : 'bg-rose-50/80 border-rose-100 text-rose-950'
+            ? 'bg-emerald-50/80 border-emerald-100 text-emerald-950'
+            : 'bg-rose-50/80 border-rose-100 text-rose-950'
             }`}
         >
           <div className="flex items-center gap-4 text-xs">
