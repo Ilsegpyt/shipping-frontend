@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, Search, Calendar, Download, Mail, CheckSquare, Square, AlertCircle } from 'lucide-react';
+import { X, Search, Calendar, Download, Mail, CheckSquare, Square, AlertCircle, Copy, Check } from 'lucide-react';
 import { COLS, CONTAINER_TYPES } from '../constants';
 
 // Exact group colors matching the Ocean Transport dashboard
@@ -44,7 +44,14 @@ export default function EmailDraftModal({
   showToast,
   lang = 'en',
 }) {
-  const activeDir = currentDir === 'Delivered' ? 'Import' : (currentDir === 'Deleted' ? 'Import' : currentDir);
+  const activeDir = useMemo(() => {
+    if (currentDir === 'Import' || currentDir === 'Export') return currentDir;
+    if (Array.isArray(activeRows) && activeRows.length > 0) {
+      const isAllExport = activeRows.every((r) => r.dir === 'Export' || (r.booking && !r.bl));
+      if (isAllExport) return 'Export';
+    }
+    return 'Import';
+  }, [currentDir, activeRows]);
   const availableCols = useMemo(() => {
     const list = COLS[activeDir] || COLS.Import || [];
     // Exclude action buttons, checkboxes, and internal cards
@@ -57,6 +64,7 @@ export default function EmailDraftModal({
   const [toError, setToError] = useState(false);
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Column selection state (Set of column keys)
   const [selectedColKeys, setSelectedColKeys] = useState(new Set());
@@ -240,21 +248,14 @@ export default function EmailDraftModal({
     });
   };
 
-  // EML Download generator
-  const handleDownloadEml = () => {
-    // 0. Validate recipient email (To) is not empty
-    if (!to || !to.trim()) {
-      setToError(true);
-      setToAlertOpen(true);
-      return;
-    }
-
+  // Shared email HTML generator for both .eml download and clipboard reply
+  const generateEmailContent = () => {
     const chosenCols = availableCols.filter((c) => selectedColKeys.has(c.k));
     if (chosenCols.length === 0) {
       const msg = lang === 'ar' ? 'يرجى اختيار عمود واحد على الأقل.' : 'Please select at least one column.';
       if (showToast) showToast(msg, 'warning');
       else console.warn(msg);
-      return;
+      return null;
     }
 
     const chosenShipments = allGroupedShipments.filter((s, idx) =>
@@ -265,64 +266,82 @@ export default function EmailDraftModal({
       const msg = lang === 'ar' ? 'يرجى اختيار شحنة واحدة على الأقل.' : 'Please select at least one shipment.';
       if (showToast) showToast(msg, 'warning');
       else console.warn(msg);
-      return;
+      return null;
     }
 
-    // Expanded custom widths per column ensuring zero word-splitting in Outlook
-    const COLUMN_CUSTOM_WIDTHS = {
-      shipNo: 190,
-      vol: 130,
-      oper: 240,
-      cert: 200,
-      client: 240,
-      bl: 190,
-      booking: 190,
-      line: 190,
-      dest: 220,
-      pod: 180,
-      pol: 180,
-      pow: 170,
-      clrType: 160,
-      customs: 180,
-      cut: 180,
-      free: 180,
-      reqDate: 180,
-      reqTime: 160,
-      arrDate: 180,
-      arrTime: 160,
-      gateOut: 180,
-      gateOutT: 160,
-      size: 200,
-      cntr: 190,
-      updates: 220,
-      trucker: 220,
-      car: 160,
-      driver: 210,
-      mob: 160,
-      checkout: 180,
-      invRcv: 180,
-      missDoc: 200,
-      missRcv: 180,
-      status: 150,
+    // Base optimal widths per column ensuring safe dimensions within Word limits
+    const BASE_COL_WIDTHS = {
+      shipNo: 50,
+      vol: 45,
+      oper: 70,
+      cert: 90,
+      client: 130,
+      bl: 110,
+      booking: 110,
+      line: 85,
+      dest: 85,
+      pod: 80,
+      pol: 80,
+      pow: 75,
+      clrType: 80,
+      customs: 80,
+      cut: 80,
+      free: 55,
+      reqDate: 78,
+      reqTime: 55,
+      arrDate: 78,
+      arrTime: 55,
+      gateOut: 78,
+      gateOutT: 55,
+      size: 70,
+      cntr: 105,
+      updates: 140,
+      trucker: 95,
+      car: 65,
+      driver: 95,
+      mob: 85,
+      checkout: 75,
+      invRcv: 75,
+      missDoc: 80,
+      missRcv: 75,
+      status: 65,
     };
 
-    // Calculate total width based on expanded individual column widths
-    const totalTableWidth = chosenCols.reduce(
-      (sum, c) => sum + (COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190)),
+    // Calculate raw width
+    const rawTotalWidth = chosenCols.reduce(
+      (sum, c) => sum + (BASE_COL_WIDTHS[c.k] || (c.w ? Math.min(c.w, 110) : 80)),
       0
     );
+
+    // Hard limit in MS Word/Outlook is 22 inches (~2,112px). We strictly cap at 1,800px.
+    const MAX_SAFE_TABLE_WIDTH = 1800;
+    const scale = rawTotalWidth > MAX_SAFE_TABLE_WIDTH ? MAX_SAFE_TABLE_WIDTH / rawTotalWidth : 1;
+
+    // Build scaled column width map
+    const colWidthsMap = {};
+    chosenCols.forEach((c) => {
+      const base = BASE_COL_WIDTHS[c.k] || (c.w ? Math.min(c.w, 110) : 80);
+      colWidthsMap[c.k] = Math.max(36, Math.round(base * scale));
+    });
+
+    const totalTableWidth = chosenCols.reduce((sum, c) => sum + colWidthsMap[c.k], 0);
+
+    const isScaledDown = scale < 0.85;
+    const cellFontSize = isScaledDown ? '10px' : '11.5px';
+    const cellPadding = isScaledDown ? '3px 4px' : '5px 8px';
+    const headerPadding = isScaledDown ? '4px 4px' : '6px 8px';
 
     // Build the HTML Table with strict inline styles and explicit pixel widths
     const theadHtml = `
       <thead>
-        <tr style="height: 46px;">
+        <tr style="height: 40px;">
           ${chosenCols
         .map((c) => {
-          const colWidth = COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190);
+          const colWidth = colWidthsMap[c.k];
           const gStyle = GROUP_STYLES[c.g] || GROUP_STYLES.g7;
-          return `<th width="${colWidth}" style="width: ${colWidth}px; min-width: ${colWidth}px; background-color: ${gStyle.bg}; border: 1px solid ${gStyle.border}; color: ${gStyle.color}; font-weight: bold; padding: 11px 12px; text-align: center; font-size: 12px; line-height: 1.35; white-space: nowrap; box-sizing: border-box;">
-                <div style="font-size: 12px; font-weight: bold; margin-bottom: 3px; white-space: nowrap;"><nobr>${escapeHtml(c.h)}</nobr></div>
-                <div style="font-size: 10px; opacity: 0.85; font-weight: normal; white-space: nowrap;"><nobr>${escapeHtml(c.ar || '')}</nobr></div>
+          return `<th width="${colWidth}" style="width: ${colWidth}px; background-color: ${gStyle.bg}; border: 1px solid ${gStyle.border}; color: ${gStyle.color}; font-weight: bold; padding: ${headerPadding}; text-align: center; font-size: ${cellFontSize}; line-height: 1.25; white-space: nowrap;">
+                <div style="font-size: ${cellFontSize}; font-weight: bold; margin-bottom: 2px; white-space: nowrap;"><span style="white-space: nowrap;">${escapeHtml(c.h)}</span></div>
+                ${c.ar && !isScaledDown ? `<div style="font-size: 9px; opacity: 0.85; font-weight: normal; white-space: nowrap;"><span style="white-space: nowrap;">${escapeHtml(c.ar)}</span></div>` : ''}
               </th>`;
         })
         .join('')}
@@ -338,14 +357,45 @@ export default function EmailDraftModal({
           const isEvenShip = shipIdx % 2 === 0;
           const shipBg = isEvenShip ? '#ffffff' : '#f8fafc';
 
+          // Pre-calculate merge eligibility per column for this specific shipment:
+          // A column is merged IF:
+          // 1. Shipment has more than 1 container (rowSpan > 1)
+          // 2. Column is unique (c.uniq === true)
+          // 3. If canUnmerge is true (e.g. Transporter, Destination, Missing Docs):
+          //    only merge if all containers have identical values; if values differ, unmerge!
+          const colMergeEligibility = {};
+          chosenCols.forEach((c) => {
+            if (c.uniq !== true || rowSpan <= 1) {
+              colMergeEligibility[c.k] = false;
+              return;
+            }
+            if (c.canUnmerge === true) {
+              const distinctVals = new Set(
+                shipRows.map((r) => {
+                  let v = r[c.k] ?? '';
+                  if (typeof v === 'object' && v !== null) {
+                    v = v.name || v.label || v.value || v.text || '';
+                  }
+                  if (c.t === 'date' && v) {
+                    v = String(v).slice(0, 10);
+                  }
+                  return String(v).trim();
+                })
+              );
+              colMergeEligibility[c.k] = distinctVals.size <= 1;
+            } else {
+              colMergeEligibility[c.k] = true;
+            }
+          });
+
           return shipRows
             .map((r, rIdx) => {
               const isFirstRow = rIdx === 0;
 
               const cells = chosenCols
                 .map((c) => {
-                  const isMergedCol = c.uniq === true;
-                  if (isMergedCol && !isFirstRow) return null; // handled by rowspan
+                  const shouldMerge = colMergeEligibility[c.k] === true;
+                  if (shouldMerge && !isFirstRow) return null; // handled by rowspan
 
                   let cellVal = r[c.k] ?? '';
 
@@ -391,12 +441,12 @@ export default function EmailDraftModal({
                     cellVal = cellVal.name || cellVal.label || cellVal.value || cellVal.text || '';
                   }
 
-                  const colWidth = COLUMN_CUSTOM_WIDTHS[c.k] || (c.w ? Math.max(c.w + 30, 180) : 190);
-                  const spanAttr = isMergedCol && rowSpan > 1 ? ` rowspan="${rowSpan}"` : '';
-                  const cellBg = isMergedCol ? shipBg : (rIdx % 2 === 0 ? '#ffffff' : '#fafafa');
+                  const colWidth = colWidthsMap[c.k];
+                  const spanAttr = shouldMerge && rowSpan > 1 ? ` rowspan="${rowSpan}"` : '';
+                  const cellBg = shouldMerge ? shipBg : (rIdx % 2 === 0 ? '#ffffff' : '#fafafa');
 
-                  return `<td width="${colWidth}"${spanAttr} style="width: ${colWidth}px; min-width: ${colWidth}px; background-color: ${cellBg}; border: 1px solid #cbd5e1; padding: 10px 14px; text-align: center; vertical-align: middle; font-size: 12.5px; line-height: 1.4; color: #1e293b; white-space: nowrap; box-sizing: border-box;">
-                      <nobr>${escapeHtml(cellVal)}</nobr>
+                  return `<td width="${colWidth}"${spanAttr} style="width: ${colWidth}px; background-color: ${cellBg}; border: 1px solid #cbd5e1; padding: ${cellPadding}; text-align: center; vertical-align: middle; font-size: ${cellFontSize}; line-height: 1.25; color: #1e293b; white-space: nowrap;">
+                      <span style="white-space: nowrap;">${escapeHtml(cellVal)}</span>
                     </td>`;
                 })
                 .filter(Boolean)
@@ -412,7 +462,7 @@ export default function EmailDraftModal({
 
     const fullTableHtml = `
       <div style="overflow-x: auto; width: 100%; margin-top: 18px; margin-bottom: 28px;">
-        <table border="1" cellpadding="8" cellspacing="0" width="${totalTableWidth}" style="border-collapse: collapse; width: ${totalTableWidth}px; min-width: ${totalTableWidth}px; table-layout: fixed; border: 1px solid #cbd5e1; font-family: 'Segoe UI', Calibri, -apple-system, Arial, sans-serif; font-size: 12.5px; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+        <table border="1" cellpadding="4" cellspacing="0" width="${totalTableWidth}" style="border-collapse: collapse; width: ${totalTableWidth}px; border: 1px solid #cbd5e1; font-family: 'Segoe UI', Calibri, -apple-system, Arial, sans-serif; font-size: ${cellFontSize}; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
           ${theadHtml}
           ${tbodyHtml}
         </table>
@@ -439,6 +489,30 @@ export default function EmailDraftModal({
 </body>
 </html>`;
 
+    return {
+      theadHtml,
+      tbodyHtml,
+      fullTableHtml,
+      formattedMessage,
+      htmlDocument,
+      totalTableWidth,
+      cellFontSize,
+    };
+  };
+
+  // EML Download generator (opens standalone draft)
+  const handleDownloadEml = () => {
+    // 0. Validate recipient email (To) is not empty
+    if (!to || !to.trim()) {
+      setToError(true);
+      setToAlertOpen(true);
+      return;
+    }
+
+    const content = generateEmailContent();
+    if (!content) return;
+    const { htmlDocument } = content;
+
     // Construct RFC 822 / EML draft format with X-Unsent: 1 header
     const emlHeaders = [
       'X-Unsent: 1',
@@ -463,6 +537,65 @@ export default function EmailDraftModal({
     URL.revokeObjectURL(downloadUrl);
 
     onClose();
+  };
+
+  // Copy for Reply generator (copies rich HTML table to paste directly into existing Outlook thread)
+  const handleCopyForReply = async () => {
+    const content = generateEmailContent();
+    if (!content) return;
+
+    const { theadHtml, tbodyHtml, totalTableWidth, formattedMessage, cellFontSize } = content;
+
+    // Notice: NO wrapping div with width:100% and NO table-layout:fixed to prevent Word/Outlook from squishing columns
+    const replyHtml = `
+      <div style="font-family: 'Segoe UI', Calibri, -apple-system, Arial, sans-serif; font-size: 13px; color: #1e293b; line-height: 1.5;">
+        ${formattedMessage ? `<div style="font-size: 14px; margin-bottom: 16px; color: #0f172a;">${formattedMessage}</div>` : ''}
+        <table border="1" cellpadding="4" cellspacing="0" width="${totalTableWidth}" style="border-collapse: collapse; width: ${totalTableWidth}px; border: 1px solid #cbd5e1; font-family: 'Segoe UI', Calibri, -apple-system, Arial, sans-serif; font-size: ${cellFontSize}; mso-table-lspace: 0pt; mso-table-rspace: 0pt;">
+          ${theadHtml}
+          ${tbodyHtml}
+        </table>
+      </div>
+    `;
+
+    const plainText = message ? `${message}\n\n[Table content copied]` : '[Table content copied]';
+
+    try {
+      if (navigator.clipboard && window.ClipboardItem) {
+        const htmlBlob = new Blob([replyHtml], { type: 'text/html' });
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob,
+          }),
+        ]);
+      } else {
+        const listener = (e) => {
+          e.clipboardData.setData('text/html', replyHtml);
+          e.clipboardData.setData('text/plain', plainText);
+          e.preventDefault();
+        };
+        document.addEventListener('copy', listener);
+        document.execCommand('copy');
+        document.removeEventListener('copy', listener);
+      }
+
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+
+      const successMsg = lang === 'ar'
+        ? 'تم نسخ الجدول بنجاح! افتح الآوتلوك واضغط Reply ثم الصق (Ctrl + V).'
+        : 'Copied! Open Outlook, click Reply, and paste (Ctrl + V).';
+
+      if (showToast) {
+        showToast(successMsg, 'success');
+      }
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      if (showToast) {
+        showToast(lang === 'ar' ? 'تعذر نسخ الجدول' : 'Failed to copy to clipboard', 'error');
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -696,26 +829,48 @@ export default function EmailDraftModal({
         {/* Footer */}
         <div className="border-t border-slate-100 pt-3 mt-3">
           <p className="text-[11.5px] text-slate-500 mb-3">
-            An unsent .eml draft will download with the recipient, subject, message and the selected table embedded in the body. Open it in Outlook, review it and send.
+            {lang === 'ar'
+              ? 'يمكنك تحميل مسودة (.eml) لفتح إيميل جديد، أو نسخ المحتوى والجدول للرد مباشرة في سكونس مفتوح بالآوتلوك.'
+              : 'Download an unsent .eml draft to open a new email, or copy formatted table to reply directly in an existing Outlook thread.'}
           </p>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 transition"
             >
-              Cancel
+              {lang === 'ar' ? 'إلغاء' : 'Cancel'}
             </button>
 
-            <button
-              type="button"
-              onClick={handleDownloadEml}
-              className="flex items-center gap-2 rounded-xl bg-[#0f4c81] hover:bg-[#0c3d68] text-white px-5 py-2.5 text-xs font-semibold shadow-md transition active:scale-95"
-            >
-              <Download size={14} />
-              <span>Download email draft (.eml)</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleCopyForReply}
+                className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold shadow-sm border transition active:scale-95 ${
+                  copied
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:border-slate-400'
+                }`}
+                title={lang === 'ar' ? 'انسخ الجدول للرد في سكونس مفتوح بالآوتلوك' : 'Copy formatted table to reply into an existing Outlook thread'}
+              >
+                {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} className="text-slate-500" />}
+                <span>
+                  {copied
+                    ? (lang === 'ar' ? 'تم النسخ!' : 'Copied!')
+                    : (lang === 'ar' ? 'نسخ للرد في سكونس (Copy)' : 'Copy for Reply')}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadEml}
+                className="flex items-center gap-2 rounded-xl bg-[#0f4c81] hover:bg-[#0c3d68] text-white px-5 py-2.5 text-xs font-semibold shadow-md transition active:scale-95"
+              >
+                <Download size={14} />
+                <span>Download email draft (.eml)</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { CONTAINER_TYPES } from './constants';
+import { CONTAINER_TYPES, is20Container } from './constants';
 
 /**
  * Normalizes any backend container type or description to the exact backend enum string
@@ -80,6 +80,37 @@ export function mapBackendOperationsToFrontend(operations = []) {
 
     const rowIndices = [];
 
+    // Calculate 20' pairs within this operation
+    let savedPairs = {};
+    try {
+      savedPairs = JSON.parse(localStorage.getItem('ocean_container_pairs') || '{}');
+    } catch (e) {}
+
+    const pairMap = new Map();
+    for (let i = 0; i < containers.length - 1; i++) {
+      const c1 = containers[i];
+      const c2 = containers[i + 1];
+      const c1Id = c1.id || `${op.id}_${i}`;
+      const c2Id = c2.id || `${op.id}_${i + 1}`;
+
+      const c1Car = String(c1.vehicleCarNumber || '').trim();
+      const c2Car = String(c2.vehicleCarNumber || '').trim();
+
+      const isBoth20 = is20Container(c1.containerType) && is20Container(c2.containerType);
+      const isSavedPair = (savedPairs[c1Id] && savedPairs[c1Id] === savedPairs[c2Id]);
+      const isSameTruck = isBoth20 && (
+        (c1Car && c1Car.toLowerCase() === c2Car.toLowerCase()) ||
+        (c1.vehicleId && c1.vehicleId === c2.vehicleId)
+      );
+
+      if (!pairMap.has(c1Id) && !pairMap.has(c2Id) && (isSavedPair || isSameTruck)) {
+        const pId = savedPairs[c1Id] || `pair_${op.id}_${c1Id}_${c2Id}`;
+        pairMap.set(c1Id, pId);
+        pairMap.set(c2Id, pId);
+        i++; // skip next since it's already paired
+      }
+    }
+
     containers.forEach((cntr, idx) => {
       const rowIdx = entry[dir].length;
       rowIndices.push(rowIdx);
@@ -92,6 +123,7 @@ export function mapBackendOperationsToFrontend(operations = []) {
         _lockedByName: op.lockedByName || op.LockedByName || '',
         _lockedAtUtc: op.lockedAtUtc || op.LockedAtUtc || null,
         _containerId: cntr.id,
+        _pairId: pairMap.get(rowId) || null,
         _ref: ref,
         _rowId: rowId,
         _ordinal: cntr.ordinal || (idx + 1),

@@ -19,6 +19,9 @@ export default function PortalLayout({
         }
     });
     const location = useLocation();
+    const isFclOrFtlPage = ['/transport', '/ocean-transport', '/ftl'].some((prefix) =>
+        location.pathname.startsWith(prefix)
+    );
 
     const toggleDesktopSidebar = () => {
         setIsDesktopCollapsed((prev) => {
@@ -155,8 +158,8 @@ export default function PortalLayout({
                             <Menu className="h-5 w-5" />
                         </button>
 
-                        {/* Desktop Expand Button when collapsed */}
-                        {isDesktopCollapsed && (
+                        {/* Desktop Expand Button when collapsed (hidden on FCL and FTL pages) */}
+                        {isDesktopCollapsed && !isFclOrFtlPage && (
                             <button
                                 type="button"
                                 onClick={toggleDesktopSidebar}

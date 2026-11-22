@@ -34,6 +34,7 @@ export const extractErrorMessage = (err) => extractApiErrorMessage(err);
 import { INITIAL_ENTRY, INITIAL_SHIPS } from './mockData';
 import { enrich, exportToExcel, safeTimeOnly } from './tptEngine';
 import { fclCandidates } from './fclEngine';
+import { PAIR_MERGE_COLS } from './constants';
 import {
   getAllOperations,
   createOperation,
@@ -702,10 +703,25 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         );
 
         if (idx !== -1) {
-          list[idx] = {
+          const updatedItem = {
             ...list[idx],
             [colKey]: val,
           };
+          list[idx] = updatedItem;
+
+          const pId = updatedItem._pairId;
+          if (pId && (PAIR_MERGE_COLS.includes(colKey) || ['carId', 'driverId', 'truckerId', 'transporterId'].includes(colKey))) {
+            const partnerIdx = list.findIndex(
+              (item, i) => i !== idx && item._pairId === pId
+            );
+            if (partnerIdx !== -1) {
+              list[partnerIdx] = {
+                ...list[partnerIdx],
+                [colKey]: val,
+              };
+            }
+          }
+
           next[d] = list;
           break;
         }

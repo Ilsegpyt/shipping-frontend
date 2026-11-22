@@ -86,7 +86,7 @@ export const COLS = {
     { k: 'client', h: 'Client', ar: 'اسم العميل', t: 'list', g: 'g1', op: true, w: 185, src: 'client', uniq: true },
     { k: 'bl', h: 'M/BL / Booking', ar: 'البوليصة / البوكينج', t: 'text', g: 'g2', op: true, w: 175, uniq: true },
     { k: 'line', h: 'Shipping Line', ar: 'الخط الملاحي', t: 'list', g: 'g2', op: true, w: 200, src: 'line', uniq: true },
-    { k: 'dest', h: 'Destination', ar: 'مكان التعتيق / التحميل', t: 'list', g: 'g2', op: true, w: 180, src: 'dest', uniq: true },
+    { k: 'dest', h: 'Destination', ar: 'مكان التعتيق / التحميل', t: 'list', g: 'g2', op: true, w: 180, src: 'dest', uniq: true, canUnmerge: true },
     { k: 'pod', h: 'POD / Port', ar: 'الميناء', t: 'list', g: 'g2', op: true, w: 165, src: 'pod', uniq: true },
     { k: 'reqDate', h: 'Req Date', ar: 'التاريخ المطلوب', t: 'date', g: 'g3', op: true, w: 165, uniq: false },
     { k: 'arrDate', h: 'Actual Arrive Date', ar: 'تاريخ الوصول الفعلي', t: 'date', g: 'g3', w: 165, uniq: false },
@@ -123,6 +123,27 @@ export const CONTAINER_TYPES = [
   { value: 'Flat20', label: "20' Flat", id: 12 },
   { value: 'Tank20', label: "20' Tank", id: 13 },
   { value: 'Tank40', label: "40' Tank", id: 14 },
+];
+
+export function is20Container(type) {
+  if (!type) return false;
+  const s = String(type).toLowerCase().trim();
+  return s.includes('20') || s.includes("20'");
+}
+
+export const PAIR_MERGE_COLS = [
+  'arrDate',
+  'arrTime',
+  'gateOut',
+  'gateOutT',
+  'updates',
+  'trucker',
+  'car',
+  'driver',
+  'mob',
+  'checkout',
+  'reqDate',
+  'reqTime',
 ];
 
 export const MASTER_DEFAULTS = {

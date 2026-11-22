@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import FclTab from './FclTab';
 import SearchableSelect from '../../../../../components/common/SearchableSelect';
-import { COLS, CONTAINER_TYPES, sortPortsWithPriority } from '../constants';
+import { COLS, CONTAINER_TYPES, sortPortsWithPriority, is20Container, PAIR_MERGE_COLS } from '../constants';
 import { fmtDay, fmtTime12, fixDate, normTime } from '../tptEngine';
 import { normalizeContainerType, mapBackendOperationsToFrontend } from '../operationsAdapter';
 import { extractErrorMessage } from '../OceanTransportDashboard';
@@ -387,6 +387,7 @@ export default function DataEntryTab({
     createdBy: '',
     customs: '',
     status: '',
+    direction: '',
     dateType: 'created',
     dateFrom: '',
     dateTo: '',
@@ -402,19 +403,45 @@ export default function DataEntryTab({
   const [serverTotalContainers, setServerTotalContainers] = useState(0);
   const [serverTotalPages, setServerTotalPages] = useState(1);
   const [isPageLoading, setIsPageLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isExportExcelLoading, setIsExportExcelLoading] = useState(false);
 
   const isServerSide = currentDir === 'Import' || currentDir === 'Export' || currentDir === 'Delivered' || currentDir === 'Deleted';
 
   const onUpdateCell = (dir, rowId, colKey, val) => {
+    const isSyncCol = PAIR_MERGE_COLS.includes(colKey) || ['carId', 'driverId', 'truckerId', 'transporterId'].includes(colKey);
+
     if (isServerSide) {
-      setServerPageRows((prev) =>
-        prev.map((r) =>
-          r._rowId === rowId || r._containerId === rowId ? { ...r, [colKey]: val } : r
-        )
-      );
+      setServerPageRows((prev) => {
+        const target = prev.find((r) => r._rowId === rowId || r._containerId === rowId);
+        const pairId = target?._pairId;
+
+        return prev.map((r) => {
+          if (r._rowId === rowId || r._containerId === rowId) {
+            return { ...r, [colKey]: val };
+          }
+          if (pairId && r._pairId === pairId && isSyncCol) {
+            return { ...r, [colKey]: val };
+          }
+          return r;
+        });
+      });
     }
+
     if (onUpdateCellProp) {
       onUpdateCellProp(dir, rowId, colKey, val);
+      if (isSyncCol) {
+        const currentList = isServerSide ? serverPageRows : (dir === 'Export' ? activeExportRows : activeImportRows);
+        const target = currentList.find((r) => r._rowId === rowId || r._containerId === rowId);
+        if (target?._pairId) {
+          const partner = currentList.find(
+            (r) => r._pairId === target._pairId && r._rowId !== rowId && r._containerId !== rowId
+          );
+          if (partner) {
+            onUpdateCellProp(dir, partner._rowId, colKey, val);
+          }
+        }
+      }
     }
   };
 
@@ -433,6 +460,7 @@ export default function DataEntryTab({
     const clean = {};
     Object.keys(f || {}).forEach((k) => {
       if (dir === 'Import' && (k === 'clearanceType' || k === 'customs')) return;
+      if (dir !== 'Delivered' && k === 'direction') return;
       const v = f[k];
       if (v !== '' && v !== null && v !== undefined) {
         clean[k] = v;
@@ -477,7 +505,7 @@ export default function DataEntryTab({
         const res = await getPagedOperations({
           page: targetPage,
           pageSize: currentTabSize,
-          operationType: (isDelivered || isDeleted) ? undefined : targetDir,
+          operationType: isDelivered ? (targetFilters.direction || undefined) : (isDeleted ? undefined : targetDir),
           status: isDelivered ? 'Delivered' : (isDeleted ? undefined : (targetFilters.status || undefined)),
           onlyActive: (isDelivered || isDeleted) ? false : true,
           isDeleted: isDeleted,
@@ -488,10 +516,10 @@ export default function DataEntryTab({
           transporter: targetFilters.transporter || undefined,
           containerType: targetFilters.containerType || undefined,
           destination: targetFilters.destination || undefined,
-          clearanceType: targetDir === 'Export' ? (targetFilters.clearanceType || undefined) : undefined,
+          clearanceType: (targetDir === 'Export' || (isDelivered && targetFilters.direction === 'Export')) ? (targetFilters.clearanceType || undefined) : undefined,
           missingDocs: targetFilters.missingDocs || undefined,
           createdBy: targetFilters.createdBy || undefined,
-          customs: targetDir === 'Export' ? (targetFilters.customs || undefined) : undefined,
+          customs: (targetDir === 'Export' || (isDelivered && targetFilters.direction === 'Export')) ? (targetFilters.customs || undefined) : undefined,
           dateType: targetFilters.dateType || undefined,
           dateFrom: targetFilters.dateFrom || undefined,
           dateTo: targetFilters.dateTo || undefined,
@@ -507,6 +535,15 @@ export default function DataEntryTab({
           if (targetDir === 'Import' || targetDir === 'Export') {
             const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
             mappedRows = mapped[targetDir] || [];
+          } else if (targetDir === 'Delivered') {
+            const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
+            if (targetFilters.direction === 'Import') {
+              mappedRows = mapped.Import || [];
+            } else if (targetFilters.direction === 'Export') {
+              mappedRows = mapped.Export || [];
+            } else {
+              mappedRows = [...(mapped.Import || []), ...(mapped.Export || [])];
+            }
           } else {
             const { entry: mapped } = mapBackendOperationsToFrontend(res.items);
             mappedRows = [...(mapped.Import || []), ...(mapped.Export || [])];
@@ -1964,11 +2001,23 @@ export default function DataEntryTab({
     const targetRow = activeUpdateRow.row;
     const containerId = targetRow._containerId;
 
+    const currentList = isServerSide ? serverPageRows : (currentDir === 'Export' ? activeExportRows : activeImportRows);
+    const partnerRow = targetRow._pairId
+      ? currentList.find((r) => r._pairId === targetRow._pairId && r._rowId !== targetRow._rowId && r._containerId !== targetRow._containerId)
+      : null;
+
     setIsSubmittingUpdate(true);
     try {
       let createdUpdate = null;
       if (containerId && !String(containerId).includes('dummy')) {
         createdUpdate = await addContainerUpdate(containerId, text);
+      }
+      if (partnerRow?._containerId && !String(partnerRow._containerId).includes('dummy')) {
+        try {
+          await addContainerUpdate(partnerRow._containerId, text);
+        } catch (partnerErr) {
+          console.warn('Could not add update to partner container:', partnerErr);
+        }
       }
 
       const newObj = {
@@ -1981,6 +2030,9 @@ export default function DataEntryTab({
 
       const updatedList = [newObj, ...(targetRow.updates || [])];
       onUpdateCell && onUpdateCell(currentDir, targetRow._rowId, 'updates', updatedList);
+      if (partnerRow) {
+        onUpdateCell && onUpdateCell(currentDir, partnerRow._rowId, 'updates', updatedList);
+      }
 
       setActiveUpdateRow((prev) => ({
         ...prev,
@@ -2003,6 +2055,9 @@ export default function DataEntryTab({
       };
       const updatedList = [fallbackObj, ...(targetRow.updates || [])];
       onUpdateCell && onUpdateCell(currentDir, targetRow._rowId, 'updates', updatedList);
+      if (partnerRow) {
+        onUpdateCell && onUpdateCell(currentDir, partnerRow._rowId, 'updates', updatedList);
+      }
       setActiveUpdateRow((prev) => ({
         ...prev,
         row: {
@@ -2167,6 +2222,9 @@ export default function DataEntryTab({
     setPage(1);
     if (currentDir !== tabKey) {
       setSearchTerm('');
+      if (tabKey !== 'Delivered') {
+        setFilters((prev) => ({ ...prev, direction: '' }));
+      }
       if (['Import', 'Export', 'Delivered', 'Deleted'].includes(tabKey)) {
         // Instant pre-population from in-memory cache if available (0ms switch!)
         const targetFilters = tabKey === 'Import' ? { ...filters, clearanceType: '', customs: '' } : filters;
@@ -2227,6 +2285,139 @@ export default function DataEntryTab({
       ...prev,
       [`${shipRef}_${colKey}`]: !prev[`${shipRef}_${colKey}`],
     }));
+  };
+
+  const [pairPromptModal, setPairPromptModal] = useState(null);
+
+  const handleMergePair = (shipRef, rowId1, rowId2) => {
+    const pairId = `pair_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+    const updater = (prev) => {
+      const idx1 = prev.findIndex((r) => r._rowId === rowId1 || r._containerId === rowId1);
+      const idx2 = prev.findIndex((r) => r._rowId === rowId2 || r._containerId === rowId2);
+      if (idx1 === -1 || idx2 === -1) return prev;
+
+      let list = [...prev];
+      if (Math.abs(idx1 - idx2) > 1) {
+        const [row2Item] = list.splice(idx2, 1);
+        const newTargetIdx = idx2 < idx1 ? idx1 : idx1 + 1;
+        list.splice(newTargetIdx, 0, row2Item);
+      }
+
+      const r1 = list.find((r) => r._rowId === rowId1 || r._containerId === rowId1);
+      const r2 = list.find((r) => r._rowId === rowId2 || r._containerId === rowId2);
+      if (!r1 || !r2) return prev;
+
+      const sharedData = {};
+      PAIR_MERGE_COLS.forEach((k) => {
+        const v1 = r1[k];
+        const v2 = r2[k];
+        if (v1 !== undefined && v1 !== null && v1 !== '' && (!Array.isArray(v1) || v1.length > 0)) {
+          sharedData[k] = v1;
+        } else if (v2 !== undefined && v2 !== null && v2 !== '' && (!Array.isArray(v2) || v2.length > 0)) {
+          sharedData[k] = v2;
+        } else {
+          sharedData[k] = v1 ?? '';
+        }
+      });
+
+      ['carId', 'driverId', 'truckerId', 'transporterId'].forEach((idKey) => {
+        sharedData[idKey] = r1[idKey] || r2[idKey] || null;
+      });
+
+      return list.map((r) => {
+        if (r._rowId === rowId1 || r._containerId === rowId1 || r._rowId === rowId2 || r._containerId === rowId2) {
+          return {
+            ...r,
+            ...sharedData,
+            _pairId: pairId,
+            _unpaired: false,
+          };
+        }
+        return r;
+      });
+    };
+
+    if (isServerSide) {
+      setServerPageRows(updater);
+    }
+    setEditingShipments((prev) => ({ ...prev, [shipRef]: true }));
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('ocean_container_pairs') || '{}');
+      saved[rowId1] = pairId;
+      saved[rowId2] = pairId;
+      localStorage.setItem('ocean_container_pairs', JSON.stringify(saved));
+    } catch (e) {}
+
+    notify(
+      lang === 'ar'
+        ? 'تم دمج الحاويتين بنجاح على نفس الشاحنة (2×20\')'
+        : '2x20\' containers merged successfully on the same truck',
+      'success'
+    );
+  };
+
+  const handleUnmergePair = (shipRef, pairId) => {
+    if (!pairId) return;
+
+    const unmergeUpdater = (prev) =>
+      prev.map((r) => {
+        if (r._pairId === pairId) {
+          return {
+            ...r,
+            _pairId: null,
+            _unpaired: true,
+          };
+        }
+        return r;
+      });
+
+    if (isServerSide) {
+      setServerPageRows(unmergeUpdater);
+    }
+
+    try {
+      const saved = JSON.parse(localStorage.getItem('ocean_container_pairs') || '{}');
+      Object.keys(saved).forEach((k) => {
+        if (saved[k] === pairId) delete saved[k];
+      });
+      localStorage.setItem('ocean_container_pairs', JSON.stringify(saved));
+    } catch (e) {}
+
+    notify(
+      lang === 'ar' ? 'تم فك دمج الحاويتين' : 'Containers unmerged',
+      'info'
+    );
+  };
+
+  const checkDuplicateCarOn20 = (carVal, rowId) => {
+    const clean = String(carVal || '').trim();
+    if (clean.length < 2) return;
+
+    const currentRows = isServerSide ? serverPageRows : (currentDir === 'Export' ? activeExportRows : activeImportRows);
+    const targetRow = currentRows.find((r) => r._rowId === rowId || r._containerId === rowId);
+    if (!targetRow || !is20Container(targetRow.size) || targetRow._pairId) return;
+
+    const shipRef = targetRow._ref;
+    const shipRows = currentRows.filter((r) => r._ref === shipRef);
+
+    const match = shipRows.find(
+      (r) =>
+        (r._rowId !== rowId && r._containerId !== rowId) &&
+        is20Container(r.size) &&
+        !r._pairId &&
+        String(r.car || '').trim().toLowerCase() === clean.toLowerCase()
+    );
+
+    if (match) {
+      setPairPromptModal({
+        shipRef,
+        row1: match,
+        row2: targetRow,
+        carNo: clean,
+      });
+    }
   };
 
   const handleMobChange = (enteredVal, rowId) => {
@@ -2445,7 +2636,7 @@ export default function DataEntryTab({
 
   const cols = isDeliveredTab ? (COLS.Delivered || COLS.Export || []) : (COLS[currentDir] || []);
   const rows = isDeliveredTab
-    ? deliveredRows
+    ? (isServerSide ? serverPageRows : deliveredRows)
     : isServerSide
       ? (serverPageRows.length > 0 && serverPageRows[0].operationType && serverPageRows[0].operationType !== currentDir ? [] : serverPageRows)
       : currentDir === 'Export'
@@ -2642,6 +2833,7 @@ export default function DataEntryTab({
     if (filters.createdBy) count++;
     if (currentDir === 'Export' && filters.customs) count++;
     if (filters.status) count++;
+    if (currentDir === 'Delivered' && filters.direction) count++;
     if (filters.dateFrom || filters.dateTo) count++;
     return count;
   }, [filters, currentDir]);
@@ -2661,6 +2853,7 @@ export default function DataEntryTab({
       createdBy: '',
       customs: '',
       status: '',
+      direction: '',
       dateType: 'created',
       dateFrom: '',
       dateTo: '',
@@ -3033,10 +3226,198 @@ export default function DataEntryTab({
     };
   }, [cols, paginatedShipments, currentDir]);
 
+  const handleEmailItClick = async () => {
+    if (!onEmailIt) return;
+    const selectedList = Array.from(selectedOps);
+
+    // If user explicitly selected specific shipments via checkboxes, email those directly
+    if (selectedList.length > 0) {
+      onEmailIt(selectedList, rows);
+      return;
+    }
+
+    // If no shipment is selected, fetch all active shipments for this section so the modal has all of them
+    setIsEmailLoading(true);
+    try {
+      const isDelivered = currentDir === 'Delivered';
+      const isDeleted = currentDir === 'Deleted';
+      const effectiveOpType = isDelivered
+        ? (filters.direction || undefined)
+        : (isDeleted ? undefined : currentDir);
+
+      const baseParams = {
+        pageSize: 500,
+        operationType: effectiveOpType,
+        onlyActive: !isDelivered && !isDeleted,
+        isDeleted: isDeleted ? true : undefined,
+        status: isDelivered ? 'Delivered' : undefined,
+        client: filters.client || undefined,
+        line: filters.line || undefined,
+        port: filters.port || undefined,
+        transporter: filters.transporter || undefined,
+        containerType: filters.containerType || undefined,
+        destination: filters.destination || undefined,
+        clearanceType: (effectiveOpType === 'Export' || currentDir === 'Export') ? (filters.clearanceType || undefined) : undefined,
+        missingDocs: filters.missingDocs || undefined,
+        createdBy: filters.createdBy || undefined,
+        customs: (effectiveOpType === 'Export' || currentDir === 'Export') ? (filters.customs || undefined) : undefined,
+        dateType: filters.dateType || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+      };
+
+      const res = await getPagedOperations({
+        page: 1,
+        ...baseParams,
+      });
+
+      let allItems = res && Array.isArray(res.items) ? [...res.items] : [];
+
+      // If total items exceed 500 (multiple pages), automatically fetch remaining pages in parallel
+      if (res && res.totalPages && res.totalPages > 1) {
+        const remainingPages = [];
+        for (let p = 2; p <= res.totalPages; p++) {
+          remainingPages.push(p);
+        }
+        const remainingRes = await Promise.all(
+          remainingPages.map((p) =>
+            getPagedOperations({
+              page: p,
+              ...baseParams,
+            })
+          )
+        );
+        remainingRes.forEach((r) => {
+          if (r && Array.isArray(r.items)) {
+            allItems = allItems.concat(r.items);
+          }
+        });
+      }
+
+      if (allItems.length > 0) {
+        const { entry: mapped } = mapBackendOperationsToFrontend(allItems);
+        let targetDirRows;
+        if (isDelivered) {
+          if (filters.direction === 'Import') {
+            targetDirRows = mapped.Import || [];
+          } else if (filters.direction === 'Export') {
+            targetDirRows = mapped.Export || [];
+          } else {
+            targetDirRows = [...(mapped.Import || []), ...(mapped.Export || [])];
+          }
+        } else {
+          targetDirRows = mapped[currentDir] || [];
+        }
+        onEmailIt([], targetDirRows.length > 0 ? targetDirRows : rows);
+      } else {
+        onEmailIt([], rows);
+      }
+    } catch (err) {
+      console.error('Failed to fetch all operations for email:', err);
+      onEmailIt([], rows);
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
+  const handleExportExcelClick = async () => {
+    if (!onExportExcel) return;
+    const selectedList = Array.from(selectedOps);
+
+    // If user explicitly selected specific shipments via checkboxes, export those directly
+    if (selectedList.length > 0) {
+      onExportExcel(selectedList, rows);
+      return;
+    }
+
+    // If no shipment is selected, fetch all active shipments for this section so the modal has all of them
+    setIsExportExcelLoading(true);
+    try {
+      const isDelivered = currentDir === 'Delivered';
+      const isDeleted = currentDir === 'Deleted';
+      const effectiveOpType = isDelivered
+        ? (filters.direction || undefined)
+        : (isDeleted ? undefined : currentDir);
+
+      const baseParams = {
+        pageSize: 500,
+        operationType: effectiveOpType,
+        onlyActive: !isDelivered && !isDeleted,
+        isDeleted: isDeleted ? true : undefined,
+        status: isDelivered ? 'Delivered' : undefined,
+        client: filters.client || undefined,
+        line: filters.line || undefined,
+        port: filters.port || undefined,
+        transporter: filters.transporter || undefined,
+        containerType: filters.containerType || undefined,
+        destination: filters.destination || undefined,
+        clearanceType: (effectiveOpType === 'Export' || currentDir === 'Export') ? (filters.clearanceType || undefined) : undefined,
+        missingDocs: filters.missingDocs || undefined,
+        createdBy: filters.createdBy || undefined,
+        customs: (effectiveOpType === 'Export' || currentDir === 'Export') ? (filters.customs || undefined) : undefined,
+        dateType: filters.dateType || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+      };
+
+      const res = await getPagedOperations({
+        page: 1,
+        ...baseParams,
+      });
+
+      let allItems = res && Array.isArray(res.items) ? [...res.items] : [];
+
+      // If total items exceed 500 (multiple pages), automatically fetch remaining pages in parallel
+      if (res && res.totalPages && res.totalPages > 1) {
+        const remainingPages = [];
+        for (let p = 2; p <= res.totalPages; p++) {
+          remainingPages.push(p);
+        }
+        const remainingRes = await Promise.all(
+          remainingPages.map((p) =>
+            getPagedOperations({
+              page: p,
+              ...baseParams,
+            })
+          )
+        );
+        remainingRes.forEach((r) => {
+          if (r && Array.isArray(r.items)) {
+            allItems = allItems.concat(r.items);
+          }
+        });
+      }
+
+      if (allItems.length > 0) {
+        const { entry: mapped } = mapBackendOperationsToFrontend(allItems);
+        let targetDirRows;
+        if (isDelivered) {
+          if (filters.direction === 'Import') {
+            targetDirRows = mapped.Import || [];
+          } else if (filters.direction === 'Export') {
+            targetDirRows = mapped.Export || [];
+          } else {
+            targetDirRows = [...(mapped.Import || []), ...(mapped.Export || [])];
+          }
+        } else {
+          targetDirRows = mapped[currentDir] || [];
+        }
+        onExportExcel([], targetDirRows.length > 0 ? targetDirRows : rows);
+      } else {
+        onExportExcel([], rows);
+      }
+    } catch (err) {
+      console.error('Failed to fetch all operations for excel export:', err);
+      onExportExcel([], rows);
+    } finally {
+      setIsExportExcelLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* 1. Compact New Operation Form */}
-      {currentDir !== 'FCL' && (
+      {/* 1. Compact New Operation Form (Only shown on active Import/Export tabs; hidden in Inactive and Delivered archives) */}
+      {(currentDir === 'Import' || currentDir === 'Export') && (
         formOpen ? (
           <form
             onSubmit={handleFormSubmit}
@@ -3433,23 +3814,35 @@ export default function DataEntryTab({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => onEmailIt && onEmailIt(Array.from(selectedOps), rows)}
-            className="ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs"
-          >
-            <Mail size={13} className="text-slate-500" />
-            <span>Email it</span>
-          </button>
-
-          {canExportExcel && (
+          {currentDir !== 'Deleted' && currentDir !== 'FCL' && (
             <button
               type="button"
-              onClick={() => onExportExcel && onExportExcel(Array.from(selectedOps), rows)}
-              className="ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs cursor-pointer"
+              onClick={handleEmailItClick}
+              disabled={isEmailLoading}
+              className={`ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs ${isEmailLoading ? 'opacity-60 cursor-wait' : ''}`}
             >
-              <FileSpreadsheet size={13} className="text-emerald-600" />
-              <span>{lang === 'ar' ? 'حفظ كاكسيل' : 'Save as Excel'}</span>
+              {isEmailLoading ? (
+                <RefreshCw size={13} className="text-slate-500 animate-spin" />
+              ) : (
+                <Mail size={13} className="text-slate-500" />
+              )}
+              <span>{isEmailLoading ? (lang === 'ar' ? 'جاري التحميل...' : 'Loading...') : 'Email it'}</span>
+            </button>
+          )}
+
+          {canExportExcel && currentDir !== 'Deleted' && currentDir !== 'FCL' && (
+            <button
+              type="button"
+              onClick={handleExportExcelClick}
+              disabled={isExportExcelLoading}
+              className={`ebtn text-xs font-semibold flex items-center gap-1.5 text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-2xs ${isExportExcelLoading ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
+            >
+              {isExportExcelLoading ? (
+                <RefreshCw size={13} className="text-slate-500 animate-spin" />
+              ) : (
+                <FileSpreadsheet size={13} className="text-emerald-600" />
+              )}
+              <span>{isExportExcelLoading ? (lang === 'ar' ? 'جاري التحميل...' : 'Loading...') : (lang === 'ar' ? 'حفظ كاكسيل' : 'Save as Excel')}</span>
             </button>
           )}
 
@@ -3517,6 +3910,69 @@ export default function DataEntryTab({
                   </kbd>
                 </div>
               </div>
+
+              {/* Quick Direction Toggle (All / Import / Export) for Delivered tab */}
+              {currentDir === 'Delivered' && (
+                <div
+                  className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 shadow-2xs shrink-0"
+                  role="group"
+                  aria-label={lang === 'ar' ? 'تصفية حسب نوع الشحنة' : 'Filter by direction'}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (filters.direction !== '') {
+                        clearTabPagesCache();
+                        setFilters((prev) => ({ ...prev, direction: '' }));
+                        setPage(1);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      !filters.direction
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <span>{lang === 'ar' ? 'الكل' : 'All'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (filters.direction !== 'Import') {
+                        clearTabPagesCache();
+                        setFilters((prev) => ({ ...prev, direction: 'Import' }));
+                        setPage(1);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      filters.direction === 'Import'
+                        ? 'bg-sky-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <span className="text-[12px] font-bold">↓</span>
+                    <span>{lang === 'ar' ? 'وارد' : 'Import'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (filters.direction !== 'Export') {
+                        clearTabPagesCache();
+                        setFilters((prev) => ({ ...prev, direction: 'Export' }));
+                        setPage(1);
+                      }
+                    }}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      filters.direction === 'Export'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+                    }`}
+                  >
+                    <span className="text-[12px] font-bold">↑</span>
+                    <span>{lang === 'ar' ? 'صادر' : 'Export'}</span>
+                  </button>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 {activeFiltersCount > 0 && (
@@ -4495,9 +4951,18 @@ export default function DataEntryTab({
                     const rowSpan = shipRows.length;
                     const shipRef = shipRows[0]?._ref || `ship_${shipIdx}`;
 
+                    const isShipmentEditing = !!editingShipments[shipRef];
+                    const isSavingThisShipment = !!savingShipments[shipRef];
+
                     const renderedRows = shipRows.map((r, rIdx) => {
                       const isFirstRow = rIdx === 0;
                       const isHighlighted = highlightedShipRef && (shipRef === highlightedShipRef || r.shipNo === highlightedShipRef || isShipmentMatch(shipRows, highlightedShipRef));
+
+                      const isPairFirst = !!(r._pairId && shipRows[rIdx + 1]?._pairId === r._pairId);
+                      const isPairSecond = !!(r._pairId && shipRows[rIdx - 1]?._pairId === r._pairId);
+                      const nextRow = shipRows[rIdx + 1];
+                      const isDelivered = r.status === 'Delivered';
+                      const canMergeWithNext = !isDelivered && !r._pairId && nextRow && !nextRow._pairId && is20Container(r.size) && is20Container(nextRow.size);
 
                       return (
                         <tr
@@ -4516,10 +4981,19 @@ export default function DataEntryTab({
                             const canUnmerge = c.canUnmerge === true;
                             const isMergedCol = canUnmerge ? (mergedCols[`${shipRef}_${c.k}`] === true) : (c.uniq === true);
 
-                            // If merged, only render on first row with rowSpan
+                            // If merged across whole shipment, only render on first row with rowSpan
                             if (isMergedCol && !isFirstRow) {
                               return null;
                             }
+
+                            // If pair merged, skip on second row
+                            const isPairCol = PAIR_MERGE_COLS.includes(c.k) && !isMergedCol;
+                            if (isPairCol && isPairSecond) {
+                              return null;
+                            }
+
+                            const effectiveRowSpan = isMergedCol ? rowSpan : (isPairCol && isPairFirst ? 2 : 1);
+                            const isPairMerged = isPairCol && isPairFirst;
 
                             let val = r[c.k] ?? '';
                             if (isMergedCol && (!val || /^[-—\s]+$/.test(String(val).trim()))) {
@@ -5243,7 +5717,7 @@ export default function DataEntryTab({
                               return (
                                 <td
                                   key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  rowSpan={effectiveRowSpan}
                                   style={{
                                     width: `${c.w}px`,
                                     minWidth: `${c.w}px`,
@@ -5252,15 +5726,12 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    className={`cbox grp-${c.g} flex flex-col items-center justify-center`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
-                                      height: '34px',
                                       minHeight: '34px',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
+                                      padding: '2px',
                                     }}
                                   >
                                     <select
@@ -5282,6 +5753,55 @@ export default function DataEntryTab({
                                         </option>
                                       ))}
                                     </select>
+
+                                    {canMergeWithNext && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleMergePair(shipRef, r._rowId, nextRow._rowId);
+                                        }}
+                                        className="w-full mt-1 py-0.5 px-1 bg-sky-50 hover:bg-sky-100 text-sky-700 hover:text-sky-900 border border-sky-300 rounded text-[10px] font-bold flex items-center justify-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                                        title={lang === 'ar' ? 'دمج الحاويتين على نفس الشاحنة (2×20\')' : 'Merge 2x20\' containers on same truck'}
+                                      >
+                                        <span>🔗</span>
+                                        <span>{lang === 'ar' ? 'دمج 2×20\'' : 'Merge 2x20\''}</span>
+                                      </button>
+                                    )}
+
+                                    {isPairFirst && (
+                                      <div className="w-full mt-1 flex items-center justify-between px-1.5 py-0.5 bg-sky-50 border border-sky-200 rounded text-[9px] font-bold text-sky-700">
+                                        <span>🔗 {lang === 'ar' ? 'مدمجة 1/2' : 'Paired 1/2'}</span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleUnmergePair(shipRef, r._pairId);
+                                          }}
+                                          className="text-rose-600 hover:text-rose-800 font-bold ml-1 cursor-pointer"
+                                          title={lang === 'ar' ? 'فك الدمج' : 'Unmerge'}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {isPairSecond && (
+                                      <div className="w-full mt-1 flex items-center justify-between px-1.5 py-0.5 bg-sky-50 border border-sky-200 rounded text-[9px] font-bold text-sky-700">
+                                        <span>🔗 {lang === 'ar' ? 'مدمجة 2/2' : 'Paired 2/2'}</span>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleUnmergePair(shipRef, r._pairId);
+                                          }}
+                                          className="text-rose-600 hover:text-rose-800 font-bold ml-1 cursor-pointer"
+                                          title={lang === 'ar' ? 'فك الدمج' : 'Unmerge'}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
                                 </td>
                               );
@@ -5299,7 +5819,7 @@ export default function DataEntryTab({
                               return (
                                 <td
                                   key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  rowSpan={effectiveRowSpan}
                                   style={{
                                     width: `${c.w}px`,
                                     minWidth: `${c.w}px`,
@@ -5313,8 +5833,8 @@ export default function DataEntryTab({
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
-                                      height: '34px',
-                                      minHeight: '34px',
+                                      height: isPairMerged ? '76px' : '34px',
+                                      minHeight: isPairMerged ? '76px' : '34px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: updatesCount > 0 ? 'space-between' : 'center',
@@ -5352,7 +5872,7 @@ export default function DataEntryTab({
                               return (
                                 <td
                                   key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  rowSpan={effectiveRowSpan}
                                   title={truckerTitle}
                                   style={{
                                     width: `${c.w}px`,
@@ -5367,8 +5887,8 @@ export default function DataEntryTab({
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
-                                      height: '34px',
-                                      minHeight: '34px',
+                                      height: isPairMerged ? '76px' : '34px',
+                                      minHeight: isPairMerged ? '76px' : '34px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -5435,7 +5955,7 @@ export default function DataEntryTab({
                               return (
                                 <td
                                   key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  rowSpan={effectiveRowSpan}
                                   style={{
                                     width: `${c.w}px`,
                                     minWidth: `${c.w}px`,
@@ -5448,8 +5968,8 @@ export default function DataEntryTab({
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
-                                      height: '34px',
-                                      minHeight: '34px',
+                                      height: isPairMerged ? '76px' : '34px',
+                                      minHeight: isPairMerged ? '76px' : '34px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -5481,7 +6001,7 @@ export default function DataEntryTab({
                               return (
                                 <td
                                   key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  rowSpan={effectiveRowSpan}
                                   style={{
                                     width: `${c.w}px`,
                                     minWidth: `${c.w}px`,
@@ -5494,8 +6014,8 @@ export default function DataEntryTab({
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
-                                      height: '34px',
-                                      minHeight: '34px',
+                                      height: isPairMerged ? '76px' : '34px',
+                                      minHeight: isPairMerged ? '76px' : '34px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -5510,6 +6030,7 @@ export default function DataEntryTab({
                                       disabled={isDisabled}
                                       placeholder="رقم السيارة..."
                                       onChange={(e) => handleCarChange(e.target.value, r._rowId)}
+                                      onBlur={(e) => checkDuplicateCarOn20(e.target.value, r._rowId)}
                                       title="أدخل رقم السيارة أو اختر من القائمة"
                                       style={{
                                         width: '100%',
@@ -5534,7 +6055,7 @@ export default function DataEntryTab({
                               return (
                                 <td
                                   key={c.k}
-                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  rowSpan={effectiveRowSpan}
                                   style={{
                                     width: `${c.w}px`,
                                     minWidth: `${c.w}px`,
@@ -5547,8 +6068,8 @@ export default function DataEntryTab({
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
-                                      height: '34px',
-                                      minHeight: '34px',
+                                      height: isPairMerged ? '76px' : '34px',
+                                      minHeight: isPairMerged ? '76px' : '34px',
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
@@ -5659,12 +6180,12 @@ export default function DataEntryTab({
 
                             // 9. Generic Cell (including missDoc with merge/unmerge)
                             const isStrictlyMerged = isMergedCol && !canUnmerge && rowSpan > 1;
-                            const cellHeight = isStrictlyMerged ? Math.round(rowSpan * 24) : 34;
+                            const cellHeight = isPairMerged ? 76 : (isStrictlyMerged ? Math.round(rowSpan * 24) : 34);
 
                             return (
                               <td
                                 key={c.k}
-                                rowSpan={isMergedCol ? rowSpan : 1}
+                                rowSpan={effectiveRowSpan}
                                 title={cellTitle}
                                 style={{
                                   width: `${c.w}px`,
@@ -5856,6 +6377,54 @@ export default function DataEntryTab({
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Smart 2x20' Pair Confirmation Modal */}
+      {pairPromptModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full border border-slate-100 p-6 text-slate-800">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl shrink-0 shadow-xs">
+                🔗
+              </div>
+              <div>
+                <h3 className="font-bold text-base text-slate-900">
+                  {lang === 'ar' ? 'دمج حاويتين 20\' على نفس الشاحنة' : 'Merge 2x20\' Containers'}
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  {lang === 'ar' ? 'اكتشاف ذكي لنفس رقم العربية' : 'Smart Truck Detection'}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 leading-relaxed mb-5">
+              {lang === 'ar'
+                ? `رقم السيارة (${pairPromptModal.carNo}) مسجل لحاوية أخرى مقاس 20' في نفس العملية (${pairPromptModal.row1.cntr || 'بدون رقم'}). هل تريد دمجهما معاً على نفس الشاحنة (تريلا واحدة)؟`
+                : `Car No. (${pairPromptModal.carNo}) is already entered for another 20' container in this operation (${pairPromptModal.row1.cntr || 'no #'}) on this truck. Would you like to merge them?`}
+            </p>
+
+            <div className="flex items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setPairPromptModal(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                {lang === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleMergePair(pairPromptModal.shipRef, pairPromptModal.row1._rowId, pairPromptModal.row2._rowId);
+                  setPairPromptModal(null);
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <span>🔗</span>
+                <span>{lang === 'ar' ? 'نعم، ادمجهما معاً' : 'Yes, Merge Together'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

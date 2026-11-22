@@ -35,7 +35,14 @@ export default function ExportExcelModal({
   showToast,
   lang = 'en',
 }) {
-  const activeDir = currentDir === 'Delivered' ? 'Import' : (currentDir === 'Deleted' ? 'Import' : currentDir);
+  const activeDir = useMemo(() => {
+    if (currentDir === 'Import' || currentDir === 'Export') return currentDir;
+    if (Array.isArray(activeRows) && activeRows.length > 0) {
+      const isAllExport = activeRows.every((r) => r.dir === 'Export' || (r.booking && !r.bl));
+      if (isAllExport) return 'Export';
+    }
+    return 'Import';
+  }, [currentDir, activeRows]);
   const availableCols = useMemo(() => {
     const list = COLS[activeDir] || COLS.Import || [];
     // Exclude action buttons, checkboxes, and internal cards
@@ -302,14 +309,31 @@ export default function ExportExcelModal({
         currentRowIdx++;
       });
 
-      // Add merged cells for unique shipment-level columns
+      // Add merged cells for unique shipment-level columns (with smart unmerge for columns where containers have different values)
       if (rowSpan > 1) {
         chosenCols.forEach((c, cIdx) => {
           if (c.uniq === true) {
-            merges.push({
-              s: { r: startRow, c: cIdx },
-              e: { r: startRow + rowSpan - 1, c: cIdx },
-            });
+            let shouldMerge = true;
+            if (c.canUnmerge) {
+              const distinctVals = new Set(
+                shipRows.map((r) => {
+                  let v = r[c.k];
+                  if (typeof v === 'object' && v !== null) {
+                    v = v.name || v.label || '';
+                  }
+                  return String(v ?? '').trim().toLowerCase();
+                })
+              );
+              // Only merge if all containers share the exact same value
+              shouldMerge = distinctVals.size <= 1;
+            }
+
+            if (shouldMerge) {
+              merges.push({
+                s: { r: startRow, c: cIdx },
+                e: { r: startRow + rowSpan - 1, c: cIdx },
+              });
+            }
           }
         });
       }
@@ -526,8 +550,8 @@ export default function ExportExcelModal({
                         key={shipRef}
                         title={titleText}
                         className={`flex items-center gap-2 cursor-pointer p-1.5 rounded-md border text-[11px] transition select-none ${isChecked
-                            ? 'border-sky-300 bg-sky-50/60 text-slate-900 font-medium'
-                            : 'border-transparent text-slate-600 hover:bg-slate-50'
+                          ? 'border-sky-300 bg-sky-50/60 text-slate-900 font-medium'
+                          : 'border-transparent text-slate-600 hover:bg-slate-50'
                           }`}
                       >
                         <input
