@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, Download, FileSpreadsheet } from 'lucide-react';
 import * as XLSX from 'xlsx-js-style';
-import { COLS, CONTAINER_TYPES } from '../constants';
+import { useAuth } from '../../../../../auth/AuthContext';
+import { COLS, CONTAINER_TYPES, PAIR_MERGE_COLS } from '../constants';
 
 // Exact TPT Excel group fill and font colors (matching ils_tpt_upload_ready (5).xlsx & constants.js)
 const EXCEL_GROUP_COLORS = {
@@ -14,6 +15,16 @@ const EXCEL_GROUP_COLORS = {
   g7: { fill: '31859B', text: 'FFFFFF', dataText: 'FFFFFF', border: '256A7C' }, // Status (Teal)
 };
 
+// Default columns excluded upon initial modal opening (user can still select them manually)
+const DEFAULT_EXCLUDED_COL_KEYS = new Set([
+  'shipNo',   // Shipment #
+  'trucker',  // Transporter
+  'invRcv',   // Invoices Receive Date
+  'missDoc',  // Missing Docs
+  'missRcv',  // Receive Date Missing Docs
+  'status',   // Status
+]);
+
 function formatShipmentDate(dStr) {
   if (!dStr) return '';
   const d = new Date(dStr);
@@ -23,6 +34,17 @@ function formatShipmentDate(dStr) {
   const month = months[d.getMonth()];
   const year = d.getFullYear();
   return `${day}-${month}-${year}`;
+}
+
+function getRowPairId(row) {
+  if (!row) return null;
+  if (row._pairId) return row._pairId;
+  try {
+    const saved = JSON.parse(localStorage.getItem('ocean_container_pairs') || '{}');
+    const id = row._rowId || row._containerId;
+    if (id && saved[id]) return saved[id];
+  } catch (e) {}
+  return null;
 }
 
 export default function ExportExcelModal({
@@ -35,6 +57,19 @@ export default function ExportExcelModal({
   showToast,
   lang = 'en',
 }) {
+  const { user } = useAuth();
+
+  // Restriction: Executive Maritime Transportation (without reports.download permission) is limited to max 3 operations
+  const isRestrictedExecutive = Boolean(
+    !user?.isSuperAdmin &&
+    user?.role !== 'SuperAdmin' &&
+    !user?.permissions?.includes('reports.download') &&
+    (user?.roleName === 'Executive Maritime Transportation' ||
+      user?.roleName === 'Ocean Operations Specialist' ||
+      user?.role === 'Executive Maritime Transportation')
+  );
+  const MAX_EXECUTIVE_EXCEL_OPERATIONS = 3;
+
   const activeDir = useMemo(() => {
     if (currentDir === 'Import' || currentDir === 'Export') return currentDir;
     if (Array.isArray(activeRows) && activeRows.length > 0) {
@@ -92,11 +127,11 @@ export default function ExportExcelModal({
       setDateFrom('');
       setDateTo('');
 
-      // Default: all data columns selected
-      setSelectedColKeys(new Set(availableCols.map((c) => c.k)));
+      // Default: 21 standard columns selected (excludes shipment #, trucker, invoices, missing docs, and status)
+      setSelectedColKeys(new Set(availableCols.filter((c) => !DEFAULT_EXCLUDED_COL_KEYS.has(c.k)).map((c) => c.k)));
 
       // If user had selected specific shipments in the main grid, pre-select them;
-      // otherwise, default to all shipments selected
+      // otherwise, default to all shipments selected (or capped to MAX_EXECUTIVE_EXCEL_OPERATIONS for restricted executive)
       if (Array.isArray(preSelectedRefs) && preSelectedRefs.length > 0) {
         const preSet = new Set(preSelectedRefs);
         const matched = new Set();
@@ -114,13 +149,23 @@ export default function ExportExcelModal({
             matched.add(ref);
           }
         });
-        setSelectedShipmentRefs(matched.size > 0 ? matched : preSet);
+        const finalMatches = matched.size > 0 ? matched : preSet;
+        if (isRestrictedExecutive && finalMatches.size > MAX_EXECUTIVE_EXCEL_OPERATIONS) {
+          const limited = Array.from(finalMatches).slice(0, MAX_EXECUTIVE_EXCEL_OPERATIONS);
+          setSelectedShipmentRefs(new Set(limited));
+        } else {
+          setSelectedShipmentRefs(finalMatches);
+        }
       } else {
         const allRefs = allGroupedShipments.map((s, idx) => s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`);
-        setSelectedShipmentRefs(new Set(allRefs));
+        if (isRestrictedExecutive) {
+          setSelectedShipmentRefs(new Set(allRefs.slice(0, MAX_EXECUTIVE_EXCEL_OPERATIONS)));
+        } else {
+          setSelectedShipmentRefs(new Set(allRefs));
+        }
       }
     }
-  }, [isOpen, activeDir, availableCols, allGroupedShipments, preSelectedRefs]);
+  }, [isOpen, activeDir, availableCols, allGroupedShipments, preSelectedRefs, isRestrictedExecutive]);
 
   // Filtered shipments inside modal
   const filteredModalShipments = useMemo(() => {
@@ -201,18 +246,47 @@ export default function ExportExcelModal({
   const toggleShipment = (ref) => {
     setSelectedShipmentRefs((prev) => {
       const next = new Set(prev);
-      if (next.has(ref)) next.delete(ref);
-      else next.add(ref);
+      if (next.has(ref)) {
+        next.delete(ref);
+      } else {
+        if (isRestrictedExecutive && next.size >= MAX_EXECUTIVE_EXCEL_OPERATIONS) {
+          const msg =
+            lang === 'ar'
+              ? `عفواً، الحد الأقصى المسموح بتصديره لرتبتك هو ${MAX_EXECUTIVE_EXCEL_OPERATIONS} عمليات فقط.`
+              : `Maximum allowed export for your role is ${MAX_EXECUTIVE_EXCEL_OPERATIONS} operations.`;
+          if (showToast) showToast(msg, 'warning');
+          else console.warn(msg);
+          return prev;
+        }
+        next.add(ref);
+      }
       return next;
     });
   };
 
   // Toggle all shipments visible in the filtered list
   const allVisibleShipmentsSelected =
-    filteredModalShipments.length > 0 &&
-    filteredModalShipments.every((s, idx) => selectedShipmentRefs.has(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`));
+    isRestrictedExecutive
+      ? selectedShipmentRefs.size >= Math.min(MAX_EXECUTIVE_EXCEL_OPERATIONS, filteredModalShipments.length) && selectedShipmentRefs.size > 0
+      : filteredModalShipments.length > 0 &&
+        filteredModalShipments.every((s, idx) => selectedShipmentRefs.has(s[0]?._computedShipRef || s[0]?._ref || `ship_${idx}`));
 
   const toggleAllShipments = () => {
+    if (isRestrictedExecutive) {
+      setSelectedShipmentRefs((prev) => {
+        if (prev.size > 0) {
+          return new Set();
+        }
+        const limited = [];
+        for (let i = 0; i < filteredModalShipments.length && limited.length < MAX_EXECUTIVE_EXCEL_OPERATIONS; i++) {
+          const s = filteredModalShipments[i];
+          limited.push(s[0]?._computedShipRef || s[0]?._ref || `ship_${i}`);
+        }
+        return new Set(limited);
+      });
+      return;
+    }
+
     setSelectedShipmentRefs((prev) => {
       const next = new Set(prev);
       if (allVisibleShipmentsSelected) {
@@ -244,6 +318,16 @@ export default function ExportExcelModal({
 
     if (chosenShipments.length === 0) {
       const msg = lang === 'ar' ? 'يرجى اختيار شحنة واحدة على الأقل.' : 'Please select at least one shipment.';
+      if (showToast) showToast(msg, 'warning');
+      else console.warn(msg);
+      return;
+    }
+
+    if (isRestrictedExecutive && chosenShipments.length > MAX_EXECUTIVE_EXCEL_OPERATIONS) {
+      const msg =
+        lang === 'ar'
+          ? `عفواً، الحد الأقصى المسموح بتصديره لرتبتك هو ${MAX_EXECUTIVE_EXCEL_OPERATIONS} عمليات فقط.`
+          : `Maximum allowed export for your role is ${MAX_EXECUTIVE_EXCEL_OPERATIONS} operations.`;
       if (showToast) showToast(msg, 'warning');
       else console.warn(msg);
       return;
@@ -310,6 +394,7 @@ export default function ExportExcelModal({
       });
 
       // Add merged cells for unique shipment-level columns (with smart unmerge for columns where containers have different values)
+      const shipmentMergedColKeys = new Set();
       if (rowSpan > 1) {
         chosenCols.forEach((c, cIdx) => {
           if (c.uniq === true) {
@@ -329,11 +414,31 @@ export default function ExportExcelModal({
             }
 
             if (shouldMerge) {
+              shipmentMergedColKeys.add(c.k);
               merges.push({
                 s: { r: startRow, c: cIdx },
                 e: { r: startRow + rowSpan - 1, c: cIdx },
               });
             }
+          }
+        });
+
+        // Add 2x20' container pair merges (for transportation & schedule columns)
+        shipRows.forEach((r, rIdx) => {
+          const nextR = shipRows[rIdx + 1];
+          const p1 = r._pairId || getRowPairId(r);
+          const p2 = nextR?._pairId || (nextR ? getRowPairId(nextR) : null);
+          const isPairFirst = Boolean(p1 && p2 && p1 === p2);
+
+          if (isPairFirst) {
+            chosenCols.forEach((c, cIdx) => {
+              if (PAIR_MERGE_COLS.includes(c.k) && !shipmentMergedColKeys.has(c.k)) {
+                merges.push({
+                  s: { r: startRow + rIdx, c: cIdx },
+                  e: { r: startRow + rIdx + 1, c: cIdx },
+                });
+              }
+            });
           }
         });
       }
@@ -456,15 +561,19 @@ export default function ExportExcelModal({
                 return (
                   <label
                     key={c.k}
+                    title={`${c.h}${c.ar ? ` (${c.ar})` : ''}`}
                     className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none text-[11.5px]"
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => toggleCol(c.k)}
-                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5"
+                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 shrink-0"
                     />
-                    <span className="truncate">{c.h}</span>
+                    <span className="truncate">
+                      <span className="font-medium text-slate-800">{c.h}</span>
+                      {c.ar && <span className="text-slate-500 font-normal ml-1.5 text-[11px]">({c.ar})</span>}
+                    </span>
                   </label>
                 );
               })}
@@ -482,7 +591,11 @@ export default function ExportExcelModal({
                     onChange={toggleAllShipments}
                     className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5"
                   />
-                  <span>Select all</span>
+                  <span>
+                    {isRestrictedExecutive
+                      ? (lang === 'ar' ? `تحديد (حد أقصى ${MAX_EXECUTIVE_EXCEL_OPERATIONS})` : `Select (max ${MAX_EXECUTIVE_EXCEL_OPERATIONS})`)
+                      : (lang === 'ar' ? 'تحديد الكل' : 'Select all')}
+                  </span>
                 </label>
 
                 {/* Search Input */}
@@ -525,6 +638,20 @@ export default function ExportExcelModal({
                 )}
               </div>
             </div>
+
+            {/* Role Limitation Notice for Executive */}
+            {isRestrictedExecutive && (
+              <div className="mt-2.5 rounded-lg bg-amber-50 border border-amber-200/80 px-3 py-1.5 text-[11px] text-amber-800 flex items-center justify-between">
+                <span>
+                  {lang === 'ar'
+                    ? `⚠️ متاح لك تصدير حد أقصى ${MAX_EXECUTIVE_EXCEL_OPERATIONS} عمليات فقط وفقاً لصلاحيات رتبتك.`
+                    : `⚠️ You are permitted to export a maximum of ${MAX_EXECUTIVE_EXCEL_OPERATIONS} operations based on your role.`}
+                </span>
+                <span className="font-bold text-amber-900 bg-amber-100/80 px-1.5 py-0.5 rounded border border-amber-300">
+                  {selectedShipmentRefs.size} / {MAX_EXECUTIVE_EXCEL_OPERATIONS}
+                </span>
+              </div>
+            )}
 
             {/* Scrollable Checklist */}
             <div className="max-h-56 overflow-y-auto pr-1 mt-2.5 rounded-lg border border-slate-200/80 bg-white p-2">
@@ -577,6 +704,11 @@ export default function ExportExcelModal({
 
             <div className="mt-2 text-right text-[11px] text-slate-500">
               {selectedShipmentRefs.size} of {allGroupedShipments.length} shipments selected
+              {isRestrictedExecutive && (
+                <span className="text-amber-700 font-semibold ms-1">
+                  ({lang === 'ar' ? `الحد الأقصى المسموح: ${MAX_EXECUTIVE_EXCEL_OPERATIONS}` : `Max allowed: ${MAX_EXECUTIVE_EXCEL_OPERATIONS}`})
+                </span>
+              )}
             </div>
           </div>
         </div>

@@ -78,10 +78,16 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     user?.role === 'SuperAdmin' ||
     user?.roleName === 'Super Admin'
   );
+  const isExecutiveMaritime = Boolean(
+    user?.roleName === 'Executive Maritime Transportation' ||
+    user?.roleName === 'Ocean Operations Specialist' ||
+    user?.role === 'Executive Maritime Transportation'
+  );
   const canExportExcel = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
-    user?.permissions?.includes('reports.download')
+    user?.permissions?.includes('reports.download') ||
+    isExecutiveMaritime
   );
   const canUploadReport = Boolean(
     user?.isSuperAdmin ||

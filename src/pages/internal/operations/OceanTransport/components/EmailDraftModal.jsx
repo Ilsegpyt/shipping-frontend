@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { X, Search, Calendar, Download, Mail, CheckSquare, Square, AlertCircle, Copy, Check } from 'lucide-react';
-import { COLS, CONTAINER_TYPES } from '../constants';
+import { COLS, CONTAINER_TYPES, PAIR_MERGE_COLS } from '../constants';
 
 // Exact group colors matching the Ocean Transport dashboard
 const GROUP_STYLES = {
@@ -13,6 +13,16 @@ const GROUP_STYLES = {
   g7: { bg: '#f0f4f8', border: '#d9e2ec', color: '#203a54' }, // Slate
 };
 
+// Default columns excluded upon initial modal opening (user can still select them manually)
+const DEFAULT_EXCLUDED_COL_KEYS = new Set([
+  'shipNo',   // Shipment #
+  'trucker',  // Transporter
+  'invRcv',   // Invoices Receive Date
+  'missDoc',  // Missing Docs
+  'missRcv',  // Receive Date Missing Docs
+  'status',   // Status
+]);
+
 function formatShipmentDate(dStr) {
   if (!dStr) return '';
   const d = new Date(dStr);
@@ -22,6 +32,17 @@ function formatShipmentDate(dStr) {
   const month = months[d.getMonth()];
   const year = d.getFullYear();
   return `${day}-${month}-${year}`;
+}
+
+function getRowPairId(row) {
+  if (!row) return null;
+  if (row._pairId) return row._pairId;
+  try {
+    const saved = JSON.parse(localStorage.getItem('ocean_container_pairs') || '{}');
+    const id = row._rowId || row._containerId;
+    if (id && saved[id]) return saved[id];
+  } catch (e) {}
+  return null;
 }
 
 function escapeHtml(str) {
@@ -112,8 +133,8 @@ export default function EmailDraftModal({
       setDateFrom('');
       setDateTo('');
 
-      // Default: all data columns selected
-      setSelectedColKeys(new Set(availableCols.map((c) => c.k)));
+      // Default: 21 standard columns selected (excludes shipment #, trucker, invoices, missing docs, and status)
+      setSelectedColKeys(new Set(availableCols.filter((c) => !DEFAULT_EXCLUDED_COL_KEYS.has(c.k)).map((c) => c.k)));
 
       // If user had selected specific shipments in the main grid, pre-select them;
       // otherwise, select all shipments
@@ -391,11 +412,22 @@ export default function EmailDraftModal({
           return shipRows
             .map((r, rIdx) => {
               const isFirstRow = rIdx === 0;
+              const nextR = shipRows[rIdx + 1];
+              const prevR = shipRows[rIdx - 1];
+              const pCurrent = r._pairId || getRowPairId(r);
+              const pNext = nextR?._pairId || (nextR ? getRowPairId(nextR) : null);
+              const pPrev = prevR?._pairId || (prevR ? getRowPairId(prevR) : null);
+
+              const isPairFirst = Boolean(pCurrent && pNext && pCurrent === pNext);
+              const isPairSecond = Boolean(pCurrent && pPrev && pCurrent === pPrev);
 
               const cells = chosenCols
                 .map((c) => {
                   const shouldMerge = colMergeEligibility[c.k] === true;
-                  if (shouldMerge && !isFirstRow) return null; // handled by rowspan
+                  if (shouldMerge && !isFirstRow) return null; // handled by shipment-level rowspan
+
+                  const isPairCol = PAIR_MERGE_COLS.includes(c.k) && !shouldMerge;
+                  if (isPairCol && isPairSecond) return null; // handled by 2x20' pair rowspan
 
                   let cellVal = r[c.k] ?? '';
 
@@ -442,7 +474,8 @@ export default function EmailDraftModal({
                   }
 
                   const colWidth = colWidthsMap[c.k];
-                  const spanAttr = shouldMerge && rowSpan > 1 ? ` rowspan="${rowSpan}"` : '';
+                  const effectiveRowSpan = shouldMerge && rowSpan > 1 ? rowSpan : (isPairCol && isPairFirst ? 2 : 1);
+                  const spanAttr = effectiveRowSpan > 1 ? ` rowspan="${effectiveRowSpan}"` : '';
                   const cellBg = shouldMerge ? shipBg : (rIdx % 2 === 0 ? '#ffffff' : '#fafafa');
 
                   return `<td width="${colWidth}"${spanAttr} style="width: ${colWidth}px; background-color: ${cellBg}; border: 1px solid #cbd5e1; padding: ${cellPadding}; text-align: center; vertical-align: middle; font-size: ${cellFontSize}; line-height: 1.25; color: #1e293b; white-space: nowrap;">
@@ -701,15 +734,19 @@ export default function EmailDraftModal({
                 return (
                   <label
                     key={c.k}
+                    title={`${c.h}${c.ar ? ` (${c.ar})` : ''}`}
                     className="flex items-center gap-2 cursor-pointer text-slate-700 hover:text-slate-900 select-none text-[11.5px]"
                   >
                     <input
                       type="checkbox"
                       checked={isChecked}
                       onChange={() => toggleCol(c.k)}
-                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5"
+                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 shrink-0"
                     />
-                    <span className="truncate">{c.h}</span>
+                    <span className="truncate">
+                      <span className="font-medium text-slate-800">{c.h}</span>
+                      {c.ar && <span className="text-slate-500 font-normal ml-1.5 text-[11px]">({c.ar})</span>}
+                    </span>
                   </label>
                 );
               })}

@@ -1694,10 +1694,16 @@ export default function DataEntryTab({
     user?.role === 'SuperAdmin' ||
     user?.permissions?.includes('reports.upload')
   );
+  const isExecutiveMaritime = Boolean(
+    user?.roleName === 'Executive Maritime Transportation' ||
+    user?.roleName === 'Ocean Operations Specialist' ||
+    user?.role === 'Executive Maritime Transportation'
+  );
   const canExportExcel = Boolean(
     user?.isSuperAdmin ||
     user?.role === 'SuperAdmin' ||
-    user?.permissions?.includes('reports.download')
+    user?.permissions?.includes('reports.download') ||
+    isExecutiveMaritime
   );
   const isOceanManager =
     user?.roleName === 'Supervisor Maritime Transportation' ||
@@ -3068,7 +3074,34 @@ export default function DataEntryTab({
 
   // Flattened paginated rows with rowSpan metadata
   const totalShipments = isServerSide ? serverTotalCount : filteredShipments.length;
-  const totalTrips = isServerSide ? serverTotalContainers : filteredShipments.reduce((sum, s) => sum + s.length, 0);
+
+  const pagePairedDeduction = useMemo(() => {
+    let count = 0;
+    groupedShipments.forEach((shipRows) => {
+      shipRows.forEach((r, rIdx) => {
+        if (r._pairId && shipRows[rIdx - 1]?._pairId === r._pairId) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }, [groupedShipments]);
+
+  const countTripsInShipmentRows = (shipRows) => {
+    let trips = 0;
+    shipRows.forEach((r, rIdx) => {
+      const isPairSecond = Boolean(r._pairId && shipRows[rIdx - 1]?._pairId === r._pairId);
+      if (!isPairSecond) trips++;
+    });
+    return trips;
+  };
+
+  const totalTrips = useMemo(() => {
+    if (isServerSide) {
+      return Math.max(0, (serverTotalContainers || 0) - pagePairedDeduction);
+    }
+    return filteredShipments.reduce((sum, s) => sum + countTripsInShipmentRows(s), 0);
+  }, [isServerSide, serverTotalContainers, pagePairedDeduction, filteredShipments]);
 
   const paginatedShipments = useMemo(() => {
     if (isServerSide) {
@@ -3326,6 +3359,15 @@ export default function DataEntryTab({
 
     // If user explicitly selected specific shipments via checkboxes, export those directly
     if (selectedList.length > 0) {
+      if (isExecutiveMaritime && !user?.permissions?.includes('reports.download') && selectedList.length > 3) {
+        notify(
+          lang === 'ar'
+            ? 'الحد الأقصى المسموح بتصديره لرتبتك هو 3 عمليات فقط. يرجى تحديد 3 عمليات كحد أقصى.'
+            : 'Maximum allowed export for your role is 3 operations. Please select at most 3.',
+          'warning'
+        );
+        return;
+      }
       onExportExcel(selectedList, rows);
       return;
     }
@@ -5759,10 +5801,27 @@ export default function DataEntryTab({
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          if (!isShipmentEditing || isDisabled) {
+                                            notify(
+                                              lang === 'ar'
+                                                ? 'يجب فتح وضع التعديل (Edit) للشحنة أولاً لدمج الحاويات'
+                                                : 'Please enable edit mode first to merge containers',
+                                              'warning'
+                                            );
+                                            return;
+                                          }
                                           handleMergePair(shipRef, r._rowId, nextRow._rowId);
                                         }}
-                                        className="w-full mt-1 py-0.5 px-1 bg-sky-50 hover:bg-sky-100 text-sky-700 hover:text-sky-900 border border-sky-300 rounded text-[10px] font-bold flex items-center justify-center gap-1 shadow-2xs transition-colors cursor-pointer"
-                                        title={lang === 'ar' ? 'دمج الحاويتين على نفس الشاحنة (2×20\')' : 'Merge 2x20\' containers on same truck'}
+                                        className={`w-full mt-1 py-0.5 px-1 border rounded text-[10px] font-bold flex items-center justify-center gap-1 shadow-2xs transition-colors ${
+                                          !isShipmentEditing || isDisabled
+                                            ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-60'
+                                            : 'bg-sky-50 hover:bg-sky-100 text-sky-700 hover:text-sky-900 border-sky-300 cursor-pointer'
+                                        }`}
+                                        title={
+                                          !isShipmentEditing || isDisabled
+                                            ? (lang === 'ar' ? 'يجب فتح وضع التعديل أولاً لدمج 2×20\'' : 'Enable edit mode first to merge 2x20\'')
+                                            : (lang === 'ar' ? 'دمج الحاويتين على نفس الشاحنة (2×20\')' : 'Merge 2x20\' containers on same truck')
+                                        }
                                       >
                                         <span>🔗</span>
                                         <span>{lang === 'ar' ? 'دمج 2×20\'' : 'Merge 2x20\''}</span>
@@ -5770,16 +5829,39 @@ export default function DataEntryTab({
                                     )}
 
                                     {isPairFirst && (
-                                      <div className="w-full mt-1 flex items-center justify-between px-1.5 py-0.5 bg-sky-50 border border-sky-200 rounded text-[9px] font-bold text-sky-700">
+                                      <div
+                                        className={`w-full mt-1 flex items-center justify-between px-1.5 py-0.5 border rounded text-[9px] font-bold ${
+                                          !isShipmentEditing || isDisabled
+                                            ? 'bg-slate-50 border-slate-200 text-slate-500'
+                                            : 'bg-sky-50 border-sky-200 text-sky-700'
+                                        }`}
+                                      >
                                         <span>🔗 {lang === 'ar' ? 'مدمجة 1/2' : 'Paired 1/2'}</span>
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            if (!isShipmentEditing || isDisabled) {
+                                              notify(
+                                                lang === 'ar'
+                                                  ? 'يجب فتح وضع التعديل (Edit) للشحنة أولاً لفك دمج الحاويات'
+                                                  : 'Please enable edit mode first to unmerge containers',
+                                                'warning'
+                                              );
+                                              return;
+                                            }
                                             handleUnmergePair(shipRef, r._pairId);
                                           }}
-                                          className="text-rose-600 hover:text-rose-800 font-bold ml-1 cursor-pointer"
-                                          title={lang === 'ar' ? 'فك الدمج' : 'Unmerge'}
+                                          className={`font-bold ml-1 ${
+                                            !isShipmentEditing || isDisabled
+                                              ? 'text-slate-400 hover:text-slate-500 cursor-not-allowed'
+                                              : 'text-rose-600 hover:text-rose-800 cursor-pointer'
+                                          }`}
+                                          title={
+                                            !isShipmentEditing || isDisabled
+                                              ? (lang === 'ar' ? 'يجب فتح وضع التعديل أولاً لفك الدمج' : 'Enable edit mode first to unmerge')
+                                              : (lang === 'ar' ? 'فك الدمج' : 'Unmerge')
+                                          }
                                         >
                                           ✕
                                         </button>
@@ -5787,16 +5869,39 @@ export default function DataEntryTab({
                                     )}
 
                                     {isPairSecond && (
-                                      <div className="w-full mt-1 flex items-center justify-between px-1.5 py-0.5 bg-sky-50 border border-sky-200 rounded text-[9px] font-bold text-sky-700">
+                                      <div
+                                        className={`w-full mt-1 flex items-center justify-between px-1.5 py-0.5 border rounded text-[9px] font-bold ${
+                                          !isShipmentEditing || isDisabled
+                                            ? 'bg-slate-50 border-slate-200 text-slate-500'
+                                            : 'bg-sky-50 border-sky-200 text-sky-700'
+                                        }`}
+                                      >
                                         <span>🔗 {lang === 'ar' ? 'مدمجة 2/2' : 'Paired 2/2'}</span>
                                         <button
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
+                                            if (!isShipmentEditing || isDisabled) {
+                                              notify(
+                                                lang === 'ar'
+                                                  ? 'يجب فتح وضع التعديل (Edit) للشحنة أولاً لفك دمج الحاويات'
+                                                  : 'Please enable edit mode first to unmerge containers',
+                                                'warning'
+                                              );
+                                              return;
+                                            }
                                             handleUnmergePair(shipRef, r._pairId);
                                           }}
-                                          className="text-rose-600 hover:text-rose-800 font-bold ml-1 cursor-pointer"
-                                          title={lang === 'ar' ? 'فك الدمج' : 'Unmerge'}
+                                          className={`font-bold ml-1 ${
+                                            !isShipmentEditing || isDisabled
+                                              ? 'text-slate-400 hover:text-slate-500 cursor-not-allowed'
+                                              : 'text-rose-600 hover:text-rose-800 cursor-pointer'
+                                          }`}
+                                          title={
+                                            !isShipmentEditing || isDisabled
+                                              ? (lang === 'ar' ? 'يجب فتح وضع التعديل أولاً لفك الدمج' : 'Enable edit mode first to unmerge')
+                                              : (lang === 'ar' ? 'فك الدمج' : 'Unmerge')
+                                          }
                                         >
                                           ✕
                                         </button>

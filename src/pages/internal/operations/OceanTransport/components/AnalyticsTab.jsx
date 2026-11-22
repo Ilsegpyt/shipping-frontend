@@ -168,7 +168,21 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
   // 2. Compute 14 KPI Metrics dynamically from filteredData
   const metrics = useMemo(() => {
     const list = filteredData || [];
-    const totalTrips = list.length;
+    const totalContainers = list.length;
+
+    // Calculate actual trips (deducting 1 for each paired 2x20' container sharing a truck)
+    const seenPairs = new Set();
+    let pairDeduction = 0;
+    list.forEach((r) => {
+      if (r._pairId) {
+        if (seenPairs.has(r._pairId)) {
+          pairDeduction++;
+        } else {
+          seenPairs.add(r._pairId);
+        }
+      }
+    });
+    const totalTrips = Math.max(0, totalContainers - pairDeduction);
 
     // Containers breakdown
     let count20 = 0;
@@ -370,6 +384,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
     return {
       totalTrips,
+      totalContainers,
       uniqueContainers,
       count20,
       count40,
@@ -482,7 +497,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
   // 3.1.1 Dynamic Auto-Insights Banner Generator (Derived dynamically from filteredData)
   const autoInsights = useMemo(() => {
     const list = filteredData || [];
-    const totalTrips = list.length;
+    const totalTrips = metrics.totalTrips;
     if (totalTrips === 0) return [];
 
     const insights = [];
@@ -1263,7 +1278,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
             <div className="kpi aqua" title={lang === 'ar' ? 'إجمالي الحاويات المنقولة: 702 حاوية مقاس 40 قدم (99.6%) و 3 حاويات مقاس 20 قدم (0.4%)' : 'Total containers moved: 702 units of 40ft (99.6%) and 3 units of 20ft (0.4%)'}>
               <div className="k-top"><span className="k-ico">📦</span><span className="k-label">{lang === 'ar' ? 'الحاويات' : 'Containers'}</span></div>
-              <div className="k-val">{metrics.totalTrips}</div>
+              <div className="k-val">{metrics.totalContainers}</div>
               <div className="k-sub">
                 {lang === 'ar'
                   ? `${metrics.count40 + metrics.count40HC} حاوية (40 قدم) · ${metrics.count20} حاويات (20 قدم)`
@@ -1360,7 +1375,7 @@ export default function AnalyticsTab({ data = [], lang = 'en', direction = 'Impo
 
             <div className="kpi aqua" title={lang === 'ar' ? 'إجمالي الحاويات المنقولة وتوزيع مقاساتها بين 40 قدم و 20 قدم' : 'Total containers moved: breakdown between 40ft and 20ft units'}>
               <div className="k-top"><span className="k-ico">📦</span><span className="k-label">{lang === 'ar' ? 'الحاويات' : 'Containers'}</span></div>
-              <div className="k-val">{metrics.totalTrips}</div>
+              <div className="k-val">{metrics.totalContainers}</div>
               <div className="k-sub">
                 {lang === 'ar'
                   ? `${metrics.count40 + metrics.count40HC} حاوية (40 قدم) · ${metrics.count20} حاويات (20 قدم)`
