@@ -1,0 +1,377 @@
+.dynamic-builder,.dynamic-section-editor,.dynamic-card,.dynamic-block{min-width:0}
+.dynamic-builder{display:grid;gap:20px}
+.dynamic-builder-heading{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.dynamic-builder-heading span{font-size:13px;color:var(--color-brand-muted)}
+.dynamic-section-editor{padding:16px;border:1px solid var(--color-brand-border);display:grid;gap:14px}
+.dynamic-toolbar,.dynamic-options{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dynamic-toolbar strong,.dynamic-toolbar span{margin-right:auto}
+.dynamic-toolbar button,.dynamic-options select,.dynamic-edit-button,.dynamic-add{border:1px solid var(--color-brand-secondary);padding:5px 9px;background:var(--color-brand-surface);border-radius:0;font-size:13px}
+.dynamic-toolbar button:disabled{opacity:.4;cursor:not-allowed}
+.dynamic-options label{display:flex;gap:8px;align-items:center;font-size:13px}
+.dynamic-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:stretch}
+.dynamic-grid>*{grid-column:span 12;min-width:0}
+.dynamic-grid--two-columns>*{grid-column:span 6}
+.dynamic-grid--three-columns>*{grid-column:span 4}
+.dynamic-grid--four-columns>*{grid-column:span 3}
+.dynamic-grid--two-by-two>*{grid-column:span 6}
+.dynamic-grid--one-left-two-right>*:first-child{grid-column:span 6;grid-row:span 2}
+.dynamic-grid--one-left-two-right>*:not(:first-child){grid-column:span 6}
+.dynamic-grid--one-right-two-left>*:last-child{grid-column:7 / span 6;grid-row:1 / span 2}
+.dynamic-grid--one-right-two-left>*:not(:last-child){grid-column:span 6}
+.dynamic-grid--one-top-two-bottom>*:first-child,.dynamic-grid--two-top-one-bottom>*:last-child{grid-column:span 12}
+.dynamic-grid--one-top-two-bottom>*:not(:first-child),.dynamic-grid--two-top-one-bottom>*:not(:last-child){grid-column:span 6}
+.dynamic-grid--three-left-one-right>*:last-child{grid-column:7 / span 6;grid-row:1 / span 3}
+.dynamic-grid--three-left-one-right>*:not(:last-child){grid-column:span 6}
+.dynamic-grid--one-left-three-right>*:first-child{grid-column:span 6;grid-row:span 3}
+.dynamic-grid--one-left-three-right>*:not(:first-child){grid-column:span 6}
+.dynamic-card{border:1px solid var(--color-brand-border);padding:12px;display:grid;align-content:start;gap:12px}
+.dynamic-block{border:1px dashed var(--color-brand-border);padding:8px;display:grid;gap:8px}
+.dynamic-preview{max-height:150px;overflow:auto;font-size:13px}
+.dynamic-preview img,.dynamic-rich img{max-width:100%;height:auto;border-radius:0}
+.dynamic-add{border-color:var(--color-brand-accent);color:var(--color-brand-primary);font-weight:600}
+.dynamic-public-page{padding:0;display:block}
+.dynamic-public-sections{padding:36px max(20px,5vw);display:grid;gap:32px;max-width:1280px;margin-inline:auto}
+.dynamic-public-section{display:grid;gap:20px;min-width:0}
+.dynamic-public-header h1{font-size:clamp(28px,3.5vw,48px);font-weight:700}
+.dynamic-public-card{min-width:0;display:grid;align-content:start;gap:16px}
+.dynamic-rich{min-width:0;overflow-wrap:anywhere}
+.dynamic-rich ul{list-style:disc;padding-left:24px}
+.dynamic-rich ol{list-style:decimal;padding-left:24px}
+@media(max-width:900px){.dynamic-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.dynamic-grid>*{grid-column:auto!important;grid-row:auto!important}.dynamic-grid--single>*,.dynamic-grid--two-rows>*,.dynamic-grid--four-rows>*{grid-column:span 2!important}}
+@media(max-width:600px){.dynamic-grid{grid-template-columns:minmax(0,1fr)}.dynamic-grid>*{grid-column:1!important;grid-row:auto!important}.dynamic-section-editor{padding:10px}.dynamic-public-page{padding:24px 16px}}
+
+.dynamic-image-pair{display:flex;gap:20px;align-items:center;min-width:0}
+.dynamic-image-pair>*{flex:1;min-width:0}
+.dynamic-image-pair--right{flex-direction:row-reverse}
+@media(max-width:600px){.dynamic-image-pair,.dynamic-image-pair--right{flex-direction:column;align-items:stretch}}
+
+/* Shared ILS identity colours, no rounded corners. */
+.dynamic-builder{color:var(--color-brand-primary);}
+.dynamic-section-editor{background:var(--color-brand-bg);}
+.dynamic-card{background:var(--color-brand-surface);}
+.dynamic-block{background:var(--color-brand-surface);}
+.dynamic-toolbar button:hover:not(:disabled),.dynamic-add:hover{background:var(--color-brand-bg);border-color:var(--color-brand-accent)}
+.dynamic-toolbar button:focus-visible,.dynamic-add:focus-visible,.dynamic-edit-button:focus-visible{outline:2px solid var(--color-brand-accent);outline-offset:2px}
+.dynamic-content-highlight{border-left:4px solid var(--color-brand-accent);padding:18px 22px;background:var(--color-brand-surface-blue);color:var(--color-brand-primary);font-weight:600}
+.dynamic-content-closing{border-top:2px solid var(--color-brand-accent);padding:20px 0 0;color:var(--color-brand-primary-hover)}
+.dynamic-card-add{justify-content:flex-start}
+.dynamic-hero-intro{max-width:48rem;}
+.dynamic-section-block-actions{padding:6px 0}
+.dynamic-builder *, .dynamic-public-page *{border-radius:0}
+@media(max-width:600px){.dynamic-public-sections{padding:24px 16px}}
+
+/* V2 editor: preserve the original ILS v1 border, colour and input treatment. */
+.dynamic-builder{color:var(--color-brand-primary-hover);gap:24px}
+.dynamic-section-editor{background:var(--color-brand-bg);border:1px solid var(--color-brand-border);padding:20px;gap:16px}
+.dynamic-card,.dynamic-block{border:1px solid var(--color-brand-border);background:var(--color-brand-surface);padding:16px}
+.dynamic-field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.dynamic-field{display:grid;gap:6px;color:var(--color-brand-primary-hover);font-weight:500;font-size:13px;min-width:0}
+.dynamic-field input,.dynamic-options select,.dynamic-toolbar select{width:100%;min-width:0;max-width:100%;border:1px solid var(--color-brand-border);background:var(--color-brand-surface);color:var(--color-brand-primary-hover);padding:9px 12px;border-radius:0;outline-offset:2px}
+.dynamic-field input:focus-visible,.dynamic-options select:focus-visible,.dynamic-toolbar select:focus-visible{outline:2px solid var(--color-brand-accent)}
+.dynamic-options label,.dynamic-toolbar label{color:var(--color-brand-primary-hover);font-weight:500}
+.dynamic-toolbar button,.dynamic-edit-button,.dynamic-add{background:var(--color-brand-surface);color:var(--color-brand-primary-hover);border:1px solid var(--color-brand-border);padding:8px 12px;font-weight:600;border-radius:0}
+.dynamic-toolbar button:hover:not(:disabled),.dynamic-edit-button:hover,.dynamic-add:hover{border-color:var(--color-brand-accent);background:var(--color-brand-bg)}
+.dynamic-section-block-actions{border-top:1px solid var(--color-brand-border);padding-top:16px}
+.dynamic-page-intro-editor{border-color:var(--color-brand-accent)}
+
+/* V1 public content surface & section heading, retaining V2 grid geometry. */
+.dynamic-public-sections{max-width:none;padding:40px 16px 64px;gap:24px}
+.dynamic-public-sections > *{max-width:1280px;width:100%;margin-inline:auto}
+.dynamic-public-section{display:block}
+.dynamic-section-inner{padding:20px}
+.dynamic-public-card{min-width:0;display:grid;align-content:start;gap:14px}
+.dynamic-card-title,.dynamic-block-title{font-weight:700;color:var(--color-brand-primary-hover);font-size:1.2rem;line-height:1.35;margin:0 0 6px}
+.dynamic-rich{color:var(--color-brand-primary);line-height:1.8}
+.dynamic-plain-block{color:var(--color-brand-primary)}
+
+/* The legacy vertical-line styles match SharedDynamicSection (v1). */
+.dynamic-public-page .dynamic-content-highlight{border:0;border-left:4px solid var(--color-brand-accent);background:var(--color-brand-bg);color:var(--color-brand-primary);padding:24px 20px;font-weight:400}
+.dynamic-public-page .dynamic-content-closing{border:0;border-left:4px solid var(--color-brand-primary);background:var(--color-brand-bg);color:var(--color-brand-primary-hover);padding:20px}
+.dynamic-public-page .dynamic-content-highlight--horizontal{border-left:0;border-top:4px solid var(--color-brand-accent);padding:20px 0 0;background:var(--color-brand-bg)}
+.dynamic-public-page .dynamic-content-highlight--horizontal.dynamic-line--bottom{border-top:0;border-bottom:4px solid var(--color-brand-accent);padding:0 0 20px}
+.dynamic-content-highlight--horizontal .dynamic-rich{font-weight:inherit}
+.dynamic-public-page .dynamic-hero-intro{max-width:48rem;color:inherit}
+.dynamic-builder *, .dynamic-public-page *{border-radius:0}
+@media(max-width:600px){.dynamic-field-grid{grid-template-columns:minmax(0,1fr)}.dynamic-section-editor{padding:12px}.dynamic-public-sections{padding:24px 16px}.dynamic-section-inner{padding:16px}}
+
+/* -------------------------------------------------------------
+   CMS v2 public spacing, palette surfaces and vertical alignment
+   Keeps the selected grid geometry and the existing v1 accent styles.
+   ------------------------------------------------------------- */
+.dynamic-public-sections {
+  gap: 48px;
+  padding-block: 48px 80px;
+}
+
+.dynamic-section-inner {
+  padding: 30px;
+}
+
+/* Preserve the shared v1 section heading's own label/title spacing. */
+.dynamic-section-inner > .dynamic-grid {
+  margin-block: 28px;
+}
+.dynamic-section-inner > .dynamic-render-block + .dynamic-render-block {
+  margin-top: 20px;
+}
+.dynamic-section-inner > .dynamic-grid + .dynamic-render-block,
+.dynamic-section-inner > .dynamic-render-block + .dynamic-grid {
+  margin-top: 20px;
+}
+
+.dynamic-public-page .dynamic-grid {
+  gap: 26px;
+  align-items: stretch;
+}
+
+/* Each card gets its own brand-palette surface. The content of a short
+   card is centred vertically against a taller neighbouring card. */
+.dynamic-public-page .dynamic-public-card {
+  min-width: 0;
+  height: 100%;
+  padding: 24px;
+  gap: 20px;
+  align-content: center;
+  background: var(--color-brand-surface);
+  border: 1px solid var(--color-brand-border);
+}
+
+/* Only normal Rich Text fields get a separate surface: highlights and
+   closings keep their existing v1 visual treatment and coloured lines. */
+.dynamic-public-page .dynamic-public-card > .dynamic-plain-block {
+  min-width: 0;
+  padding: 20px 22px;
+  border: 1px solid var(--color-brand-border);
+  background: var(--color-brand-surface-tint);
+}
+
+.dynamic-public-page .dynamic-public-card > .dynamic-plain-block .dynamic-rich {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dynamic-public-page .dynamic-public-card > .dynamic-card-title {
+  margin-bottom: 2px;
+}
+
+/* More breathing room in the editor without changing its behaviour. */
+.dynamic-builder { gap: 28px; }
+.dynamic-section-editor { gap: 20px; padding: 24px; }
+.dynamic-card { gap: 18px; padding: 20px; }
+.dynamic-block { gap: 12px; padding: 16px; }
+.dynamic-section-editor .dynamic-grid { gap: 20px; }
+
+@media (max-width: 900px) {
+  .dynamic-public-sections { gap: 36px; padding-block: 36px 56px; }
+  .dynamic-public-page .dynamic-grid { gap: 18px; }
+  .dynamic-public-page .dynamic-public-card { padding: 20px; }
+}
+
+@media (max-width: 600px) {
+  .dynamic-public-sections { gap: 30px; padding: 24px 16px 40px; }
+  .dynamic-section-inner { padding: 16px; }
+  .dynamic-section-inner > .dynamic-grid { margin-block: 20px; }
+  .dynamic-public-page .dynamic-public-card { padding: 16px; gap: 16px; }
+  .dynamic-public-page .dynamic-public-card > .dynamic-plain-block { padding: 16px; }
+  .dynamic-section-editor { padding: 12px; }
+  .dynamic-card { padding: 14px; }
+}
+/* Compact spacing between section label, title and subtitle only. */
+.dynamic-public-page .dynamic-section-inner > h2 {
+  margin-top: 0px;
+  margin-bottom: 10px;
+}
+.dynamic-public-page .dynamic-section-inner > h2 + p {
+  margin-top: -10px;
+  margin-bottom: 15px;
+}
+.dynamic-public-page .dynamic-section-inner > p + p {
+  margin-top: 5px;
+}
+
+/* CMS v2: prevent Rich Text from overflowing beside images. */
+.dynamic-public-page .dynamic-public-card,
+.dynamic-public-page .dynamic-plain-block,
+.dynamic-public-page .dynamic-image-pair,
+.dynamic-public-page .dynamic-image-pair > *,
+.dynamic-public-page .dynamic-rich,
+.dynamic-public-page .dynamic-rich :is(p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dynamic-public-page .dynamic-rich,
+.dynamic-public-page .dynamic-rich :is(p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.dynamic-public-page .dynamic-rich :is(img, video, iframe) {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Don't let a long link or long code token widen the card. */
+.dynamic-public-page .dynamic-rich :is(a, code, pre) {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+/* Image and text side by side */
+.dynamic-public-page .dynamic-image-pair {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-width: 0;
+}
+
+.dynamic-public-page .dynamic-image-pair > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Control image proportions */
+
+.dynamic-public-page .dynamic-image-pair img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+}
+
+
+/* Tablet and mobile */
+@media (max-width: 900px) {
+  .dynamic-public-page .dynamic-image-pair,
+  .dynamic-public-page .dynamic-image-pair--right {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .dynamic-public-page .dynamic-image-pair img {
+    width: 100%;
+    height: auto;
+    max-height: 260px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+  }
+}
+/* CMS v2 — Typography adjustments; append to the END of DynamicPageBuilder.css. */
+/* Text and headings slightly heavier, without changing the ILS identity palette. */
+.dynamic-public-page .dynamic-rich {
+  font-size: clamp(0.95rem, 0.3vw + 0.88rem, 1.05rem);
+  font-weight: 450;
+  line-height: 1.75;
+}
+.dynamic-public-page .dynamic-rich :is(strong, b) { font-weight: 700; }
+.dynamic-public-page :is(.dynamic-card-title, .dynamic-block-title) {
+  font-weight: 700;
+  font-size: clamp(1.05rem, 0.65vw + 0.95rem, 1.25rem);
+  line-height: 1.4;
+}
+.dynamic-public-page .dynamic-rich :is(h2, h3) {
+  font-weight: 700;
+  line-height: 1.4;
+}
+.dynamic-public-page .dynamic-content-highlight,
+.dynamic-public-page .dynamic-content-closing {
+  border-left-width: 5px;
+}
+/* Use legacy v1 accent treatment for highlights inside a card. */
+.dynamic-public-page .dynamic-public-card > .dynamic-content-highlight {
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 5px solid var(--color-brand-accent);
+  padding: 20px;
+  background: var(--color-brand-bg);
+}
+@media (max-width: 600px) {
+  .dynamic-public-page .dynamic-rich { font-size: 0.95rem; line-height: 1.7; }
+  .dynamic-public-page :is(.dynamic-card-title, .dynamic-block-title) { font-size: 1.05rem; }
+  .dynamic-public-page .dynamic-public-card > .dynamic-content-highlight { padding: 14px; border-left-width: 4px; }
+  .dynamic-public-page .dynamic-content-closing { border-left-width: 4px; }
+}
+
+/* CMS v2 — Typography Colour Hierarchy */
+
+.dynamic-public-page .dynamic-rich,
+.dynamic-public-page .dynamic-plain-block {
+  color: var(--color-brand-muted);
+}
+
+/* Headings */
+.dynamic-public-page .dynamic-rich h1,
+.dynamic-public-page .dynamic-rich h2,
+.dynamic-public-page .dynamic-rich h3,
+.dynamic-public-page .dynamic-rich h4,
+.dynamic-public-page .dynamic-card-title,
+.dynamic-public-page .dynamic-block-title {
+  color: var(--color-brand-primary);
+}
+
+/* Body text */
+.dynamic-public-page .dynamic-rich p,
+.dynamic-public-page .dynamic-rich li {
+  color: var(--color-brand-muted);
+}
+
+/* Links */
+.dynamic-public-page .dynamic-rich a {
+  color: var(--color-brand-accent);
+  text-decoration: underline;
+}
+
+/* Preserve highlight and closing identity */
+.dynamic-public-page .dynamic-content-highlight {
+  color: var(--color-brand-primary);
+}
+
+.dynamic-public-page .dynamic-content-closing {
+  color: var(--color-brand-primary-hover);
+}
+/* Add at the end of DynamicPageBuilder.css. Text continues beneath an image
+   using normal float layout; existing side-by-side Flex layout is unchanged. */
+.dynamic-public-page .dynamic-rich::after,
+.dynamic-preview::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+.dynamic-public-page .dynamic-rich .dynamic-image-float,
+.dynamic-preview .dynamic-image-float {
+  float: left;
+  width: min(45%, 420px);
+  max-width: 100%;
+  margin: 0 22px 14px 0;
+  min-width: 0;
+}
+.dynamic-public-page .dynamic-rich .dynamic-image-float--wrap-right,
+.dynamic-preview .dynamic-image-float--wrap-right {
+  float: right;
+  margin: 0 0 14px 22px;
+}
+.dynamic-public-page .dynamic-rich .dynamic-image-float img,
+.dynamic-preview .dynamic-image-float img,
+.dynamic-public-page .dynamic-rich img.dynamic-image-float,
+.dynamic-preview img.dynamic-image-float {
+  display: block;
+  width: 100% !important;
+  max-width: 100%;
+  height: auto !important;
+  object-fit: contain;
+  border-radius: 0;
+}
+/* A direct img is itself the floated element; avoid forcing a large width. */
+@media (max-width: 900px) {
+  .dynamic-public-page .dynamic-rich .dynamic-image-float,
+  .dynamic-preview .dynamic-image-float {
+    float: none;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 18px;
+  }
+}

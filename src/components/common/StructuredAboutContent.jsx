@@ -4,6 +4,7 @@ import SharedSectionHeading from "./SharedSectionHeading";
 import SharedCmsPageHero from "./SharedCmsPageHero";
 import SharedContentSection from "./SharedContentSection";
 import SharedDynamicSection from "./SharedDynamicSection";
+import { DynamicPageRenderer, parseDynamicPage } from "./DynamicPageBuilder";
 import RichTextEditor from "./RichTextEditor";
 import ContentBlockEditor from "./ContentBlockEditor";
 import { useEffect, useState } from "react";
@@ -432,6 +433,11 @@ function pageContentOrderToPublicData(pageContentOrder, pageIntroText = "") {
 }
 
 export function StructuredAboutRenderer({ page, styleVariant = "about" }) {
+  if (parseDynamicPage(page?.pageContentOrder)) return <DynamicPageRenderer page={page} />;
+  return <LegacyStructuredAboutRenderer page={page} styleVariant={styleVariant} />;
+}
+
+function LegacyStructuredAboutRenderer({ page, styleVariant = "about" }) {
   const orderedData = pageContentOrderToPublicData(
     page?.pageContentOrder,
     page?.pageIntroText || "",

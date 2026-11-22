@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import contentService from "../../../services/contentService";
 
 import RichTextEditor from "../../../components/common/RichTextEditor";
+import { DynamicPageBuilder, createEmptyDynamicPage, parseDynamicPage } from "../../../components/common/DynamicPageBuilder";
 
 import RepeatableSection from "../../../components/common/RepeatableSection";
 import ContentBlockEditor from "../../../components/common/ContentBlockEditor";
@@ -522,6 +523,8 @@ export default function Content() {
   const [isPhilosophyPage, setIsPhilosophyPage] = useState(false);
   const [isStructuredAboutPage, setIsStructuredAboutPage] = useState(false);
   const [aboutPageForm, setAboutPageForm] = useState(createEmptyAboutPage());
+  const [pageEditorMode, setPageEditorMode] = useState("legacy");
+  const [dynamicPage, setDynamicPage] = useState(createEmptyDynamicPage());
 
   useEffect(() => {
 
@@ -641,6 +644,8 @@ export default function Content() {
     setIsPhilosophyPage(false);
     setIsStructuredAboutPage(type === "Page");
     setAboutPageForm(createEmptyAboutPage());
+    setPageEditorMode("legacy");
+    setDynamicPage(createEmptyDynamicPage());
     setPhilosophyForm(createEmptyPhilosophyContent());
     setSaveError("");
 
@@ -694,7 +699,7 @@ export default function Content() {
 
     }
 
-    if (form.type === "Page") {
+    if (form.type === "Page" && pageEditorMode === "legacy") {
       const sections = Array.isArray(aboutPageForm.sections)
         ? aboutPageForm.sections
         : [];
@@ -754,7 +759,9 @@ export default function Content() {
     }
 
     const pageContentOrder =
-      form.type === "Page" ? aboutPageToPageContentOrder(aboutPageForm) : null;
+      form.type === "Page"
+        ? (pageEditorMode === "dynamic" ? JSON.stringify(dynamicPage) : aboutPageToPageContentOrder(aboutPageForm))
+        : null;
 
     const payload = {
       parentId: form.parentId || null,
@@ -765,11 +772,11 @@ export default function Content() {
         form.type === "Post"
           ? form.body || null
           : form.type === "Page"
-            ? aboutPageForm.introText?.trim() || pageContentOrder
+            ? (pageEditorMode === "dynamic" ? null : aboutPageForm.introText?.trim() || pageContentOrder)
             : null,
 
       pageIntroText:
-        form.type === "Page" ? aboutPageForm.introText || null : null,
+        form.type === "Page" ? (pageEditorMode === "dynamic" ? null : aboutPageForm.introText || null) : null,
 
       pageContentOrder,
 
@@ -971,6 +978,9 @@ export default function Content() {
       setIsPhilosophyPage(false);
       setIsStructuredAboutPage(type === "Page");
       setAboutPageForm(pageData);
+      const existingDynamic = type === "Page" ? parseDynamicPage(content.pageContentOrder) : null;
+      setPageEditorMode(existingDynamic ? "dynamic" : "legacy");
+      setDynamicPage(existingDynamic || createEmptyDynamicPage());
       setPhilosophyForm(createEmptyPhilosophyContent());
 
       setEditingContentId(contentId);
@@ -1119,6 +1129,9 @@ export default function Content() {
               publishedAt: "",
             });
 
+            setPageEditorMode("legacy");
+            setAboutPageForm(createEmptyAboutPage());
+            setDynamicPage(createEmptyDynamicPage());
             setShowAddForm(true);
 
             setSaveError("");
@@ -1234,11 +1247,20 @@ export default function Content() {
             {(form.type === "Page" || form.type === "Post") && (
               <div className="md:col-span-2 space-y-5">
                 {form.type === "Page" ? (
-                  <StructuredAboutEditor
-                    value={aboutPageForm}
-                    onChange={handleAboutPageChange}
-                    pageTitle={form.title || "Page"}
-                  />
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap gap-3 items-center">
+                      <label htmlFor="page-editor-mode" className="font-semibold">Page editor</label>
+                      <select id="page-editor-mode" className="border border-slate-300 p-2 rounded-none" value={pageEditorMode}
+                        onChange={(event) => setPageEditorMode(event.target.value)}>
+                        <option value="legacy">Existing CMS (v1)</option>
+                        <option value="dynamic">Grid & Card Builder (v2)</option>
+                      </select>
+                      <span className="text-xs text-amber-700">Changing modes does not convert content. Save only the selected version.</span>
+                    </div>
+                    {pageEditorMode === "dynamic" ?
+                      <DynamicPageBuilder value={dynamicPage} onChange={setDynamicPage} /> :
+                      <StructuredAboutEditor value={aboutPageForm} onChange={handleAboutPageChange} pageTitle={form.title || "Page"} />}
+                  </div>
                 ) : (
                   <>
                     <label className="mb-2 block text-sm font-medium text-slate-700">

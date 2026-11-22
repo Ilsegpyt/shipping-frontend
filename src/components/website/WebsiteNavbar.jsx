@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import ilsLogo from "../../assets/branding/ILS_Egypt_navy_transparent.png";
+import ilsLogo from "../../assets/branding/ILS_Egypt_navy_transparent.jpg";
 import contentService from "../../services/contentService";
 import { cmsPagePath } from "../../utils/cmsPageRoutes";
 

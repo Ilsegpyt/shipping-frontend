@@ -2,6 +2,7 @@ import "./SharedCmsContentLayout.css";
 import "./SharedCmsImageStyles.css";
 import SharedSectionHeading from "./SharedSectionHeading";
 import SharedCmsPageHero from "./SharedCmsPageHero";
+import { DynamicPageRenderer, parseDynamicPage } from "./DynamicPageBuilder";
 import SharedContentSection from "./SharedContentSection";
 import RichTextEditor from "./RichTextEditor";
 import { cleanHtmlImages } from "../../utils/mediaUrl";
@@ -280,6 +281,7 @@ function prepareStructuredRichHtml(html = "") {
 }
 
 export function StructuredPageRenderer({ page, parentTitle = "About ILS" }) {
+  if (parseDynamicPage(page?.pageContentOrder)) return <DynamicPageRenderer page={page} parentTitle={parentTitle} />;
   const body = page?.body || "";
   let data;
   try { data = body.startsWith(STRUCTURED_PAGE_MARKER) ? JSON.parse(body.slice(STRUCTURED_PAGE_MARKER.length)) : parseStructuredPage(body); }
