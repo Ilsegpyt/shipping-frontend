@@ -96,7 +96,7 @@
 .dynamic-content-highlight--horizontal .dynamic-rich{font-weight:inherit}
 .dynamic-public-page .dynamic-hero-intro{max-width:48rem;color:inherit}
 .dynamic-builder *, .dynamic-public-page *{border-radius:0}
-@media(max-width:600px){.dynamic-field-grid{grid-template-columns:minmax(0,1fr)}.dynamic-section-editor{padding:12px}.dynamic-public-sections{padding:24px 16px}.dynamic-section-inner{padding:16px}}
+@media(max-width:600px){.dynamic-field-grid{grid-template-columns:minmax(0,1fr)}.dynamic-section-editor{padding:12px}.dynamic-public-sections{padding:24px 16px}.dynamic-section-inner{padding:8px}}
 
 /* -------------------------------------------------------------
    CMS v2 public spacing, palette surfaces and vertical alignment
@@ -108,7 +108,7 @@
 }
 
 .dynamic-section-inner {
-  padding: 30px;
+  padding: 16px;
 }
 
 /* Preserve the shared v1 section heading's own label/title spacing. */
@@ -133,11 +133,11 @@
 .dynamic-public-page .dynamic-public-card {
   min-width: 0;
   height: 100%;
-  padding: 24px;
+  padding: 16px;
   gap: 20px;
   /* align-content: center; */
   background: var(--color-brand-surface);
-  border: 1px solid var(--color-brand-border);
+  border: 1px solid var(--color-brand-accent);
 }
 
 /* Only normal Rich Text fields get a separate surface: highlights and
@@ -168,15 +168,15 @@
 @media (max-width: 900px) {
   .dynamic-public-sections { gap: 22px; padding-block: 36px 56px; }
   .dynamic-public-page .dynamic-grid { gap: 18px; }
-  .dynamic-public-page .dynamic-public-card { padding: 20px; }
+  .dynamic-public-page .dynamic-public-card { padding: 12px; }
 }
 
 @media (max-width: 600px) {
   .dynamic-public-sections { gap: 18px; padding: 24px 16px 40px; }
-  .dynamic-section-inner { padding: 16px; }
+  .dynamic-section-inner { padding: 10px; }
   .dynamic-section-inner > .dynamic-grid { margin-block: 20px; }
-  .dynamic-public-page .dynamic-public-card { padding: 16px; gap: 16px; }
-  .dynamic-public-page .dynamic-public-card > .dynamic-plain-block { padding: 16px; }
+  .dynamic-public-page .dynamic-public-card { padding: 10px; gap: 16px; }
+  .dynamic-public-page .dynamic-public-card > .dynamic-plain-block { padding: 10px; }
   .dynamic-section-editor { padding: 12px; }
   .dynamic-card { padding: 14px; }
 }
@@ -273,7 +273,7 @@
 .dynamic-public-page .dynamic-rich :is(strong, b) { font-weight: 700; }
 .dynamic-public-page :is(.dynamic-card-title, .dynamic-block-title) {
   font-weight: 700;
-  font-size: clamp(1.05rem, 0.65vw + 0.95rem, 1.25rem);
+  font-size: clamp(1.05rem, -0.35vw + 0.95rem, 1.25rem);
   line-height: 1.4;
 }
 .dynamic-public-page .dynamic-rich :is(h2, h3) {

@@ -233,7 +233,7 @@ export default function CustomsDutiesCalculator() {
     return (
         <main className="min-h-screen bg-brand-surface text-brand-text">
             <SharedCmsPageHero label="ILS Resources" title="Customs Duties Calculator">
-                <p className="text-base leading-7 text-brand-primary-hover sm:text-lg sm:leading-8">Estimate import taxes, VAT & duties for shipments to Egypt.</p>
+                <p>Estimate import taxes, VAT & duties for shipments to Egypt.</p>
             </SharedCmsPageHero>
 
             <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">

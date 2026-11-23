@@ -5,7 +5,7 @@ export default function NafezaPlatform() {
     return (
         <main className="min-h-screen bg-brand-surface text-brand-primary">
             <SharedCmsPageHero label="ILS Resources" title="Nafeza Platform">
-                <p className="text-base leading-7 text-brand-primary-hover sm:text-lg sm:leading-8">Nafeza is Egypt's Unified Registration System for electronic customs and foreign trade procedures.</p>
+                <p >Nafeza is Egypt's Unified Registration System for electronic customs and foreign trade procedures.</p>
             </SharedCmsPageHero>
             <section className="mx-auto max-w-6xl px-4 py-10 sm:px-8 sm:py-14 lg:px-12 lg:py-16 ">
                 <div className="border border-brand-primary-hover bg-brand-surface p-5 sm:p-8 lg:p-10">

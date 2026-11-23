@@ -540,7 +540,9 @@ export default function Content() {
   const [isPhilosophyPage, setIsPhilosophyPage] = useState(false);
   const [isStructuredAboutPage, setIsStructuredAboutPage] = useState(false);
   const [aboutPageForm, setAboutPageForm] = useState(createEmptyAboutPage());
-  const [pageEditorMode, setPageEditorMode] = useState("legacy");
+  // V1 editor switch (disabled; retained for reference):
+  // const [pageEditorMode, setPageEditorMode] = useState("legacy");
+  const [legacyPageNeedsMigration, setLegacyPageNeedsMigration] = useState(false);
   const [dynamicPage, setDynamicPage] = useState(createEmptyDynamicPage());
 
   useEffect(() => {
@@ -661,7 +663,9 @@ export default function Content() {
     setIsPhilosophyPage(false);
     setIsStructuredAboutPage(type === "Page");
     setAboutPageForm(createEmptyAboutPage());
-    setPageEditorMode("legacy");
+    // V1 mode reset (disabled):
+    // setPageEditorMode("legacy");
+    setLegacyPageNeedsMigration(false);
     setDynamicPage(createEmptyDynamicPage());
     setPhilosophyForm(createEmptyPhilosophyContent());
     setSaveError("");
@@ -716,6 +720,8 @@ export default function Content() {
 
     }
 
+    /*
+      V1 page validation (disabled; retained for reference):
     if (form.type === "Page" && pageEditorMode === "legacy") {
       const sections = Array.isArray(aboutPageForm.sections)
         ? aboutPageForm.sections
@@ -736,6 +742,13 @@ export default function Content() {
         );
         return;
       }
+    }
+    */
+
+    // Do not overwrite a previously saved V1 page with an empty V2 structure.
+    if (form.type === "Page" && legacyPageNeedsMigration) {
+      setSaveError("This page contains V1 content. Convert it to V2 before saving to avoid losing its existing content.");
+      return;
     }
 
     if (form.type === "Post" && !(form.body || "").trim()) {
@@ -775,10 +788,15 @@ export default function Content() {
 
     }
 
+    /*
+      V1/V2 save-mode selection (disabled):
     const pageContentOrder =
       form.type === "Page"
         ? (pageEditorMode === "dynamic" ? JSON.stringify(dynamicPage) : aboutPageToPageContentOrder(aboutPageForm))
         : null;
+    */
+    const pageContentOrder =
+      form.type === "Page" ? JSON.stringify(dynamicPage) : null;
 
     const payload = {
       parentId: form.parentId || null,
@@ -789,11 +807,11 @@ export default function Content() {
         form.type === "Post"
           ? form.body || null
           : form.type === "Page"
-            ? (pageEditorMode === "dynamic" ? null : aboutPageForm.introText?.trim() || pageContentOrder)
+            ? null
             : null,
 
       pageIntroText:
-        form.type === "Page" ? (pageEditorMode === "dynamic" ? null : aboutPageForm.introText || null) : null,
+        null,
 
       pageContentOrder,
 
@@ -820,6 +838,7 @@ export default function Content() {
       setIsPhilosophyPage(false);
       setIsStructuredAboutPage(false);
       setAboutPageForm(createEmptyAboutPage());
+      setLegacyPageNeedsMigration(false);
 
       setPhilosophyForm(createEmptyPhilosophyContent());
 
@@ -996,7 +1015,10 @@ export default function Content() {
       setIsStructuredAboutPage(type === "Page");
       setAboutPageForm(pageData);
       const existingDynamic = type === "Page" ? parseDynamicPage(content.pageContentOrder) : null;
-      setPageEditorMode(existingDynamic ? "dynamic" : "legacy");
+      // V1 auto-selection (disabled):
+      // setPageEditorMode(existingDynamic ? "dynamic" : "legacy");
+      setLegacyPageNeedsMigration(type === "Page" && !existingDynamic &&
+        Boolean(content.pageContentOrder || content.body || content.pageIntroText));
       setDynamicPage(existingDynamic || createEmptyDynamicPage());
       setPhilosophyForm(createEmptyPhilosophyContent());
 
@@ -1146,7 +1168,9 @@ export default function Content() {
               publishedAt: "",
             });
 
-            setPageEditorMode("legacy");
+            // V1 mode reset (disabled):
+            // setPageEditorMode("legacy");
+            setLegacyPageNeedsMigration(false);
             setAboutPageForm(createEmptyAboutPage());
             setDynamicPage(createEmptyDynamicPage());
             setShowAddForm(true);
@@ -1265,18 +1289,29 @@ export default function Content() {
               <div className="md:col-span-2 space-y-5">
                 {form.type === "Page" ? (
                   <div className="space-y-4">
-                    <div className="flex flex-wrap gap-3 items-center">
-                      <label htmlFor="page-editor-mode" className="font-semibold">Page editor</label>
-                      <select id="page-editor-mode" className="border border-slate-300 p-2 rounded-none" value={pageEditorMode}
-                        onChange={(event) => setPageEditorMode(event.target.value)}>
-                        <option value="legacy">Existing CMS (v1)</option>
-                        <option value="dynamic">Grid & Card Builder (v2)</option>
-                      </select>
-                      <span className="text-xs text-amber-700">Changing modes does not convert content. Save only the selected version.</span>
-                    </div>
-                    {pageEditorMode === "dynamic" ?
-                      <DynamicPageBuilder value={dynamicPage} onChange={setDynamicPage} /> :
-                      <StructuredAboutEditor value={aboutPageForm} onChange={handleAboutPageChange} pageTitle={form.title || "Page"} />}
+                    {/*
+                      V1 editor and mode switch (disabled; retained for reference):
+
+                      <div className="flex flex-wrap gap-3 items-center">
+                        <label htmlFor="page-editor-mode">Page editor</label>
+                        <select value={pageEditorMode} onChange={(event) => setPageEditorMode(event.target.value)}>
+                          <option value="legacy">Existing CMS (v1)</option>
+                          <option value="dynamic">Grid & Card Builder (v2)</option>
+                        </select>
+                      </div>
+
+                      {pageEditorMode === "dynamic"
+                        ? <DynamicPageBuilder value={dynamicPage} onChange={setDynamicPage} />
+                        : <StructuredAboutEditor value={aboutPageForm} onChange={handleAboutPageChange} pageTitle={form.title || "Page"} />}
+                    */}
+
+                    {legacyPageNeedsMigration && (
+                      <p className="border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                        This page has existing V1 content. V2 cannot edit it safely until the content is converted.
+                        Saving is disabled to protect the original content.
+                      </p>
+                    )}
+                    <DynamicPageBuilder value={dynamicPage} onChange={setDynamicPage} />
                   </div>
                 ) : (
                   <>

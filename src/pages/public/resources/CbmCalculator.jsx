@@ -141,7 +141,7 @@ export default function CbmCalculator() {
     return (
         <main className="min-h-screen bg-slate-50 text-slate-900">
             <SharedCmsPageHero label="ILS Resources" title="CBM Calculator">
-                <p className="text-base leading-7 text-[#53677c] sm:text-lg sm:leading-8">Calculate cargo volume, gross weight and volumetric weight for your shipment.</p>
+                <p>Calculate cargo volume, gross weight and volumetric weight for your shipment.</p>
             </SharedCmsPageHero>
 
             <section className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">

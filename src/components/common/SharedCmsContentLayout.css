@@ -216,14 +216,14 @@
 /* Public CMS typography: mobile < tablet < desktop.
    Only the shared presentation layer; no portal/dashboard/editor rules. */
 .ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich):not(.intro-rich) {
-  font-size: clamp(0.875rem, 1.15vw, 1.125rem);
+  font-size: clamp(0.9rem, 1.15vw, 1.125rem);
   line-height: 1.75;
 }
 .ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) h1 {
   font-size: clamp(1.75rem, 2.6vw, 2.5rem);
 }
 .ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) :is(h2, h3) {
-  font-size: clamp(1.5rem, 1.9vw, 1.875rem);
+  font-size: clamp(1.25rem, 1.9vw, 1.875rem);
 }
 .ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) h3 {
   font-size: clamp(1.25rem, 1.4vw, 1.5rem);

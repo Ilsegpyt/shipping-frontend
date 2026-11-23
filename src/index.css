@@ -134,7 +134,7 @@ img[src*="/uploads/content/"] {
    Rich text headings/lists retain their own hierarchy and editor formatting. */
 .ils-website {
   --ils-font-hero: clamp(2rem, 4vw, 3.8rem);
-  --ils-font-section-title: clamp(1.5rem, 2.5vw, 1.875rem);
+  --ils-font-section-title: clamp(1.25rem, 2.5vw, 1.875rem);
   --ils-font-body: clamp(0.875rem, 1.1vw, 1rem);
   --ils-font-small: clamp(0.75rem, 0.95vw, 0.875rem);
 }
