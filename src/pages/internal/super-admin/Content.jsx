@@ -14,6 +14,23 @@ import { extractApiErrorMessage } from "../../../utils/errorUtils";
 const PHILOSOPHY_SCHEMA = "ils-philosophy-v2";
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+// const HERO_LINK_PATHS = new Set([
+//   "/join-ils/agent-opportunity", "/join-ils/recruitment",
+//   "/contact-ils/locations", "/contact-ils/get-a-quote",
+//   "/resources/nafeza-platform", "/resources/cbm-calculator",
+//   "/resources/customs-duties-calculator",
+// ]);
+// const normalizeHeroLinkPath = (url) => {
+//   try { return new URL(String(url || ""), window.location.origin).pathname.toLowerCase().replace(/\/$/, "") || "/"; }
+//   catch { return ""; }
+// };
+// const HERO_LINK_TITLES = new Set([
+//   "agent opportunity", "join our team", "recruitment", "ils branches", "get a quote",
+//   "nafeza", "nafeza platform", "cbm calculator", "customs duties calculator",
+// ]);
+// const normalizeHeroTitle = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+const supportsHeroUpload = (type) =>
+  type === "Page" || type === "Post" || type === "Link";
 
 const createEmptyCard = (id = `card-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`) => ({
   id,
@@ -780,7 +797,7 @@ export default function Content() {
 
       pageContentOrder,
 
-      featuredImage: ["Page", "Post"].includes(form.type) ? form.featuredImage || null : null,
+      featuredImage: supportsHeroUpload(form.type, form.linkUrl, form.title) ? form.featuredImage || null : null,
 
       linkUrl: form.type === "Link" ? form.linkUrl || null : null,
 
@@ -1314,10 +1331,10 @@ export default function Content() {
 
             {/* Post Featured Image */}
 
-            {(form.type === "Page" || form.type === "Post") && (
+            {supportsHeroUpload(form.type, form.linkUrl, form.title) && (
               <div>
                 <label className="mb-2 block text-sm font-medium text-slate-700">
-                  {form.type === "Page" ? "Hero Image" : "Featured Image"}
+                  {form.type === "Post" ? "Featured Image" : "Hero Image (optional — uses default when empty)"}
                 </label>
 
                 <input
@@ -1339,7 +1356,7 @@ export default function Content() {
                     <img
                       src={cleanImageUrl(form.featuredImage, API_BASE_URL)}
                       alt="Hero / featured image preview"
-                      className="h-32 w-48 rounded-lg border border-slate-200 object-cover"
+                      className="h-32 w-48 rounded-none border border-slate-200 object-cover"
                     />
 
 
@@ -1352,7 +1369,7 @@ export default function Content() {
                           featuredImage: "",
                         }))
                       }
-                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow hover:bg-red-600"
+                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-none bg-red-500 text-xs font-bold text-white shadow hover:bg-red-600"
                     >
                       ×
                     </button>

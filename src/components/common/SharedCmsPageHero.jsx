@@ -1,11 +1,14 @@
+import useCmsStaticHeroImage from "../../hooks/useCmsStaticHeroImage";
 import { Link, useLocation } from "react-router-dom";
 import { cleanImageUrl } from "../../utils/mediaUrl";
 import seaFreightImage from "../../assets/website/solutions/seafreight.webp";
 
 /** Presentation-only hero. CMS parsing, routing, and persistence remain unchanged. */
-export default function SharedCmsPageHero({ label, title, children, image = seaFreightImage }) {
+export default function SharedCmsPageHero({ label, title, children, image }) {
   const { pathname, search } = useLocation();
-  const resolvedImage = image ? cleanImageUrl(image, import.meta.env.VITE_API_BASE_URL || "") : seaFreightImage;
+  const { image: cmsHeroImage, loading: heroLoading } = useCmsStaticHeroImage(pathname, title);
+  const selectedImage = cmsHeroImage || image || seaFreightImage;
+  const resolvedImage = cleanImageUrl(selectedImage, import.meta.env.VITE_API_BASE_URL || "");
   const normalizedPath = pathname.replace(/\/$/, "");
   const isNewsIndex = normalizedPath === "/news";
   const isNewsDetail = /^\/news\/[^/]+/.test(normalizedPath);
@@ -21,7 +24,7 @@ export default function SharedCmsPageHero({ label, title, children, image = seaF
   return (
     <header className="ils-cms-hero relative isolate min-h-[240px] overflow-hidden bg-brand-bg sm:min-h-[280px] lg:min-h-[300px]">
       <div aria-hidden="true" className="absolute inset-y-0 right-0 w-full sm:w-[60%] lg:w-[55%]">
-        <img src={resolvedImage} alt="" className="h-full w-full object-cover object-center" />
+        {!heroLoading && <img src={resolvedImage} alt="" className="h-full w-full object-cover object-center" />}
       </div>
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-brand-bg/25 via-brand-bg/15 to-brand-bg/5" />
       {/* On mobile the image fills the hero, so darken it for inverse (white) text. */}

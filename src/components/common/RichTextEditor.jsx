@@ -816,6 +816,8 @@ export default function RichTextEditor({ value, onChange }) {
                 <option value="above">Image above text</option>
                 <option value="left">Image left, text beside it</option>
                 <option value="right">Image right, text beside it</option>
+                <option value="wrap-left">Image left, text wraps underneath</option>
+                <option value="wrap-right">Image right, text wraps underneath</option>
               </select>
             </label>
 
@@ -878,8 +880,8 @@ export default function RichTextEditor({ value, onChange }) {
         editor={editor}
         className="
                     min-h-30 px-4 py-3 text-sm outline-none
-                    [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-bold
-                    [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold
+                    [&_h2]:mb-3 [&_h2]:!text-[28px] [&_h2]:!font-bold
+                    [&_h3]:mb-2 [&_h3]:!text-[22px] [&_h3]:!font-semibold
                     [&_ul]:ml-6 [&_ul]:list-disc
                     [&_ol]:ml-6 [&_ol]:list-decimal
                     [&_p]:mb-2

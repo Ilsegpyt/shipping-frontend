@@ -97,7 +97,8 @@
 @media (max-width: 639px) {
   .ils-shared-content :is(.about-rich, .structured-rich):not(.intro-rich) { font-size: 1rem; line-height: 1.7; }
   .ils-shared-content :is(.about-rich, .structured-rich) h1 { font-size: 2rem; }
-  .ils-shared-content :is(.about-rich, .structured-rich) :is(h2, h3) { font-size: 1.5rem; }
+  .ils-shared-content :is(.about-rich, .structured-rich) h2 { font-size: 1.5rem; }
+  .ils-shared-content :is(.about-rich, .structured-rich) h3 { font-size: 1.25rem; }
   .ils-shared-content article > div > h2 { font-size: 1.75rem; }
   .ils-shared-content > section:first-child h1 { font-size: 2.25rem; }
 }
@@ -222,7 +223,11 @@
   font-size: clamp(1.75rem, 2.6vw, 2.5rem);
 }
 .ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) :is(h2, h3) {
-  font-size: clamp(1.25rem, 1.9vw, 1.875rem);
+  font-size: clamp(1.5rem, 1.9vw, 1.875rem);
+}
+.ils-shared-content .ils-cms-content-section :is(.about-rich, .structured-rich) h3 {
+  font-size: clamp(1.25rem, 1.4vw, 1.5rem);
+  font-weight: 600;
 }
 .ils-shared-content .ils-cms-content-section > article > div > h2 {
   font-size: clamp(1.5rem, 2.2vw, 2rem);

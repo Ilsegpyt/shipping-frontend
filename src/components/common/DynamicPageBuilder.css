@@ -33,7 +33,9 @@
 .dynamic-public-sections{padding:36px max(20px,5vw);display:grid;gap:32px;max-width:1280px;margin-inline:auto}
 .dynamic-public-section{display:grid;gap:20px;min-width:0}
 .dynamic-public-header h1{font-size:clamp(28px,3.5vw,48px);font-weight:700}
-.dynamic-public-card{min-width:0;display:grid;align-content:start;gap:16px}
+.dynamic-public-card{min-width:0;display:grid;
+  /* align-content:start; */
+  gap:16px}
 .dynamic-rich{min-width:0;overflow-wrap:anywhere}
 .dynamic-rich ul{list-style:disc;padding-left:24px}
 .dynamic-rich ol{list-style:decimal;padding-left:24px}
@@ -79,7 +81,9 @@
 .dynamic-public-sections > *{max-width:1280px;width:100%;margin-inline:auto}
 .dynamic-public-section{display:block}
 .dynamic-section-inner{padding:20px}
-.dynamic-public-card{min-width:0;display:grid;align-content:start;gap:14px}
+.dynamic-public-card{min-width:0;display:grid;
+  align-content:start
+  ;gap:14px}
 .dynamic-card-title,.dynamic-block-title{font-weight:700;color:var(--color-brand-primary-hover);font-size:1.2rem;line-height:1.35;margin:0 0 6px}
 .dynamic-rich{color:var(--color-brand-primary);line-height:1.8}
 .dynamic-plain-block{color:var(--color-brand-primary)}
@@ -99,7 +103,7 @@
    Keeps the selected grid geometry and the existing v1 accent styles.
    ------------------------------------------------------------- */
 .dynamic-public-sections {
-  gap: 48px;
+  gap: 30px;
   padding-block: 48px 80px;
 }
 
@@ -131,7 +135,7 @@
   height: 100%;
   padding: 24px;
   gap: 20px;
-  align-content: center;
+  /* align-content: center; */
   background: var(--color-brand-surface);
   border: 1px solid var(--color-brand-border);
 }
@@ -162,13 +166,13 @@
 .dynamic-section-editor .dynamic-grid { gap: 20px; }
 
 @media (max-width: 900px) {
-  .dynamic-public-sections { gap: 36px; padding-block: 36px 56px; }
+  .dynamic-public-sections { gap: 22px; padding-block: 36px 56px; }
   .dynamic-public-page .dynamic-grid { gap: 18px; }
   .dynamic-public-page .dynamic-public-card { padding: 20px; }
 }
 
 @media (max-width: 600px) {
-  .dynamic-public-sections { gap: 30px; padding: 24px 16px 40px; }
+  .dynamic-public-sections { gap: 18px; padding: 24px 16px 40px; }
   .dynamic-section-inner { padding: 16px; }
   .dynamic-section-inner > .dynamic-grid { margin-block: 20px; }
   .dynamic-public-page .dynamic-public-card { padding: 16px; gap: 16px; }
@@ -374,4 +378,129 @@
     max-width: 100%;
     margin: 0 0 18px;
   }
+}
+
+.dynamic-builder .dynamic-content-hint { display:block; flex-basis:100%; font-size:.85rem; line-height:1.5; color:var(--color-brand-muted,#64748b); }
+.dynamic-builder .dynamic-card-add { flex-wrap:wrap; gap:8px; }
+.dynamic-builder .dynamic-card-add button { white-space:normal; }
+.dynamic-public-page .dynamic-public-card img, .dynamic-preview img { max-width:100%; }
+.dynamic-public-page .dynamic-image-pair, .dynamic-preview .dynamic-image-pair,
+.dynamic-public-page .dynamic-image-pair > *, .dynamic-preview .dynamic-image-pair > * { min-width:0; }
+
+.dynamic-image-settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;width:100%}
+.dynamic-image-settings label{display:grid;gap:6px;font-size:13px;font-weight:600}
+.dynamic-image-settings input,.dynamic-image-settings select{min-width:0;width:100%;padding:9px;border:1px solid var(--color-brand-border,#cbd5e1);background:var(--color-brand-surface,#fff);border-radius:0}
+.dynamic-image-text{display:flow-root;width:100%;min-width:0}
+.dynamic-image-text__media{min-width:0}
+.dynamic-image-text__media img{display:block;width:100%!important;max-width:100%;border-radius:0!important}
+.dynamic-image-text__content{min-width:0;overflow-wrap:anywhere}
+.dynamic-image-text--side{display:grid;grid-template-columns:minmax(0,var(--dynamic-image-width)) minmax(0,1fr);gap:22px;align-items:center}
+.dynamic-image-text--side.dynamic-image-text--right{grid-template-columns:minmax(0,1fr) minmax(0,var(--dynamic-image-width))}
+.dynamic-image-text--side.dynamic-image-text--right .dynamic-image-text__media{grid-column:2;grid-row:1}
+.dynamic-image-text--side.dynamic-image-text--right .dynamic-image-text__content{grid-column:1;grid-row:1}
+.dynamic-image-text--wrap .dynamic-image-text__media{float:left;width:var(--dynamic-image-width);max-width:80%;margin:0 22px 14px 0}
+.dynamic-image-text--wrap.dynamic-image-text--right .dynamic-image-text__media{float:right;margin:0 0 14px 22px}
+.dynamic-image-text--wrap .dynamic-image-text__content{display:contents}
+.dynamic-image-text--wrap .dynamic-image-text__content>:first-child{margin-top:0}
+.dynamic-image-text--top,.dynamic-image-text--bottom{display:flex;flex-direction:column;gap:16px}
+.dynamic-image-text--bottom{flex-direction:column-reverse}
+.dynamic-image-text--top .dynamic-image-text__content,.dynamic-image-text--bottom .dynamic-image-text__content{display:block;width:100%}
+@media(max-width:900px){
+.dynamic-image-text--side,.dynamic-image-text--wrap,.dynamic-image-text--top,.dynamic-image-text--bottom{display:flex;flex-direction:column;gap:16px}
+.dynamic-image-text--side.dynamic-image-text--right .dynamic-image-text__media,.dynamic-image-text--side.dynamic-image-text--right .dynamic-image-text__content{grid-column:auto;grid-row:auto}
+.dynamic-image-text--wrap .dynamic-image-text__media,.dynamic-image-text--wrap.dynamic-image-text--right .dynamic-image-text__media{float:none;width:100%;max-width:100%;margin:0}
+.dynamic-image-text--wrap .dynamic-image-text__content{display:block}
+.dynamic-image-text--bottom{flex-direction:column}
+}
+
+/* Additional card arrangements: desktop, preview and public page */
+.dynamic-grid--three-rows > * { grid-column: span 12; }
+.dynamic-grid--one-top-three-bottom > :first-child,
+.dynamic-grid--three-top-one-bottom > :last-child { grid-column: span 12; }
+.dynamic-grid--one-top-three-bottom > :not(:first-child),
+.dynamic-grid--three-top-one-bottom > :not(:last-child) { grid-column: span 4; }
+@media (max-width: 900px) {
+  .dynamic-grid--three-rows > * { grid-column: span 2 !important; }
+  .dynamic-grid--one-top-three-bottom > :first-child,
+  .dynamic-grid--three-top-one-bottom > :last-child { grid-column: span 2 !important; }
+  .dynamic-grid--one-top-three-bottom > :not(:first-child),
+  .dynamic-grid--three-top-one-bottom > :not(:last-child) { grid-column: auto !important; }
+}
+@media (max-width: 600px) {
+  .dynamic-grid--three-rows > *,
+  .dynamic-grid--one-top-three-bottom > *,
+  .dynamic-grid--three-top-one-bottom > * { grid-column: 1 !important; grid-row: auto !important; }
+}
+/* CMS v2: image-only media, edge-to-edge in the card/section. */
+.dynamic-cover-image{position:relative;display:block;width:100%;min-width:0;overflow:hidden;border-radius:0!important;background:var(--color-brand-bg)}
+.dynamic-cover-image img{display:block!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:var(--dynamic-cover-position,center)!important;border-radius:0!important;margin:0!important}
+.dynamic-public-page .dynamic-public-card--image-only{padding:0!important;overflow:hidden;display:flex;align-items:stretch;min-height:220px}
+.dynamic-public-card--image-only .dynamic-card-cover{flex:1;min-height:220px;height:100%}
+.dynamic-public-page .dynamic-section-cover{height:var(--dynamic-cover-height,440px);width:100%;}
+.dynamic-public-page .dynamic-section-inner:has(> .dynamic-section-cover){padding:0}
+.dynamic-public-page .dynamic-section-inner:has(> .dynamic-section-cover) > :not(.dynamic-section-cover){padding-inline:30px}
+.dynamic-section-image-preview{height:200px}
+.dynamic-image-only-preview{height:160px}
+.dynamic-section-order{display:grid;gap:8px;padding:14px;border:1px solid var(--color-brand-border)}
+.dynamic-order-item{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--color-brand-border);background:var(--color-brand-surface)}
+.dynamic-order-item span{flex:1;font-size:13px;font-weight:600}
+.dynamic-order-item button{border:1px solid var(--color-brand-border);padding:4px 10px;border-radius:0}
+.dynamic-order-item button:disabled{opacity:.35}
+@media(max-width:600px){.dynamic-public-page .dynamic-section-cover{height:min(var(--dynamic-cover-height,440px),65vw);min-height:200px}.dynamic-public-card--image-only .dynamic-card-cover{min-height:220px;aspect-ratio:4/3}}
+
+/* Untitled cards have no outer card border; content styles remain intact. */
+.dynamic-public-page .dynamic-public-card--untitled {
+  border: 0;
+  box-shadow: none;
+}
+/* When a section has no visible cards, OrderedSectionContent emits no grid. */
+
+/* Page-level highlight/closing use the same section content surface and spacing. */
+.dynamic-public-page .dynamic-page-block-inner { width: 100%; box-sizing: border-box; }
+
+/* Distinct semantic heading levels in rendered TipTap content. */
+.dynamic-public-page .dynamic-rich h2 {
+  font-size: clamp(1.5rem, 1.4vw + 1rem, 1.875rem);
+  font-weight: 700; line-height: 1.3;
+}
+.dynamic-public-page .dynamic-rich h3 {
+  font-size: clamp(1.25rem, 0.8vw + 0.95rem, 1.5rem);
+  font-weight: 600; line-height: 1.4;
+}
+@media (max-width: 639px) {
+  .dynamic-public-page .dynamic-rich h2 { font-size: 1.5rem; }
+  .dynamic-public-page .dynamic-rich h3 { font-size: 1.25rem; }
+}
+
+/* Unified ordering controls inside each item header */
+.dynamic-order-controls { display: inline-flex; gap: .4rem; align-items: center; margin-left: auto; }
+.dynamic-order-controls button { min-width: 2rem; min-height: 2rem; }
+.dynamic-ordered-block { grid-column: 1 / -1; min-width: 0; }
+.dynamic-page-add { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+/* Match the existing Card content editor for page and section blocks. */
+.dynamic-builder .dynamic-unified-content-block {
+  border: 1px solid var(--color-brand-border);
+  background: var(--color-brand-surface);
+  padding: 16px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+.dynamic-builder .dynamic-page-content-block { width: 100%; }
+.dynamic-builder .dynamic-unified-content-block > .dynamic-toolbar { min-width: 0; }
+.dynamic-builder .dynamic-unified-content-block > .dynamic-edit-button { width: 100%; }
+.dynamic-builder .dynamic-unified-content-block > .dynamic-preview {
+  min-height: 34px;
+  max-height: 150px;
+  overflow: auto;
+}
+
+/* Page highlight/closing siblings: same compact rhythm as other content. */
+.dynamic-public-sections > .dynamic-page-block-inner + .dynamic-page-block-inner {
+  margin-top: -28px; /* existing public grid gap is 48px; effective gap is 20px */
+}
+@media (max-width: 600px) {
+  .dynamic-public-sections > .dynamic-page-block-inner + .dynamic-page-block-inner { margin-top: -12px; }
 }
