@@ -118,7 +118,7 @@ export default function AgentOpportunity() {
                         </p>
                     </div>
 
-                    <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-6 shadow-sm sm:p-9">
+                    <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-3 shadow-sm sm:p-9">
                         <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
