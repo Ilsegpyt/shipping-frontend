@@ -1,16 +1,14 @@
-import { DashboardStatusBadge } from "../../../components/dashboard/DashboardUI";
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
+import "../../../components/dashboard/management-locations.css";
 import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
 import "../../../components/dashboard/management-heading.css";
 import { useEffect, useMemo, useState } from 'react';
 
 import {
     Plus,
-    Search,
     RefreshCw,
     MoreHorizontal,
-    Pencil,
     Ban,
-    RotateCcw,
     MapPin,
     Building2,
     CheckCircle2,
@@ -331,25 +329,13 @@ export default function Locations() {
     };
 
     return (
-        <div className="min-h-full">
-            {/* Page Header */}
-            <div className="mb-5 flex items-start justify-between gap-4">
-                <div>
-                    <ManagementHeaderTitle title="Locations" description="Manage ILS branches and office locations." />
-                </div>
-
-                <button
-                    type="button"
-                    onClick={openCreateModal}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Location
-                </button>
-            </div>
+        <DashboardPage className="ils-locations-page">
+            <DashboardPageHeader title="Locations" description="Manage ILS branches and office locations." actions={
+                <DashboardButton variant="primary" icon={Plus} onClick={openCreateModal}>Add Location</DashboardButton>
+            } />
 
             {/* Statistics */}
-            <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="ils-locations-stats mb-5 grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-lg border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-50 text-slate-600">
@@ -406,12 +392,10 @@ export default function Locations() {
             </div>
 
             {/* Main Card */}
-            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+            <DashboardTableSurface>
                 {/* Toolbar */}
-                <div className="flex flex-col gap-3 border-b border-slate-200 p-3 md:flex-row md:items-center">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
+                <div className="ils-locations-toolbar ils-dashboard-toolbar">
+                    <div className="ils-locations-search">
                         <input
                             type="text"
                             value={searchTerm}
@@ -419,11 +403,11 @@ export default function Locations() {
                                 setSearchTerm(event.target.value)
                             }
                             placeholder="Search locations..."
-                            className="h-10 w-full rounded-md border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                            className="ils-locations-search-input"
                         />
                     </div>
 
-                    <label className="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-slate-200 px-3 text-sm text-slate-600">
+                    <label className="ils-locations-filter">
                         <input
                             type="checkbox"
                             checked={showInactive}
@@ -440,7 +424,7 @@ export default function Locations() {
                         type="button"
                         onClick={loadLocations}
                         disabled={loading}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="ils-locations-refresh"
                     >
                         <RefreshCw
                             className={`h-4 w-4 ${loading ? 'animate-spin' : ''
@@ -468,7 +452,7 @@ export default function Locations() {
 
                 {/* Table */}
                 <div className="overflow-x-auto">
-                    <table className="min-w-full">
+                    <table className="min-w-full ils-locations-data-table">
                         <thead>
                             <tr className="border-b border-slate-200 bg-slate-50/70">
                                 <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -586,6 +570,9 @@ export default function Locations() {
                                             <td className="px-4 py-3">
                                                 <div className="relative flex justify-end">
                                                     <button
+                                                        id={`location-actions-${location.id}`}
+                                                        aria-label={`Actions for ${location.name}`}
+                                                        aria-expanded={openActionsId === location.id}
                                                         type="button"
                                                         onClick={() =>
                                                             setOpenActionsId(
@@ -595,55 +582,21 @@ export default function Locations() {
                                                                     : location.id
                                                             )
                                                         }
-                                                        className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                        className="ils-locations-actions-trigger"
                                                     >
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </button>
 
                                                     {openActionsId ===
                                                         location.id && (
-                                                            <div className="absolute right-0 top-9 z-20 w-40 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        openEditModal(
-                                                                            location
-                                                                        )
-                                                                    }
-                                                                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
-                                                                >
-                                                                    <Pencil className="h-4 w-4" />
-                                                                    Edit
-                                                                </button>
-
+                                                            <DashboardActionMenu anchorId={`location-actions-${location.id}`} width={224}>
+                                                                <DashboardActionItem action="edit" onClick={() => openEditModal(location)} />
                                                                 {active ? (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            openDeactivateModal(
-                                                                                location
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                                                                    >
-                                                                        <Ban className="h-4 w-4" />
-                                                                        Deactivate
-                                                                    </button>
+                                                                    <DashboardActionItem action="deactivate" onClick={() => openDeactivateModal(location)} />
                                                                 ) : (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            handleRestore(
-                                                                                location
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-600 hover:bg-slate-50"
-                                                                    >
-                                                                        <RotateCcw className="h-4 w-4" />
-                                                                        Restore
-                                                                    </button>
+                                                                    <DashboardActionItem action="activate" onClick={() => handleRestore(location)} />
                                                                 )}
-                                                            </div>
+                                                            </DashboardActionMenu>
                                                         )}
                                                 </div>
                                             </td>
@@ -667,40 +620,33 @@ export default function Locations() {
                         </p>
                     </div>
                 )}
-            </div>
+            </DashboardTableSurface>
 
-            {/* Add / Edit Modal */}
+            {/* Add / Edit Modal — shared dashboard visual system */}
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
-                    <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white shadow-xl">
-                        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-                            <div>
-                                <h2 className="text-base font-semibold text-slate-900">
-                                    {editingLocation
-                                        ? 'Edit Location'
-                                        : 'Add Location'}
-                                </h2>
-
-                                <p className="mt-0.5 text-xs text-slate-400">
-                                    {editingLocation
-                                        ? 'Update branch information.'
-                                        : 'Add a new ILS branch or office.'}
-                                </p>
+                <div className="ils-dashboard-modal-overlay ils-locations-modal-overlay" role="presentation">
+                    <div className="ils-dashboard-modal-panel ils-locations-form-modal" role="dialog" aria-modal="true" aria-labelledby="ils-location-dialog-title">
+                        <div className="ils-dashboard-modal-header ils-locations-dialog-header">
+                            <div className="ils-locations-dialog-heading">
+                                <div className="ils-locations-dialog-icon"><MapPin size={19} aria-hidden="true" /></div>
+                                <div>
+                                    <h2 id="ils-location-dialog-title" className="ils-locations-dialog-title">
+                                        {editingLocation ? 'Edit Location' : 'Add Location'}
+                                    </h2>
+                                    <p className="ils-locations-dialog-subtitle">
+                                        {editingLocation ? 'Update branch information.' : 'Add a new ILS branch or office.'}
+                                    </p>
+                                </div>
                             </div>
-
-                            <button
-                                type="button"
-                                onClick={closeModal}
-                                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                            >
-                                <X className="h-5 w-5" />
+                            <button type="button" onClick={closeModal} className="ils-locations-dialog-close" aria-label="Close location form">
+                                <X size={19} aria-hidden="true" />
                             </button>
                         </div>
-
-                        <form onSubmit={handleSubmit}>
-                            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
+                        <form onSubmit={handleSubmit} className="ils-locations-dialog-form">
+                            <div className="ils-locations-dialog-scroll">
+                                <div className="ils-locations-form-grid">
                                 <div className="md:col-span-2">
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         Location Name
                                     </label>
 
@@ -709,12 +655,12 @@ export default function Locations() {
                                         value={form.name}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         Address
                                     </label>
 
@@ -724,12 +670,12 @@ export default function Locations() {
                                         onChange={handleChange}
                                         required
                                         rows={3}
-                                        className="w-full resize-none rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field ils-locations-textarea"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         Latitude
                                     </label>
 
@@ -740,12 +686,12 @@ export default function Locations() {
                                         value={form.latitude}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         Longitude
                                     </label>
 
@@ -756,18 +702,18 @@ export default function Locations() {
                                         value={form.longitude}
                                         onChange={handleChange}
                                         required
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
-                                <div className="border-t border-slate-100 pt-4 md:col-span-2">
-                                    <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <div className="ils-locations-section-divider md:col-span-2">
+                                    <p className="ils-locations-section-title">
                                         Management
                                     </p>
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         CEO Name
                                     </label>
 
@@ -775,12 +721,12 @@ export default function Locations() {
                                         name="ceoName"
                                         value={form.ceoName}
                                         onChange={handleChange}
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         CEO Email
                                     </label>
 
@@ -789,12 +735,12 @@ export default function Locations() {
                                         type="email"
                                         value={form.ceoEmail}
                                         onChange={handleChange}
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         GM Name
                                     </label>
 
@@ -802,12 +748,12 @@ export default function Locations() {
                                         name="gmName"
                                         value={form.gmName}
                                         onChange={handleChange}
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         GM Email
                                     </label>
 
@@ -816,12 +762,12 @@ export default function Locations() {
                                         type="email"
                                         value={form.gmEmail}
                                         onChange={handleChange}
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         Branch Manager Name
                                     </label>
 
@@ -829,12 +775,12 @@ export default function Locations() {
                                         name="branchManagerName"
                                         value={form.branchManagerName}
                                         onChange={handleChange}
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-xs font-medium text-slate-600">
+                                    <label className="ils-locations-label">
                                         Branch Manager Email
                                     </label>
 
@@ -843,26 +789,26 @@ export default function Locations() {
                                         type="email"
                                         value={form.branchManagerEmail}
                                         onChange={handleChange}
-                                        className="w-full rounded-md border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-200"
+                                        className="ils-locations-field"
                                     />
                                 </div>
 
-                                <label className="flex items-center gap-2 md:col-span-2">
+                                <label className="ils-locations-checkbox-row md:col-span-2">
                                     <input
                                         type="checkbox"
                                         name="isActive"
                                         checked={form.isActive}
                                         onChange={handleChange}
-                                        className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-400"
+                                        className="ils-locations-checkbox"
                                     />
 
-                                    <span className="text-sm text-slate-600">
+                                    <span className="ils-locations-checkbox-text">
                                         Active location
                                     </span>
                                 </label>
 
                                 {formError && (
-                                    <div className="flex items-center justify-between rounded-md border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600 md:col-span-2">
+                                    <div className="ils-locations-form-error md:col-span-2">
                                         <span>{formError}</span>
                                         <button
                                             type="button"
@@ -874,28 +820,12 @@ export default function Locations() {
                                         </button>
                                     </div>
                                 )}
+                                </div>
                             </div>
-
-                            <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50/50 px-5 py-4">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    disabled={saving}
-                                    className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="submit"
-                                    disabled={saving}
-                                    className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {saving
-                                        ? 'Saving...'
-                                        : editingLocation
-                                            ? 'Save Changes'
-                                            : 'Create Location'}
+                            <div className="ils-dashboard-modal-footer ils-locations-dialog-footer">
+                                <button type="button" onClick={closeModal} disabled={saving} className="ils-locations-btn ils-locations-btn--secondary">Cancel</button>
+                                <button type="submit" disabled={saving} className="ils-locations-btn ils-locations-btn--primary">
+                                    {saving ? 'Saving...' : editingLocation ? 'Save Changes' : 'Create Location'}
                                 </button>
                             </div>
                         </form>
@@ -905,8 +835,8 @@ export default function Locations() {
 
             {/* Deactivate Confirmation Modal */}
             {deactivateLocation && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
+                <div className="ils-dashboard-modal-overlay ils-locations-modal-overlay ils-locations-confirm-overlay">
+                    <div className="ils-dashboard-modal-panel ils-locations-confirm-modal">
                         <div className="p-6">
                             <div className="flex items-start gap-4">
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
@@ -943,7 +873,7 @@ export default function Locations() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-2 border-t border-slate-200 bg-slate-50/50 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
                             <button
                                 type="button"
                                 onClick={closeDeactivateModal}
@@ -969,6 +899,6 @@ export default function Locations() {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPage>
     );
 }

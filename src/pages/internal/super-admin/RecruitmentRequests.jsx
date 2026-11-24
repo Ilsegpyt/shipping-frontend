@@ -1,4 +1,6 @@
-import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardSearchField, DashboardTableSurface } from "../../../components/dashboard/DashboardUI";
+import "../../../components/dashboard/dashboard-ui.css";
+import "../../../components/dashboard/management-recruitment.css";
 import "../../../components/dashboard/management-heading.css";
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -322,19 +324,12 @@ export default function RecruitmentRequests() {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <div className="flex items-center gap-3">
-                    <div>
-                        <ManagementHeaderTitle title="Recruitments Requests" description="Manage and review recruitment requests submitted through the ILS website." />
-                    </div>
-                </div>
-            </div>
+        <DashboardPage className="ils-recruitment">
+            <DashboardPageHeader title="Recruitments Requests" description="Manage and review recruitment requests submitted through the ILS website." />
 
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4">
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="ils-recruitment-stat">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500">
@@ -354,11 +349,11 @@ export default function RecruitmentRequests() {
             </div>
 
             {/* Main Card */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <DashboardTableSurface>
                 {/* Toolbar */}
                 <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="relative w-full sm:max-w-md">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <div className="ils-dashboard-toolbar-search">
+                        <Search className="ils-recruitment-search-icon" />
 
                         <input
                             type="text"
@@ -368,7 +363,7 @@ export default function RecruitmentRequests() {
                                 setPage(1);
                             }}
                             placeholder="Search by applicant name, email, phone, department, or CV..." title="Search by applicant name, email, phone, department, or CV"
-                            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+                            className="ils-recruitment-search-input"
                         />
                     </div>
 
@@ -378,7 +373,7 @@ export default function RecruitmentRequests() {
                             loadApplications(true)
                         }
                         disabled={refreshing}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="ils-dashboard-button ils-dashboard-button--secondary"
                     >
                         <RefreshCw
                             className={`h-4 w-4 ${refreshing
@@ -642,14 +637,14 @@ export default function RecruitmentRequests() {
                             </div>
                         </div>
                     )}
-            </div>
+            </DashboardTableSurface>
 
             {/* Details Modal */}
             {(selectedApplication ||
                 detailsLoading ||
                 detailsError) && (
                     <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+                        className="ils-dashboard-modal-overlay ils-recruitment-modal-overlay"
                         onMouseDown={(event) => {
                             if (
                                 event.target ===
@@ -659,9 +654,9 @@ export default function RecruitmentRequests() {
                             }
                         }}
                     >
-                        <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="ils-dashboard-modal-panel ils-recruitment-modal-panel">
                             {/* Modal Header */}
-                            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <div className="ils-dashboard-modal-header flex items-center justify-between gap-4">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
                                         Recruitment Request Details
@@ -683,7 +678,7 @@ export default function RecruitmentRequests() {
                             </div>
 
                             {/* Modal Content */}
-                            <div className="max-h-[calc(90vh-80px)] overflow-y-auto p-6">
+                            <div className="ils-recruitment-modal-body">
                                 {detailsLoading ? (
                                     <div className="flex items-center justify-center py-16">
                                         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -822,6 +817,6 @@ export default function RecruitmentRequests() {
                         </div>
                     </div>
                 )}
-        </div>
+        </DashboardPage>
     );
 }

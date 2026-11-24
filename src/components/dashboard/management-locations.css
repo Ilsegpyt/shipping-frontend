@@ -1,0 +1,77 @@
+/* Locations management page — shared dashboard identity, square corners. */
+.ils-locations-page { min-width: 0; }
+.ils-locations-page .ils-locations-stats > div { border-radius: 0; border-color: var(--color-border); background: var(--color-surface); }
+.ils-locations-page .ils-locations-stats > div > div > div:first-child { border-radius: 0; }
+.ils-locations-table-wrapper { overflow: hidden; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface); }
+.ils-locations-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; padding: .85rem 1rem; border-bottom: 1px solid var(--color-border); }
+.ils-locations-search { flex: 1 1 250px; min-width: 0; }
+.ils-locations-search-input { width: 100%; min-height: 2.5rem; padding: .5rem .8rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface); color: var(--color-text); font-size: .875rem; outline-offset: 2px; }
+.ils-locations-filter, .ils-locations-refresh { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: 2.5rem; padding: .5rem .8rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface); color: var(--color-text); font-size: .875rem; }
+.ils-locations-refresh { font-weight: 600; }
+.ils-locations-refresh:hover:not(:disabled), .ils-locations-filter:hover { background: var(--color-surface-muted, #f8fafc); }
+.ils-locations-actions-trigger { display: inline-flex; align-items: center; justify-content: center; padding: .45rem; border: 1px solid transparent; border-radius: 0; color: var(--color-text-muted, #64748b); }
+.ils-locations-actions-trigger:hover { border-color: var(--color-border); background: var(--color-surface-muted, #f8fafc); }
+.ils-locations-form-modal { max-width: min(54rem, calc(100vw - 2rem)); border-radius: 0; }
+.ils-locations-confirm-modal { max-width: min(32rem, calc(100vw - 2rem)); border-radius: 0; }
+.ils-locations-page input, .ils-locations-page textarea, .ils-locations-page select, .ils-locations-page button, .ils-locations-page table, .ils-locations-page .rounded-lg, .ils-locations-page .rounded-md, .ils-locations-page .rounded-xl, .ils-locations-page .rounded-full { border-radius: 0; }
+.ils-locations-form-modal input, .ils-locations-form-modal textarea, .ils-locations-form-modal button, .ils-locations-confirm-modal button, .ils-locations-confirm-modal .rounded-full { border-radius: 0; }
+@media (max-width: 640px) { .ils-locations-toolbar > * { width: 100%; } .ils-locations-toolbar .ils-locations-search { flex-basis: 100%; } }
+
+/* Locations: shared dashboard table and dialog anatomy. */
+.ils-locations-page .ils-dashboard-table-surface { border: 1px solid var(--db-border); border-radius: 0; overflow: hidden; }
+.ils-locations-page .ils-dashboard-table-surface .ils-locations-toolbar { border: 0; border-bottom: 1px solid var(--db-border); }
+.ils-locations-page .ils-locations-data-table { width: 100%; border-collapse: collapse; }
+.ils-locations-page .ils-locations-data-table thead th { background: var(--db-bg); color: var(--color-text-muted); font-size: .75rem; font-weight: 700; letter-spacing: .045em; }
+.ils-locations-page .ils-locations-data-table tbody tr:nth-child(odd) { background: var(--color-surface); }
+.ils-locations-page .ils-locations-data-table tbody tr:nth-child(even) { background: var(--color-surface-tint); }
+.ils-locations-page .ils-locations-data-table tbody tr:hover { background: var(--color-surface-blue); }
+.ils-locations-modal-overlay { z-index: 70; }
+.ils-locations-page .ils-locations-form-modal { width: 100%; max-width: min(56rem, calc(100vw - 2rem)); max-height: min(90vh, 900px); overflow-y: auto; }
+.ils-locations-page .ils-locations-confirm-modal { width: 100%; max-width: min(32rem, calc(100vw - 2rem)); }
+.ils-locations-page .ils-locations-form-modal form > .grid { gap: 1rem 1.25rem; padding: 1.5rem; }
+.ils-locations-page .ils-locations-form-modal :is(input:not([type="checkbox"]), textarea, select) { width: 100%; border: 1px solid var(--db-border); background: var(--color-surface); color: var(--color-text); border-radius: 0; min-height: 2.6rem; }
+.ils-locations-page .ils-locations-form-modal :is(input:not([type="checkbox"]), textarea, select):focus { border-color: var(--db-accent); outline: 2px solid var(--color-surface-blue); outline-offset: 0; }
+.ils-locations-page .ils-locations-form-modal label { color: var(--color-text-muted); font-weight: 600; }
+.ils-locations-page .ils-locations-modal-overlay button { border-radius: 0; }
+@media (max-width: 640px) { .ils-locations-page .ils-locations-form-modal form > .grid { padding: 1rem; } .ils-locations-page .ils-dashboard-modal-header, .ils-locations-page .ils-dashboard-modal-footer { padding: 1rem; } }
+
+/* Add/Edit Location — scrollable wide dialog with fixed header and actions. */
+.ils-locations-page .ils-locations-form-modal {
+  width: min(100%, 58rem); max-width: min(58rem, calc(100vw - 2rem));
+  height: auto; max-height: min(92dvh, 920px); overflow: hidden;
+  display: flex; flex-direction: column; border-radius: 0;
+}
+.ils-locations-dialog-header { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.ils-locations-dialog-heading { display: flex; align-items: center; gap: .9rem; min-width: 0; }
+.ils-locations-dialog-icon { width: 2.75rem; height: 2.75rem; flex: 0 0 auto; display: grid; place-items: center; color: var(--color-primary); background: var(--color-surface-blue); border: 1px solid var(--color-border); }
+.ils-locations-dialog-title { font-size: 1.125rem; font-weight: 700; color: var(--color-text); line-height: 1.4; }
+.ils-locations-dialog-subtitle { margin-top: .25rem; font-size: .8125rem; color: var(--color-text-muted); }
+.ils-locations-dialog-close { flex: 0 0 auto; width: 2.25rem; height: 2.25rem; display: grid; place-items: center; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-text-muted); cursor: pointer; }
+.ils-locations-dialog-close:hover { background: var(--color-surface-muted); color: var(--color-text); }
+.ils-locations-dialog-form { min-height: 0; display: flex; flex: 1 1 auto; flex-direction: column; }
+.ils-locations-dialog-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.ils-locations-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.1rem 1.25rem; padding: 1.5rem; }
+.ils-locations-label { display: block; margin-bottom: .45rem; color: var(--color-text-muted); font-size: .8125rem; font-weight: 600; }
+.ils-locations-page .ils-locations-form-modal .ils-locations-field { display: block; width: 100%; min-width: 0; min-height: 2.75rem; padding: .65rem .8rem; border: 1px solid var(--color-border); border-radius: 0; background: var(--color-surface); color: var(--color-text); font-size: .875rem; }
+.ils-locations-page .ils-locations-form-modal .ils-locations-field:focus { border-color: var(--color-primary); outline: 2px solid var(--color-surface-blue); outline-offset: 0; }
+.ils-locations-page .ils-locations-form-modal .ils-locations-textarea { resize: vertical; min-height: 5.5rem; }
+.ils-locations-section-divider { border-top: 1px solid var(--color-border); padding-top: 1.15rem; margin-top: .25rem; }
+.ils-locations-section-title { color: var(--color-text); font-size: .8125rem; font-weight: 700; letter-spacing: .055em; text-transform: uppercase; }
+.ils-locations-checkbox-row { display: flex; align-items: center; gap: .7rem; padding: .8rem; background: var(--color-surface-tint); border: 1px solid var(--color-border); }
+.ils-locations-checkbox { width: 1rem; height: 1rem; accent-color: var(--color-primary); }
+.ils-locations-checkbox-text { color: var(--color-text); font-size: .875rem; font-weight: 600; }
+.ils-locations-form-error { display: flex; align-items: center; justify-content: space-between; padding: .75rem; border: 1px solid var(--color-danger); color: var(--color-danger); background: var(--color-danger-soft); font-size: .875rem; }
+.ils-locations-dialog-footer { flex: 0 0 auto; background: var(--color-surface); }
+.ils-locations-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.6rem; padding: .65rem 1.1rem; border: 1px solid var(--color-border); border-radius: 0; font-size: .875rem; font-weight: 650; cursor: pointer; }
+.ils-locations-btn--secondary { background: var(--color-surface); color: var(--color-text); }
+.ils-locations-btn--secondary:hover:not(:disabled) { background: var(--color-surface-muted); }
+.ils-locations-btn--primary { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+.ils-locations-btn--primary:hover:not(:disabled) { filter: brightness(.93); }
+.ils-locations-btn:disabled { opacity: .55; cursor: not-allowed; }
+@media (max-width: 640px) {
+  .ils-locations-page .ils-locations-form-modal { max-width: calc(100vw - 1rem); max-height: calc(100dvh - 1rem); }
+  .ils-locations-form-grid { grid-template-columns: minmax(0, 1fr); padding: 1rem; }
+  .ils-locations-form-grid > .md\:col-span-2 { grid-column: auto; }
+  .ils-locations-dialog-header, .ils-locations-dialog-footer { padding: 1rem; }
+  .ils-locations-dialog-footer .ils-locations-btn { flex: 1 1 0; }
+}

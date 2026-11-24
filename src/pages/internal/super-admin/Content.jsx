@@ -1,5 +1,6 @@
-import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
-import "../../../components/dashboard/management-heading.css";
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
+import { Plus, ChevronDown, ChevronRight, Ellipsis } from "lucide-react";
+import "../../../components/dashboard/content-management.css";
 import { useEffect, useState } from "react";
 
 import contentService from "../../../services/contentService";
@@ -460,6 +461,7 @@ function legacyPageBodyToAboutPage(body = "") {
 export default function Content() {
 
   const [contents, setContents] = useState([]);
+  const [openActionMenu, setOpenActionMenu] = useState(null);
 
   const [children, setChildren] = useState({});
 
@@ -907,6 +909,7 @@ export default function Content() {
 
   };
 
+
   const findContentInLoadedTree = (contentId) => {
 
     const search = (items) => {
@@ -1133,15 +1136,9 @@ export default function Content() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-
-      <div className="flex items-center justify-between">
-        <div>
-          <ManagementHeaderTitle title="Content Management" description="Manage website content and pages." />
-        </div>
-
-        <button
+    <DashboardPage className="ils-content-management">
+      <DashboardPageHeader title="Content Management" description="Manage website content and pages." actions={
+        <DashboardButton variant="primary" icon={Plus}
           type="button"
           onClick={() => {
             setEditingContentId(null);
@@ -1173,16 +1170,16 @@ export default function Content() {
 
             setSaveError("");
           }}
-          className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
         >
-          + Add Content
-        </button>
-      </div>
+          Add Content
+        </DashboardButton>
+      } />
+
 
       {/* Add Content Form */}
 
       {showAddForm && (
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="ils-content-editor border border-brand-border bg-brand-surface shadow-sm">
           {/* Form Header */}
 
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -1458,7 +1455,7 @@ export default function Content() {
                 setSaveError("");
               }}
               disabled={savingContent}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ils-dashboard-button ils-dashboard-button--secondary"
             >
               Cancel
             </button>
@@ -1467,7 +1464,7 @@ export default function Content() {
               type="button"
               onClick={handleSaveContent}
               disabled={savingContent}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="ils-dashboard-button ils-dashboard-button--primary"
             >
               {savingContent
                 ? "Saving..."
@@ -1480,8 +1477,8 @@ export default function Content() {
       )}
 
       {deleteConfirm.open && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="ils-dashboard-modal-overlay fixed inset-0 z-[100] flex items-center justify-center px-4">
+          <div role="alertdialog" aria-modal="true" aria-labelledby="content-delete-title" className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm w-full bg-brand-surface shadow-2xl">
             <div className="border-b border-red-100 px-6 py-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
@@ -1489,7 +1486,7 @@ export default function Content() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
+                  <h3 id="content-delete-title" className="text-lg font-semibold text-slate-900">
                     Delete Content
                   </h3>
 
@@ -1524,7 +1521,7 @@ export default function Content() {
                     title: "",
                   })
                 }
-                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+                className="ils-dashboard-button ils-dashboard-button--secondary"
               >
                 Cancel
               </button>
@@ -1532,7 +1529,7 @@ export default function Content() {
               <button
                 type="button"
                 onClick={confirmDeleteContent}
-                className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                className="ils-dashboard-button ils-dashboard-button--danger"
               >
                 Delete
               </button>
@@ -1601,15 +1598,13 @@ export default function Content() {
 
               return (
                 <div key={content.id}>
-                  <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center justify-between gap-3 px-5 py-4">
                     <button
                       type="button"
                       onClick={() => handleExpand(content.id)}
-                      className="flex items-center gap-3 text-left"
+                      className="flex min-w-0 items-center gap-3 text-left"
                     >
-                      <span className="text-slate-400">
-                        {isExpanded ? "▼" : "▶"}
-                      </span>
+                      {isExpanded ? <ChevronDown size={17} aria-hidden="true" /> : <ChevronRight size={17} aria-hidden="true" />}
 
                       <div>
                         <div className="flex items-center gap-2">
@@ -1617,7 +1612,7 @@ export default function Content() {
                             {content.title}
                           </span>
 
-                          <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-medium text-sky-600">
+                          <span className={`ils-dashboard-status ils-content-type-badge ils-content-type-badge--${String(getTypeName(content.type)).toLowerCase()}`}>
                             {content.type}
                           </span>
                         </div>
@@ -1628,22 +1623,14 @@ export default function Content() {
                       </div>
                     </button>
 
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEditContent(content.id)}
-                        className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50"
-                      >
-                        Edit
+                    <div className="relative shrink-0">
+                      <button type="button" id={`content-actions-${content.id}`} className="ils-content-action-trigger" aria-label={`Actions for ${content.title}`} aria-expanded={openActionMenu === `root-${content.id}`} onClick={() => setOpenActionMenu((current) => current === `root-${content.id}` ? null : `root-${content.id}`)}>
+                        <Ellipsis size={19} />
                       </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteContent(content.id)}
-                        className="rounded-md border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                      >
-                        Delete
-                      </button>
+                      {openActionMenu === `root-${content.id}` && <DashboardActionMenu anchorId={`content-actions-${content.id}`}>
+                        <DashboardActionItem action="edit" onClick={() => { setOpenActionMenu(null); handleEditContent(content.id); }} />
+                        <DashboardActionItem action="delete" onClick={() => { setOpenActionMenu(null); handleDeleteContent(content.id, null, content.title); }} />
+                      </DashboardActionMenu>}
                     </div>
                   </div>
 
@@ -1668,40 +1655,26 @@ export default function Content() {
                             {contentChildren.map((child) => (
                               <div
                                 key={child.id}
-                                className="flex items-center justify-between rounded-lg bg-white px-4 py-3"
+                                className="flex items-center justify-between gap-3 border border-brand-border bg-brand-surface px-4 py-3"
                               >
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-medium text-slate-700">
                                     {child.title}
                                   </span>
 
-                                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500">
+                                  <span className={`ils-dashboard-status ils-content-type-badge ils-content-type-badge--${String(getTypeName(child.type)).toLowerCase()}`}>
                                     {child.type}
                                   </span>
                                 </div>
 
-                                <div className="flex gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEditContent(child.id)}
-                                    className="text-xs font-medium text-sky-600 hover:text-sky-700"
-                                  >
-                                    Edit
+                                <div className="relative shrink-0">
+                                  <button type="button" id={`content-actions-${child.id}`} className="ils-content-action-trigger" aria-label={`Actions for ${child.title}`} aria-expanded={openActionMenu === `child-${child.id}`} onClick={() => setOpenActionMenu((current) => current === `child-${child.id}` ? null : `child-${child.id}`)}>
+                                    <Ellipsis size={19} />
                                   </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleDeleteContent(
-                                        child.id,
-
-                                        content.id,
-                                      )
-                                    }
-                                    className="text-xs font-medium text-red-500 hover:text-red-600"
-                                  >
-                                    Delete
-                                  </button>
+                                  {openActionMenu === `child-${child.id}` && <DashboardActionMenu anchorId={`content-actions-${child.id}`}>
+                                    <DashboardActionItem action="edit" onClick={() => { setOpenActionMenu(null); handleEditContent(child.id); }} />
+                                    <DashboardActionItem action="delete" onClick={() => { setOpenActionMenu(null); handleDeleteContent(child.id, content.id, child.title); }} />
+                                  </DashboardActionMenu>}
                                 </div>
                               </div>
                             ))}
@@ -1715,7 +1688,7 @@ export default function Content() {
           </div>
         )}
       </div>
-    </div>
+    </DashboardPage>
   );
 
 }

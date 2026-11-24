@@ -1,0 +1,10 @@
+/* Agent Opportunities uses shared ILS dashboard tokens. */
+.ils-agent-opportunities .ils-agent-stat { border: 1px solid var(--color-border); background: var(--color-surface); }
+.ils-agent-opportunities .ils-agent-stat-icon { background: var(--color-surface-muted); color: var(--color-primary); }
+.ils-agent-opportunities .ils-dashboard-table-surface { border-radius: 0; }
+.ils-agent-opportunities .ils-dashboard-table-surface table { min-width: 820px; }
+.ils-agent-opportunities .ils-dashboard-table-surface thead th { white-space: nowrap; }
+.ils-agent-details-panel { max-width: min(56rem, calc(100vw - 2rem)); max-height: min(90vh, 900px); overflow-y: auto; }
+.ils-agent-details-panel .ils-agent-detail-card { border: 1px solid var(--color-border); background: var(--color-surface); border-radius: 0; }
+.ils-agent-opportunities button, .ils-agent-opportunities input, .ils-agent-details-panel button { border-radius: 0; }
+@media (max-width: 640px) { .ils-agent-details-panel { max-height: calc(100vh - 1.5rem); } }

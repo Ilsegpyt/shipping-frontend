@@ -1,12 +1,11 @@
-import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
-import "../../../components/dashboard/management-heading.css";
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardActionMenu, DashboardActionItem } from '../../../components/dashboard/DashboardUI';
+import '../../../components/dashboard/management-contact.css';
 import { useEffect, useMemo, useState } from 'react';
 import {
-    Eye,
+    Ellipsis,
     Mail,
     Phone,
     RefreshCw,
-    Search,
     X,
 } from 'lucide-react';
 
@@ -16,6 +15,7 @@ import { extractApiErrorMessage } from '../../../utils/errorUtils';
 export default function ContactInquiries() {
     const [inquiries, setInquiries] = useState([]);
     const [selectedInquiry, setSelectedInquiry] = useState(null);
+    const [openActionId, setOpenActionId] = useState(null);
 
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -149,15 +149,12 @@ export default function ContactInquiries() {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <ManagementHeaderTitle title="Contact Us" description="Review and manage contact inquiries submitted through the website." />
-            </div>
+        <DashboardPage className="ils-contact-page">
+            <DashboardPageHeader title="Contact Us" description="Review and manage contact inquiries submitted through the website." />
 
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="ils-contact-stat">
                     <p className="text-sm font-medium text-slate-500">
                         Total Inquiries
                     </p>
@@ -167,7 +164,7 @@ export default function ContactInquiries() {
                     </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="ils-contact-stat">
                     <p className="text-sm font-medium text-slate-500">
                         Current Page
                     </p>
@@ -177,7 +174,7 @@ export default function ContactInquiries() {
                     </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="ils-contact-stat">
                     <p className="text-sm font-medium text-slate-500">
                         Page
                     </p>
@@ -189,46 +186,18 @@ export default function ContactInquiries() {
             </div>
 
             {/* Toolbar */}
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <div className="relative w-full md:max-w-md">
-                        <Search
-                            size={18}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(event) => {
-                                setSearchTerm(
-                                    event.target.value
-                                );
-                            }}
-                            placeholder="Search by name, company, email, phone, or service..." title="Search by name, company, email, phone, or service"
-                            className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                        />
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={handleRefresh}
-                        disabled={loading}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <RefreshCw
-                            size={16}
-                            className={
-                                loading
-                                    ? 'animate-spin'
-                                    : ''
-                            }
-                        />
-
-                        Refresh
-                    </button>
-                </div>
-            </div>
+            <DashboardToolbar actions={
+                <DashboardButton onClick={handleRefresh} disabled={loading} icon={RefreshCw}>
+                    Refresh
+                </DashboardButton>
+            }>
+                <DashboardSearchField
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search inquiries..."
+                    title="Search by name, company, email, phone, or service"
+                />
+            </DashboardToolbar>
 
             {/* Error Banner */}
             {error && (
@@ -246,7 +215,7 @@ export default function ContactInquiries() {
             )}
 
             {/* Table */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <DashboardTableSurface>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-50">
@@ -359,20 +328,23 @@ export default function ContactInquiries() {
 
                                             <td className="whitespace-nowrap px-6 py-4 text-right">
                                                 <button
+                                                    id={`contact-action-${inquiry.id}`}
                                                     type="button"
-                                                    onClick={() =>
-                                                        handleViewDetails(
-                                                            inquiry
-                                                        )
-                                                    }
-                                                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                                    aria-label={`Actions for ${inquiry.fullName || 'inquiry'}`}
+                                                    aria-expanded={openActionId === inquiry.id}
+                                                    onClick={() => setOpenActionId((current) => current === inquiry.id ? null : inquiry.id)}
+                                                    className="ils-dashboard-action-trigger"
                                                 >
-                                                    <Eye
-                                                        size={16}
-                                                    />
-
-                                                    View Details
+                                                    <Ellipsis size={20} />
                                                 </button>
+                                                {openActionId === inquiry.id && (
+                                                    <>
+                                                        <button type="button" className="ils-contact-menu-backdrop" aria-label="Close actions" onClick={() => setOpenActionId(null)} />
+                                                        <DashboardActionMenu anchorId={`contact-action-${inquiry.id}`}>
+                                                            <DashboardActionItem action="view" onClick={() => { setOpenActionId(null); handleViewDetails(inquiry); }} />
+                                                        </DashboardActionMenu>
+                                                    </>
+                                                )}
                                             </td>
                                         </tr>
                                     )
@@ -430,14 +402,14 @@ export default function ContactInquiries() {
                         </div>
                     </div>
                 )}
-            </div>
+            </DashboardTableSurface>
 
             {/* Details Modal */}
             {selectedInquiry && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4">
-                    <div className="max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel ils-contact-modal" role="dialog" aria-modal="true" aria-label="Contact Inquiry">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                        <div className="ils-dashboard-modal-header flex items-center justify-between">
                             <div>
                                 <h2 className="text-lg font-semibold text-slate-900">
                                     Contact Inquiry
@@ -461,7 +433,7 @@ export default function ContactInquiries() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="max-h-[calc(90vh-150px)] overflow-y-auto px-6 py-6">
+                        <div className="ils-dashboard-modal-body ils-contact-modal-body">
                             {detailsLoading ? (
                                 <div className="py-12 text-center text-sm text-slate-500">
                                     Loading inquiry details...
@@ -542,7 +514,7 @@ export default function ContactInquiries() {
                                             Message
                                         </p>
 
-                                        <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                        <div className="ils-contact-message">
                                             <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
                                                 {selectedInquiry.message ||
                                                     'No message provided.'}
@@ -554,13 +526,13 @@ export default function ContactInquiries() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
                             <button
                                 type="button"
                                 onClick={() =>
                                     setSelectedInquiry(null)
                                 }
-                                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                                className="ils-dashboard-button ils-dashboard-button--primary"
                             >
                                 Close
                             </button>
@@ -568,6 +540,6 @@ export default function ContactInquiries() {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPage>
     );
 }

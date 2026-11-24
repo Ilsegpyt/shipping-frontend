@@ -1,0 +1,33 @@
+.ils-content-management .ils-content-editor { min-width: 0; }
+.ils-content-management .ils-content-action-trigger { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border: 1px solid var(--color-border); background: var(--color-surface); color: var(--color-primary); cursor: pointer; }
+.ils-content-management .ils-content-action-trigger:hover { background: var(--color-surface-blue); border-color: var(--color-accent); }
+.ils-content-management .ils-content-action-trigger:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.ils-content-management .ils-content-editor :is(input, select, textarea) { border-radius: 0; }
+.ils-content-management .ils-content-editor { overflow-wrap: anywhere; }
+@media(max-width: 640px) { .ils-content-management .ils-content-editor > .grid { grid-template-columns: minmax(0,1fr); } .ils-content-management .ils-dashboard-table-surface > .divide-y > div > .flex { align-items: flex-start; } }
+
+/* Content type badges — ILS identity tokens, no hardcoded palette. */
+.ils-content-management .ils-content-type-badge {
+  display: inline-flex; align-items: center; border: 1px solid transparent;
+  border-radius: 0; font-weight: 650; letter-spacing: .01em;
+}
+.ils-content-management .ils-content-type-badge--category {
+  color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary) 23%, var(--color-surface));
+}
+.ils-content-management .ils-content-type-badge--page {
+  color: var(--color-primary-hover);
+  background: color-mix(in srgb, var(--color-primary-hover) 10%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-primary-hover) 25%, var(--color-surface));
+}
+.ils-content-management .ils-content-type-badge--post {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+  border-color: color-mix(in srgb, var(--color-success) 25%, var(--color-surface));
+}
+.ils-content-management .ils-content-type-badge--link {
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+  border-color: color-mix(in srgb, var(--color-accent) 28%, var(--color-surface));
+}

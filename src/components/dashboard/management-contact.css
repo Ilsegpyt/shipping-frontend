@@ -1,0 +1,14 @@
+/* Contact Inquiries management page — shared ILS dashboard tokens. */
+.ils-contact-page .ils-contact-stat { border: 1px solid var(--color-border); background: var(--color-surface); padding: 1.25rem; border-radius: 0; }
+.ils-contact-page .ils-contact-stat p:last-child { color: var(--color-primary); }
+.ils-contact-page .ils-dashboard-table-surface { border-radius: 0; }
+.ils-contact-page .ils-dashboard-table-surface td { vertical-align: middle; }
+.ils-contact-page .ils-dashboard-table-surface td, .ils-contact-page .ils-dashboard-table-surface th { padding-left: 1rem; padding-right: 1rem; }
+.ils-contact-page .ils-dashboard-table-surface button { border-radius: 0; }
+.ils-contact-menu-backdrop { position: fixed; inset: 0; z-index: 999; background: transparent; cursor: default; }
+.ils-contact-modal { max-width: min(56rem, calc(100vw - 2rem)); display: flex; flex-direction: column; overflow: hidden; max-height: min(90vh, 850px); }
+.ils-contact-modal-body { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.ils-contact-modal-body > div > .grid > div { border: 1px solid var(--color-border); background: var(--color-surface-tint); padding: 1rem; min-width: 0; }
+.ils-contact-message { border: 1px solid var(--color-border); background: var(--color-surface-tint); padding: 1rem; border-radius: 0; }
+.ils-contact-modal button { border-radius: 0; }
+@media (max-width: 640px) { .ils-contact-modal .ils-dashboard-modal-header, .ils-contact-modal .ils-dashboard-modal-body, .ils-contact-modal .ils-dashboard-modal-footer { padding: 1rem; } }

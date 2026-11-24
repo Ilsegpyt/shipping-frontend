@@ -1,8 +1,7 @@
-import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
-import "../../../components/dashboard/management-heading.css";
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface } from "../../../components/dashboard/DashboardUI";
+import "../../../components/dashboard/management-quotations.css";
 import { useEffect, useMemo, useState } from 'react';
 import {
-    Search,
     RefreshCw,
     Eye,
     X,
@@ -343,19 +342,12 @@ export default function Quotations() {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <div className="flex items-center gap-3">
-                    <div>
-                        <ManagementHeaderTitle title="Quotations" description="Manage and review quotation requests submitted through the ILS website." />
-                    </div>
-                </div>
-            </div>
+        <DashboardPage>
+            <DashboardPageHeader title="Quotations" description="Manage and review quotation requests submitted through the ILS website." />
 
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4">
-                <div className="rounded-xl border border-slate-200 bg-white p-5">
+                <div className="ils-quotations-stat">
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-500">
@@ -367,7 +359,7 @@ export default function Quotations() {
                             </p>
                         </div>
 
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-none bg-slate-100">
                             <FileText className="h-5 w-5 text-slate-700" />
                         </div>
                     </div>
@@ -375,40 +367,21 @@ export default function Quotations() {
             </div>
 
             {/* Main Card */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <DashboardTableSurface>
                 {/* Toolbar */}
-                <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="relative w-full sm:max-w-md">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                        <input
-                            type="text"
+                <DashboardToolbar actions={
+                    <DashboardButton icon={RefreshCw} onClick={() => loadQuotations(true)} disabled={refreshing}>Refresh</DashboardButton>
+                }>
+                    <DashboardSearchField
+                            type="search"
                             value={search}
                             onChange={(event) => {
                                 setSearch(event.target.value);
                                 setPage(1);
                             }}
                             placeholder="Search by name, company, country, email, phone, or service..." title="Search by name, company, country, email, phone, or service"
-                            className="h-10 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
                         />
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => loadQuotations(true)}
-                        disabled={refreshing}
-                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        <RefreshCw
-                            className={`h-4 w-4 ${refreshing
-                                ? 'animate-spin'
-                                : ''
-                                }`}
-                        />
-
-                        Refresh
-                    </button>
-                </div>
+                </DashboardToolbar>
 
                 {/* Error */}
                 {error && (
@@ -484,7 +457,7 @@ export default function Quotations() {
                                         className="px-5 py-12 text-center"
                                     >
                                         <div className="flex flex-col items-center">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-none bg-slate-100">
                                                 <FileText className="h-5 w-5 text-slate-400" />
                                             </div>
 
@@ -617,13 +590,13 @@ export default function Quotations() {
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                                    <span className="inline-flex rounded-none bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
                                                         {interestType}
                                                     </span>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                                                    <span className="inline-flex rounded-none bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
                                                         {transportModes}
                                                     </span>
                                                 </td>
@@ -645,7 +618,7 @@ export default function Quotations() {
                                                                 quotation
                                                             )
                                                         }
-                                                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                                        className="ils-quotations-view-action"
                                                     >
                                                         <Eye className="h-4 w-4" />
                                                         View
@@ -682,7 +655,7 @@ export default function Quotations() {
                                         goToPreviousPage
                                     }
                                     disabled={page <= 1}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-none border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -693,21 +666,21 @@ export default function Quotations() {
                                     disabled={
                                         page >= totalPages
                                     }
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-none border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
                             </div>
                         </div>
                     )}
-            </div>
+            </DashboardTableSurface>
 
             {/* Details Modal */}
             {(selectedQuotation ||
                 detailsLoading ||
                 detailsError) && (
                     <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+                        className="ils-dashboard-modal-overlay"
                         onMouseDown={(event) => {
                             if (
                                 event.target ===
@@ -717,9 +690,9 @@ export default function Quotations() {
                             }
                         }}
                     >
-                        <div className="max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="ils-dashboard-modal-panel ils-quotations-modal">
                             {/* Modal Header */}
-                            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+                            <div className="ils-dashboard-modal-header flex items-center justify-between">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
                                         Quotation Details
@@ -734,14 +707,14 @@ export default function Quotations() {
                                 <button
                                     type="button"
                                     onClick={closeDetails}
-                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                    className="ils-quotations-modal-close"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
 
                             {/* Modal Content */}
-                            <div className="max-h-[calc(90vh-80px)] overflow-y-auto p-6">
+                            <div className="ils-quotations-modal-content">
                                 {detailsLoading ? (
                                     <div className="flex items-center justify-center py-16">
                                         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -750,7 +723,7 @@ export default function Quotations() {
                                         </div>
                                     </div>
                                 ) : detailsError ? (
-                                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                                         <span>{detailsError}</span>
                                         <button
                                             type="button"
@@ -770,7 +743,7 @@ export default function Quotations() {
                                             </h3>
 
                                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
                                                     <p className="text-xs text-slate-400">
                                                         Name
                                                     </p>
@@ -782,7 +755,7 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
                                                     <p className="text-xs text-slate-400">
                                                         Company
                                                     </p>
@@ -798,7 +771,7 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
                                                     <p className="text-xs text-slate-400">
                                                         Country
                                                     </p>
@@ -814,7 +787,7 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
                                                     <p className="text-xs text-slate-400">
                                                         Phone
                                                     </p>
@@ -830,7 +803,7 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
+                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4 md:col-span-2">
                                                     <p className="text-xs text-slate-400">
                                                         Email
                                                     </p>
@@ -855,7 +828,7 @@ export default function Quotations() {
                                             </h3>
 
                                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                                <div className="rounded-xl border border-slate-200 p-4">
+                                                <div className="rounded-none border border-slate-200 p-4">
                                                     <div className="flex items-center gap-2">
                                                         <FileText className="h-4 w-4 text-slate-400" />
 
@@ -875,7 +848,7 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 p-4">
+                                                <div className="rounded-none border border-slate-200 p-4">
                                                     <div className="flex items-center gap-2">
                                                         <Ship className="h-4 w-4 text-slate-400" />
 
@@ -895,7 +868,7 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 p-4">
+                                                <div className="rounded-none border border-slate-200 p-4">
                                                     <div className="flex items-center gap-2">
                                                         <FileText className="h-4 w-4 text-slate-400" />
 
@@ -927,7 +900,7 @@ export default function Quotations() {
                                                 </h3>
                                             </div>
 
-                                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                            <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
                                                 <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
                                                     {formatValue(
                                                         getValue(
@@ -965,6 +938,6 @@ export default function Quotations() {
                         </div>
                     </div>
                 )}
-        </div>
+        </DashboardPage>
     );
 }
