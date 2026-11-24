@@ -1,0 +1,9 @@
+/* Management-only table presentation; reusable by future dashboard screens.
+   No changes to data fetching, pagination, events, or Operations styles. */
+.ils-management-page table { border-collapse: collapse; }
+.ils-management-page table thead { background: var(--color-bg); }
+.ils-management-page table thead th { color: var(--color-primary); }
+.ils-management-page table tbody > tr:nth-child(odd) { background: var(--color-surface); }
+.ils-management-page table tbody > tr:nth-child(even) { background: var(--color-surface-tint); }
+.ils-management-page table tbody > tr:hover { background: var(--color-surface-blue); }
+.ils-management-page table tbody > tr { border-color: var(--color-border); }

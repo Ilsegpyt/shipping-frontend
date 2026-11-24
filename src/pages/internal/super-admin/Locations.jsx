@@ -1,3 +1,6 @@
+import { DashboardStatusBadge } from "../../../components/dashboard/DashboardUI";
+import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import "../../../components/dashboard/management-heading.css";
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -332,13 +335,7 @@ export default function Locations() {
             {/* Page Header */}
             <div className="mb-5 flex items-start justify-between gap-4">
                 <div>
-                    <h1 className="text-xl font-semibold text-slate-900">
-                        Locations
-                    </h1>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                        Manage ILS branches and office locations.
-                    </p>
+                    <ManagementHeaderTitle title="Locations" description="Manage ILS branches and office locations." />
                 </div>
 
                 <button
@@ -581,16 +578,9 @@ export default function Locations() {
                                             </td>
 
                                             <td className="px-4 py-3">
-                                                <span
-                                                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-medium ${active
-                                                            ? 'bg-slate-100 text-slate-700'
-                                                            : 'bg-red-50 text-red-600'
-                                                        }`}
-                                                >
-                                                    {active
-                                                        ? 'Active'
-                                                        : 'Inactive'}
-                                                </span>
+                                                <DashboardStatusBadge tone={active ? 'positive' : 'negative'}>
+                                                    {active ? 'Active' : 'Inactive'}
+                                                </DashboardStatusBadge>
                                             </td>
 
                                             <td className="px-4 py-3">

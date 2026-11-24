@@ -1,3 +1,5 @@
+import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import "../../../components/dashboard/management-heading.css";
 import { useEffect, useMemo, useState } from 'react';
 import {
     Eye,
@@ -150,14 +152,7 @@ export default function ContactInquiries() {
         <div className="space-y-6">
             {/* Header */}
             <div>
-                <h1 className="text-2xl font-semibold text-slate-900">
-                    Contact Us
-                </h1>
-
-                <p className="mt-1 text-sm text-slate-500">
-                    Review and manage contact inquiries
-                    submitted through the website.
-                </p>
+                <ManagementHeaderTitle title="Contact Us" description="Review and manage contact inquiries submitted through the website." />
             </div>
 
             {/* Stats */}

@@ -1,3 +1,11 @@
+import { DashboardActionItem } from "../../../components/dashboard/DashboardUI";
+import "../../../components/dashboard/management-customers.css";
+import { DashboardActionMenu, DashboardButton, DashboardPageHeader, DashboardToolbar, DashboardSearchField } from "../../../components/dashboard/DashboardUI";
+import ManagementSearchInput from "../../../components/dashboard/ManagementSearchInput";
+import "../../../components/dashboard/management-search.css";
+import { DashboardStatusBadge } from "../../../components/dashboard/DashboardUI";
+import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import "../../../components/dashboard/management-heading.css";
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -12,6 +20,7 @@ import {
     Eye,
     Pencil,
     Ban,
+    CheckCircle2,
     Mail,
     Trash2,
     LogIn,
@@ -556,122 +565,74 @@ export default function Customers() {
 
     return (
         <div
-            className="min-h-full bg-slate-50 px-4 py-4 sm:px-6"
+            className="min-h-full ils-management-customers"
             onClick={() => setOpenActionsId(null)}
         >
             <div className="w-full space-y-5">
-                {/* Page Header */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-                                <span className="text-sm font-semibold">C</span>
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-                                    Customers
-                                </h1>
-                                <p className="mt-0.5 text-sm text-slate-500">
-                                    Manage customer accounts, access, and contact information.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {canCreate && (
-                        <button
-                            type="button"
-                            onClick={openAddCustomerModal}
-                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                        >
-                            <Plus size={17} />
+                {/* Shared management header and toolbar — same components as Users / Roles. */}
+                <DashboardPageHeader
+                    title="Customers"
+                    description="Manage customer accounts, access, and contact information."
+                    actions={canCreate ? (
+                        <DashboardButton variant="primary" icon={Plus} onClick={openAddCustomerModal}>
                             Add Customer
-                        </button>
-                    )}
-                </div>
+                        </DashboardButton>
+                    ) : null}
+                />
 
-                {/* Toolbar */}
-                <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                        <div className="relative w-full lg:max-w-md">
-                            <Search
-                                size={17}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                            />
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(event) =>
-                                    setSearchTerm(event.target.value)
-                                }
+                <DashboardToolbar actions={
+                    <>
+                        {!isAccountManager && (
+                            <select
+                                value={recordStatus}
+                                onChange={(event) => {
+                                    event.stopPropagation();
+                                    handleRecordStatusChange(event);
+                                }}
                                 onClick={(event) => event.stopPropagation()}
-                                placeholder="Search by company, owner, email, phone, or code..." title="Search by company, owner, email, phone, or code"
-                                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-4 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-slate-300 focus:bg-white focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2">
-                            {!isAccountManager && (
-                                <select
-                                    value={recordStatus}
-                                    onChange={(event) => {
-                                        event.stopPropagation();
-                                        handleRecordStatusChange(event);
-                                    }}
-                                    onClick={(event) =>
-                                        event.stopPropagation()
-                                    }
-                                    className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
-                                >
-                                    <option value="notDeleted">
-                                        Not Deleted
-                                    </option>
-                                    <option value="deleted">
-                                        Deleted
-                                    </option>
-                                    <option value="all">
-                                        All Records
-                                    </option>
-                                </select>
-                            )}
-
-                            {canDelete &&
-                                selectedCustomerIds.length > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            openDeleteConfirmation(
-                                                selectedCustomerIds
-                                            );
-                                        }}
-                                        disabled={isDeleting}
-                                        className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        <Trash2 size={16} />
-                                        {isDeleting
-                                            ? 'Deleting...'
-                                            : `Delete Selected (${selectedCustomerIds.length})`}
-                                    </button>
-                                )}
-
-                            <button
-                                type="button"
+                                className="ils-dashboard-filter-select"
+                            >
+                                <option value="notDeleted">Not Deleted</option>
+                                <option value="deleted">Deleted</option>
+                                <option value="all">All Records</option>
+                            </select>
+                        )}
+                        {canDelete && selectedCustomerIds.length > 0 && (
+                            <DashboardButton
+                                variant="danger"
+                                icon={Trash2}
                                 onClick={(event) => {
                                     event.stopPropagation();
-                                    handleRefresh();
+                                    openDeleteConfirmation(selectedCustomerIds);
                                 }}
-                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                disabled={isDeleting}
                             >
-                                <RefreshCw size={16} />
-                                Refresh
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                                {isDeleting ? 'Deleting...' : `Delete Selected (${selectedCustomerIds.length})`}
+                            </DashboardButton>
+                        )}
+                        <DashboardButton
+                            variant="secondary"
+                            icon={RefreshCw}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                handleRefresh();
+                            }}
+                        >
+                            Refresh
+                        </DashboardButton>
+                    </>
+                }>
+                    <DashboardSearchField
+                        value={searchTerm}
+                        onChange={(event) => setSearchTerm(event.target.value)}
+                        onClick={(event) => event.stopPropagation()}
+                        placeholder="Search by company, owner, email, phone, or code..."
+                        title="Search by company, owner, email, phone, or code"
+                    />
+                </DashboardToolbar>
 
                 {deleteError && !loading && (
-                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         <span>{deleteError}</span>
                         <button
                             type="button"
@@ -684,7 +645,7 @@ export default function Customers() {
                 )}
 
                 {loading && (
-                    <div className="rounded-xl border border-slate-200 bg-white py-16 text-center text-sm text-slate-500 shadow-sm">
+                    <div className="rounded-none border border-slate-200 bg-white py-16 text-center text-sm text-slate-500 shadow-sm">
                         <RefreshCw
                             size={20}
                             className="mx-auto mb-3 animate-spin text-slate-400"
@@ -694,7 +655,7 @@ export default function Customers() {
                 )}
 
                 {!loading && error && (
-                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-xs transition">
+                    <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-xs transition">
                         <span>{error}</span>
                         <button
                             type="button"
@@ -710,7 +671,7 @@ export default function Customers() {
                 {!loading && !error && (
                     <>
                         {/* Customers Table */}
-                        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+                        <div className="ils-dashboard-table-surface">
                             <div className="flex flex-col gap-1 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                     <h2 className="text-sm font-semibold text-slate-900">
@@ -791,7 +752,7 @@ export default function Customers() {
                                                     className="px-6 py-16 text-center"
                                                 >
                                                     <div className="mx-auto max-w-sm">
-                                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-slate-100">
+                                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
                                                             <Search
                                                                 size={19}
                                                                 className="text-slate-400"
@@ -841,7 +802,7 @@ export default function Customers() {
 
                                                         <td className="px-4 py-4">
                                                             <div className="flex min-w-0 items-center gap-3">
-                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-xs font-semibold text-slate-600">
+                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-none bg-slate-100 text-xs font-semibold text-slate-600">
                                                                     {(
                                                                         customer.companyName ||
                                                                         customer.ownerName ||
@@ -877,30 +838,16 @@ export default function Customers() {
                                                         </td>
 
                                                         <td className="px-4 py-4">
-                                                            <span className="inline-flex max-w-[180px] truncate rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                                            <span className="inline-flex max-w-[180px] truncate rounded-none bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                                                                 {customer.industry ||
                                                                     '—'}
                                                             </span>
                                                         </td>
 
                                                         <td className="px-4 py-4">
-                                                            <span
-                                                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${customer.status?.toLowerCase() ===
-                                                                    'active'
-                                                                    ? 'bg-emerald-50 text-emerald-700'
-                                                                    : 'bg-slate-100 text-slate-600'
-                                                                    }`}
-                                                            >
-                                                                <span
-                                                                    className={`h-1.5 w-1.5 rounded-full ${customer.status?.toLowerCase() ===
-                                                                        'active'
-                                                                        ? 'bg-emerald-500'
-                                                                        : 'bg-slate-400'
-                                                                        }`}
-                                                                />
-                                                                {customer.status ||
-                                                                    'Unknown'}
-                                                            </span>
+                                                            <DashboardStatusBadge tone={!customer.status ? 'neutral' : customer.status.toLowerCase() === 'active' ? 'positive' : 'negative'}>
+                                                                {customer.status ? (customer.status.toLowerCase() === 'active' ? 'Active' : 'Inactive') : 'Unknown'}
+                                                            </DashboardStatusBadge>
                                                         </td>
 
                                                         <td className="relative px-4 py-4 text-right">
@@ -914,8 +861,11 @@ export default function Customers() {
                                                                         customer.id
                                                                     );
                                                                 }}
-                                                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                                className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                                id={`customer-actions-${customer.id}`}
                                                                 aria-label="Customer actions"
+                                                                aria-expanded={openActionsId === customer.id}
+                                                                aria-haspopup="menu"
                                                             >
                                                                 <MoreHorizontal
                                                                     size={18}
@@ -924,8 +874,8 @@ export default function Customers() {
 
                                                             {openActionsId ===
                                                                 customer.id && (
-                                                                    <div
-                                                                        className="absolute right-4 top-12 z-30 w-52 overflow-hidden rounded-xl border border-slate-200 bg-white py-1.5 text-left shadow-xl"
+                                                                    <DashboardActionMenu
+                                                                        anchorId={`customer-actions-${customer.id}`}
                                                                         onClick={(
                                                                             event
                                                                         ) =>
@@ -939,7 +889,7 @@ export default function Customers() {
                                                                                     customer.id
                                                                                 )
                                                                             }
-                                                                            className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                            className="ils-dashboard-action-item ils-dashboard-action-item--neutral"
                                                                         >
                                                                             <Eye
                                                                                 size={
@@ -957,7 +907,7 @@ export default function Customers() {
                                                                                         customer.id
                                                                                     )
                                                                                 }
-                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                                className="ils-dashboard-action-item ils-dashboard-action-item--neutral"
                                                                             >
                                                                                 <LogIn
                                                                                     size={
@@ -976,14 +926,14 @@ export default function Customers() {
                                                                                         customer.id
                                                                                     )
                                                                                 }
-                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                                className="ils-dashboard-action-item ils-dashboard-action-item--neutral"
                                                                             >
                                                                                 <Pencil
                                                                                     size={
                                                                                         16
                                                                                     }
                                                                                 />
-                                                                                Edit Customer
+                                                                                Edit
                                                                             </button>
                                                                         )}
 
@@ -995,7 +945,7 @@ export default function Customers() {
                                                                                         customer.id
                                                                                     )
                                                                                 }
-                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
+                                                                                className="ils-dashboard-action-item ils-dashboard-action-item--neutral"
                                                                             >
                                                                                 <Mail
                                                                                     size={
@@ -1006,49 +956,24 @@ export default function Customers() {
                                                                             </button>
                                                                         )}
 
-                                                                        {canDelete && (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() =>
-                                                                                    openDeleteConfirmation(
-                                                                                        [
-                                                                                            customer.id,
-                                                                                        ]
-                                                                                    )
-                                                                                }
-                                                                                disabled={
-                                                                                    isDeleting
-                                                                                }
-                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-red-600 transition hover:bg-red-50 disabled:opacity-50"
-                                                                            >
-                                                                                <Trash2
-                                                                                    size={
-                                                                                        16
-                                                                                    }
-                                                                                />
-                                                                                Delete Customer
-                                                                            </button>
+                                                                        {canSuspend && (
+                                                                            <DashboardActionItem
+                                                                                action={customer.status?.toLowerCase() === 'active' ? 'deactivate' : 'activate'}
+                                                                                onClick={() => handleSuspendCustomer(customer.id)}
+                                                                            />
                                                                         )}
 
-                                                                        {canSuspend && (
-                                                                            <button
-                                                                                type="button"
-                                                                                onClick={() =>
-                                                                                    handleSuspendCustomer(
-                                                                                        customer.id
-                                                                                    )
-                                                                                }
-                                                                                className="flex w-full items-center gap-3 px-3.5 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-                                                                            >
-                                                                                <Ban
-                                                                                    size={
-                                                                                        16
-                                                                                    }
-                                                                                />
-                                                                                Suspend / Activate
-                                                                            </button>
+                                                                        {canDelete && (
+                                                                            <>
+                                                                                <div className="my-1 border-t border-brand-surface-muted" role="separator" />
+                                                                            <DashboardActionItem
+                                                                                action="delete"
+                                                                                onClick={() => openDeleteConfirmation([customer.id])}
+                                                                                disabled={isDeleting}
+                                                                            />
+                                                                            </>
                                                                         )}
-                                                                    </div>
+                                                                    </DashboardActionMenu>
                                                                 )}
                                                         </td>
                                                     </tr>
@@ -1073,7 +998,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={handlePreviousPage}
                                     disabled={pageNumber === 1}
-                                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="rounded-none border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Previous
                                 </button>
@@ -1086,7 +1011,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={handleNextPage}
                                     disabled={pageNumber >= totalPages}
-                                    className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="rounded-none border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Next
                                 </button>
@@ -1102,7 +1027,7 @@ export default function Customers() {
                         onClick={closeDeleteConfirmation}
                     >
                         <div
-                            className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl"
+                            className="ils-dashboard-dialog-panel w-full max-w-md overflow-hidden rounded-none bg-white shadow-2xl"
                             onClick={(event) => event.stopPropagation()}
                         >
                             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
@@ -1119,7 +1044,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeDeleteConfirmation}
                                     disabled={isDeleting}
-                                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
                                     aria-label="Close"
                                 >
                                     <X size={20} />
@@ -1128,7 +1053,7 @@ export default function Customers() {
 
                             <div className="px-6 py-6">
                                 {deleteError && (
-                                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="mb-4 rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                                         {deleteError}
                                     </div>
                                 )}
@@ -1154,7 +1079,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeDeleteConfirmation}
                                     disabled={isDeleting}
-                                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                    className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
@@ -1162,7 +1087,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={handleConfirmDelete}
                                     disabled={isDeleting}
-                                    className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                    className="rounded-none bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
                                 >
                                     {isDeleting
                                         ? 'Deleting...'
@@ -1176,7 +1101,7 @@ export default function Customers() {
                 {/* Add Customer Modal */}
                 {isAddModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-white shadow-2xl">
                             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1190,7 +1115,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeAddCustomerModal}
                                     disabled={creatingCustomer}
-                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1201,7 +1126,7 @@ export default function Customers() {
                                 className="space-y-4 p-6"
                             >
                                 {createError && (
-                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                                         {createError}
                                     </div>
                                 )}
@@ -1240,7 +1165,7 @@ export default function Customers() {
                                                 }
                                                 required={name !== 'industry'}
                                                 disabled={creatingCustomer}
-                                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                className="w-full rounded-none border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
                                                 placeholder={placeholder}
                                             />
                                         </div>
@@ -1252,14 +1177,14 @@ export default function Customers() {
                                         type="button"
                                         onClick={closeAddCustomerModal}
                                         disabled={creatingCustomer}
-                                        className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                        className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={creatingCustomer}
-                                        className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                        className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                                     >
                                         {creatingCustomer
                                             ? 'Creating...'
@@ -1274,7 +1199,7 @@ export default function Customers() {
                 {/* Customer Details Modal */}
                 {isDetailsModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-2xl overflow-hidden rounded-none bg-white shadow-2xl">
                             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1288,7 +1213,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeDetailsModal}
                                     disabled={loadingDetails}
-                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1310,11 +1235,11 @@ export default function Customers() {
                                             ['Email', selectedCustomer.ownerEmail],
                                             ['Phone', selectedCustomer.ownerPhone],
                                             ['Industry', selectedCustomer.industry],
-                                            ['Status', selectedCustomer.status],
+                                            ['Status', selectedCustomer.status ? (selectedCustomer.status.toLowerCase() === 'active' ? 'Active' : 'Inactive') : 'Unknown'],
                                         ].map(([label, value]) => (
                                             <div
                                                 key={label}
-                                                className="rounded-xl border border-slate-200 bg-slate-50/70 p-4"
+                                                className="rounded-none border border-slate-200 bg-slate-50/70 p-4"
                                             >
                                                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                                     {label}
@@ -1338,7 +1263,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeDetailsModal}
                                     disabled={loadingDetails}
-                                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                    className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                                 >
                                     Close
                                 </button>
@@ -1350,7 +1275,7 @@ export default function Customers() {
                 {/* Edit Customer Modal */}
                 {isEditModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-white shadow-2xl">
                             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1364,7 +1289,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeEditModal}
                                     disabled={updatingCustomer}
-                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1375,7 +1300,7 @@ export default function Customers() {
                                 className="space-y-4 p-6"
                             >
                                 {updateError && (
-                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                                         {updateError}
                                     </div>
                                 )}
@@ -1429,7 +1354,7 @@ export default function Customers() {
                                                                 disabled={
                                                                     updatingCustomer
                                                                 }
-                                                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                                className="w-full rounded-none border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
                                                                 placeholder={
                                                                     placeholder
                                                                 }
@@ -1446,7 +1371,7 @@ export default function Customers() {
                                                     disabled={
                                                         updatingCustomer
                                                     }
-                                                    className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                    className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                                                 >
                                                     Cancel
                                                 </button>
@@ -1455,7 +1380,7 @@ export default function Customers() {
                                                     disabled={
                                                         updatingCustomer
                                                     }
-                                                    className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                                    className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                                                 >
                                                     {updatingCustomer
                                                         ? 'Saving...'
@@ -1473,7 +1398,7 @@ export default function Customers() {
                 {/* Change Email Modal */}
                 {isEmailModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-white shadow-2xl">
                             <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
                                 <div>
                                     <h2 className="text-lg font-semibold text-slate-900">
@@ -1488,7 +1413,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeEmailModal}
                                     disabled={updatingEmail}
-                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1499,7 +1424,7 @@ export default function Customers() {
                                 className="space-y-4 p-6"
                             >
                                 {emailError && (
-                                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                                         {emailError}
                                     </div>
                                 )}
@@ -1524,7 +1449,7 @@ export default function Customers() {
                                                     ''
                                                 }
                                                 disabled
-                                                className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500 outline-none"
+                                                className="w-full rounded-none border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500 outline-none"
                                             />
                                         </div>
 
@@ -1542,7 +1467,7 @@ export default function Customers() {
                                                 }
                                                 required
                                                 disabled={updatingEmail}
-                                                className="w-full rounded-lg border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                className="w-full rounded-none border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
                                                 placeholder="Enter new email address"
                                             />
                                         </div>
@@ -1552,14 +1477,14 @@ export default function Customers() {
                                                 type="button"
                                                 onClick={closeEmailModal}
                                                 disabled={updatingEmail}
-                                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 type="submit"
                                                 disabled={updatingEmail}
-                                                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                                className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
                                             >
                                                 {updatingEmail
                                                     ? 'Saving...'

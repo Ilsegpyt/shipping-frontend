@@ -1,14 +1,11 @@
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from '../../../components/dashboard/DashboardUI';
 import { useEffect, useMemo, useState } from 'react';
 import {
     ChevronLeft,
     ChevronRight,
     Ellipsis,
-    Edit,
     Plus,
     RefreshCw,
-    Search,
-    UserCheck,
-    UserX,
     Trash2,
     X,
 } from 'lucide-react';
@@ -509,83 +506,47 @@ export default function Users() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Page Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-semibold text-slate-900">
-                        Users
-                    </h1>
+        <DashboardPage>
+            <DashboardPageHeader
+                title="Users"
+                eyebrow="Management / Administration"
+                description="Manage internal users and their access."
+                actions={
+                    <DashboardButton variant="primary" icon={Plus} onClick={openAddUserModal}>
+                        Add User
+                    </DashboardButton>
+                }
+            />
 
-                    <p className="mt-1 text-sm text-slate-500">
-                        Manage internal users and their access.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={openAddUserModal}
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-                >
-                    <Plus className="h-4 w-4" />
-                    Add User
-                </button>
-            </div>
-
-            {/* Toolbar */}
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
-                <div className="relative w-full max-w-md">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                    <input
-                        type="search"
-                        placeholder="Search by name, email, role, or phone..." title="Search by name, email, role, or phone"
-                        value={searchTerm}
-                        onChange={(event) =>
-                            setSearchTerm(event.target.value)
-                        }
-                        className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                    />
-                </div>
-
-                <div className="flex items-center gap-3">
+            <DashboardToolbar actions={
+                <>
                     {selectedUserIds.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={handleBulkDeleteAction}
-                            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-red-700"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                            Delete Selected
-                            <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-xs">
-                                {selectedUserIds.length}
-                            </span>
-                        </button>
+                        <DashboardButton variant="danger" icon={Trash2} onClick={handleBulkDeleteAction}>
+                            Delete Selected <span className="bg-brand-surface/20 px-1.5 py-0.5 text-xs">{selectedUserIds.length}</span>
+                        </DashboardButton>
                     )}
-
-                    <button
-                        type="button"
-                        onClick={() => loadUsers(pageNumber)}
-                        disabled={loading}
-                        className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                        <RefreshCw
-                            className={`h-4 w-4 ${loading ? 'animate-spin' : ''
-                                }`}
-                        />
+                    <DashboardButton onClick={() => loadUsers(pageNumber)} disabled={loading}>
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                         Refresh
-                    </button>
-                </div>
-            </div>
+                    </DashboardButton>
+                </>
+            }>
+                <DashboardSearchField
+                    placeholder="Search by name, email, role, or phone..."
+                    title="Search by name, email, role, or phone"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                />
+            </DashboardToolbar>
 
             {/* Error */}
             {error && (
-                <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-xs transition">
+                <div className="flex items-center justify-between rounded-lg border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger shadow-xs transition">
                     <span>{error}</span>
                     <button
                         type="button"
                         onClick={() => setError('')}
-                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                        className="text-brand-danger hover:text-brand-danger font-bold px-2 py-0.5 rounded cursor-pointer"
                         title="إغلاق"
                     >
                         ✕
@@ -594,10 +555,10 @@ export default function Users() {
             )}
 
             {/* Table */}
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <DashboardTableSurface>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                    <table className="min-w-full divide-y divide-brand-border">
+                        <thead className="bg-brand-surface-tint">
                             <tr>
                                 <th className="w-12 px-6 py-3 text-left">
                                     <input
@@ -609,42 +570,42 @@ export default function Users() {
                                             filteredUsers.length === 0
                                         }
                                         aria-label="Select all users"
-                                        className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        className="h-4 w-4 rounded border-brand-secondary text-brand-primary focus:ring-brand-accent"
                                     />
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
                                     Name
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
                                     Email
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
                                     Role
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
                                     Phone
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
                                     Status
                                 </th>
 
-                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-brand-muted">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
 
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-brand-surface-muted">
                             {loading ? (
                                 <tr>
                                     <td
                                         colSpan="7"
-                                        className="px-6 py-10 text-center text-sm text-slate-500"
+                                        className="px-6 py-10 text-center text-sm text-brand-muted"
                                     >
                                         Loading users...
                                     </td>
@@ -653,7 +614,7 @@ export default function Users() {
                                 <tr>
                                     <td
                                         colSpan="7"
-                                        className="px-6 py-10 text-center text-sm text-slate-500"
+                                        className="px-6 py-10 text-center text-sm text-brand-muted"
                                     >
                                         No users found.
                                     </td>
@@ -669,10 +630,7 @@ export default function Users() {
                                     return (
                                         <tr
                                             key={user.id}
-                                            className={`transition ${isSelected
-                                                ? 'bg-blue-50/60'
-                                                : 'hover:bg-slate-50'
-                                                }`}
+                                            className={`transition ${isSelected ? 'ils-dashboard-row-selected' : ''}`}
                                         >
                                             <td className="px-6 py-4">
                                                 <input
@@ -684,38 +642,31 @@ export default function Users() {
                                                         )
                                                     }
                                                     aria-label={`Select ${user.name}`}
-                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                                    className="h-4 w-4 rounded border-brand-secondary text-brand-primary focus:ring-brand-accent"
                                                 />
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-slate-900">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-brand-text">
                                                 {user.name}
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-brand-muted">
                                                 {user.email}
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-brand-muted">
                                                 {user.roleName ||
                                                     'Unknown Role'}
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-brand-muted">
                                                 {user.phone || '—'}
                                             </td>
 
                                             <td className="whitespace-nowrap px-6 py-4">
-                                                <span
-                                                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${active
-                                                        ? 'bg-emerald-50 text-emerald-700'
-                                                        : 'bg-red-50 text-red-700'
-                                                        }`}
-                                                >
-                                                    {getStatusLabel(
-                                                        user.status
-                                                    )}
-                                                </span>
+                                                <DashboardStatusBadge tone={active ? 'positive' : 'negative'}>
+                                                    {getStatusLabel(user.status)}
+                                                </DashboardStatusBadge>
                                             </td>
 
                                             <td className="relative whitespace-nowrap px-6 py-4 text-right">
@@ -724,66 +675,30 @@ export default function Users() {
                                                     onClick={() =>
                                                         toggleMenu(user.id)
                                                     }
+                                                    id={`dashboard-user-actions-${user.id}`}
                                                     aria-label={`Actions for ${user.name}`}
                                                     aria-expanded={isMenuOpen}
-                                                    className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                                    className="rounded-lg p-2 text-brand-muted transition hover:bg-brand-surface-muted hover:text-brand-text"
                                                 >
                                                     <Ellipsis className="h-5 w-5" />
                                                 </button>
 
                                                 {isMenuOpen && (
-                                                    <div className="absolute right-6 top-14 z-50 w-44 rounded-xl border border-slate-200 bg-white p-1 text-left shadow-lg">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleAction(
-                                                                    'Edit',
-                                                                    user
-                                                                )
-                                                            }
-                                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                            Edit
-                                                        </button>
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleAction(
-                                                                    'Status',
-                                                                    user
-                                                                )
-                                                            }
-                                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-                                                        >
-                                                            {active ? (
-                                                                <UserX className="h-4 w-4" />
-                                                            ) : (
-                                                                <UserCheck className="h-4 w-4" />
-                                                            )}
-
-                                                            {active
-                                                                ? 'Deactivate'
-                                                                : 'Activate'}
-                                                        </button>
-
-                                                        <div className="my-1 border-t border-slate-100" />
-
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                handleAction(
-                                                                    'Delete',
-                                                                    user
-                                                                )
-                                                            }
-                                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                            Delete
-                                                        </button>
-                                                    </div>
+                                                    <DashboardActionMenu anchorId={`dashboard-user-actions-${user.id}`} width={176}>
+                                                        <DashboardActionItem
+                                                            action="edit"
+                                                            onClick={() => handleAction('Edit', user)}
+                                                        />
+                                                        <DashboardActionItem
+                                                            action={active ? 'deactivate' : 'activate'}
+                                                            onClick={() => handleAction('Status', user)}
+                                                        />
+                                                        <div className="my-1 border-t border-brand-surface-muted" />
+                                                        <DashboardActionItem
+                                                            action="delete"
+                                                            onClick={() => handleAction('Delete', user)}
+                                                        />
+                                                    </DashboardActionMenu>
                                                 )}
                                             </td>
                                         </tr>
@@ -795,18 +710,18 @@ export default function Users() {
                 </div>
 
                 {/* Pagination */}
-                <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
-                    <p className="text-sm text-slate-500">
+                <div className="flex items-center justify-between border-t border-brand-border px-6 py-4">
+                    <p className="text-sm text-brand-muted">
                         Showing page{' '}
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-brand-text">
                             {pageNumber}
                         </span>{' '}
                         of{' '}
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-brand-text">
                             {totalPages}
                         </span>{' '}
                         —{' '}
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-brand-text">
                             {totalCount}
                         </span>{' '}
                         users
@@ -817,7 +732,7 @@ export default function Users() {
                             type="button"
                             onClick={handlePreviousPage}
                             disabled={loading || pageNumber <= 1}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex items-center gap-1 rounded-lg border border-brand-border px-3 py-2 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             <ChevronLeft className="h-4 w-4" />
                             Previous
@@ -829,32 +744,32 @@ export default function Users() {
                             disabled={
                                 loading || pageNumber >= totalPages
                             }
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="inline-flex items-center gap-1 rounded-lg border border-brand-border px-3 py-2 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             Next
                             <ChevronRight className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
-            </div>
+            </DashboardTableSurface>
 
             {/* Add User Modal */}
             {isAddUserModalOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/40 px-4"
                     onClick={closeAddUserModal}
                 >
                     <div
-                        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog w-full max-w-lg rounded-2xl bg-brand-surface shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                        <div className="flex items-center justify-between border-b border-brand-border px-6 py-5">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
                                     Add User
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Create a new internal user.
                                 </p>
                             </div>
@@ -864,7 +779,7 @@ export default function Users() {
                                 onClick={closeAddUserModal}
                                 disabled={creatingUser}
                                 aria-label="Close modal"
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -872,13 +787,13 @@ export default function Users() {
 
                         <div className="space-y-5 px-6 py-6">
                             {addUserError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                <div className="rounded-lg border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                                     {addUserError}
                                 </div>
                             )}
 
                             {createSuccess && (
-                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                <div className="rounded-lg border border-brand-success-soft bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                                     <p className="font-semibold">
                                         Internal user created successfully.
                                     </p>
@@ -892,7 +807,7 @@ export default function Users() {
                             <div>
                                 <label
                                     htmlFor="new-user-name"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Full Name *
                                 </label>
@@ -904,14 +819,14 @@ export default function Users() {
                                     value={newUser.name}
                                     onChange={handleNewUserChange}
                                     disabled={creatingUser || createSuccess}
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="new-user-email"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Email Address *
                                 </label>
@@ -923,14 +838,14 @@ export default function Users() {
                                     value={newUser.email}
                                     onChange={handleNewUserChange}
                                     disabled={creatingUser || createSuccess}
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="new-user-phone"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Phone Number
                                 </label>
@@ -942,14 +857,14 @@ export default function Users() {
                                     value={newUser.phone}
                                     onChange={handleNewUserChange}
                                     disabled={creatingUser || createSuccess}
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="new-user-role"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Role *
                                 </label>
@@ -964,7 +879,7 @@ export default function Users() {
                                         creatingUser ||
                                         createSuccess
                                     }
-                                    className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border bg-brand-surface px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 >
                                     <option value="">
                                         {rolesLoading
@@ -984,12 +899,12 @@ export default function Users() {
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-brand-border px-6 py-4">
                             <button
                                 type="button"
                                 onClick={closeAddUserModal}
                                 disabled={creatingUser}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {createSuccess ? 'Close' : 'Cancel'}
                             </button>
@@ -999,7 +914,7 @@ export default function Users() {
                                     type="button"
                                     onClick={handleCreateUser}
                                     disabled={creatingUser || rolesLoading}
-                                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-brand-inverse transition hover:bg-brand-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {creatingUser && (
                                         <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1018,20 +933,20 @@ export default function Users() {
             {/* Edit User Modal */}
             {isEditModalOpen && selectedUser && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/40 px-4"
                     onClick={closeEditModal}
                 >
                     <div
-                        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog w-full max-w-lg rounded-2xl bg-brand-surface shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                        <div className="flex items-center justify-between border-b border-brand-border px-6 py-5">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
                                     Edit User
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Update the user profile information.
                                 </p>
                             </div>
@@ -1041,7 +956,7 @@ export default function Users() {
                                 onClick={closeEditModal}
                                 disabled={saving}
                                 aria-label="Close modal"
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -1049,7 +964,7 @@ export default function Users() {
 
                         <div className="space-y-5 px-6 py-6">
                             {modalError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                <div className="rounded-lg border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                                     {modalError}
                                 </div>
                             )}
@@ -1057,7 +972,7 @@ export default function Users() {
                             <div>
                                 <label
                                     htmlFor="edit-user-name"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Name
                                 </label>
@@ -1069,14 +984,14 @@ export default function Users() {
                                     value={editForm.name}
                                     onChange={handleFormChange}
                                     disabled={saving}
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="edit-user-email"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Email
                                 </label>
@@ -1088,14 +1003,14 @@ export default function Users() {
                                     value={editForm.email}
                                     onChange={handleFormChange}
                                     disabled={saving}
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
                             </div>
 
                             <div>
                                 <label
                                     htmlFor="edit-user-phone"
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Phone
                                 </label>
@@ -1107,17 +1022,17 @@ export default function Users() {
                                     value={editForm.phone}
                                     onChange={handleFormChange}
                                     disabled={saving}
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-brand-border px-6 py-4">
                             <button
                                 type="button"
                                 onClick={closeEditModal}
                                 disabled={saving}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -1126,7 +1041,7 @@ export default function Users() {
                                 type="button"
                                 onClick={handleSaveChanges}
                                 disabled={saving}
-                                className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2.5 text-sm font-medium text-brand-inverse transition hover:bg-brand-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {saving && (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1142,15 +1057,15 @@ export default function Users() {
             {/* Change Status Modal */}
             {isStatusModalOpen && statusUser && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/40 px-4"
                     onClick={closeStatusModal}
                 >
                     <div
-                        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog w-full max-w-md rounded-2xl bg-brand-surface shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                        <div className="flex items-center justify-between border-b border-brand-border px-6 py-5">
+                            <h2 className="text-lg font-semibold text-brand-text">
                                 {isActive(statusUser.status)
                                     ? 'Deactivate User'
                                     : 'Activate User'}
@@ -1161,34 +1076,34 @@ export default function Users() {
                                 onClick={closeStatusModal}
                                 disabled={changingStatus}
                                 aria-label="Close modal"
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
                         <div className="px-6 py-6">
-                            <p className="text-sm leading-6 text-slate-600">
+                            <p className="text-sm leading-6 text-brand-muted">
                                 Are you sure you want to{' '}
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-semibold text-brand-text">
                                     {isActive(statusUser.status)
                                         ? 'deactivate'
                                         : 'activate'}
                                 </span>{' '}
                                 user{' '}
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-semibold text-brand-text">
                                     {statusUser.name}
                                 </span>
                                 ?
                             </p>
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-brand-border px-6 py-4">
                             <button
                                 type="button"
                                 onClick={closeStatusModal}
                                 disabled={changingStatus}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -1197,9 +1112,9 @@ export default function Users() {
                                 type="button"
                                 onClick={handleConfirmStatusChange}
                                 disabled={changingStatus}
-                                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${isActive(statusUser.status)
-                                    ? 'bg-red-600 hover:bg-red-700'
-                                    : 'bg-emerald-600 hover:bg-emerald-700'
+                                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-brand-inverse transition disabled:cursor-not-allowed disabled:opacity-50 ${isActive(statusUser.status)
+                                    ? 'bg-brand-danger hover:bg-brand-danger'
+                                    : 'bg-brand-success hover:bg-brand-success'
                                     }`}
                             >
                                 {changingStatus && (
@@ -1220,15 +1135,15 @@ export default function Users() {
             {/* Delete Single User Modal */}
             {isDeleteModalOpen && deleteUser && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/40 px-4"
                     onClick={closeDeleteModal}
                 >
                     <div
-                        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog w-full max-w-md rounded-2xl bg-brand-surface shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                        <div className="flex items-center justify-between border-b border-brand-border px-6 py-5">
+                            <h2 className="text-lg font-semibold text-brand-text">
                                 Delete User
                             </h2>
 
@@ -1237,32 +1152,32 @@ export default function Users() {
                                 onClick={closeDeleteModal}
                                 disabled={deleting}
                                 aria-label="Close modal"
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
                         <div className="px-6 py-6">
-                            <p className="text-sm leading-6 text-slate-600">
+                            <p className="text-sm leading-6 text-brand-muted">
                                 Are you sure you want to delete user{' '}
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-semibold text-brand-text">
                                     {deleteUser.name}
                                 </span>
                                 ?
                             </p>
 
-                            <p className="mt-2 text-sm text-red-600">
+                            <p className="mt-2 text-sm text-brand-danger">
                                 This action cannot be undone.
                             </p>
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-brand-border px-6 py-4">
                             <button
                                 type="button"
                                 onClick={closeDeleteModal}
                                 disabled={deleting}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -1271,7 +1186,7 @@ export default function Users() {
                                 type="button"
                                 onClick={handleConfirmDelete}
                                 disabled={deleting}
-                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-lg bg-brand-danger px-4 py-2.5 text-sm font-medium text-brand-inverse transition hover:bg-brand-danger disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {deleting && (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1287,15 +1202,15 @@ export default function Users() {
             {/* Bulk Delete Modal */}
             {isBulkDeleteModalOpen && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/40 px-4"
                     onClick={closeBulkDeleteModal}
                 >
                     <div
-                        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog w-full max-w-md rounded-2xl bg-brand-surface shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                        <div className="flex items-center justify-between border-b border-brand-border px-6 py-5">
+                            <h2 className="text-lg font-semibold text-brand-text">
                                 Delete Selected Users
                             </h2>
 
@@ -1304,32 +1219,32 @@ export default function Users() {
                                 onClick={closeBulkDeleteModal}
                                 disabled={bulkDeleting}
                                 aria-label="Close modal"
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
                         <div className="px-6 py-6">
-                            <p className="text-sm leading-6 text-slate-600">
+                            <p className="text-sm leading-6 text-brand-muted">
                                 Are you sure you want to delete{' '}
-                                <span className="font-semibold text-slate-900">
+                                <span className="font-semibold text-brand-text">
                                     {selectedUserIds.length}
                                 </span>{' '}
                                 selected users?
                             </p>
 
-                            <p className="mt-2 text-sm text-red-600">
+                            <p className="mt-2 text-sm text-brand-danger">
                                 This action cannot be undone.
                             </p>
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-brand-border px-6 py-4">
                             <button
                                 type="button"
                                 onClick={closeBulkDeleteModal}
                                 disabled={bulkDeleting}
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
                             </button>
@@ -1338,7 +1253,7 @@ export default function Users() {
                                 type="button"
                                 onClick={handleConfirmBulkDelete}
                                 disabled={bulkDeleting}
-                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center gap-2 rounded-lg bg-brand-danger px-4 py-2.5 text-sm font-medium text-brand-inverse transition hover:bg-brand-danger disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {bulkDeleting && (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1352,6 +1267,6 @@ export default function Users() {
                     </div>
                 </div>
             )}
-        </div>
+        </DashboardPage>
     );
 }

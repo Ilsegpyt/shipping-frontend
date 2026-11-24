@@ -1,3 +1,4 @@
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from '../../../components/dashboard/DashboardUI';
 import { useEffect, useMemo, useState } from 'react';
 
 import {
@@ -10,7 +11,6 @@ import {
 
     RefreshCw,
 
-    Search,
 
     ShieldCheck,
 
@@ -726,108 +726,41 @@ export default function Roles() {
 
     return (
 
-        <div className="space-y-6">
+        <DashboardPage>
 
-            {/* Page Header */}
+            <DashboardPageHeader
+                title="Roles"
+                eyebrow="Management / Administration"
+                description="Manage roles and their permissions."
+                actions={
+                    <DashboardButton variant="primary" icon={Plus} onClick={openAddRoleModal}>
+                        Add Role
+                    </DashboardButton>
+                }
+            />
 
-            <div className="flex items-center justify-between">
-
-                <div>
-
-                    <h1 className="text-2xl font-semibold text-slate-900">
-
-                        Roles
-
-                    </h1>
-
-                    <p className="mt-1 text-sm text-slate-500">
-
-                        Manage roles and their permissions.
-
-                    </p>
-
-                </div>
-
-                <button
-
-                    type="button"
-
-                    onClick={openAddRoleModal}
-
-                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-
-                >
-
-                    <Plus className="h-4 w-4" />
-
-                    Add Role
-
-                </button>
-
-            </div>
-
-            {/* Toolbar */}
-
-            <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
-
-                <div className="relative w-full max-w-md">
-
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                    <input
-
-                        type="search"
-
-                        placeholder="Search by role name, description, or alias..." title="Search by role name, description, or alias"
-
-                        value={searchTerm}
-
-                        onChange={(event) =>
-
-                            setSearchTerm(event.target.value)
-
-                        }
-
-                        className="h-10 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-
-                    />
-
-                </div>
-
-                <button
-
-                    type="button"
-
-                    onClick={loadRoles}
-
-                    disabled={loading}
-
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-
-                >
-
-                    <RefreshCw
-
-                        className={`h-4 w-4 ${loading ? 'animate-spin' : ''
-
-                            }`}
-
-                    />
-
+            <DashboardToolbar actions={
+                <DashboardButton onClick={loadRoles} disabled={loading}>
+                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     Refresh
-
-                </button>
-
-            </div>
+                </DashboardButton>
+            }>
+                <DashboardSearchField
+                    placeholder="Search by role name, description, or alias..."
+                    title="Search by role name, description, or alias"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                />
+            </DashboardToolbar>
 
             {/* Error */}
             {error && (
-                <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-xs transition">
+                <div className="flex items-center justify-between rounded-none border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger shadow-xs transition">
                     <span>{error}</span>
                     <button
                         type="button"
                         onClick={() => setError('')}
-                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                        className="text-brand-danger hover:text-brand-danger font-bold px-2 py-0.5 rounded cursor-pointer"
                         title="إغلاق"
                     >
                         ✕
@@ -837,29 +770,29 @@ export default function Roles() {
 
             {/* Table */}
 
-            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <DashboardTableSurface>
 
                 <div className="overflow-x-auto">
 
-                    <table className="min-w-full divide-y divide-slate-200">
+                    <table className="min-w-full divide-y divide-brand-border">
 
-                        <thead className="bg-slate-50">
+                        <thead className="bg-brand-surface-tint">
 
                             <tr>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
 
                                     Role
 
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-brand-muted">
 
                                     Status
 
                                 </th>
 
-                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-brand-muted">
 
                                     Actions
 
@@ -869,7 +802,7 @@ export default function Roles() {
 
                         </thead>
 
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-brand-surface-muted">
 
                             {loading ? (
 
@@ -879,7 +812,7 @@ export default function Roles() {
 
                                         colSpan="3"
 
-                                        className="px-6 py-10 text-center text-sm text-slate-500"
+                                        className="px-6 py-10 text-center text-sm text-brand-muted"
 
                                     >
 
@@ -897,7 +830,7 @@ export default function Roles() {
 
                                         colSpan="3"
 
-                                        className="px-6 py-10 text-center text-sm text-slate-500"
+                                        className="px-6 py-10 text-center text-sm text-brand-muted"
 
                                     >
 
@@ -921,7 +854,7 @@ export default function Roles() {
 
                                             key={role.id}
 
-                                            className="transition hover:bg-slate-50"
+                                            className="transition"
 
                                         >
 
@@ -929,13 +862,13 @@ export default function Roles() {
 
                                                 <div className="flex items-center gap-3">
 
-                                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100">
+                                                    <div className="flex h-9 w-9 items-center justify-center bg-brand-surface-muted">
 
-                                                        <ShieldCheck className="h-4 w-4 text-slate-600" />
+                                                        <ShieldCheck className="h-4 w-4 text-brand-muted" />
 
                                                     </div>
 
-                                                    <span className="text-sm font-medium text-slate-900">
+                                                    <span className="text-sm font-medium text-brand-text">
 
                                                         {role.name}
 
@@ -949,19 +882,11 @@ export default function Roles() {
 
                                                 {role.status === 0 || role.status === 'Active' ? (
 
-                                                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-
-                                                        Active
-
-                                                    </span>
+                                                    <DashboardStatusBadge tone="positive">Active</DashboardStatusBadge>
 
                                                 ) : (
 
-                                                    <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
-
-                                                        Inactive
-
-                                                    </span>
+                                                    <DashboardStatusBadge tone="negative">Inactive</DashboardStatusBadge>
 
                                                 )}
 
@@ -983,6 +908,7 @@ export default function Roles() {
 
                                                     }
 
+                                                    id={`dashboard-role-actions-${role.id}`}
                                                     aria-label={`Actions for ${role.name}`}
 
                                                     aria-expanded={
@@ -991,7 +917,7 @@ export default function Roles() {
 
                                                     }
 
-                                                    className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                                    className="ils-dashboard-action-trigger"
 
                                                 >
 
@@ -1001,79 +927,23 @@ export default function Roles() {
 
                                                 {isMenuOpen && (
 
-                                                    <div className="absolute right-6 top-14 z-50 w-48 rounded-xl border border-slate-200 bg-white p-1 text-left shadow-lg">
-
-                                                        <button
-
-                                                            type="button"
-
-                                                            onClick={() =>
-
-                                                                openPermissionsModal(
-
-                                                                    role
-
-                                                                )
-
-                                                            }
-
-                                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-700 transition hover:bg-slate-50"
-
-                                                        >
-
-                                                            <ShieldCheck className="h-4 w-4" />
-
-                                                            Permissions
-
-                                                        </button>
-
+                                                    <DashboardActionMenu anchorId={`dashboard-role-actions-${role.id}`} width={248}>
+                                                        <DashboardActionItem
+                                                            action="permissions"
+                                                            onClick={() => openPermissionsModal(role)}
+                                                        />
                                                         {role.status === 0 || role.status === 'Active' ? (
-
-                                                            <button
-
-                                                                type="button"
-
-                                                                onClick={() =>
-
-                                                                    requestDeactivateRole(role)
-
-                                                                }
-
-                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-
-                                                            >
-
-                                                                <Trash2 className="h-4 w-4" />
-
-                                                                Deactivate
-
-                                                            </button>
-
+                                                            <DashboardActionItem
+                                                                action="deactivate"
+                                                                onClick={() => requestDeactivateRole(role)}
+                                                            />
                                                         ) : (
-
-                                                            <button
-
-                                                                type="button"
-
-                                                                onClick={() =>
-
-                                                                    requestActivateRole(role)
-
-                                                                }
-
-                                                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-emerald-600 transition hover:bg-emerald-50"
-
-                                                            >
-
-                                                                <ShieldCheck className="h-4 w-4" />
-
-                                                                Activate
-
-                                                            </button>
-
+                                                            <DashboardActionItem
+                                                                action="activate"
+                                                                onClick={() => requestActivateRole(role)}
+                                                            />
                                                         )}
-
-                                                    </div>
+                                                    </DashboardActionMenu>
 
                                                 )}
 
@@ -1095,13 +965,13 @@ export default function Roles() {
 
                 {/* Footer */}
 
-                <div className="border-t border-slate-200 px-6 py-4">
+                <div className="border-t border-brand-border px-6 py-4">
 
-                    <p className="text-sm text-slate-500">
+                    <p className="text-sm text-brand-muted">
 
                         Showing{' '}
 
-                        <span className="font-medium text-slate-700">
+                        <span className="font-medium text-brand-text">
 
                             {filteredRoles.length}
 
@@ -1117,7 +987,7 @@ export default function Roles() {
 
                 </div>
 
-            </div>
+            </DashboardTableSurface>
 
             {/* Add Role Modal */}
 
@@ -1125,7 +995,7 @@ export default function Roles() {
 
                 <div
 
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4"
+                    className="ils-dashboard-modal-overlay"
 
                     onClick={closeAddRoleModal}
 
@@ -1133,7 +1003,7 @@ export default function Roles() {
 
                     <div
 
-                        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--form"
 
                         onClick={(event) =>
 
@@ -1143,17 +1013,17 @@ export default function Roles() {
 
                     >
 
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                        <div className="ils-dashboard-modal-header flex items-center justify-between">
 
                             <div>
 
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
 
                                     Add Role
 
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
 
                                     Create a new role.
 
@@ -1171,7 +1041,7 @@ export default function Roles() {
 
                                 aria-label="Close modal"
 
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-none p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
 
                             >
 
@@ -1181,11 +1051,11 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="space-y-5 px-6 py-6">
+                        <div className="ils-dashboard-modal-body">
 
                             {addRoleError && (
 
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                <div className="rounded-none border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
 
                                     {addRoleError}
 
@@ -1195,7 +1065,7 @@ export default function Roles() {
 
                             {createSuccess && (
 
-                                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                <div className="rounded-none border border-brand-success-soft bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
 
                                     Role created successfully.
 
@@ -1209,7 +1079,7 @@ export default function Roles() {
 
                                     htmlFor="new-role-name"
 
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
 
                                 >
 
@@ -1237,7 +1107,7 @@ export default function Roles() {
 
                                     }
 
-                                    className="h-11 w-full rounded-lg border border-slate-200 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="h-11 w-full rounded-none border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
 
                                 />
 
@@ -1249,7 +1119,7 @@ export default function Roles() {
 
                                     htmlFor="new-role-description"
 
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
 
                                 >
 
@@ -1277,7 +1147,7 @@ export default function Roles() {
 
                                     }
 
-                                    className="w-full rounded-lg border border-slate-200 px-3 py-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                    className="w-full rounded-none border border-brand-border px-3 py-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
 
                                 />
 
@@ -1285,9 +1155,9 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
 
-                            <button
+                            <DashboardButton
 
                                 type="button"
 
@@ -1295,17 +1165,17 @@ export default function Roles() {
 
                                 disabled={creatingRole}
 
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="secondary"
 
                             >
 
                                 {createSuccess ? 'Close' : 'Cancel'}
 
-                            </button>
+                            </DashboardButton>
 
                             {!createSuccess && (
 
-                                <button
+                                <DashboardButton
 
                                     type="button"
 
@@ -1313,7 +1183,7 @@ export default function Roles() {
 
                                     disabled={creatingRole}
 
-                                    className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                    variant="primary"
 
                                 >
 
@@ -1329,7 +1199,7 @@ export default function Roles() {
 
                                         : 'Create Role'}
 
-                                </button>
+                                </DashboardButton>
 
                             )}
 
@@ -1347,7 +1217,7 @@ export default function Roles() {
 
                 <div
 
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 px-4 py-6"
+                    className="ils-dashboard-modal-overlay"
 
                     onClick={closePermissionsModal}
 
@@ -1355,7 +1225,7 @@ export default function Roles() {
 
                     <div
 
-                        className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--permissions flex max-h-[90vh] flex-col overflow-hidden"
 
                         onClick={(event) =>
 
@@ -1365,21 +1235,21 @@ export default function Roles() {
 
                     >
 
-                        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+                        <div className="ils-dashboard-modal-header flex items-center justify-between">
 
                             <div>
 
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
 
                                     Role Permissions
 
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
 
                                     Manage permissions for{' '}
 
-                                    <span className="font-medium text-slate-700">
+                                    <span className="font-medium text-brand-text">
 
                                         {selectedRole.name}
 
@@ -1405,7 +1275,7 @@ export default function Roles() {
 
                                 aria-label="Close modal"
 
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-none p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
 
                             >
 
@@ -1415,11 +1285,11 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="flex-1 overflow-y-auto px-6 py-6">
+                        <div className="ils-dashboard-modal-body min-h-0 flex-1 overflow-y-auto">
 
                             {permissionError && (
 
-                                <div className="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                <div className="mb-5 rounded-none border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
 
                                     {permissionError}
 
@@ -1429,13 +1299,13 @@ export default function Roles() {
 
                             {/* Add Permission */}
 
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4">
 
                                 <label
 
                                     htmlFor="permission-select"
 
-                                    className="mb-2 block text-sm font-medium text-slate-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
 
                                 >
 
@@ -1469,7 +1339,7 @@ export default function Roles() {
 
                                         }
 
-                                        className="h-11 min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-50"
+                                        className="ils-dashboard-modal-select min-w-0 flex-1"
 
                                     >
 
@@ -1535,7 +1405,7 @@ export default function Roles() {
 
                                     </select>
 
-                                    <button
+                                    <DashboardButton
 
                                         type="button"
 
@@ -1555,7 +1425,7 @@ export default function Roles() {
 
                                         }
 
-                                        className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                        variant="primary"
 
                                     >
 
@@ -1567,7 +1437,7 @@ export default function Roles() {
 
                                         Add
 
-                                    </button>
+                                    </DashboardButton>
 
                                 </div>
 
@@ -1579,13 +1449,13 @@ export default function Roles() {
 
                                 <div className="mb-3 flex items-center justify-between">
 
-                                    <h3 className="text-sm font-semibold text-slate-900">
+                                    <h3 className="text-sm font-semibold text-brand-text">
 
                                         Current Permissions
 
                                     </h3>
 
-                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                    <span className="rounded-none bg-brand-surface-muted px-2.5 py-1 text-xs font-medium text-brand-muted">
 
                                         {rolePermissions.length}
 
@@ -1595,7 +1465,7 @@ export default function Roles() {
 
                                 {permissionsLoading ? (
 
-                                    <div className="rounded-xl border border-slate-200 px-6 py-10 text-center text-sm text-slate-500">
+                                    <div className="rounded-none border border-brand-border px-6 py-10 text-center text-sm text-brand-muted">
 
                                         Loading permissions...
 
@@ -1603,7 +1473,7 @@ export default function Roles() {
 
                                 ) : rolePermissions.length === 0 ? (
 
-                                    <div className="rounded-xl border border-slate-200 px-6 py-10 text-center text-sm text-slate-500">
+                                    <div className="rounded-none border border-brand-border px-6 py-10 text-center text-sm text-brand-muted">
 
                                         This role has no permissions.
 
@@ -1621,15 +1491,15 @@ export default function Roles() {
 
                                                     key={permission}
 
-                                                    className="flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-3"
+                                                    className="flex items-center justify-between rounded-none border border-brand-border bg-brand-surface px-4 py-3"
 
                                                 >
 
                                                     <div className="flex min-w-0 items-center gap-3">
 
-                                                        <ShieldCheck className="h-4 w-4 shrink-0 text-slate-500" />
+                                                        <ShieldCheck className="h-4 w-4 shrink-0 text-brand-muted" />
 
-                                                        <span className="truncate text-sm text-slate-700">
+                                                        <span className="truncate text-sm text-brand-text">
 
                                                             {
 
@@ -1665,7 +1535,7 @@ export default function Roles() {
 
                                                         }
 
-                                                        className="ml-4 inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="ils-dashboard-permission-remove ml-4"
 
                                                     >
 
@@ -1697,9 +1567,9 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
 
-                            <button
+                            <DashboardButton
 
                                 type="button"
 
@@ -1713,13 +1583,13 @@ export default function Roles() {
 
                                 }
 
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="secondary"
 
                             >
 
                                 Close
 
-                            </button>
+                            </DashboardButton>
 
                         </div>
 
@@ -1733,7 +1603,7 @@ export default function Roles() {
 
                 <div
 
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 px-4"
+                    className="ils-dashboard-modal-overlay z-[60]"
 
                     onClick={() => {
 
@@ -1749,29 +1619,29 @@ export default function Roles() {
 
                     <div
 
-                        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm"
 
                         onClick={(event) => event.stopPropagation()}
 
                     >
 
-                        <div className="flex items-center gap-4 border-b border-emerald-100 px-6 py-5">
+                        <div className="ils-dashboard-modal-header flex items-center gap-4">
 
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-none bg-brand-success-soft">
 
-                                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                                <ShieldCheck className="h-5 w-5 text-brand-success" />
 
                             </div>
 
                             <div>
 
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
 
                                     Activate Role?
 
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
 
                                     This will activate the role and make it available again.
 
@@ -1783,9 +1653,9 @@ export default function Roles() {
 
                         <div className="px-6 py-5">
 
-                            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                            <div className="rounded-none border border-brand-success-soft bg-brand-success-soft px-4 py-3">
 
-                                <p className="text-sm text-emerald-700">
+                                <p className="text-sm text-brand-success">
 
                                     Are you sure you want to activate
 
@@ -1803,7 +1673,7 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
 
                             <button
 
@@ -1813,7 +1683,7 @@ export default function Roles() {
 
                                 disabled={activatingRole}
 
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
 
                             >
 
@@ -1821,7 +1691,7 @@ export default function Roles() {
 
                             </button>
 
-                            <button
+                            <DashboardButton
 
                                 type="button"
 
@@ -1829,7 +1699,7 @@ export default function Roles() {
 
                                 disabled={activatingRole}
 
-                                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="success"
 
                             >
 
@@ -1841,7 +1711,7 @@ export default function Roles() {
 
                                 Activate
 
-                            </button>
+                            </DashboardButton>
 
                         </div>
 
@@ -1855,7 +1725,7 @@ export default function Roles() {
 
                 <div
 
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 px-4"
+                    className="ils-dashboard-modal-overlay z-[60]"
 
                     onClick={() => {
 
@@ -1871,29 +1741,29 @@ export default function Roles() {
 
                     <div
 
-                        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm"
 
                         onClick={(event) => event.stopPropagation()}
 
                     >
 
-                        <div className="flex items-center gap-4 border-b border-red-100 px-6 py-5">
+                        <div className="ils-dashboard-modal-header flex items-center gap-4">
 
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-none bg-brand-danger-soft">
 
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                                <AlertTriangle className="h-5 w-5 text-brand-danger" />
 
                             </div>
 
                             <div>
 
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
 
                                     Deactivate Role?
 
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
 
                                     This will deactivate the role and remove it
 
@@ -1907,9 +1777,9 @@ export default function Roles() {
 
                         <div className="px-6 py-5">
 
-                            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                            <div className="rounded-none border border-brand-danger-soft bg-brand-danger-soft px-4 py-3">
 
-                                <p className="text-sm text-red-700">
+                                <p className="text-sm text-brand-danger">
 
                                     Are you sure you want to deactivate
 
@@ -1927,7 +1797,7 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
 
                             <button
 
@@ -1937,7 +1807,7 @@ export default function Roles() {
 
                                 disabled={deactivatingRole}
 
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
 
                             >
 
@@ -1945,7 +1815,7 @@ export default function Roles() {
 
                             </button>
 
-                            <button
+                            <DashboardButton
 
                                 type="button"
 
@@ -1953,7 +1823,7 @@ export default function Roles() {
 
                                 disabled={deactivatingRole}
 
-                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="danger"
 
                             >
 
@@ -1965,7 +1835,7 @@ export default function Roles() {
 
                                 Deactivate
 
-                            </button>
+                            </DashboardButton>
 
                         </div>
 
@@ -1979,7 +1849,7 @@ export default function Roles() {
 
                 <div
 
-                    className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 px-4"
+                    className="ils-dashboard-modal-overlay z-[60]"
 
                     onClick={() => {
 
@@ -1995,29 +1865,29 @@ export default function Roles() {
 
                     <div
 
-                        className="w-full max-w-md rounded-2xl bg-white shadow-2xl"
+                        className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm"
 
                         onClick={(event) => event.stopPropagation()}
 
                     >
 
-                        <div className="flex items-center gap-4 border-b border-red-100 px-6 py-5">
+                        <div className="ils-dashboard-modal-header flex items-center gap-4">
 
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-red-50">
+                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-none bg-brand-danger-soft">
 
-                                <AlertTriangle className="h-5 w-5 text-red-600" />
+                                <AlertTriangle className="h-5 w-5 text-brand-danger" />
 
                             </div>
 
                             <div>
 
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
 
                                     Remove Permission?
 
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
 
                                     This action will remove the permission from this role.
 
@@ -2031,7 +1901,7 @@ export default function Roles() {
 
                             {permissionError && (
 
-                                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                <div className="mb-4 rounded-none border border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
 
                                     {permissionError}
 
@@ -2039,9 +1909,9 @@ export default function Roles() {
 
                             )}
 
-                            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                            <div className="rounded-none border border-brand-danger-soft bg-brand-danger-soft px-4 py-3">
 
-                                <p className="text-sm text-red-700">
+                                <p className="text-sm text-brand-danger">
 
                                     Are you sure you want to remove
 
@@ -2067,7 +1937,7 @@ export default function Roles() {
 
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-slate-200 px-6 py-4">
+                        <div className="ils-dashboard-modal-footer">
 
                             <button
 
@@ -2077,7 +1947,7 @@ export default function Roles() {
 
                                 disabled={revokingPermission !== null}
 
-                                className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
 
                             >
 
@@ -2085,7 +1955,7 @@ export default function Roles() {
 
                             </button>
 
-                            <button
+                            <DashboardButton
 
                                 type="button"
 
@@ -2093,7 +1963,7 @@ export default function Roles() {
 
                                 disabled={revokingPermission !== null}
 
-                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="danger"
 
                             >
 
@@ -2105,7 +1975,7 @@ export default function Roles() {
 
                                 Remove
 
-                            </button>
+                            </DashboardButton>
 
                         </div>
 
@@ -2115,7 +1985,7 @@ export default function Roles() {
 
             )}
 
-        </div>
+        </DashboardPage>
 
     );
 

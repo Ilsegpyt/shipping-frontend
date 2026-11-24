@@ -14,6 +14,12 @@
   --ils-cyan: #3097BF;
   --ils-ink: #141625;
   --ils-semi-cyan:#f3f8fc;
+  /* Management semantic additions: two greens, two reds and one gray */
+  --ils-green: #007A55;
+  --ils-green-light: #ECFDF5;
+  --ils-red: #E7000B;
+  --ils-red-light: #FEF2F2;
+  --ils-neutral-gray: #8A929E;
 
   /* Semantic colors */
   --color-primary: var(--ils-navy);
@@ -30,6 +36,13 @@
   --color-surface-muted: var(--ils-light-gray);
   --color-surface-dark: var(--ils-navy);
 
+  --color-success: var(--ils-green);
+  --color-success-indicator: #00BC7D;
+  --color-success-soft: var(--ils-green-light);
+  --color-danger: var(--ils-red);
+  --color-danger-soft: var(--ils-red-light);
+  --color-danger-border: #FFC9C9;
+  --color-neutral: var(--ils-neutral-gray);
   --color-border: var(--ils-light-gray);
   --color-surface-tint: #f6fafc;
   --color-surface-blue: #eaf5fb;
@@ -51,6 +64,13 @@
   --color-brand-surface-muted: var(--color-surface-muted);
   --color-brand-surface-dark: var(--color-surface-dark);
 
+  --color-brand-success: var(--color-success);
+  --color-brand-success-indicator: var(--color-success-indicator);
+  --color-brand-success-soft: var(--color-success-soft);
+  --color-brand-danger: var(--color-danger);
+  --color-brand-danger-soft: var(--color-danger-soft);
+  --color-brand-danger-border: var(--color-danger-border);
+  --color-brand-neutral: var(--color-neutral);
   --color-brand-border: var(--color-border);
   --color-brand-surface-tint: var(--color-surface-tint);
   --color-brand-surface-blue: var(--color-surface-blue);

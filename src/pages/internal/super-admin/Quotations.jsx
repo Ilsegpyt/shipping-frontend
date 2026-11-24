@@ -1,3 +1,5 @@
+import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import "../../../components/dashboard/management-heading.css";
 import { useEffect, useMemo, useState } from 'react';
 import {
     Search,
@@ -345,19 +347,8 @@ export default function Quotations() {
             {/* Header */}
             <div>
                 <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900">
-                        <FileText className="h-5 w-5 text-white" />
-                    </div>
-
                     <div>
-                        <h1 className="text-2xl font-semibold text-slate-900">
-                            Quotations
-                        </h1>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                            Manage and review quotation requests
-                            submitted through the ILS website.
-                        </p>
+                        <ManagementHeaderTitle title="Quotations" description="Manage and review quotation requests submitted through the ILS website." />
                     </div>
                 </div>
             </div>

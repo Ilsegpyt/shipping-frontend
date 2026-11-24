@@ -1,6 +1,7 @@
+import "../../../components/dashboard/dashboard-ui.css";
+import { DashboardStatusBadge, DashboardPageHeader, DashboardToolbar, DashboardSearchField, DashboardActionMenu, DashboardActionItem, DashboardButton } from "../../../components/dashboard/DashboardUI";
 import { useEffect, useMemo, useState } from "react";
 import {
-    Search,
     Users,
     Building2,
     Mail,
@@ -10,6 +11,7 @@ import {
     XCircle,
     UserPlus,
     UserMinus,
+    MoreHorizontal,
 } from "lucide-react";
 
 import {
@@ -32,6 +34,25 @@ export default function AccountManagerAssignments() {
 
     const [search, setSearch] = useState("");
     const [activeTab, setActiveTab] = useState("managers");
+    const [openActionsId, setOpenActionsId] = useState(null);
+    useEffect(() => {
+        if (openActionsId === null) return;
+        const dismiss = (event) => {
+            if (event.type === 'keydown') {
+                if (event.key === 'Escape') setOpenActionsId(null);
+                return;
+            }
+            if (!event.target.closest('.ils-dashboard-action-menu, .ils-dashboard-action-trigger')) {
+                setOpenActionsId(null);
+            }
+        };
+        document.addEventListener('pointerdown', dismiss);
+        document.addEventListener('keydown', dismiss);
+        return () => {
+            document.removeEventListener('pointerdown', dismiss);
+            document.removeEventListener('keydown', dismiss);
+        };
+    }, [openActionsId]);
 
     const [expandedManagers, setExpandedManagers] = useState({});
 
@@ -389,21 +410,16 @@ export default function AccountManagerAssignments() {
     };
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-semibold text-slate-900">
-                    Account Managers
-                </h1>
-
-                <p className="mt-1 text-sm text-slate-500">
-                    Manage account managers and customer assignments.
-                </p>
-            </div>
+        <div className="ils-dashboard-page space-y-6">
+            {/* Shared management header: same component as Users and Roles */}
+            <DashboardPageHeader
+                title="Account Managers"
+                description="Manage account managers and customer assignments."
+            />
 
             {/* Loading */}
             {loading && (
-                <div className="rounded-xl border border-slate-200 bg-white px-6 py-12 text-center">
+                <div className="rounded-none border border-slate-200 bg-white px-6 py-12 text-center">
                     <p className="text-sm text-slate-500">
                         Loading account managers...
                     </p>
@@ -412,14 +428,14 @@ export default function AccountManagerAssignments() {
 
             {/* Error */}
             {!loading && error && (
-                <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-5 py-4 shadow-xs transition">
+                <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 px-5 py-4 shadow-xs transition">
                     <p className="text-sm text-red-700">
                         {error}
                     </p>
                     <button
                         type="button"
                         onClick={() => setError("")}
-                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded-none cursor-pointer"
                         title="إغلاق"
                     >
                         ✕
@@ -432,9 +448,9 @@ export default function AccountManagerAssignments() {
                     {/* Summary */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                         {/* Account Managers */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-slate-200 bg-white p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
                                     <Users className="h-5 w-5 text-slate-700" />
                                 </div>
 
@@ -451,9 +467,9 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         {/* Assigned Account Managers */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-slate-200 bg-white p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
                                     <Users className="h-5 w-5 text-slate-700" />
                                 </div>
 
@@ -470,9 +486,9 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         {/* Assigned Customers */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-slate-200 bg-white p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
                                     <Building2 className="h-5 w-5 text-slate-700" />
                                 </div>
 
@@ -489,9 +505,9 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         {/* Unassigned Customers */}
-                        <div className="rounded-xl border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-slate-200 bg-white p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-slate-100">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
                                     <Building2 className="h-5 w-5 text-slate-700" />
                                 </div>
 
@@ -508,41 +524,28 @@ export default function AccountManagerAssignments() {
                         </div>
                     </div>
 
-                    {/* Search */}
-                    <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(event) =>
-                                    setSearch(
-                                        event.target.value
-                                    )
-                                }
-                                placeholder={
-                                    activeTab === "managers"
-                                        ? "Search by manager name, email, customer company, or owner..."
-                                        : "Search by customer company, owner, or email..."
-                                }
-                                className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                            />
-                        </div>
-                    </div>
+                    {/* Shared toolbar and search: preserve page-owned filtering */}
+                    <DashboardToolbar>
+                        <DashboardSearchField
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder={activeTab === "managers"
+                                ? "Search by manager name, email, customer company, or owner..."
+                                : "Search by customer company, owner, or email..."}
+                        />
+                    </DashboardToolbar>
 
                     {/* Tabs */}
-                    <div className="border-b border-slate-200">
-                        <div className="flex gap-6">
+                    <div className="ils-dashboard-tabs" role="tablist" aria-label="Account manager views">
+                        <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={() =>
                                     setActiveTab("managers")
                                 }
-                                className={`border-b-2 pb-3 text-sm font-medium transition ${activeTab === "managers"
-                                        ? "border-slate-900 text-slate-900"
-                                        : "border-transparent text-slate-500 hover:text-slate-700"
-                                    }`}
+                                className={`ils-dashboard-tab ${activeTab === "managers" ? "ils-dashboard-tab--active" : ""}`}
+                                role="tab"
+                                aria-selected={activeTab === "managers"}
                             >
                                 Account Managers
                             </button>
@@ -552,10 +555,9 @@ export default function AccountManagerAssignments() {
                                 onClick={() =>
                                     setActiveTab("customers")
                                 }
-                                className={`border-b-2 pb-3 text-sm font-medium transition ${activeTab === "customers"
-                                        ? "border-slate-900 text-slate-900"
-                                        : "border-transparent text-slate-500 hover:text-slate-700"
-                                    }`}
+                                className={`ils-dashboard-tab ${activeTab === "customers" ? "ils-dashboard-tab--active" : ""}`}
+                                role="tab"
+                                aria-selected={activeTab === "customers"}
                             >
                                 Unassigned Customers
                             </button>
@@ -566,7 +568,7 @@ export default function AccountManagerAssignments() {
                     {activeTab === "managers" && (
                         <div>
                             <div className="mb-3">
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-primary">
                                     Account Managers
                                 </h2>
 
@@ -575,7 +577,7 @@ export default function AccountManagerAssignments() {
                                 </p>
                             </div>
 
-                            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <div className="ils-dashboard-table-surface">
                                 {paginatedManagers.length === 0 ? (
                                     <div className="px-6 py-12 text-center">
                                         <Users className="mx-auto h-8 w-8 text-slate-300" />
@@ -590,9 +592,9 @@ export default function AccountManagerAssignments() {
                                     </div>
                                 ) : (
                                     <div className="overflow-x-auto">
-                                        <table className="w-full min-w-[900px]">
+                                        <table className="ils-dashboard-table w-full min-w-[900px]">
                                             <thead>
-                                                <tr className="border-b border-slate-200 bg-slate-50">
+                                                <tr className="border-b">
                                                     <th className="w-8 px-4 py-3"></th>
 
                                                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -621,7 +623,7 @@ export default function AccountManagerAssignments() {
                                                                 key={
                                                                     manager.accountManagerId
                                                                 }
-                                                                className="border-b border-slate-100 last:border-b-0"
+                                                                className="border-b last:border-b-0"
                                                             >
                                                                 <td
                                                                     colSpan={4}
@@ -668,7 +670,7 @@ export default function AccountManagerAssignments() {
                                                                             </div>
 
                                                                             <div>
-                                                                                <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                                                                <span className="inline-flex rounded-none bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
                                                                                     {
                                                                                         manager
                                                                                             .customers
@@ -698,7 +700,7 @@ export default function AccountManagerAssignments() {
                                                                                 0
                                                                             ) ===
                                                                                 0 ? (
-                                                                                <div className="rounded-lg border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
+                                                                                <div className="rounded-none border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
                                                                                     <Building2 className="mx-auto h-7 w-7 text-slate-300" />
 
                                                                                     <p className="mt-2 text-sm font-medium text-slate-700">
@@ -710,10 +712,10 @@ export default function AccountManagerAssignments() {
                                                                                     </p>
                                                                                 </div>
                                                                             ) : (
-                                                                                <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                                                                                <div className="overflow-x-auto rounded-none border border-slate-200 bg-white">
                                                                                     <table className="w-full min-w-[850px]">
                                                                                         <thead>
-                                                                                            <tr className="border-b border-slate-200 bg-slate-50">
+                                                                                            <tr className="border-b">
                                                                                                 <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                                                                                     Customer
                                                                                                 </th>
@@ -741,7 +743,7 @@ export default function AccountManagerAssignments() {
                                                                                                         key={
                                                                                                             customer.customerId
                                                                                                         }
-                                                                                                        className="border-b border-slate-100 last:border-b-0"
+                                                                                                        className="border-b last:border-b-0"
                                                                                                     >
                                                                                                         <td className="px-4 py-3">
                                                                                                             <div className="flex items-center gap-2">
@@ -763,20 +765,11 @@ export default function AccountManagerAssignments() {
 
                                                                                                         <td className="px-4 py-3">
                                                                                                             {customer.isDeleted ? (
-                                                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
-                                                                                                                    <XCircle className="h-3.5 w-3.5" />
-                                                                                                                    Deleted
-                                                                                                                </span>
+                                                                                                                <DashboardStatusBadge tone="negative">Deleted</DashboardStatusBadge>
                                                                                                             ) : customer.isActive ? (
-                                                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                                                                                                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                                                                                                    Active
-                                                                                                                </span>
+                                                                                                                <DashboardStatusBadge tone="positive">Active</DashboardStatusBadge>
                                                                                                             ) : (
-                                                                                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                                                                                                                    <XCircle className="h-3.5 w-3.5" />
-                                                                                                                    Suspended
-                                                                                                                </span>
+                                                                                                                <DashboardStatusBadge tone="negative">Inactive</DashboardStatusBadge>
                                                                                                             )}
                                                                                                         </td>
 
@@ -785,32 +778,25 @@ export default function AccountManagerAssignments() {
                                                                                                                 {!customer.isDeleted &&
                                                                                                                     customer.isActive && (
                                                                                                                         <>
-                                                                                                                            <button
+                                                                                                                                                                                                                                                        <button
                                                                                                                                 type="button"
-                                                                                                                                onClick={() =>
-                                                                                                                                    openChangeModal(
-                                                                                                                                        customer,
-                                                                                                                                        manager.accountManagerId
-                                                                                                                                    )
-                                                                                                                                }
-                                                                                                                                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                                                                                                id={`assignment-actions-${customer.customerId}`}
+                                                                                                                                aria-label="Assignment actions"
+                                                                                                                                aria-haspopup="menu"
+                                                                                                                                aria-expanded={openActionsId === customer.customerId}
+                                                                                                                                className="ils-dashboard-action-trigger"
+                                                                                                                                onClick={() => setOpenActionsId(current => current === customer.customerId ? null : customer.customerId)}
                                                                                                                             >
-                                                                                                                                <UserPlus className="h-3.5 w-3.5" />
-                                                                                                                                Change Manager
+                                                                                                                                <MoreHorizontal size={18} />
                                                                                                                             </button>
+                                                                                                                            {openActionsId === customer.customerId && (
+                                                                                                                                <DashboardActionMenu anchorId={`assignment-actions-${customer.customerId}`}>
+                                                                                                                                    <DashboardActionItem action="change-manager" onClick={() => { setOpenActionsId(null); openChangeModal(customer, manager.accountManagerId); }} />
+                                                                                                                                    <div className="ils-dashboard-action-separator" role="separator" />
+                                                                                                                                    <DashboardActionItem action="remove" onClick={() => { setOpenActionsId(null); openRemoveModal(customer); }} />
+                                                                                                                                </DashboardActionMenu>
+                                                                                                                            )}
 
-                                                                                                                            <button
-                                                                                                                                type="button"
-                                                                                                                                onClick={() =>
-                                                                                                                                    openRemoveModal(
-                                                                                                                                        customer
-                                                                                                                                    )
-                                                                                                                                }
-                                                                                                                                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                                                                                                                            >
-                                                                                                                                <UserMinus className="h-3.5 w-3.5" />
-                                                                                                                                Remove
-                                                                                                                            </button>
                                                                                                                         </>
                                                                                                                     )}
                                                                                                             </div>
@@ -859,7 +845,7 @@ export default function AccountManagerAssignments() {
                     {activeTab === "customers" && (
                         <div>
                             <div className="mb-3">
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-primary">
                                     Unassigned Customers
                                 </h2>
 
@@ -868,7 +854,7 @@ export default function AccountManagerAssignments() {
                                 </p>
                             </div>
 
-                            <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                            <div className="ils-dashboard-table-surface">
                                 {paginatedUnassignedCustomers.length ===
                                     0 ? (
                                     <div className="px-6 py-12 text-center">
@@ -886,7 +872,7 @@ export default function AccountManagerAssignments() {
                                     <div className="overflow-x-auto">
                                         <table className="w-full min-w-[800px]">
                                             <thead>
-                                                <tr className="border-b border-slate-200 bg-slate-50">
+                                                <tr className="border-b">
                                                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                                                         Customer
                                                     </th>
@@ -912,7 +898,7 @@ export default function AccountManagerAssignments() {
                                                             key={
                                                                 customer.customerId
                                                             }
-                                                            className="border-b border-slate-100 last:border-b-0"
+                                                            className="border-b last:border-b-0"
                                                         >
                                                             <td className="px-5 py-4">
                                                                 <div className="flex items-center gap-3">
@@ -934,38 +920,18 @@ export default function AccountManagerAssignments() {
 
                                                             <td className="px-5 py-4">
                                                                 {customer.isDeleted ? (
-                                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
-                                                                        <XCircle className="h-3.5 w-3.5" />
-                                                                        Deleted
-                                                                    </span>
+                                                                    <DashboardStatusBadge tone="negative">Deleted</DashboardStatusBadge>
                                                                 ) : customer.isActive ? (
-                                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                                                                        <CheckCircle2 className="h-3.5 w-3.5" />
-                                                                        Active
-                                                                    </span>
+                                                                    <DashboardStatusBadge tone="positive">Active</DashboardStatusBadge>
                                                                 ) : (
-                                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
-                                                                        <XCircle className="h-3.5 w-3.5" />
-                                                                        Suspended
-                                                                    </span>
+                                                                    <DashboardStatusBadge tone="negative">Inactive</DashboardStatusBadge>
                                                                 )}
                                                             </td>
 
                                                             <td className="px-5 py-4 text-right">
                                                                 {!customer.isDeleted &&
                                                                     customer.isActive && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() =>
-                                                                                openAssignModal(
-                                                                                    customer
-                                                                                )
-                                                                            }
-                                                                            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
-                                                                        >
-                                                                            <UserPlus className="h-3.5 w-3.5" />
-                                                                            Assign
-                                                                        </button>
+                                                                        <DashboardButton variant="primary" icon={UserPlus} onClick={() => openAssignModal(customer)}>Assign</DashboardButton>
                                                                     )}
                                                             </td>
                                                         </tr>
@@ -1001,12 +967,12 @@ export default function AccountManagerAssignments() {
 
             {/* Assign Modal */}
             {assignModalCustomer && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-                        <div className="border-b border-slate-200 px-6 py-5">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel">
+                        <div className="ils-dashboard-modal-header">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-primary">
                                         Assign Customer
                                     </h2>
 
@@ -1019,15 +985,15 @@ export default function AccountManagerAssignments() {
                                     type="button"
                                     onClick={closeAssignModal}
                                     disabled={assigning}
-                                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <XCircle className="h-5 w-5" />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="space-y-5 px-6 py-5">
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="ils-dashboard-modal-body">
+                            <div className="rounded-none border border-slate-200 bg-slate-50 px-4 py-3">
                                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                     Customer
                                 </p>
@@ -1060,7 +1026,7 @@ export default function AccountManagerAssignments() {
                                         )
                                     }
                                     disabled={assigning}
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                    className="ils-dashboard-modal-select"
                                 >
                                     <option value="">
                                         Select Account Manager
@@ -1086,7 +1052,7 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             {assignError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3">
                                     <p className="text-sm text-red-700">
                                         {assignError}
                                     </p>
@@ -1094,29 +1060,27 @@ export default function AccountManagerAssignments() {
                             )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                            <button
+                        <div className="ils-dashboard-modal-footer">
+                            <DashboardButton variant="secondary"
                                 type="button"
                                 onClick={closeAssignModal}
                                 disabled={assigning}
-                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
-                            </button>
+                            </DashboardButton>
 
-                            <button
+                            <DashboardButton variant="primary"
                                 type="button"
                                 onClick={handleAssign}
                                 disabled={
                                     assigning ||
                                     !selectedAccountManagerId
                                 }
-                                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {assigning
                                     ? "Assigning..."
                                     : "Assign Customer"}
-                            </button>
+                            </DashboardButton>
                         </div>
                     </div>
                 </div>
@@ -1124,12 +1088,12 @@ export default function AccountManagerAssignments() {
 
             {/* Change Account Manager Modal */}
             {changeModalCustomer && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-                        <div className="border-b border-slate-200 px-6 py-5">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel">
+                        <div className="ils-dashboard-modal-header">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-primary">
                                         Change Account Manager
                                     </h2>
 
@@ -1144,15 +1108,15 @@ export default function AccountManagerAssignments() {
                                         closeChangeModal
                                     }
                                     disabled={changing}
-                                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <XCircle className="h-5 w-5" />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="space-y-5 px-6 py-5">
-                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="ils-dashboard-modal-body">
+                            <div className="rounded-none border border-slate-200 bg-slate-50 px-4 py-3">
                                 <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
                                     Customer
                                 </p>
@@ -1185,7 +1149,7 @@ export default function AccountManagerAssignments() {
                                         )
                                     }
                                     disabled={changing}
-                                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                    className="ils-dashboard-modal-select"
                                 >
                                     <option value="">
                                         Select Account Manager
@@ -1217,7 +1181,7 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             {changeError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3">
                                     <p className="text-sm text-red-700">
                                         {changeError}
                                     </p>
@@ -1225,19 +1189,18 @@ export default function AccountManagerAssignments() {
                             )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                            <button
+                        <div className="ils-dashboard-modal-footer">
+                            <DashboardButton variant="secondary"
                                 type="button"
                                 onClick={
                                     closeChangeModal
                                 }
                                 disabled={changing}
-                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
-                            </button>
+                            </DashboardButton>
 
-                            <button
+                            <DashboardButton variant="primary"
                                 type="button"
                                 onClick={
                                     handleChangeAccountManager
@@ -1246,12 +1209,11 @@ export default function AccountManagerAssignments() {
                                     changing ||
                                     !selectedNewAccountManagerId
                                 }
-                                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {changing
                                     ? "Changing..."
                                     : "Change Manager"}
-                            </button>
+                            </DashboardButton>
                         </div>
                     </div>
                 </div>
@@ -1259,12 +1221,12 @@ export default function AccountManagerAssignments() {
 
             {/* Remove Account Manager Modal */}
             {removeModalCustomer && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-xl">
-                        <div className="border-b border-slate-200 px-6 py-5">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel">
+                        <div className="ils-dashboard-modal-header">
                             <div className="flex items-start justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-primary">
                                         Remove Account Manager
                                     </h2>
 
@@ -1277,15 +1239,15 @@ export default function AccountManagerAssignments() {
                                     type="button"
                                     onClick={closeRemoveModal}
                                     disabled={removing}
-                                    className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <XCircle className="h-5 w-5" />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="space-y-5 px-6 py-5">
-                            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4">
+                        <div className="ils-dashboard-modal-body">
+                            <div className="rounded-none border border-red-200 bg-red-50 px-4 py-4">
                                 <div className="flex items-start gap-3">
                                     <UserMinus className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
 
@@ -1314,7 +1276,7 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             {removeError && (
-                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+                                <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3">
                                     <p className="text-sm text-red-700">
                                         {removeError}
                                     </p>
@@ -1322,30 +1284,28 @@ export default function AccountManagerAssignments() {
                             )}
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
-                            <button
+                        <div className="ils-dashboard-modal-footer">
+                            <DashboardButton variant="secondary"
                                 type="button"
                                 onClick={closeRemoveModal}
                                 disabled={removing}
-                                className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancel
-                            </button>
+                            </DashboardButton>
 
-                            <button
+                            <DashboardButton variant="danger"
                                 type="button"
                                 onClick={
                                     handleRemoveAccountManager
                                 }
                                 disabled={removing}
-                                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <UserMinus className="h-4 w-4" />
 
                                 {removing
                                     ? "Removing..."
                                     : "Remove Manager"}
-                            </button>
+                            </DashboardButton>
                         </div>
                     </div>
                 </div>
@@ -1384,7 +1344,7 @@ function Pagination({
                     onClick={() =>
                         onPageChange(page - 1)
                     }
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-none border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     Previous
                 </button>
@@ -1399,8 +1359,8 @@ function Pagination({
                         onClick={() =>
                             onPageChange(pageNumber)
                         }
-                        className={`h-8 min-w-8 rounded-lg px-2 text-xs font-medium transition ${pageNumber === page
-                                ? "bg-slate-900 text-white"
+                        className={`h-8 min-w-8 rounded-none px-2 text-xs font-medium transition ${pageNumber === page
+                                ? "bg-brand-primary text-white"
                                 : "text-slate-600 hover:bg-slate-100"
                             }`}
                     >
@@ -1416,7 +1376,7 @@ function Pagination({
                     onClick={() =>
                         onPageChange(page + 1)
                     }
-                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-none border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     Next
                 </button>

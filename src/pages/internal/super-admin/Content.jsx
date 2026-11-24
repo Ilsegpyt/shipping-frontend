@@ -1,3 +1,5 @@
+import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import "../../../components/dashboard/management-heading.css";
 import { useEffect, useState } from "react";
 
 import contentService from "../../../services/contentService";
@@ -1136,13 +1138,7 @@ export default function Content() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            Content Management
-          </h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Manage website content and pages.
-          </p>
+          <ManagementHeaderTitle title="Content Management" description="Manage website content and pages." />
         </div>
 
         <button

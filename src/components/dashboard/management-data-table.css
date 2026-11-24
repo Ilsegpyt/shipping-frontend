@@ -1,0 +1,18 @@
+/* Management table visual system. All colors resolve to index.css tokens. */
+.ils-management-data-table { width: 100%; border-collapse: collapse; }
+.ils-management-data-table thead,
+.ils-management-data-table thead tr { background: var(--color-bg); }
+.ils-management-data-table thead th {
+  color: var(--color-primary);
+  font-size: .72rem;
+  font-weight: 700;
+  letter-spacing: .055em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ils-management-data-table tbody > tr:nth-child(odd) { background: var(--color-surface); }
+.ils-management-data-table tbody > tr:nth-child(even) { background: var(--color-surface-tint); }
+.ils-management-data-table tbody > tr:hover { background: var(--color-surface-blue); }
+.ils-management-data-table tbody > tr { border-color: var(--color-border); }
+.ils-management-data-table th,
+.ils-management-data-table td { border-radius: 0; }

@@ -1,0 +1,20 @@
+/* Shared management search input. Palette comes exclusively from index.css. */
+.ils-management-search-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 0.625rem 1rem 0.625rem 2.5rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+  transition: background-color .15s, border-color .15s;
+}
+.ils-management-search-input::placeholder { color: var(--color-brand-muted); }
+.ils-management-search-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+.ils-management-search-input:disabled { opacity: .6; cursor: not-allowed; }

@@ -1,3 +1,6 @@
+import { DashboardStatusBadge } from "../../../components/dashboard/DashboardUI";
+import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
+import "../../../components/dashboard/management-heading.css";
 import { useEffect, useState } from 'react';
 import {
   Anchor,
@@ -368,12 +371,7 @@ export default function OperationsLookups() {
       {/* Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Operations Master Data & Lookups
-          </h1>
-          <p className="text-sm text-slate-500">
-            Manage Ports, Destinations, Drivers, Shipping Lines, Transporters, and Vehicles.
-          </p>
+          <ManagementHeaderTitle title="Operations Master Data & Lookups" description="Manage Ports, Destinations, Drivers, Shipping Lines, Transporters, and Vehicles." />
         </div>
 
         <button
@@ -596,22 +594,9 @@ export default function OperationsLookups() {
                       {(() => {
                         const isItemActive = item.isActive !== false && !item.isDeleted;
                         return (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold ${isItemActive
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : 'bg-rose-50 text-rose-700 border border-rose-200'
-                              }`}
-                          >
-                            {isItemActive ? (
-                              <>
-                                <CheckCircle2 size={11} /> Active
-                              </>
-                            ) : (
-                              <>
-                                <XCircle size={11} /> Inactive
-                              </>
-                            )}
-                          </span>
+                          <DashboardStatusBadge tone={isItemActive ? 'positive' : 'negative'}>
+                            {isItemActive ? 'Active' : 'Inactive'}
+                          </DashboardStatusBadge>
                         );
                       })()}
                     </td>

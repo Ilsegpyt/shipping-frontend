@@ -1,0 +1,38 @@
+.ils-management-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  padding: .625rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  font-size: .875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  cursor: pointer;
+  transition: background-color .15s, border-color .15s;
+}
+.ils-management-button:disabled { opacity: .55; cursor: not-allowed; }
+.ils-management-button--primary {
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+.ils-management-button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+.ils-management-button--secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.ils-management-button--secondary:hover:not(:disabled) {
+  background: var(--color-surface-tint);
+}
+.ils-management-button--danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+.ils-management-button--danger:hover:not(:disabled) {
+  background: var(--color-danger-soft);
+}
