@@ -15,6 +15,7 @@ import {
     Database,
     Truck,
     Container,
+    Handshake,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -106,6 +107,12 @@ export const getInternalNavigation = (user) => [
                 path: "/customers",
                 permission: "customers.view",
                 icon: Building2,
+            },
+            {
+                label: "Transporters",
+                path: "/transporters",
+                permission: "transporters.transporters.view",
+                icon: Handshake,
             },
 
             // Roles

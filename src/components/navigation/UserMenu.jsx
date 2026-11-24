@@ -31,10 +31,6 @@ export default function UserMenu() {
                     <p className="text-sm font-semibold text-gray-900">
                         {user?.name}
                     </p>
-
-                    <p className="text-xs text-gray-500">
-                        {user?.roleName}
-                    </p>
                 </div>
 
                 <ChevronDown

@@ -68,16 +68,30 @@ api.interceptors.response.use(
     (response) => response,
 
     async (error) => {
-        // Handle rate limiting.
+        const originalRequest = error.config;
+
+        // Handle rate limiting (429) with automatic graceful retry
+        if (error.response?.status === 429 && originalRequest && !originalRequest._rateLimitRetried) {
+            originalRequest._rateLimitRetried = true;
+            const retryAfterHeader = error.response.headers?.['retry-after'];
+            const delayMs = retryAfterHeader && !isNaN(Number(retryAfterHeader))
+                ? Number(retryAfterHeader) * 1000
+                : 2000;
+
+            console.warn(`[RateLimit] 429 received for ${originalRequest.url}. Retrying automatically in ${delayMs}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+            return api(originalRequest);
+        }
+
+        // Handle rate limiting rejection if retry already failed or no config
         if (error.response?.status === 429) {
             error.message =
                 error.response.data?.message ||
-                'You have exceeded the allowed number of requests. Please try again later.';
+                'You have exceeded the allowed number of requests. Please try again in a few seconds.';
 
             return Promise.reject(error);
         }
-
-        const originalRequest = error.config;
 
         const isDeactivatedError =
             error.response?.status === 403 ||

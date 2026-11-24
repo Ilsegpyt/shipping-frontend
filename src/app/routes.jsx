@@ -70,6 +70,9 @@ import Quotations from "../pages/internal/super-admin/Quotations";
 import RecruitmentRequests from "../pages/internal/super-admin/RecruitmentRequests";
 import ContactInquiries from "../pages/internal/super-admin/ContactInquiries";
 import OperationsLookups from "../pages/internal/super-admin/OperationsLookups";
+import Transporters from "../pages/internal/transporters/Transporters";
+import TransporterDetails from "../pages/internal/transporters/TransporterDetails";
+import PortDetails from "../pages/internal/transporters/PortDetails";
 
 // Customer pages
 import CustomerDashboard from "../pages/customer/CustomerDashboard";
@@ -284,6 +287,14 @@ export default function AppRoutes() {
             element={<ProtectedRoute requiredPermission="customers.view" />}
           >
             <Route index element={<Customers />} />
+          </Route>
+          <Route
+            path="/transporters"
+            element={<ProtectedRoute requiredPermission="transporters.transporters.view" />}
+          >
+            <Route index element={<Transporters />} />
+            <Route path=":id" element={<TransporterDetails />} />
+            <Route path=":id/ports/:portCoverageId" element={<PortDetails />} />
           </Route>
           <Route path="/operations-lookups" element={<OperationsLookups />} />
           <Route path="/content" element={<Content />} />

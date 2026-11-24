@@ -19,7 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronsLeft,
-  ChevronsRight
+  ChevronsRight,
+  Building2
 } from 'lucide-react';
 import * as opsService from '../../../services/operationsService';
 import { extractApiErrorMessage } from '../../../utils/errorUtils';
@@ -28,6 +29,7 @@ const TABS = [
   { key: 'lines', label: 'Shipping Lines', icon: Ship, hasSubtype: false, description: 'Common shipping lines for FCL & FTL operations.' },
   { key: 'destinations', label: 'Destinations', icon: MapPin, hasSubtype: false, description: 'Common destinations and delivery areas.' },
   { key: 'ports', label: 'Ports & Airports', icon: Anchor, hasSubtype: true, fclLabel: 'Sea Ports (FCL)', ftlLabel: 'Airports (FTL)' },
+  { key: 'terminals', label: 'Air Terminals', icon: Building2, hasSubtype: false, description: 'Cargo terminals & facilities for FTL operations (e.g. CACC, Cairo Cargo Village).' },
   { key: 'drivers', label: 'Drivers', icon: User, hasSubtype: true, fclLabel: 'FCL Drivers', ftlLabel: 'FTL Drivers' },
   { key: 'transporters', label: 'Transporters', icon: Truck, hasSubtype: true, fclLabel: 'FCL Transporters', ftlLabel: 'FTL Transporters' },
   { key: 'vehicles', label: 'Vehicles', icon: Car, hasSubtype: true, fclLabel: 'FCL Vehicles', ftlLabel: 'FTL Vehicles' }
@@ -120,6 +122,8 @@ export default function OperationsLookups() {
         result = await opsService.getShippingLinesFull(params);
       } else if (tab === 'destinations') {
         result = await opsService.getDestinationsFull(params);
+      } else if (tab === 'terminals') {
+        result = await opsService.getFtlTerminalsFull(params);
       } else if (tab === 'ports') {
         result = currentSubType === 'ftl'
           ? await opsService.getFtlAirportsFull(params)
@@ -269,6 +273,8 @@ export default function OperationsLookups() {
         }
       } else if (activeTab === 'destinations') {
         await opsService.createDestinationItem({ name: formData.name });
+      } else if (activeTab === 'terminals') {
+        await opsService.createFtlTerminal({ name: formData.name });
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') {
           await opsService.createFtlDriver({
@@ -338,6 +344,11 @@ export default function OperationsLookups() {
         }
       } else if (activeTab === 'destinations') {
         await opsService.updateDestination(selectedItem.id, {
+          name: formData.name,
+          isActive: formData.isActive
+        });
+      } else if (activeTab === 'terminals') {
+        await opsService.updateFtlTerminal(selectedItem.id, {
           name: formData.name,
           isActive: formData.isActive
         });
@@ -414,6 +425,8 @@ export default function OperationsLookups() {
         else await opsService.deactivatePort(selectedItem.id);
       } else if (activeTab === 'destinations') {
         await opsService.deactivateDestination(selectedItem.id);
+      } else if (activeTab === 'terminals') {
+        await opsService.deactivateFtlTerminal(selectedItem.id);
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') await opsService.deactivateFtlDriver(selectedItem.id);
         else await opsService.deactivateDriver(selectedItem.id);
@@ -452,6 +465,8 @@ export default function OperationsLookups() {
         }
       } else if (activeTab === 'destinations') {
         await opsService.updateDestination(item.id, { name: item.name, isActive: true });
+      } else if (activeTab === 'terminals') {
+        await opsService.updateFtlTerminal(item.id, { name: item.name, isActive: true });
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') {
           await opsService.updateFtlDriver(item.id, {
@@ -514,7 +529,7 @@ export default function OperationsLookups() {
             Operations Master Data & Lookups
           </h1>
           <p className="text-sm text-slate-500">
-            Manage Ports & Airports, Destinations, Drivers, Shipping Lines, Transporters, and Vehicles.
+            Manage Ports & Airports, Air Terminals, Destinations, Drivers, Shipping Lines, Transporters, and Vehicles.
           </p>
         </div>
 
@@ -719,6 +734,7 @@ export default function OperationsLookups() {
                   )
                 )}
                 {activeTab === 'destinations' && <th className="px-6 py-3.5">Destination Name</th>}
+                {activeTab === 'terminals' && <th className="px-6 py-3.5">Terminal Name</th>}
                 {activeTab === 'drivers' && (
                   subType === 'ftl' ? (
                     <>
@@ -784,6 +800,9 @@ export default function OperationsLookups() {
                       </>
                     )}
                     {activeTab === 'destinations' && (
+                      <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
+                    )}
+                    {activeTab === 'terminals' && (
                       <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
                     )}
                     {activeTab === 'drivers' && (
@@ -1053,6 +1072,20 @@ export default function OperationsLookups() {
                 </div>
               )}
 
+              {activeTab === 'terminals' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. CACC Terminal, Cairo Cargo Village, EgyptAir Cargo Terminal"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
               {activeTab === 'drivers' && (
                 subType === 'ftl' ? (
                   <>
@@ -1311,6 +1344,19 @@ export default function OperationsLookups() {
               {activeTab === 'destinations' && (
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Destination Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {activeTab === 'terminals' && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
                   <input
                     type="text"
                     required

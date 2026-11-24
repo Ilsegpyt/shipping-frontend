@@ -158,6 +158,10 @@ export function createMockApi({
       await wait(latency);
       return { success: true };
     },
+    async takeOverOperation(ref) {
+      await wait(latency);
+      return { isLocked: true, lockedByName: user.displayName, lockedAtUtc: new Date().toISOString() };
+    },
     async deleteShipment(ref, version) {
       await wait(latency);
       const db = read();

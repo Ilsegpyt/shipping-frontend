@@ -101,9 +101,9 @@ export default function FtlDeliveredArchive({
       .then((res) => {
         if (!isMounted || !res.data) return;
         setLookups({
-          clients: res.data.clients || [],
-          truckers: res.data.truckers || [],
-          terminals: res.data.lines || res.data.terminals || [],
+          clients: res.data.client || res.data.clients || [],
+          truckers: res.data.trucker || res.data.truckers || [],
+          terminals: res.data.line || res.data.lines || res.data.terminals || [],
         });
       })
       .catch(() => {

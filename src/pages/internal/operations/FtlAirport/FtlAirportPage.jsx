@@ -103,12 +103,14 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
     try {
       const data = await getFtlOperationsCounts();
       if (data) {
-        setCounts({
+        const newCounts = {
           activeImportCount: data.activeImportCount ?? data.ActiveImportCount ?? 0,
           activeExportCount: data.activeExportCount ?? data.ActiveExportCount ?? 0,
           deliveredCount: data.deliveredCount ?? data.DeliveredCount ?? 0,
           inactiveCount: data.inactiveCount ?? data.InactiveCount ?? 0,
-        });
+        };
+        setCounts(newCounts);
+        dashboardRef.current?.setCounts?.(newCounts);
       }
     } catch (err) {
       console.error('[FTL] Failed to fetch operations counts:', err);
@@ -132,12 +134,15 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
 
   const handleReady = useCallback(() => {
     isReadyRef.current = true;
+    if (counts) {
+      dashboardRef.current?.setCounts?.(counts);
+    }
     if (defaultView === 'entry') {
       dashboardRef.current?.showDataEntry();
     } else if (defaultView === 'dashboard') {
       dashboardRef.current?.showDashboard();
     }
-  }, [defaultView]);
+  }, [defaultView, counts]);
 
   const handleLanguageChange = useCallback((newLang) => {
     setLanguage(newLang);

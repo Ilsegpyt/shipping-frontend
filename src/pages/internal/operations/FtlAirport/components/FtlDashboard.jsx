@@ -73,12 +73,16 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
         host: hostHooks,
         language: latest.current.language,
         theme: latest.current.theme,
+        counts: latest.current.counts,
         initialWorkspace: latest.current.initialWorkspace,
         onEvent(type, detail) {
           const p = latest.current;
           if (type === 'ready') {
             const slot = root.querySelector('#entryArchiveSlot');
             if (slot) setArchiveHost(slot);
+            if (latest.current.counts) {
+              engine?.setCounts?.(latest.current.counts);
+            }
             p.onReady?.(detail);
           }
           else if (type === 'change') p.onChange?.();
@@ -99,6 +103,9 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       return undefined;
     }
     engineRef.current = engine;
+    if (latest.current.counts) {
+      engine?.setCounts?.(latest.current.counts);
+    }
 
     return () => {
       engine.destroy();

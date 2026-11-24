@@ -313,7 +313,8 @@ export const getMarkup = () => `
     <div id="ftlConflictBody" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:20px;font-size:13px;line-height:1.6;color:#334155">
       <!-- Dynamic body -->
     </div>
-    <div id="ftlConflictFoot" style="display:flex;justify-content:flex-end;gap:10px">
+    <div id="ftlConflictFoot" style="display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap">
+      <button type="button" class="ebtn" id="ftlConflictCopyExcel" onclick="__FTL__.copyConflictData()" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">📊 <span id="ftlConflictCopyExcelTxt">نسخ كجدول إكسل</span></button>
       <button type="button" class="ebtn" onclick="__FTL__.closeM('ftlConflictModal')" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer">إغلاق</button>
       <button type="button" class="ebtn go" id="ftlConflictAction" style="padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;display:none"></button>
     </div>

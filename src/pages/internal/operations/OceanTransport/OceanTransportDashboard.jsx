@@ -382,7 +382,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   };
 
   useEffect(() => {
-    loadData();
+    // Initial mount / browser Refresh (F5): force fresh lookups from server
+    loadData(true);
   }, []);
 
   // Handle switching tabs with Lazy Loading
@@ -1128,6 +1129,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             vehicleId: resolvedVehicleId,
             carNumber: r.car?.trim() || null,
             driverId: resolvedDriverId,
+            driverName: r.driver?.trim() || null,
+            driverMobile: r.mob?.trim() || null,
             checkOutFromThePort: r.checkout
               ? (r.checkout.includes('T') ? r.checkout : `${r.checkout.slice(0, 10)}T00:00:00Z`)
               : null,
@@ -1282,6 +1285,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             vehicleId: resolvedVehicleId,
             carNumber: r.car?.trim() || null,
             driverId: resolvedDriverId,
+            driverName: r.driver?.trim() || null,
+            driverMobile: r.mob?.trim() || null,
             missingDocs: r.missDoc?.trim() || null,
             missingDocsReceivedDate: r.missRcv ? r.missRcv.slice(0, 10) : null,
           };

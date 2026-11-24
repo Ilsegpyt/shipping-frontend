@@ -19,9 +19,6 @@ export default function PortalLayout({
         }
     });
     const location = useLocation();
-    const isFclOrFtlPage = ['/transport', '/ocean-transport', '/ftl'].some((prefix) =>
-        location.pathname.startsWith(prefix)
-    );
 
     const toggleDesktopSidebar = () => {
         setIsDesktopCollapsed((prev) => {
@@ -73,7 +70,7 @@ export default function PortalLayout({
                     type="button"
                     onClick={toggleDesktopSidebar}
                     className="hidden md:flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
-                    title="طي القائمة الجانبية لتوسيع الشاشة (Collapse)"
+                    title="طي القائمة لتوسيع الشاشة (Collapse)"
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -102,7 +99,7 @@ export default function PortalLayout({
                     type="button"
                     onClick={toggleDesktopSidebar}
                     className="fixed left-0 top-24 z-40 hidden md:flex items-center justify-center w-6 h-12 bg-slate-900 text-slate-300 hover:text-white rounded-r-xl shadow-lg border-y border-r border-slate-700 hover:w-8 transition-all cursor-pointer group"
-                    title="إظهار القائمة الجانبية (Expand Sidebar)"
+                    title="إظهار القائمة (Expand Sidebar)"
                 >
                     <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </button>
@@ -157,19 +154,6 @@ export default function PortalLayout({
                         >
                             <Menu className="h-5 w-5" />
                         </button>
-
-                        {/* Desktop Expand Button when collapsed (hidden on FCL and FTL pages) */}
-                        {isDesktopCollapsed && !isFclOrFtlPage && (
-                            <button
-                                type="button"
-                                onClick={toggleDesktopSidebar}
-                                className="hidden md:inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition cursor-pointer shadow-2xs"
-                                title="إظهار القائمة الجانبية (Expand)"
-                            >
-                                <ChevronRight className="h-4 w-4 text-slate-500" />
-                                <span>القائمة الجانبية</span>
-                            </button>
-                        )}
                     </div>
 
                     <div className="flex min-w-0 items-center justify-end gap-2">

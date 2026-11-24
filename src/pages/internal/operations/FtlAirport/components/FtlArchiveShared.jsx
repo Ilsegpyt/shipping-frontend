@@ -735,6 +735,7 @@ export function FtlFullDetailsDrawer({ op, onClose, isDelivered = true, lang = '
   const client = fields.client || '—';
   const terminal = fields.line || '—';
   const dest = fields.dest || '—';
+  const fullAddress = fields.fullAddress || '—';
   const aod = fields.aod || '—';
   const clrType = fields.clrType || '—';
 
@@ -888,6 +889,10 @@ export function FtlFullDetailsDrawer({ op, onClose, isDelivered = true, lang = '
               <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
                 <span className="text-slate-400 block text-[10px]">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created Date'}</span>
                 <span className="font-bold text-slate-800">{op.day || '—'} · {op.at || '—'}</span>
+              </div>
+              <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 col-span-2 sm:col-span-3">
+                <span className="text-slate-400 block text-[10px]">{lang === 'ar' ? 'العنوان التفصيلي' : 'Full Address'}</span>
+                <span className="font-semibold text-slate-800 break-words">{fullAddress}</span>
               </div>
             </div>
           </div>

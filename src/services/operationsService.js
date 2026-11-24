@@ -64,68 +64,76 @@ export const clearLookupsCache = () => {
 export const getCachedLookups = async (forceRefresh = false) => {
   const now = Date.now();
 
-  // 1. Check in-memory cache first
+  // 1. Check in-memory cache first (used during active tab session)
   if (!forceRefresh && memoryLookupsCache && (now - memoryLookupsTimestamp < FIVE_HOURS_MS)) {
     return memoryLookupsCache;
   }
 
-  // 2. Check sessionStorage
-  if (!forceRefresh) {
+  // 2. Helper to fetch fresh lookups from server
+  const fetchFresh = async () => {
+    const [
+      customers,
+      shippingLines,
+      ports,
+      transporters,
+      drivers,
+      vehicles,
+      destinations,
+    ] = await Promise.all([
+      getOperationCustomers(),
+      getOperationShippingLines(),
+      getOperationPorts(),
+      getOperationTransporters(),
+      getOperationDrivers(),
+      getOperationVehicles(),
+      getOperationDestinations(),
+    ]);
+
+    const freshData = {
+      customers: Array.isArray(customers) ? customers : [],
+      shippingLines: Array.isArray(shippingLines) ? shippingLines : [],
+      ports: Array.isArray(ports) ? ports : [],
+      transporters: Array.isArray(transporters) ? transporters : [],
+      drivers: Array.isArray(drivers) ? drivers : [],
+      vehicles: Array.isArray(vehicles) ? vehicles : [],
+      destinations: Array.isArray(destinations) ? destinations : [],
+    };
+
+    memoryLookupsCache = freshData;
+    memoryLookupsTimestamp = Date.now();
+
     try {
-      const stored = sessionStorage.getItem(LOOKUPS_CACHE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.timestamp && (now - parsed.timestamp < FIVE_HOURS_MS) && parsed.data) {
-          memoryLookupsCache = parsed.data;
-          memoryLookupsTimestamp = parsed.timestamp;
-          return parsed.data;
-        }
-      }
-    } catch (e) { }
-  }
+      sessionStorage.setItem(
+        LOOKUPS_CACHE_KEY,
+        JSON.stringify({ timestamp: memoryLookupsTimestamp, data: freshData })
+      );
+    } catch (e) {
+      // If quota exceeded, in-memory cache still holds it
+    }
 
-  // 3. Fetch from server
-  const [
-    customers,
-    shippingLines,
-    ports,
-    transporters,
-    drivers,
-    vehicles,
-    destinations,
-  ] = await Promise.all([
-    getOperationCustomers(),
-    getOperationShippingLines(),
-    getOperationPorts(),
-    getOperationTransporters(),
-    getOperationDrivers(),
-    getOperationVehicles(),
-    getOperationDestinations(),
-  ]);
-
-  const freshData = {
-    customers: Array.isArray(customers) ? customers : [],
-    shippingLines: Array.isArray(shippingLines) ? shippingLines : [],
-    ports: Array.isArray(ports) ? ports : [],
-    transporters: Array.isArray(transporters) ? transporters : [],
-    drivers: Array.isArray(drivers) ? drivers : [],
-    vehicles: Array.isArray(vehicles) ? vehicles : [],
-    destinations: Array.isArray(destinations) ? destinations : [],
+    return freshData;
   };
 
-  memoryLookupsCache = freshData;
-  memoryLookupsTimestamp = now;
-
-  try {
-    sessionStorage.setItem(
-      LOOKUPS_CACHE_KEY,
-      JSON.stringify({ timestamp: now, data: freshData })
-    );
-  } catch (e) {
-    // If quota exceeded, in-memory cache still holds it
+  // If forceRefresh, fetch fresh from server immediately
+  if (forceRefresh) {
+    return await fetchFresh();
   }
 
-  return freshData;
+  // 3. Check sessionStorage
+  try {
+    const stored = sessionStorage.getItem(LOOKUPS_CACHE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed?.timestamp && (now - parsed.timestamp < FIVE_HOURS_MS) && parsed.data) {
+        memoryLookupsCache = parsed.data;
+        memoryLookupsTimestamp = parsed.timestamp;
+        return parsed.data;
+      }
+    }
+  } catch (e) { }
+
+  // 4. Fallback: Fetch from server
+  return await fetchFresh();
 };
 
 /**
@@ -254,6 +262,21 @@ export const takeOverOperation = async (id) => {
   return response.data;
 };
 
+export const lockFtlOperation = async (ref) => {
+  const response = await api.post(`/api/v1/ftl/operations/${encodeURIComponent(ref)}/lock`);
+  return response.data;
+};
+
+export const unlockFtlOperation = async (ref, force = false) => {
+  const response = await api.post(`/api/v1/ftl/operations/${encodeURIComponent(ref)}/unlock`, { force });
+  return response.data;
+};
+
+export const takeOverFtlOperation = async (ref) => {
+  const response = await api.post(`/api/v1/ftl/operations/${encodeURIComponent(ref)}/take-over`);
+  return response.data;
+};
+
 /**
  * Advanced Operations Search (Rule-based, Sorting, Pagination)
  * POST /api/operations/search
@@ -376,6 +399,12 @@ export const createFtlAirport = (data) => { clearLookupsCache(); return api.post
 export const updateFtlAirport = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ftl/airports/${id}`, data).then(r => r.data); };
 export const deactivateFtlAirport = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ftl/airports/${id}`).then(r => r.data); };
 
+export const getFtlTerminalsFull = (params = true) => api.get(`/api/operations/ftl/terminals${buildLookupQuery(params)}`).then(r => r.data);
+export const getFtlTerminalById = (id) => api.get(`/api/operations/ftl/terminals/${id}`).then(r => r.data);
+export const createFtlTerminal = (data) => { clearLookupsCache(); return api.post('/api/operations/ftl/terminals', data).then(r => r.data); };
+export const updateFtlTerminal = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ftl/terminals/${id}`, data).then(r => r.data); };
+export const deactivateFtlTerminal = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ftl/terminals/${id}`).then(r => r.data); };
+
 /**
  * FTL Operations Endpoints (Counts, Paged Lazy Load, Deliver, Reopen)
  */
@@ -401,9 +430,11 @@ export const getFtlOperationsCounts = async () => {
 
   // 2. Direct fast paged query fallback (guaranteed to match FtlDeliveredArchive and FtlInactiveArchive)
   try {
-    const [delRes, inactRes] = await Promise.allSettled([
+    const [delRes, inactRes, impRes, expRes] = await Promise.allSettled([
       getPagedFtlOperations({ page: 1, pageSize: 1, status: 'Delivered', onlyActive: false, isDeleted: false }),
       getPagedFtlOperations({ page: 1, pageSize: 1, isDeleted: true }),
+      getPagedFtlOperations({ page: 1, pageSize: 1, operationType: 'Import', onlyActive: true, isDeleted: false }),
+      getPagedFtlOperations({ page: 1, pageSize: 1, operationType: 'Export', onlyActive: true, isDeleted: false }),
     ]);
 
     const extractCount = (res) => {
@@ -417,14 +448,11 @@ export const getFtlOperationsCounts = async () => {
       return 0;
     };
 
-    const deliveredCount = extractCount(delRes);
-    const inactiveCount = extractCount(inactRes);
-
     return {
-      activeImportCount: 0,
-      activeExportCount: 0,
-      deliveredCount,
-      inactiveCount,
+      activeImportCount: extractCount(impRes),
+      activeExportCount: extractCount(expRes),
+      deliveredCount: extractCount(delRes),
+      inactiveCount: extractCount(inactRes),
     };
   } catch (err) {
     console.error('[FTL] Failed to fetch operations counts fallback:', err);

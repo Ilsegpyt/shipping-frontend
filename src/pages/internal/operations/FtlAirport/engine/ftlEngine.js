@@ -50,6 +50,8 @@ export function createFtlEngine(root, options = {}) {
   const __emit = (type, detail) => { if (!destroyed) { try { options.onEvent && options.onEvent(type, detail); } catch (e) { console.error(e); } } };
   const ILS = options.host || {};
   const __extra = {};
+  let LAST_COUNTS = options.counts ? { ...options.counts } : null;
+  const LOADED_DIRS = new Set();
   const printHost = document.createElement('div');
   printHost.className = 'ftl-root ftl-print-host';
   printHost.setAttribute('data-theme', 'light');
@@ -59,6 +61,10 @@ export function createFtlEngine(root, options = {}) {
   root.dir = 'ltr';
   root.lang = 'en';
   root.innerHTML = getMarkup();
+
+  if (options.counts) {
+    LAST_COUNTS = { ...options.counts };
+  }
 
   /* Keep root stacking context elevated above app sticky headers when any modal is open */
   const updateModalState = () => {
@@ -1660,6 +1666,7 @@ export function createFtlEngine(root, options = {}) {
       { k: 'hawb', h: 'HAWB', ar: 'البوليصة الفرعية', t: 'text', g: 'g2', w: 145 },
       { k: 'line', h: 'Air Terminal', ar: 'المحطة الجوية', t: 'list', g: 'g2', w: 170, src: 'line' },
       { k: 'dest', h: 'destination', ar: 'مكان التعتيق', t: 'list', g: 'g2', w: 190, src: 'dest' },
+      { k: 'fullAddress', h: 'Full Address', ar: 'العنوان التفصيلي', t: 'text', g: 'g2', w: 260 },
       { k: 'aod', h: 'AOD', ar: 'مطار الوصول', t: 'list', g: 'g2', w: 140, src: 'aod' },
       { k: 'free', h: 'free time till', ar: 'فترة السماح للشحنة', t: 'date', g: 'g2', w: 150 },
       { k: 'reqDate', h: 'Required Offloading Date', ar: 'تاريخ التعتيق المطلوب', t: 'date', g: 'g3', w: 200 },
@@ -1694,6 +1701,7 @@ export function createFtlEngine(root, options = {}) {
       { k: 'client', h: 'CLEINT', ar: 'اسم العميل', t: 'list', g: 'g1', w: 320, src: 'client' },
       { k: 'line', h: 'Air Terminal', ar: 'المحطة الجوية', t: 'list', g: 'g2', w: 170, src: 'line' },
       { k: 'dest', h: 'destination', ar: 'مكان التحميل', t: 'list', g: 'g2', w: 190, src: 'dest' },
+      { k: 'fullAddress', h: 'Full Address', ar: 'العنوان التفصيلي', t: 'text', g: 'g2', w: 260 },
       { k: 'pol', h: 'POL', ar: 'ميناء الشحن', t: 'list', g: 'g2', w: 140, src: 'pol' },
       { k: 'aod', h: 'AOD', ar: 'مطار الوصول', t: 'list', g: 'g2', w: 140, src: 'aod' },
       { k: 'pow', h: 'POW', ar: 'ميناء العبور', t: 'list', g: 'g2', opt: true, w: 140, src: 'pow' },
@@ -1719,10 +1727,10 @@ export function createFtlEngine(root, options = {}) {
     ]
   };
   /* Import merge defaults follow the approved sheet layout: only the listed shipment-level fields merge automatically. */
-  const IMPORT_DEFAULT_MERGED = new Set(['shipNo', 'vol', 'oper', 'cert', 'client', 'mawb', 'bl', 'hawb', 'line', 'dest', 'aod', 'free']);
+  const IMPORT_DEFAULT_MERGED = new Set(['shipNo', 'vol', 'oper', 'cert', 'client', 'mawb', 'bl', 'hawb', 'line', 'dest', 'fullAddress', 'aod', 'free']);
   COLS.Import.forEach(c => { if (!IMPORT_DEFAULT_MERGED.has(c.k)) c.uniq = false; });
   /* Export merge defaults follow the approved sheet layout: only the listed shipment-level fields merge automatically. */
-  const EXPORT_DEFAULT_MERGED = new Set(['shipNo', 'vol', 'oper', 'clrType', 'cert', 'customs', 'mawb', 'booking', 'hawb', 'client', 'line', 'dest', 'pol', 'aod', 'pow']);
+  const EXPORT_DEFAULT_MERGED = new Set(['shipNo', 'vol', 'oper', 'clrType', 'cert', 'customs', 'mawb', 'booking', 'hawb', 'client', 'line', 'dest', 'fullAddress', 'pol', 'aod', 'pow']);
   COLS.Export.forEach(c => { if (!EXPORT_DEFAULT_MERGED.has(c.k)) c.uniq = false; });
   for (const dir of ['Import', 'Export']) {
     const cols = COLS[dir], index = cols.findIndex(c => c.k === 'updates');
@@ -1732,7 +1740,7 @@ export function createFtlEngine(root, options = {}) {
   }
   const opFields = dir => COLS[dir].filter(c => c.op && c.k !== 'cut');
   const isMergeCol = c => !!c && c.uniq !== false;
-  const FIXED_MERGE = { Import: new Set(['aod', 'oper', 'client', 'cert', 'mawb', 'bl', 'shipNo', 'invRcv', 'line', 'vol']), Export: new Set(['clrType', 'oper', 'vol', 'shipNo', 'cert', 'customs', 'mawb', 'booking', 'client', 'line', 'pol', 'aod', 'pow', 'trucker', 'invRcv']) };
+  const FIXED_MERGE = { Import: new Set(['aod', 'oper', 'client', 'cert', 'mawb', 'bl', 'shipNo', 'invRcv', 'line', 'vol', 'fullAddress']), Export: new Set(['clrType', 'oper', 'vol', 'shipNo', 'cert', 'customs', 'mawb', 'booking', 'client', 'line', 'pol', 'aod', 'pow', 'trucker', 'invRcv', 'fullAddress']) };
   for (const dir of ['Import', 'Export']) COLS[dir].forEach(c => { if (FIXED_MERGE[dir].has(c.k)) c.uniq = true; });
   const canToggleMerge = (dir, c) => !!c && c.k === 'trucker';   /* Transporter is the only column with a manual Merge / Un-merge */
   const MASTER_SEED = { "oper": ["Fatma", "Hager", "Mohamed", "Nadia", "Sara", "Yasmin"], "client": ["CHEMICALS", "CHMICALS", "DICE", "DICOOMIX", "FUFENG", "GERMAN COMPANY", "GOLDEN SUN", "HENG TONG", "LANDMARK", "London Foods", "MIDEA", "MIDEA ELECTRICS", "MIDEA KITCHEN", "MIDEA Washing", "MIRACO"], "line": ["EgyptAir Cargo", "Cairo Cargo City", "EAS Cargo", "Lufthansa Cargo", "Emirates SkyCargo"], "aod": ["Cairo (CAI)", "Borg El Arab (HBE)", "Luxor (LXR)", "Aswan (ASW)", "Hurghada (HRG)", "Sharm El Sheikh (SSH)"], "pol": ["Cairo (CAI)", "Borg El Arab (HBE)"], "pow": [], "dest": ["10OF RAMDAN", "ABOR", "ABU RAWASH", "ALSDAT", "Borg Elarab", "Elkhanka", "Elsadat", "Elsalhya", "Helwan", "OCTOBER", "Qalyoub", "SOKHNA", "WADI ELNATRUN"], "trucker": ["ABU ELDAHAB", "ALDAMNHORY", "ALRihab", "Ayman", "Darwesh", "EURO", "Eldawlya", "MEDIL EAST", "Ranin", "TAQA"], "status": [] };
@@ -2234,11 +2242,29 @@ export function createFtlEngine(root, options = {}) {
   /* Soft Concurrency & Edit Mode state (matching FCL) */
   const ACTIVE_EDIT_SHIPS = new Set();
   const SAVING_SHIPS = new Set();
+  const OPENING_EDIT_SHIPS = new Set();
+  const CHECKING_LOCK_SHIPS = new Set();
+  let LAST_CONFLICT_SHIP = null;
   const OP_SNAPSHOTS = {};
   const LOCK_HEARTBEATS = {};
   let LAST_OPEN_MANIFEST = null;
   let MANIFEST_GRID_SCROLL = null;
   const ACTIVE_MODAL_EDIT = { ref: null, type: null, rowIndex: null };
+
+  const isLockActive = (lockedAtUtc, timeoutMinutes = 10) => {
+    if (!lockedAtUtc) return false;
+    const lockTime = new Date(lockedAtUtc).getTime();
+    if (isNaN(lockTime)) return false;
+    return (Date.now() - lockTime) < timeoutMinutes * 60 * 1000;
+  };
+
+  const isShipLockedByOther = (ship) => {
+    if (!ship || !ship.lockedByUserId) return false;
+    const myId = String(ILS.user?.id || OP_USER_ID || '').toLowerCase();
+    const lockerId = String(ship.lockedByUserId).toLowerCase();
+    if (myId && lockerId === myId) return false;
+    return isLockActive(ship.lockedAtUtc, 10);
+  };
 
   const isModalEditActive = (ref, rowIndex, type) => {
     if (!ref) return false;
@@ -2250,6 +2276,8 @@ export function createFtlEngine(root, options = {}) {
 
   const canMutateOperation = (ref) => {
     if (!ref) return false;
+    const ship = SHIPS[EDIR]?.[ref];
+    if (isShipLockedByOther(ship)) return false;
     return ACTIVE_EDIT_SHIPS.has(ref) || ACTIVE_MODAL_EDIT.ref === ref;
   };
 
@@ -2260,6 +2288,8 @@ export function createFtlEngine(root, options = {}) {
       const ship = rowShip(dir, i);
       const ref = ship?.ref;
       if (!ref || !ACTIVE_EDIT_SHIPS.has(ref)) return true; // Entire table is read-only until user clicks Edit!
+      if (ship?.status === 'Delivered') return true;
+      if (isShipLockedByOther(ship)) return true;
     }
     // Fields permanently locked:
     if (c.k === 'vol') return true; // Number of shipments cannot be edited after creation
@@ -2598,7 +2628,7 @@ export function createFtlEngine(root, options = {}) {
            shipment rows that truck carries, never merged across different trucks. */
   const MERGE_LEVEL = {
     trk: new Set(['trucker', 'truckType', 'cntr', 'driver', 'mob', 'gateIn', 'gateInT', 'gateOut', 'gateOutT', 'updates', 'updDate', 'transInv', 'arrDate', 'arrTime', 'reqDate', 'reqTime']),
-    shp: new Set(['shipNo', 'size', 'hawb', 'cert', 'customs', 'client', 'mawb', 'bl', 'booking', 'packages', 'weight', 'commodity', 'cbm', 'line', 'dest', 'aod', 'clrType', 'invRcv', 'missDoc', 'missRcv']),
+    shp: new Set(['shipNo', 'size', 'hawb', 'cert', 'customs', 'client', 'mawb', 'bl', 'booking', 'packages', 'weight', 'commodity', 'cbm', 'line', 'dest', 'fullAddress', 'aod', 'clrType', 'invRcv', 'missDoc', 'missRcv']),
     row: new Set(['loadedPackages', 'loadStatus']),
     op: new Set(['vol', 'movement', 'status', 'oper'])
   };
@@ -3366,6 +3396,11 @@ export function createFtlEngine(root, options = {}) {
   }
 
   function toggleStatusMenu(ref, btnEl) {
+    const ship = SHIPS[EDIR]?.[ref];
+    if (isShipLockedByOther(ship)) {
+      toast(AR() ? `العملية مقفولة حالياً بواسطة ${ship.lockedByName || 'مستخدم آخر'}` : `Operation is currently locked by ${ship.lockedByName || 'another user'}`, 'warning');
+      return;
+    }
     const existing = document.querySelector('.fcl-status-menu');
     if (existing) {
       const isSame = existing.dataset.ref === ref;
@@ -4437,7 +4472,14 @@ export function createFtlEngine(root, options = {}) {
 
     const actionsEl = $('truckManifestActions');
     if (actionsEl) {
-      if (!isEditMode) {
+      if (isShipLockedByOther(ship)) {
+        actionsEl.innerHTML = `
+          <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>${AR() ? `قيد التعديل (${esc(ship?.lockedByName || 'مستخدم آخر')})` : `Locked (${esc(ship?.lockedByName || 'Other')})`}</span>
+          </div>
+        `;
+      } else if (!isEditMode) {
         actionsEl.innerHTML = `
           <button type="button" class="manifest-action-btn edit" onclick="__FTL__.startEditFromManifest('${esc(ref)}', '${esc(plate)}', ${rowIndex}, 'truck')" title="${AR() ? 'تفعيل وضع التعديل لتعديل الحمولات وتوزيع الطرود' : 'Enable edit mode'}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:750;background:#ffffff;color:#0369a1;border:1.5px solid #7dd3fc;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.12);transition:all 0.15s">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -4785,7 +4827,14 @@ export function createFtlEngine(root, options = {}) {
 
     const actionsEl = $('shipmentBreakdownActions');
     if (actionsEl) {
-      if (!isEditMode) {
+      if (isShipLockedByOther(ship)) {
+        actionsEl.innerHTML = `
+          <div style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <span>${AR() ? `قيد التعديل (${esc(ship?.lockedByName || 'مستخدم آخر')})` : `Locked (${esc(ship?.lockedByName || 'Other')})`}</span>
+          </div>
+        `;
+      } else if (!isEditMode) {
         actionsEl.innerHTML = `
           <button type="button" class="manifest-action-btn edit" onclick="__FTL__.startEditFromManifest('${esc(ref)}', '${esc(shpIdent)}', ${rowIndex}, 'shipment')" title="${AR() ? 'تفعيل وضع التعديل لتوزيع طرود الشحنة على الشاحنات' : 'Enable edit mode'}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12.5px;font-weight:750;background:#ffffff;color:#166534;border:1.5px solid #86efac;cursor:pointer;box-shadow:0 2px 4px rgba(0,0,0,0.12);transition:all 0.15s">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -5014,7 +5063,7 @@ export function createFtlEngine(root, options = {}) {
     $('shipmentBreakdownModal').classList.add('open');
   }
   function activeOpCount(d) {
-    const hasLoaded = Object.keys(SHIPS[d] || {}).length > 0;
+    const hasLoaded = LOADED_DIRS.has(d) && Object.keys(SHIPS[d] || {}).length > 0;
     if (hasLoaded) {
       return Object.values(SHIPS[d]).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').length;
     }
@@ -5162,10 +5211,6 @@ export function createFtlEngine(root, options = {}) {
             extraBadges += `<span class="shared-truck-tag multi" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:9.5px;font-weight:750;padding:1px 5px;border-radius:5px;display:inline-flex;align-items:center;gap:3px" title="${AR() ? `هذه الشاحنة مشتركة في ${totalShares} شحنات [حصة ${shareIdx} من ${totalShares}]` : `Shared truck (${shareIdx} of ${totalShares})`}"><span class="shared-truck-dot" style="background:#2563eb;width:5px;height:5px;border-radius:50%;display:inline-block"></span>${AR() ? `مشتركة [${shareIdx}/${totalShares}]` : `Shared [${shareIdx}/${totalShares}]`}</span>`;
           }
 
-          const quickColoadBtn = (!isUnassignedTruck && ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > 1)
-            ? `<button type="button" class="quick-coload-btn" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v)}',${i})" title="${AR() ? 'تحميل مشترك / تقسيم حمولة العربة' : 'Co-load / Split truck load'}" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;font-size:9.5px;font-weight:750;border-radius:4px;padding:1px 5px;cursor:pointer">+ ${AR() ? 'مشترك' : 'Co-load'}</button>`
-            : '';
-
           const trkLoadedTotal = isUnassignedTruck ? 0 : ((Array.isArray(r._allocations) && r._allocations.length)
             ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
             : (parseInt(normalizeDigits(r.loadedPackages || '0'), 10) || 0));
@@ -5175,15 +5220,17 @@ export function createFtlEngine(root, options = {}) {
 
           const fallbackTrk = (trkNo && trkNo > 0) ? (AR() ? `شاحنة ${trkNo}` : `Truck ${trkNo}`) : '';
           const trkText = esc(displayValue(c, v)) || (fallbackTrk ? `<span style="font-weight:750;color:#0b4f7a">${fallbackTrk}</span>` : (isUnassignedTruck ? `<span style="color:#94a3b8;font-size:11px;font-style:italic">⏳ ${AR() ? 'في انتظار التعيين' : 'Unassigned'}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>'));
-          const manifestAction = isUnassignedTruck ? '' : `onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v || fallbackTrk)}',${i})"`;
-          const badgeClick = locked ? manifestAction : '';
-          const iconClick = !locked ? manifestAction : '';
-          const clickTitle = isUnassignedTruck ? (AR() ? 'في انتظار تعيين شاحنة لهذه الشحنة' : 'Unassigned') : (AR() ? 'عرض بيان حمولة العربية (Truck Manifest)' : 'View Truck Manifest');
-          const badgeTitle = locked ? clickTitle : (AR() ? 'انقر لتعديل رقم السيارة، أو اضغط على أيقونة 🚚 لفتح البيان' : 'Click to edit truck plate, or click 🚚 to open manifest');
+          const manifestTitle = isUnassignedTruck ? (AR() ? 'في انتظار تعيين شاحنة لهذه الشحنة' : 'Unassigned') : (AR() ? 'عرض بيان حمولة العربية (Truck Manifest)' : 'View Truck Manifest');
+          const manifestBtn = isUnassignedTruck
+            ? `<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#f1f5f9;border:1px solid #e2e8f0;color:#94a3b8;font-size:12px;opacity:0.6" title="${manifestTitle}">🚚</span>`
+            : `<button type="button" class="truck-manifest-icon-btn" onclick="event.stopPropagation();__FTL__.openTruckManifest('${esc(v || fallbackTrk)}',${i})" title="${manifestTitle}" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#e0f2fe;border:1px solid #7dd3fc;color:#0369a1;cursor:pointer;font-size:12px;line-height:1;transition:all 0.15s;padding:0;box-shadow:0 1px 2px rgba(0,0,0,0.04)" onmouseover="this.style.background='#bae6fd';this.style.borderColor='#38bdf8'" onmouseout="this.style.background='#e0f2fe';this.style.borderColor='#7dd3fc'">🚚</button>`;
+
+          const editPlateTitle = locked ? (AR() ? 'انقر على "تعديل" لتعديل بيانات العملية' : 'Click Edit to modify') : (AR() ? 'انقر لتعديل رقم لوحة الشاحنة' : 'Click to edit truck plate');
+          const platePill = `<span class="truck-plate-pill" title="${editPlateTitle}" style="display:inline-flex;align-items:center;padding:3px 9px;font-weight:750;border-radius:7px;font-size:12px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;cursor:pointer;white-space:nowrap;min-width:32px;justify-content:center"><span>${trkText}</span></span>`;
 
           const badgesRow = (extraBadges || trkLoadBadge) ? `<div style="display:flex;align-items:center;justify-content:center;gap:3px;flex-wrap:wrap;margin-top:2px">${extraBadges}${trkLoadBadge}</div>` : '';
 
-          inner = `<span class="cv" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:4px"><div style="display:inline-flex;align-items:center;justify-content:center;gap:5px"><span class="clickable-cell-badge" ${badgeClick} title="${badgeTitle}" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;font-weight:750;border-radius:9px;font-size:12px;background:#f0f9ff;border:1px solid #7dd3fc;color:#0369a1;cursor:pointer;white-space:nowrap"><span ${iconClick} style="cursor:pointer" title="${clickTitle}">🚚</span> <span>${trkText}</span></span>${quickColoadBtn}</div>${badgesRow}</span>`;
+          inner = `<span class="cv" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:4px"><div style="display:inline-flex;align-items:center;justify-content:center;gap:5px">${manifestBtn}${platePill}</div>${badgesRow}</span>`;
         } else if (c.k === 'loadedPackages') {
           const trkLoadedTotal = (Array.isArray(r._allocations) && r._allocations.length)
             ? r._allocations.reduce((sum, a) => sum + (parseInt(normalizeDigits(String(a.pkgs || '0')), 10) || 0), 0)
@@ -5242,7 +5289,10 @@ export function createFtlEngine(root, options = {}) {
         } else if (c.k === 'shipNo') {
           const valText = esc(displayValue(c, v));
           const disp = valText ? `<span>${valText}</span>` : '<span class="ph">' + (locked ? '' : '&nbsp;') + '</span>';
-          inner = `<span class="cv" style="display:flex;align-items:center;justify-content:center;width:100%"><span class="clickable-cell-badge" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض بيان توزيع الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}" style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:9px;font-weight:750;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b;cursor:pointer;white-space:nowrap">📦 ${disp}</span></span>`;
+          const editShipTitle = locked ? (AR() ? 'انقر على "تعديل" لتعديل بيانات العملية' : 'Click Edit to modify') : (AR() ? 'انقر لتعديل رقم الشحنة' : 'Click to edit shipment number');
+          const breakdownBtn = `<button type="button" class="shipment-breakdown-icon-btn" onclick="event.stopPropagation();__FTL__.openShipmentBreakdown('${esc(v)}',${i})" title="${AR() ? 'عرض وتوزيع طرود الشحنة (Shipment Breakdown)' : 'View Shipment Breakdown'}" style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;background:#f1f5f9;border:1px solid #cbd5e1;cursor:pointer;font-size:12px;line-height:1;transition:all 0.15s;padding:0;box-shadow:0 1px 2px rgba(0,0,0,0.04)" onmouseover="this.style.background='#e2e8f0';this.style.borderColor='#94a3b8'" onmouseout="this.style.background='#f1f5f9';this.style.borderColor='#cbd5e1'">📦</button>`;
+          const shipPill = `<span class="ship-number-pill" title="${editShipTitle}" style="display:inline-flex;align-items:center;padding:3px 9px;border-radius:7px;font-weight:750;font-size:12px;background:#f8fafc;border:1px solid #e2e8f0;color:#1e293b;cursor:pointer;white-space:nowrap;min-width:32px;justify-content:center">${disp}</span>`;
+          inner = `<span class="cv" style="display:flex;align-items:center;justify-content:center;width:100%"><div style="display:inline-flex;align-items:center;justify-content:center;gap:5px">${breakdownBtn}${shipPill}</div></span>`;
         } else if (c.k === 'loadStatus') {
           const isSGreater = ship && Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
           if (isSGreater) {
@@ -5384,7 +5434,11 @@ export function createFtlEngine(root, options = {}) {
         }
         const isEditingThis = ACTIVE_EDIT_SHIPS.has(ship.ref);
         const isSavingThis = SAVING_SHIPS.has(ship.ref);
+        const isOpeningThis = OPENING_EDIT_SHIPS.has(ship.ref);
+        const isCheckingThis = CHECKING_LOCK_SHIPS.has(ship.ref);
         const hasDraft = !isEditingThis && Boolean(localStorage.getItem('ftl_draft_' + ship.ref));
+        const isDeliveredStatus = ship.status === 'Delivered';
+        const lockedByOther = isShipLockedByOther(ship);
 
         let opControls = '';
         if (isEditingThis) {
@@ -5396,15 +5450,41 @@ export function createFtlEngine(root, options = {}) {
               ✕ ${AR() ? 'إلغاء' : 'Cancel'}
             </button>
           `;
+        } else if (isDeliveredStatus) {
+          opControls = `
+            <div style="display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%;max-width:95px;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:700;background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1" title="${AR() ? 'العملية مُسلّمة' : 'Operation is Delivered'}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span>${AR() ? 'مُسلّم' : 'Delivered'}</span>
+            </div>
+          `;
+        } else if (lockedByOther) {
+          opControls = `
+            <div class="fcl-locked-actions" style="display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;max-width:105px">
+              <button type="button" class="check-lock-btn" ${isCheckingThis ? 'disabled' : ''} onclick="event.stopPropagation();__FTL__.checkAndEditShipment('${esc(ship.ref)}')" style="display:inline-flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:100%;padding:5px 6px;border-radius:8px;font-size:11px;font-weight:700;background:#fffbeb;color:#92400e;border:1px solid #fcd34d;cursor:pointer;text-align:center;transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)" title="${AR() ? 'الشحنة مقفولة حالياً. انقر هنا للتحقق مما إذا كان زميلك قد انتهى والبدء في التعديل فوراً دون رفرش' : 'Locked. Click to check if lock is free and start editing immediately'}">
+                <div style="display:flex;align-items:center;gap:4px;font-weight:800;color:#92400e">
+                  ${isCheckingThis ? `<span class="spin">⏳</span>` : `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`}
+                  <span>${isCheckingThis ? (AR() ? 'جاري الفحص...' : 'Checking...') : (AR() ? 'قيد التعديل' : 'Locked')}</span>
+                </div>
+                <span style="font-size:10px;color:#b45309;font-weight:600;max-width:90px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ship.lockedByName || (AR() ? 'مستخدم آخر' : 'Other User'))}</span>
+                <span style="font-size:9px;color:#d97706;text-decoration:underline;text-decoration-style:dotted">${AR() ? 'انقر للتحقق والبدء' : 'Click to check & edit'}</span>
+              </button>
+              ${REOPEN_GRANTED ? `
+                <button type="button" class="takeover-btn" onclick="event.stopPropagation();__FTL__.takeOverShipment('${esc(ship.ref)}')" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;padding:4px 6px;border-radius:8px;font-size:10.5px;font-weight:700;background:#eef2ff;color:#4338ca;border:1px solid #c7d2fe;cursor:pointer;transition:all 0.15s" title="${AR() ? 'سحب القفل للبدء في التعديل بصفتك مدير' : 'Take over lock as manager'}">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+                  <span>${AR() ? 'فك القفل' : 'Take Over'}</span>
+                </button>
+              ` : ''}
+            </div>
+          `;
         } else {
           const draftBadge = hasDraft
             ? `<button type="button" onclick="event.stopPropagation();__FTL__.restoreDraft('${esc(ship.ref)}')" style="width:100%;max-width:95px;font-size:9.5px;font-weight:750;background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:2px 4px;border-radius:6px;cursor:pointer">📝 ${AR() ? 'استرجاع المسودة' : 'Restore Draft'}</button>`
             : '';
 
           opControls = `
-            <button type="button" class="start-edit-btn" onclick="event.stopPropagation();__FTL__.startEditShipment('${esc(ship.ref)}')" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%;max-width:95px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#f0f9ff;color:#0369a1;border:1px solid #7dd3fc;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-              <span>${AR() ? 'تعديل' : 'Edit'}</span>
+            <button type="button" class="start-edit-btn" ${isOpeningThis ? 'disabled' : ''} onclick="event.stopPropagation();__FTL__.startEditShipment('${esc(ship.ref)}')" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%;max-width:95px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#f0f9ff;color:#0369a1;border:1px solid #7dd3fc;cursor:${isOpeningThis ? 'not-allowed' : 'pointer'};opacity:${isOpeningThis ? '0.6' : '1'};transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)">
+              ${isOpeningThis ? `<span class="spin">⏳</span>` : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`}
+              <span>${isOpeningThis ? (AR() ? 'جاري الفتح...' : 'Opening...') : (AR() ? 'تعديل' : 'Edit')}</span>
             </button>
             <button type="button" class="delbtn" onclick="event.stopPropagation();__FTL__.delShip('${esc(ship.ref)}',${i})" title="${AR() ? 'حذف هذه الشحنة ونقلها للمحذوفات' : 'Delete shipment'}" style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;max-width:95px;padding:4.5px 8px;border-radius:8px;font-size:11.5px;font-weight:650;background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;cursor:pointer;transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
@@ -5550,15 +5630,23 @@ export function createFtlEngine(root, options = {}) {
     return `<input class="ed" type="${type}" ${c.t === 'time' || NUMERIC_ID_KEYS.has(c.k) ? 'inputmode="numeric"' : ''} ${c.t === 'time' ? 'placeholder="HH:mm (24h)" maxlength="5"' : ''} value="${esc(c.t === 'time' ? normTime(v) || v : v)}" data-r="${i}" data-k="${c.k}" autocomplete="off" spellcheck="false">`;
   }
   /* Soft Concurrency & Edit Lifecycle Management (Matching FCL) */
-  function showConflictModal({ title, message, conflictType, lockerName, onAction, actionLabel }) {
+  function showConflictModal({ title, message, conflictType, lockerName, onAction, actionLabel, shipRef }) {
     const modal = $('ftlConflictModal');
     if (!modal) {
       alert(message);
       return;
     }
+    if (shipRef && SHIPS[EDIR]?.[shipRef]) {
+      LAST_CONFLICT_SHIP = {
+        ref: shipRef,
+        dir: EDIR,
+        rows: (SHIPS[EDIR][shipRef].rows || []).map(idx => ({ ...ENTRY[EDIR][idx] }))
+      };
+    }
     const titleEl = $('ftlConflictTitle');
     const bodyEl = $('ftlConflictBody');
     const actBtn = $('ftlConflictAction');
+    const copyBtn = $('ftlConflictCopyExcel');
     if (titleEl) titleEl.textContent = title || (AR() ? 'تعارض في قفل العملية' : 'Lock Conflict');
     if (bodyEl) {
       bodyEl.innerHTML = `
@@ -5570,6 +5658,10 @@ export function createFtlEngine(root, options = {}) {
           : (AR() ? 'لا يمكن فتح وضع التعديل طالما العملية محجوزة بواسطة موظف آخر، منعاً لتضارب البيانات.' : 'Operation cannot be edited while locked by another user.')}
         </div>
       `;
+    }
+    if (copyBtn) {
+      copyBtn.style.display = LAST_CONFLICT_SHIP ? '' : 'none';
+      copyBtn.onclick = () => copyConflictData();
     }
     if (actBtn) {
       if (onAction && actionLabel) {
@@ -5584,66 +5676,121 @@ export function createFtlEngine(root, options = {}) {
     modal.classList.add('open');
   }
 
-  async function startEditShipment(ref) {
-    const dir = EDIR;
-    const ship = SHIPS[dir][ref];
-    if (!ship) return;
-
-    if (LIVE && ILS.api?.lockOperation) {
-      try {
-        const lockRes = await ILS.api.lockOperation(ref);
-        if (lockRes && lockRes.isLocked === false) {
-          showConflictModal({
-            title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
-            message: AR() ? `العملية (${ref}) مقفولة ومحجوزة للتعديل بواسطة: ${lockRes.lockedByName || 'موظف آخر'}` : `Operation is currently locked by ${lockRes.lockedByName || 'another user'}`,
-            conflictType: 'LOCKED_BY_OTHER',
-            lockerName: lockRes.lockedByName
-          });
-          return;
-        }
-      } catch (err) {
-        const errMsg = err?.message || String(err);
-        if (errMsg.includes('locked by') || errMsg.includes('مقفولة')) {
-          showConflictModal({
-            title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
-            message: errMsg,
-            conflictType: 'LOCKED_BY_OTHER'
-          });
-          return;
-        }
-        console.warn('lockOperation error:', err);
+  function copyConflictData() {
+    if (!LAST_CONFLICT_SHIP) return;
+    const { ref, dir, rows } = LAST_CONFLICT_SHIP;
+    if (!rows || !rows.length) return;
+    const activeCols = (COLS[dir] || []).filter(c => !['actions', 'sel'].includes(c.k));
+    const headers = activeCols.map(c => AR() ? (c.ar || c.h) : c.h);
+    const escapeTsv = val => {
+      const str = String(val ?? '');
+      if (str.includes('\t') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+        return `"${str.replace(/"/g, '""')}"`;
       }
+      return str;
+    };
+    const tsv = [
+      headers.map(escapeTsv).join('\t'),
+      ...rows.map(row => activeCols.map(c => escapeTsv(row[c.k] ?? '')).join('\t'))
+    ].join('\r\n');
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(tsv).then(() => {
+        toast(AR() ? '📋 تم نسخ بيانات الشحنة إلى الحافظة بنجاح (يمكنك لصقها في Excel)' : 'Copied shipment rows to clipboard as TSV for Excel', 'success');
+      }).catch(() => {
+        toast(AR() ? 'تعذر النسخ إلى الحافظة' : 'Failed to copy to clipboard', 'error');
+      });
+    } else {
+      toast(AR() ? 'الحافظة غير مدعومة في هذا المتصفح' : 'Clipboard not supported', 'error');
+    }
+  }
+
+  async function startEditShipment(ref, isAlreadyLocked = false) {
+    const dir = EDIR;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship) return;
+    if (OPENING_EDIT_SHIPS.has(ref)) return;
+
+    if (ship.status === 'Delivered') {
+      toast(AR() ? 'العملية مُسلّمة ولا يمكن تعديلها' : 'Operation is Delivered and cannot be edited', 'warning');
+      return;
     }
 
-    OP_SNAPSHOTS[ref] = JSON.parse(JSON.stringify(ship.rows.map(idx => ({ ...ENTRY[dir][idx] }))));
-    ACTIVE_EDIT_SHIPS.add(ref);
+    if (!isAlreadyLocked && isShipLockedByOther(ship)) {
+      toast(AR() ? `العملية مقفولة حالياً بواسطة (${ship.lockedByName || 'موظف آخر'})` : `Operation is currently locked by (${ship.lockedByName || 'another user'})`, 'warning');
+      return;
+    }
+
+    OPENING_EDIT_SHIPS.add(ref);
+    renderEntry();
 
     try {
-      const savedDraft = localStorage.getItem(`ftl_draft_${ref}`);
-      if (savedDraft) {
-        const parsed = JSON.parse(savedDraft);
-        if (Array.isArray(parsed) && parsed.length === ship.rows.length) {
-          toast(AR() ? `📝 تم استعادة مسودة محلية محفوظة تلقائياً للعملية (${ref})` : `Restored local draft for ${ref}`);
-          ship.rows.forEach((idx, rIdx) => {
-            if (parsed[rIdx]) ENTRY[dir][idx] = { ...parsed[rIdx] };
-          });
+      if (!isAlreadyLocked && LIVE && ILS.api?.lockOperation) {
+        try {
+          const lockRes = await ILS.api.lockOperation(ref);
+          if (lockRes && lockRes.isLocked === false) {
+            ship.lockedByName = lockRes.lockedByName;
+            showConflictModal({
+              title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
+              message: AR() ? `العملية (${ref}) مقفولة ومحجوزة للتعديل بواسطة: ${lockRes.lockedByName || 'موظف آخر'}` : `Operation is currently locked by ${lockRes.lockedByName || 'another user'}`,
+              conflictType: 'LOCKED_BY_OTHER',
+              lockerName: lockRes.lockedByName,
+              shipRef: ref
+            });
+            return;
+          }
+          if (lockRes) {
+            ship.lockedByUserId = lockRes.lockedByUserId || OP_USER_ID;
+            ship.lockedByName = lockRes.lockedByName || OP_USER;
+            ship.lockedAtUtc = lockRes.lockedAtUtc || new Date().toISOString();
+          }
+        } catch (err) {
+          const errMsg = err?.message || String(err);
+          if (errMsg.includes('locked by') || errMsg.includes('مقفولة')) {
+            showConflictModal({
+              title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
+              message: errMsg,
+              conflictType: 'LOCKED_BY_OTHER',
+              shipRef: ref
+            });
+            return;
+          }
+          console.warn('lockOperation error:', err);
         }
       }
-    } catch (e) { }
 
-    if (LOCK_HEARTBEATS[ref]) clearInterval(LOCK_HEARTBEATS[ref]);
-    LOCK_HEARTBEATS[ref] = setInterval(() => {
-      if (ACTIVE_EDIT_SHIPS.has(ref) && LIVE && ILS.api?.lockOperation) {
-        ILS.api.lockOperation(ref).catch(err => console.warn('Heartbeat lock renewal failed:', err));
-      }
-    }, 210000);
+      OP_SNAPSHOTS[ref] = JSON.parse(JSON.stringify(ship.rows.map(idx => ({ ...ENTRY[dir][idx] }))));
+      ACTIVE_EDIT_SHIPS.add(ref);
 
-    renderEntry();
-    toast(AR() ? `✓ تم حجز القفل وفتح وضع التعديل للعملية (${ref})` : `Edit mode activated for ${ref}`);
+      try {
+        const savedDraft = localStorage.getItem(`ftl_draft_${ref}`);
+        if (savedDraft) {
+          const parsed = JSON.parse(savedDraft);
+          if (Array.isArray(parsed) && parsed.length === ship.rows.length) {
+            toast(AR() ? `📝 تم استعادة مسودة محلية محفوظة تلقائياً للعملية (${ref})` : `Restored local draft for ${ref}`);
+            ship.rows.forEach((idx, rIdx) => {
+              if (parsed[rIdx]) ENTRY[dir][idx] = { ...parsed[rIdx] };
+            });
+          }
+        }
+      } catch (e) { }
 
-    const firstRow = ship.rows[0];
-    const firstCol = COLS[dir].find(c => !isLocked(dir, c, firstRow));
-    if (firstCol) setCursor(firstRow, firstCol.k, true);
+      if (LOCK_HEARTBEATS[ref]) clearInterval(LOCK_HEARTBEATS[ref]);
+      LOCK_HEARTBEATS[ref] = setInterval(() => {
+        if (ACTIVE_EDIT_SHIPS.has(ref) && LIVE && ILS.api?.lockOperation) {
+          ILS.api.lockOperation(ref).catch(err => console.warn('Heartbeat lock renewal failed:', err));
+        }
+      }, 210000);
+
+      toast(AR() ? `✓ تم حجز القفل وفتح وضع التعديل للعملية (${ref})` : `Edit mode activated for ${ref}`);
+
+      const firstRow = ship.rows[0];
+      const firstCol = COLS[dir].find(c => !isLocked(dir, c, firstRow));
+      if (firstCol) setCursor(firstRow, firstCol.k, true);
+    } finally {
+      OPENING_EDIT_SHIPS.delete(ref);
+      renderEntry();
+    }
   }
 
   async function saveShipmentEdits(ref) {
@@ -5684,7 +5831,8 @@ export function createFtlEngine(root, options = {}) {
         showConflictModal({
           title: AR() ? 'تعارض في حفظ البيانات' : 'Save Conflict',
           message: AR() ? 'قام موظف آخر بتعديل وحفظ هذه الشحنة أثناء عملك. تم إيقاف الحفظ لحماية البيانات، وتم الاحتفاظ بتعديلاتك في مسودة محلية بأمان.' : 'Another user modified and saved this shipment. Save stopped to prevent overwriting.',
-          conflictType: 'MODIFIED_BY_OTHER'
+          conflictType: 'MODIFIED_BY_OTHER',
+          shipRef: ref
         });
         SAVING_SHIPS.delete(ref);
         renderEntry();
@@ -5804,6 +5952,65 @@ export function createFtlEngine(root, options = {}) {
     return true;
   }
 
+  async function takeOverShipment(ref) {
+    const dir = EDIR;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship) return;
+    if (!REOPEN_GRANTED) {
+      toast(AR() ? 'غير مصرح لك بسحب القفل كمدير' : 'Unauthorized to take over lock', 'error');
+      return;
+    }
+    if (ship.status === 'Delivered') {
+      toast(AR() ? 'العملية مُسلّمة ولا يمكن سحب قفلها' : 'Operation is Delivered and cannot be taken over', 'warning');
+      return;
+    }
+    try {
+      if (LIVE && ILS.api?.takeOverOperation) {
+        await ILS.api.takeOverOperation(ref);
+      }
+      ship.lockedByUserId = OP_USER_ID;
+      ship.lockedByName = OP_USER;
+      ship.lockedAtUtc = new Date().toISOString();
+      toast(AR() ? 'تم سحب القفل بنجاح كمدير، وجاري فتح التعديل الآن' : 'Lock seized successfully as manager. Edit mode active.', 'success');
+      await startEditShipment(ref, true);
+    } catch (err) {
+      console.error('takeOver error:', err);
+      const errMsg = err?.message || String(err);
+      toast((AR() ? 'تعذر سحب القفل: ' : 'Failed to take over lock: ') + errMsg, 'error');
+    }
+  }
+
+  async function checkAndEditShipment(ref) {
+    const dir = EDIR;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship) return;
+    if (CHECKING_LOCK_SHIPS.has(ref)) return;
+    CHECKING_LOCK_SHIPS.add(ref);
+    renderEntry();
+    try {
+      if (LIVE && ILS.api?.lockOperation) {
+        const lockRes = await ILS.api.lockOperation(ref);
+        if (lockRes && lockRes.isLocked === false) {
+          ship.lockedByName = lockRes.lockedByName;
+          toast(AR() ? `الشحنة ما زالت قيد التعديل حالياً بواسطة (${lockRes.lockedByName || 'موظف آخر'}).` : `Operation is still being edited by (${lockRes.lockedByName || 'other user'}).`, 'warning');
+          return;
+        }
+      }
+      ship.lockedByUserId = OP_USER_ID;
+      ship.lockedByName = OP_USER;
+      ship.lockedAtUtc = new Date().toISOString();
+      toast(AR() ? 'تم تحرير الشحنة بنجاح! وضع التعديل متاح الآن.' : 'Lock acquired! Edit mode active.', 'success');
+      await startEditShipment(ref, true);
+    } catch (err) {
+      console.error('checkAndEditShipment error:', err);
+      const errMsg = err?.message || String(err);
+      toast(errMsg, 'warning');
+    } finally {
+      CHECKING_LOCK_SHIPS.delete(ref);
+      renderEntry();
+    }
+  }
+
   function restoreDraft(ref) {
     startEditShipment(ref);
   }
@@ -5814,6 +6021,16 @@ export function createFtlEngine(root, options = {}) {
     const ship = SHIPS[dir]?.[ref];
     if (!ship) return;
 
+    if (ship.status === 'Delivered') {
+      toast(AR() ? 'العملية مُسلّمة ولا يمكن تعديل توزيعها' : 'Operation is Delivered and cannot be edited', 'warning');
+      return;
+    }
+
+    if (isShipLockedByOther(ship)) {
+      toast(AR() ? `العملية مقفولة حالياً بواسطة (${ship.lockedByName || 'موظف آخر'})` : `Operation is currently locked by (${ship.lockedByName || 'another user'})`, 'warning');
+      return;
+    }
+
     if (LIVE && ILS.api?.lockOperation) {
       try {
         const lockRes = await ILS.api.lockOperation(ref);
@@ -5822,9 +6039,15 @@ export function createFtlEngine(root, options = {}) {
             title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
             message: AR() ? `العملية (${ref}) مقفولة ومحجوزة للتعديل بواسطة: ${lockRes.lockedByName || 'موظف آخر'}` : `Operation is currently locked by ${lockRes.lockedByName || 'another user'}`,
             conflictType: 'LOCKED_BY_OTHER',
-            lockerName: lockRes.lockedByName
+            lockerName: lockRes.lockedByName,
+            shipRef: ref
           });
           return;
+        }
+        if (lockRes) {
+          ship.lockedByUserId = lockRes.lockedByUserId || OP_USER_ID;
+          ship.lockedByName = lockRes.lockedByName || OP_USER;
+          ship.lockedAtUtc = lockRes.lockedAtUtc || new Date().toISOString();
         }
       } catch (err) {
         const errMsg = err?.message || String(err);
@@ -5832,7 +6055,8 @@ export function createFtlEngine(root, options = {}) {
           showConflictModal({
             title: AR() ? 'العملية قيد التعديل حالياً' : 'Operation Currently Locked',
             message: errMsg,
-            conflictType: 'LOCKED_BY_OTHER'
+            conflictType: 'LOCKED_BY_OTHER',
+            shipRef: ref
           });
           return;
         }
@@ -5903,6 +6127,10 @@ export function createFtlEngine(root, options = {}) {
   async function delShip(ref, i) {
     const dir = EDIR;
     const ship = SHIPS[dir]?.[ref];
+    if (isShipLockedByOther(ship)) {
+      toast(AR() ? `لا يمكن حذف العملية لأنها مقفولة حالياً بواسطة (${ship.lockedByName || 'موظف آخر'})` : `Cannot delete operation while locked by (${ship.lockedByName || 'another user'})`, 'warning');
+      return;
+    }
     const firstRow = ship?.rows?.[0] !== undefined ? ENTRY[dir]?.[ship.rows[0]] : null;
     __emit('requestDelete', {
       ref,
@@ -6566,6 +6794,7 @@ export function createFtlEngine(root, options = {}) {
           else if (c.k === 'client' && v) v = normClient(v) || String(v).trim();
           else if (c.k === 'line' && v) v = normLine(v) || String(v).trim();
           else if (['dest', 'aod', 'pod', 'pol', 'pow'].includes(c.k) && v) v = normSite(v) || String(v).trim();
+          else if (c.k === 'fullAddress' && v) v = String(v).trim();
           else if (c.k === 'trucker' && v) v = normTrucker(v) || String(v).trim();
           fields[c.k] = (v === null || v === undefined) ? '' : String(v);
         }
@@ -6758,7 +6987,7 @@ export function createFtlEngine(root, options = {}) {
     if (on) { if (VIEW_MODE === 'dash' && MODE() !== 'FCL') EDIR = MODE(); $('dash').style.display = 'none'; VIEW_MODE = 'entry'; renderEntry(); }
     headerFor(VIEW_MODE);
   }
-  function switchEntryDir(d) {
+  async function switchEntryDir(d) {
     if (EDITING && !commitEdit()) return;
     CURRENT_TAB = d;
     EDIR = d;
@@ -6774,11 +7003,22 @@ export function createFtlEngine(root, options = {}) {
     if (opWrap) opWrap.style.display = '';
     $('deliveredOpen')?.classList.remove('on');
     $('inactiveOpen')?.classList.remove('on');
+
+    if (LIVE && ILS.api?.load && !LOADED_DIRS.has(d)) {
+      try {
+        const payload = await ILS.api.load(d);
+        if (payload && Array.isArray(payload.shipments)) {
+          hydrateWorkspace(payload, d);
+          LOADED_DIRS.add(d);
+        }
+      } catch (err) {
+        console.error('Failed to lazy load ' + d + ' operations:', err);
+      }
+    }
+
     renderEntry();
     __emit('tabChange', d);
   }
-
-  let LAST_COUNTS = null;
 
   function setArchiveOperations(tab, ops, directionFilter = '', totalCount = null) {
     ARCHIVE_FILTER_DIR = directionFilter || '';
@@ -7295,6 +7535,7 @@ export function createFtlEngine(root, options = {}) {
     const optObj = typeof type === 'object' ? type : options;
     const duration = typeof optObj === 'number' ? optObj : (optObj?.duration || 10000);
 
+
     // Title matching FCL in Arabic & English
     const title = optObj?.title || (
       finalType === 'error'
@@ -7540,7 +7781,23 @@ export function createFtlEngine(root, options = {}) {
         }
         ROWMETA[d][idx] = { id: tr.id, ref: sh.ref, user: sh.enteredBy?.displayName || sh.enteredBy || '', day: sh.day || '', at: sh.at || '', updates: parsedUpdates };
       }
-      SHIPS[d][sh.ref] = { ref: sh.ref, dir: d, rows: idxs, per: Math.max(1, Number(sh.per) || 1), unmerged: new Set((sh.unmerged || []).filter(k => canToggleMerge(d, COLS[d].find(c => c.k === k)))), at: sh.at || '', day: sh.day || '', user: sh.enteredBy?.displayName || sh.enteredBy || '', status, targetTruckCount: sh.trk, initialShipCount: sh.shp };
+      SHIPS[d][sh.ref] = {
+        ref: sh.ref,
+        dir: d,
+        rows: idxs,
+        per: Math.max(1, Number(sh.per) || 1),
+        unmerged: new Set((sh.unmerged || []).filter(k => canToggleMerge(d, COLS[d].find(c => c.k === k)))),
+        at: sh.at || '',
+        day: sh.day || '',
+        user: sh.enteredBy?.displayName || sh.enteredBy || '',
+        status,
+        targetTruckCount: sh.trk,
+        initialShipCount: sh.shp,
+        lockedByUserId: sh.lockedByUserId || null,
+        lockedByName: sh.lockedByName || null,
+        lockedAtUtc: sh.lockedAtUtc || null,
+        isLocked: Boolean(sh.isLocked)
+      };
       layoutShip(d, SHIPS[d][sh.ref], { shpSpans: sh.shpSpans, trkSpans: sh.trkSpans, trkOf: sh.trkOf, shp: sh.shp, trk: sh.trk });
       const numShipments = (sh.shpSpans ? sh.shpSpans.length : (Number(sh.shp) || Number(sh.per) || 1));
       let savedAllocs = sh.allocations;
@@ -8653,6 +8910,7 @@ export function createFtlEngine(root, options = {}) {
     addShipmentTruckAllocation, updateShipmentTruckAllocation, removeShipmentTruckAllocation,
     openInactive, renderInactive, toggleAllInactive, toggleInactiveSelection, copyInactiveTrips, delShip,
     startEditShipment, saveShipmentEdits, cancelEditShipment, restoreDraft,
+    takeOverShipment, checkAndEditShipment, copyConflictData,
     startEditFromManifest, saveFromManifest, cancelFromManifest,
     pageInactive: (d) => { INACTIVE_PAGE += d; },
     stepOpShip: (d) => __extra.stepOpShip && __extra.stepOpShip(d),

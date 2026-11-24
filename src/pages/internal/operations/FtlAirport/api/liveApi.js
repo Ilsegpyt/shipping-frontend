@@ -24,18 +24,36 @@ export function createLiveApi({
       try {
         const res = await api.get('/api/v1/ftl/master');
         const data = res.data || {};
+        const client = data.client || data.clients || [];
+        const line = data.line || data.lines || [];
+        const dest = data.dest || data.destinations || [];
+        const aod = data.aod || data.pod || data.pods || [];
+        const pol = data.pol || data.pod || data.pods || data.aod || [];
+        const trucker = data.trucker || data.truckers || [];
+        const driver = data.driver || data.drivers || [];
+        const cntr = data.cntr || data.cntrs || data.vehicles || [];
+
         return {
           ...data,
-          client: data.client || data.clients || [],
-          line: data.line || data.lines || [],
-          dest: data.dest || data.destinations || [],
-          aod: data.aod || data.pod || data.pods || [],
-          pol: data.pol || data.pod || data.pods || data.aod || [],
-          trucker: data.trucker || data.truckers || [],
+          client,
+          clients: client,
+          line,
+          lines: line,
+          terminals: line,
+          dest,
+          destinations: dest,
+          aod,
+          pol,
+          trucker,
+          truckers: trucker,
+          driver,
+          drivers: driver,
+          cntr,
+          vehicles: cntr,
         };
       } catch (e) {
         console.warn('[FTL Airport] loadMaster fallback:', e);
-        return { clients: [], lines: [], truckers: [], destinations: [], drivers: [], vehicles: [] };
+        return { clients: [], lines: [], terminals: [], truckers: [], destinations: [], drivers: [], vehicles: [] };
       }
     },
 
@@ -53,9 +71,25 @@ export function createLiveApi({
       return res.data;
     },
 
-    async load() {
-      const res = await api.get('/api/v1/ftl/workspace');
-      return res.data;
+    async load(direction) {
+      const query = new URLSearchParams();
+      if (direction) query.append('operationType', direction);
+      query.append('onlyActive', 'true');
+      const res = await api.get(`/api/v1/ftl/workspace?${query.toString()}`);
+      const data = res.data;
+      if (direction && data && Array.isArray(data.shipments)) {
+        return {
+          ...data,
+          shipments: data.shipments.filter(s => s.direction === direction && s.status !== 'Delivered' && s.status !== 'Inactive')
+        };
+      }
+      if (data && Array.isArray(data.shipments)) {
+        return {
+          ...data,
+          shipments: data.shipments.filter(s => s.status !== 'Delivered' && s.status !== 'Inactive')
+        };
+      }
+      return data;
     },
 
     async updateOperation(ref, payload) {
@@ -116,8 +150,13 @@ export function createLiveApi({
       return res.data;
     },
 
-    async unlockOperation(ref) {
-      const res = await api.post(`/api/v1/ftl/operations/${enc(ref)}/unlock`);
+    async unlockOperation(ref, force = false) {
+      const res = await api.post(`/api/v1/ftl/operations/${enc(ref)}/unlock`, { force });
+      return res.data;
+    },
+
+    async takeOverOperation(ref) {
+      const res = await api.post(`/api/v1/ftl/operations/${enc(ref)}/take-over`);
       return res.data;
     },
 
@@ -132,8 +171,19 @@ export function createLiveApi({
     },
 
     async getCounts() {
-      const res = await api.get('/api/operations/ftl/counts');
-      return res.data;
+      try {
+        const res = await api.get('/api/operations/ftl/counts');
+        if (res?.data && (res.data.inactiveCount !== undefined || res.data.InactiveCount !== undefined)) {
+          return res.data;
+        }
+      } catch {}
+      try {
+        const res = await api.get('/api/v1/ftl/counts');
+        if (res?.data && (res.data.inactiveCount !== undefined || res.data.InactiveCount !== undefined)) {
+          return res.data;
+        }
+      } catch {}
+      return null;
     },
 
     async getPagedOperations(params = {}) {

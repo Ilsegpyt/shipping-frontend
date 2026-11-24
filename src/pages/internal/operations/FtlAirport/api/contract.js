@@ -20,6 +20,7 @@ export const OPTIONAL_METHODS = [
   'deleteShipment',          // (ref) => {}
   'lockOperation',           // (ref) => {isLocked, lockedByName, lockedAtUtc}
   'unlockOperation',         // (ref) => {unlocked}
+  'takeOverOperation',       // (ref) => {isLocked, lockedByName, lockedAtUtc}
   'getStatusAudits',         // (ref) => [{ id, beforeStatus, afterStatus, userId, userName, atUtc }]
   'addTruckUpdate',          // (ref, tripId, note) => {id, text, at, by}
 ];

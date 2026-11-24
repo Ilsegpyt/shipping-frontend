@@ -2466,18 +2466,19 @@ export default function DataEntryTab({
     if (onUpdateCell) {
       onUpdateCell(currentDir, rowId, 'driver', enteredVal);
     }
-    if (lookups.drivers?.length > 0) {
-      const clean = String(enteredVal).trim().toLowerCase();
-      const matched = lookups.drivers.find(
+    const clean = String(enteredVal || '').trim().toLowerCase();
+    let matched = null;
+    if (clean && lookups.drivers?.length > 0) {
+      matched = lookups.drivers.find(
         (d) =>
           (d.name && d.name.trim().toLowerCase() === clean) ||
           (d.driverNumber && d.driverNumber.trim().toLowerCase() === clean)
       );
-      if (matched && onUpdateCell) {
-        onUpdateCell(currentDir, rowId, 'driverId', matched.id);
-        if (matched.mobileNumber) {
-          onUpdateCell(currentDir, rowId, 'mob', matched.mobileNumber);
-        }
+    }
+    if (onUpdateCell) {
+      onUpdateCell(currentDir, rowId, 'driverId', matched ? matched.id : null);
+      if (matched?.mobileNumber) {
+        onUpdateCell(currentDir, rowId, 'mob', matched.mobileNumber);
       }
     }
   };

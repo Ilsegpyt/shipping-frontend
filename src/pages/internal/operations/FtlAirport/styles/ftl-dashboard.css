@@ -246,6 +246,33 @@
   background: rgba(11, 79, 122, .15)
 }
 
+.ftl-root .truck-manifest-icon-btn,
+.ftl-root .shipment-breakdown-icon-btn {
+  user-select: none;
+  cursor: pointer;
+  outline: none;
+}
+.ftl-root .truck-manifest-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+}
+.ftl-root .shipment-breakdown-icon-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.ftl-root .truck-plate-pill,
+.ftl-root .ship-number-pill {
+  transition: all 0.15s ease-in-out;
+}
+.ftl-root .truck-plate-pill:hover {
+  border-color: #38bdf8 !important;
+  background: #e0f2fe !important;
+}
+.ftl-root .ship-number-pill:hover {
+  border-color: #94a3b8 !important;
+  background: #f1f5f9 !important;
+}
+
 /* Inactive and Delivered Tab Badges (Matching FCL Design) */
 .ftl-root .etab.etab-delivered {
   background: rgba(236, 253, 245, 0.7) !important;
@@ -3989,22 +4016,27 @@ body.ftl-modal-open {
 .ftl-root .trip-quick-search-input {
   width: 100%;
   height: 32px;
-  padding-inline-start: 32px;
+  padding-inline-start: 34px;
   padding-inline-end: 62px;
-  background: var(--card, #ffffff);
-  border: 1px solid var(--line, #cbd5e1);
-  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--ink, #1e293b);
+  font-weight: 550;
+  color: #1e293b;
   outline: none;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.ftl-root .trip-quick-search-input::placeholder {
+  color: #475569;
+  font-weight: 500;
+  opacity: 1;
 }
 .ftl-root .trip-quick-search-input:focus {
   background: #ffffff;
   border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 .ftl-root .trip-search-icon {
   position: absolute;
@@ -4059,9 +4091,10 @@ body.ftl-modal-open {
 }
 
 .ftl-root .chipst.muted {
-  background: var(--mist);
-  color: var(--steel);
-  font-weight: 500
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 650;
+  border: 1px solid #e2e8f0;
 }
 
 .ftl-root .chipst.dirty {
@@ -6760,22 +6793,27 @@ body.ftl-modal-open {
 .ftl-root .trip-quick-search-input {
   width: 100%;
   height: 32px;
-  padding-inline-start: 32px;
+  padding-inline-start: 34px;
   padding-inline-end: 62px;
-  background: var(--card, #ffffff);
-  border: 1px solid var(--line, #cbd5e1);
-  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
   font-size: 12px;
-  font-weight: 500;
-  color: var(--ink, #1e293b);
+  font-weight: 550;
+  color: #1e293b;
   outline: none;
   transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+.ftl-root .trip-quick-search-input::placeholder {
+  color: #475569;
+  font-weight: 500;
+  opacity: 1;
 }
 .ftl-root .trip-quick-search-input:focus {
   background: #ffffff;
   border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 .ftl-root .trip-search-icon {
   position: absolute;
@@ -6830,9 +6868,10 @@ body.ftl-modal-open {
 }
 
 .ftl-root .chipst.muted {
-  background: var(--mist);
-  color: var(--steel);
-  font-weight: 500
+  background: #f1f5f9;
+  color: #334155;
+  font-weight: 650;
+  border: 1px solid #e2e8f0;
 }
 
 .ftl-root .chipst.dirty {
@@ -7229,7 +7268,21 @@ body.ftl-modal-open {
 .ftl-root .triprule .tripvalue {
   width: 200px;
   min-width: 170px;
-  max-width: 260px
+  max-width: 260px;
+  color: #0f172a;
+  font-weight: 600;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+}
+.ftl-root .triprule .tripvalue::placeholder {
+  color: #475569;
+  font-weight: 500;
+  opacity: 1;
+}
+.ftl-root .triprule .tripvalue:focus {
+  border-color: #0284c7;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .ftl-root .triprule .tripvalue-wrap {
@@ -7241,9 +7294,16 @@ body.ftl-modal-open {
 }
 
 .ftl-root .triprule .triptype {
-  font-size: 10px;
-  color: var(--steel);
-  white-space: nowrap
+  font-size: 11px;
+  font-weight: 700;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 2px 7px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
 }
 
 .ftl-root .triprule button,
