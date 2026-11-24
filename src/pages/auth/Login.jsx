@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, getMe } from '../../auth/authService';
 import { useAuth } from '../../auth/AuthContext';
+import { setAccessToken } from '../../services/api';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -18,15 +19,9 @@ export default function Login() {
         setLoading(true);
 
         try {
-            const { accessToken, refreshToken, accessTokenExpiresAtUtc } =
-                await login(email, password);
+            const { accessToken } = await login(email, password);
 
-            localStorage.setItem('accessToken', accessToken);
-            localStorage.setItem('refreshToken', refreshToken);
-            localStorage.setItem(
-                'accessTokenExpiresAtUtc',
-                accessTokenExpiresAtUtc
-            );
+            setAccessToken(accessToken);
 
             const currentUser = await getMe();
 

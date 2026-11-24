@@ -1,36 +1,6 @@
-
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import LoadingScreen from '../components/common/LoadingScreen';
-
-function getTokenType() {
-    const token = localStorage.getItem('accessToken');
-
-    if (!token) {
-        return null;
-    }
-
-    try {
-        const payload = token.split('.')[1];
-
-        if (!payload) {
-            return null;
-        }
-
-        const base64 = payload
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
-
-        const padded = base64.padEnd(
-            Math.ceil(base64.length / 4) * 4,
-            '='
-        );
-
-        return JSON.parse(atob(padded)).token_type ?? null;
-    } catch {
-        return null;
-    }
-}
 
 function getPortalHome(tokenType, user) {
     switch (tokenType) {
@@ -51,11 +21,10 @@ function getPortalHome(tokenType, user) {
             return '/dashboard';
 
         case 'customer':
-            return '/customer';
-
         case 'impersonation':
             return '/customer';
 
+        case 'subaccount':
         case 'sub_account':
             return '/subaccount';
 
@@ -73,16 +42,12 @@ export default function ProtectedRoute({ requiredPermission, customCheck }) {
 
     const location = useLocation();
 
-    const hasAccessToken = Boolean(
-        localStorage.getItem('accessToken')
-    );
-
     if (loading) {
         return <LoadingScreen />;
     }
 
     // Do not redirect to login when user verification fails temporarily.
-    if (authUnavailable && hasAccessToken) {
+    if (authUnavailable) {
         return (
             <div
                 role="alert"
@@ -120,6 +85,8 @@ export default function ProtectedRoute({ requiredPermission, customCheck }) {
         );
     }
 
+    const tokenType = user?.tokenType?.toLowerCase();
+
     const isSuperAdmin = Boolean(
         user?.isSuperAdmin ||
         user?.role === 'SuperAdmin' ||
@@ -127,7 +94,6 @@ export default function ProtectedRoute({ requiredPermission, customCheck }) {
     );
 
     if (customCheck && !customCheck(user)) {
-        const tokenType = getTokenType();
         const portalHome = getPortalHome(tokenType, user);
         return <Navigate to={portalHome} replace state={{ from: location }} />;
     }
@@ -137,7 +103,6 @@ export default function ProtectedRoute({ requiredPermission, customCheck }) {
         !isSuperAdmin &&
         !user.permissions?.includes(requiredPermission)
     ) {
-        const tokenType = getTokenType();
         const portalHome = getPortalHome(tokenType, user);
 
         if (location.pathname !== portalHome) {

@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+import LoadingScreen from "../components/common/LoadingScreen";
 import WebsiteLayout from "../layouts/WebsiteLayout";
 import ProtectedRoute from "../auth/ProtectedRoute";
 
@@ -84,48 +86,41 @@ import SubAccountDashboard from "../pages/sub-account/SubAccountDashboard";
 import SubAccountProfile from "../pages/sub-account/SubAccountProfile";
 
 function PortalGuard({ allowedTokenType, children }) {
-  const token = localStorage.getItem("accessToken");
+  const { user, loading } = useAuth();
 
-  if (!token) {
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  try {
-    const payload = token.split(".")[1];
+  const tokenType = user.tokenType?.toLowerCase();
+  const targetType = allowedTokenType?.toLowerCase();
 
-    if (!payload) {
-      return <Navigate to="/login" replace />;
-    }
-
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
-    const tokenType = JSON.parse(atob(padded)).token_type;
-
-    if (tokenType === allowedTokenType) {
-      return children;
-    }
-
-    // Impersonation uses the Customer Portal.
-    if (allowedTokenType === "customer" && tokenType === "impersonation") {
-      return children;
-    }
-
-    if (tokenType === "internal") {
-      return <Navigate to="/dashboard" replace />;
-    }
-
-    if (tokenType === "customer") {
-      return <Navigate to="/customer" replace />;
-    }
-
-    if (tokenType === "subaccount") {
-      return <Navigate to="/subaccount" replace />;
-    }
-
-    return <Navigate to="/login" replace />;
-  } catch {
-    return <Navigate to="/login" replace />;
+  if (tokenType === targetType) {
+    return children;
   }
+
+  // Impersonation uses the Customer Portal.
+  if (targetType === "customer" && tokenType === "impersonation") {
+    return children;
+  }
+
+  if (tokenType === "internal") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (tokenType === "customer") {
+    return <Navigate to="/customer" replace />;
+  }
+
+  if (tokenType === "subaccount" || tokenType === "sub_account") {
+    return <Navigate to="/subaccount" replace />;
+  }
+
+  return <Navigate to="/login" replace />;
 }
 
 export default function AppRoutes() {

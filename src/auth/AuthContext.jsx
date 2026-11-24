@@ -1,7 +1,6 @@
-
 import { createContext, useContext, useEffect, useState } from 'react';
-import { getMe } from './authService';
-import api from '../services/api';
+import { getMe, logout as logoutService } from './authService';
+import api, { getAccessToken, setAccessToken, refreshAccessToken } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -57,6 +56,8 @@ function clearSession() {
         'originalRefreshToken',
         'originalAccessTokenExpiresAtUtc',
     ].forEach((key) => localStorage.removeItem(key));
+    sessionStorage.clear();
+    setAccessToken(null);
 }
 
 export function AuthProvider({ children }) {
@@ -69,15 +70,19 @@ export function AuthProvider({ children }) {
         let active = true;
 
         async function loadUser() {
-            const accessToken = localStorage.getItem('accessToken');
-
-            if (!accessToken) {
-                setLoading(false);
-                return;
-            }
+            // Clean up any legacy localStorage tokens
+            [
+                'accessToken',
+                'refreshToken',
+                'accessTokenExpiresAtUtc',
+            ].forEach((key) => localStorage.removeItem(key));
 
             for (let attempt = 0; attempt <= MAX_AUTH_RETRIES; attempt++) {
                 try {
+                    if (!getAccessToken()) {
+                        await refreshAccessToken();
+                    }
+
                     const currentUser = await getMe();
 
                     if (!active) return;
@@ -85,7 +90,7 @@ export function AuthProvider({ children }) {
                     setUser(currentUser);
                     setAuthUnavailable(false);
 
-                    const auditLogId = localStorage.getItem(
+                    const auditLogId = sessionStorage.getItem(
                         'impersonationAuditLogId'
                     );
 
@@ -97,8 +102,6 @@ export function AuthProvider({ children }) {
                     return;
                 } catch (error) {
                     if (!active) return;
-
-                    console.error('Failed to load current user:', error);
 
                     if (isTemporaryError(error)) {
                         setAuthUnavailable(true);
@@ -117,20 +120,11 @@ export function AuthProvider({ children }) {
                         return;
                     }
 
-                    const isDeactivated =
-                        error.response?.status === 401 ||
-                        error.response?.status === 403 ||
-                        (error.response?.status === 400 &&
-                            typeof error.response?.data === 'string' &&
-                            error.response.data.toLowerCase().includes('deactivated'));
-
-                    if (isDeactivated) {
-                        clearSession();
-                        setUser(null);
-                        setImpersonation(null);
-                        setAuthUnavailable(false);
-                    }
-
+                    // 401 or not logged in
+                    clearSession();
+                    setUser(null);
+                    setImpersonation(null);
+                    setAuthUnavailable(false);
                     setLoading(false);
                     return;
                 }
@@ -145,29 +139,13 @@ export function AuthProvider({ children }) {
     }, []);
 
     const startImpersonation = async (response) => {
-        const currentAccessToken = localStorage.getItem('accessToken');
-        const currentRefreshToken = localStorage.getItem('refreshToken');
-        const currentAccessTokenExpiresAtUtc = localStorage.getItem(
-            'accessTokenExpiresAtUtc'
-        );
+        const currentAccessToken = getAccessToken();
 
-        localStorage.setItem('originalAccessToken', currentAccessToken ?? '');
-        localStorage.setItem('originalRefreshToken', currentRefreshToken ?? '');
-        localStorage.setItem(
-            'originalAccessTokenExpiresAtUtc',
-            currentAccessTokenExpiresAtUtc ?? ''
-        );
+        sessionStorage.setItem('originalAccessToken', currentAccessToken ?? '');
+        sessionStorage.setItem('originalRefreshToken', response.originalRefreshToken ?? '');
+        sessionStorage.setItem('impersonationAuditLogId', response.auditLogId);
 
-        localStorage.setItem('accessToken', response.accessToken);
-        localStorage.setItem('refreshToken', response.refreshToken);
-        localStorage.setItem(
-            'accessTokenExpiresAtUtc',
-            response.accessTokenExpiresAtUtc
-        );
-        localStorage.setItem(
-            'impersonationAuditLogId',
-            response.auditLogId
-        );
+        setAccessToken(response.accessToken);
 
         const currentUser = await getMe();
 
@@ -179,7 +157,7 @@ export function AuthProvider({ children }) {
     };
 
     const endImpersonation = async () => {
-        const auditLogId = localStorage.getItem('impersonationAuditLogId');
+        const auditLogId = sessionStorage.getItem('impersonationAuditLogId');
 
         if (!auditLogId) {
             return;
@@ -190,37 +168,21 @@ export function AuthProvider({ children }) {
                 auditLogId,
             });
         } finally {
-            const originalAccessToken = localStorage.getItem(
-                'originalAccessToken'
-            );
-            const originalRefreshToken = localStorage.getItem(
+            const originalRefreshToken = sessionStorage.getItem(
                 'originalRefreshToken'
             );
-            const originalAccessTokenExpiresAtUtc = localStorage.getItem(
-                'originalAccessTokenExpiresAtUtc'
-            );
 
-            if (originalAccessToken) {
-                localStorage.setItem('accessToken', originalAccessToken);
-            }
-
-            if (originalRefreshToken) {
-                localStorage.setItem('refreshToken', originalRefreshToken);
-            }
-
-            if (originalAccessTokenExpiresAtUtc) {
-                localStorage.setItem(
-                    'accessTokenExpiresAtUtc',
-                    originalAccessTokenExpiresAtUtc
-                );
-            }
-
-            localStorage.removeItem('impersonationAuditLogId');
-            localStorage.removeItem('originalAccessToken');
-            localStorage.removeItem('originalRefreshToken');
-            localStorage.removeItem('originalAccessTokenExpiresAtUtc');
+            sessionStorage.removeItem('impersonationAuditLogId');
+            sessionStorage.removeItem('originalAccessToken');
+            sessionStorage.removeItem('originalRefreshToken');
 
             try {
+                if (originalRefreshToken) {
+                    await refreshAccessToken(originalRefreshToken);
+                } else {
+                    await refreshAccessToken();
+                }
+
                 const currentUser = await getMe();
 
                 setUser(currentUser);
@@ -239,7 +201,13 @@ export function AuthProvider({ children }) {
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            await logoutService();
+        } catch (e) {
+            console.error('Logout error:', e);
+        }
+
         clearSession();
 
         setUser(null);

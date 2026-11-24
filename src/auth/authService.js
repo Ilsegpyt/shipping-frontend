@@ -1,4 +1,4 @@
-import api from '../services/api';
+import api, { refreshAccessToken } from '../services/api';
 
 export async function login(email, password) {
     const response = await api.post('/api/auth/login', {
@@ -9,18 +9,16 @@ export async function login(email, password) {
     return response.data;
 }
 
-export async function refresh() {
-    const refreshToken = localStorage.getItem('refreshToken');
+export async function refresh(fallbackRefreshToken) {
+    return await refreshAccessToken(fallbackRefreshToken);
+}
 
-    if (!refreshToken) {
-        throw new Error('No refresh token available.');
+export async function logout() {
+    try {
+        await api.post('/api/auth/logout');
+    } catch (e) {
+        console.error('Logout error:', e);
     }
-
-    const response = await api.post('/api/auth/refresh', {
-        refreshToken,
-    });
-
-    return response.data;
 }
 
 export async function getMe() {

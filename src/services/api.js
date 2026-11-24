@@ -1,15 +1,24 @@
 
 import axios from 'axios';
 
-
 const API_BASE_URL = (
     import.meta.env.VITE_API_BASE_URL ?? ''
 ).replace(/\/+$/, '');
 
-
 const api = axios.create({
     baseURL: API_BASE_URL,
+    withCredentials: true,
 });
+
+let inMemoryAccessToken = null;
+
+export const setAccessToken = (token) => {
+    inMemoryAccessToken = token;
+};
+
+export const getAccessToken = () => {
+    return inMemoryAccessToken;
+};
 
 let isRefreshing = false;
 let refreshSubscribers = [];
@@ -23,37 +32,27 @@ const onRefreshed = (accessToken) => {
     refreshSubscribers = [];
 };
 
-const refreshAccessToken = async () => {
-    const refreshToken = localStorage.getItem('refreshToken');
-
-    if (!refreshToken) {
-        throw new Error('No refresh token available.');
-    }
+export const refreshAccessToken = async (fallbackRefreshToken) => {
+    const payload = fallbackRefreshToken ? { refreshToken: fallbackRefreshToken } : {};
 
     const response = await axios.post(
         `${API_BASE_URL}/api/auth/refresh`,
-        { refreshToken }
+        payload,
+        { withCredentials: true }
     );
 
     const {
         accessToken,
-        refreshToken: newRefreshToken,
-        accessTokenExpiresAtUtc,
     } = response.data;
 
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', newRefreshToken);
-    localStorage.setItem(
-        'accessTokenExpiresAtUtc',
-        accessTokenExpiresAtUtc
-    );
+    setAccessToken(accessToken);
 
     return accessToken;
 };
 
 api.interceptors.request.use(
     (config) => {
-        const accessToken = localStorage.getItem('accessToken');
+        const accessToken = getAccessToken();
 
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
@@ -99,10 +98,8 @@ api.interceptors.response.use(
                 typeof error.response?.data === 'string' &&
                 error.response.data.toLowerCase().includes('deactivated'));
 
-        if (isDeactivatedError && localStorage.getItem('accessToken')) {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('accessTokenExpiresAtUtc');
+        if (isDeactivatedError) {
+            setAccessToken(null);
             window.location.href = '/login';
             return Promise.reject(error);
         }
@@ -147,10 +144,7 @@ api.interceptors.response.use(
             return api(originalRequest);
         } catch (refreshError) {
             refreshSubscribers = [];
-
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('accessTokenExpiresAtUtc');
+            setAccessToken(null);
 
             window.location.href = '/login';
 
