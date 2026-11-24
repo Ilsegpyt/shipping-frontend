@@ -39,6 +39,10 @@
   --color-success: var(--ils-green);
   --color-success-indicator: #00BC7D;
   --color-success-soft: var(--ils-green-light);
+  --color-success-border: color-mix(in srgb, var(--color-success) 25%, var(--color-surface));
+  --color-warning: #854D0E;
+  --color-warning-soft: #FFFBEB;
+  --color-warning-border: #FCD34D;
   --color-danger: var(--ils-red);
   --color-danger-soft: var(--ils-red-light);
   --color-danger-border: #FFC9C9;
@@ -67,6 +71,10 @@
   --color-brand-success: var(--color-success);
   --color-brand-success-indicator: var(--color-success-indicator);
   --color-brand-success-soft: var(--color-success-soft);
+  --color-brand-success-border: var(--color-success-border);
+  --color-brand-warning: var(--color-warning);
+  --color-brand-warning-soft: var(--color-warning-soft);
+  --color-brand-warning-border: var(--color-warning-border);
   --color-brand-danger: var(--color-danger);
   --color-brand-danger-soft: var(--color-danger-soft);
   --color-brand-danger-border: var(--color-danger-border);

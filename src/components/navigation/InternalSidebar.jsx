@@ -38,9 +38,9 @@ export default function InternalSidebar() {
     };
 
     return (
-        <nav className="relative flex h-[calc(100vh-5rem)] flex-col overflow-hidden">
+        <nav className="ils-internal-nav relative flex h-[calc(100vh-5rem)] flex-col overflow-hidden">
             {/* Navigation */}
-            <div className="relative z-10 space-y-6 overflow-y-auto p-4">
+            <div className="ils-branded-scrollbar relative z-10 min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
                 {internalNavigation.map((section) => {
                     const visibleItems = (section.items ?? []).filter((item) => {
                         if (item.subItems) {
@@ -186,15 +186,15 @@ export default function InternalSidebar() {
                 })}
             </div>
 
-            {/* World Map */}
+            {/* World Map
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-56 overflow-hidden">
                 <div
-                    className="absolute inset-0 bg-[url('/world-map.svg')] bg-bottom bg-no-repeat opacity-[0.08]"
+                    className="absolute inset-0 bg-[url('/map.svg')] bg-bottom bg-no-repeat opacity-[0.30]"
                     style={{ backgroundSize: '130% auto' }}
                 />
 
                 <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-slate-900 to-transparent" />
-            </div>
+            </div> */}
         </nav>
     );
 }

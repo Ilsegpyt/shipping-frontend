@@ -332,17 +332,17 @@ export default function RecruitmentRequests() {
                 <div className="ils-recruitment-stat">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-slate-500">
+                            <p className="text-sm font-medium text-brand-muted">
                                 Total Requests
                             </p>
 
-                            <p className="mt-2 text-2xl font-semibold text-slate-900">
+                            <p className="mt-2 text-2xl font-semibold text-brand-text">
                                 {totalCount}
                             </p>
                         </div>
 
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
-                            <UserPlus className="h-5 w-5 text-slate-700" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-surface-muted">
+                            <UserPlus className="h-5 w-5 text-brand-text" />
                         </div>
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export default function RecruitmentRequests() {
             {/* Main Card */}
             <DashboardTableSurface>
                 {/* Toolbar */}
-                <div className="flex flex-col gap-3 border-b border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 border-b border-brand-border p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="ils-dashboard-toolbar-search">
                         <Search className="ils-recruitment-search-icon" />
 
@@ -388,12 +388,12 @@ export default function RecruitmentRequests() {
 
                 {/* Error */}
                 {error && (
-                    <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="flex items-center justify-between border-b border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{error}</span>
                         <button
                             type="button"
                             onClick={() => setError('')}
-                            className="ml-3 font-bold text-red-500 hover:text-red-700"
+                            className="ml-3 font-bold text-brand-danger hover:text-brand-danger"
                             title="Close"
                         >
                             ✕
@@ -405,37 +405,37 @@ export default function RecruitmentRequests() {
                 <div className="overflow-x-auto">
                     <table className="min-w-full">
                         <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50">
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-brand-border bg-brand-surface-tint">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Department
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     CV
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Message
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Submitted
                                 </th>
 
-                                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
 
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-brand-border">
                             {loading ? (
                                 <tr>
                                     <td
                                         colSpan="5"
                                         className="px-5 py-12 text-center"
                                     >
-                                        <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                                        <div className="flex items-center justify-center gap-2 text-sm text-brand-muted">
                                             <RefreshCw className="h-4 w-4 animate-spin" />
                                             Loading recruitment requests...
                                         </div>
@@ -449,15 +449,15 @@ export default function RecruitmentRequests() {
                                         className="px-5 py-12 text-center"
                                     >
                                         <div className="flex flex-col items-center">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-                                                <UserPlus className="h-5 w-5 text-slate-400" />
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-surface-muted">
+                                                <UserPlus className="h-5 w-5 text-brand-neutral" />
                                             </div>
 
-                                            <p className="mt-3 text-sm font-medium text-slate-700">
+                                            <p className="mt-3 text-sm font-medium text-brand-text">
                                                 No recruitment requests found
                                             </p>
 
-                                            <p className="mt-1 text-sm text-slate-400">
+                                            <p className="mt-1 text-sm text-brand-neutral">
                                                 Try changing your search
                                                 criteria.
                                             </p>
@@ -511,11 +511,11 @@ export default function RecruitmentRequests() {
                                         return (
                                             <tr
                                                 key={id}
-                                                className="transition hover:bg-slate-50"
+                                                className="transition hover:bg-brand-surface-tint"
                                             >
                                                 <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
-                                                        <BriefcaseBusiness className="h-4 w-4 text-slate-400" />
+                                                    <div className="flex items-center gap-2 text-sm font-medium text-brand-text">
+                                                        <BriefcaseBusiness className="h-4 w-4 text-brand-neutral" />
 
                                                         {department}
                                                     </div>
@@ -523,10 +523,10 @@ export default function RecruitmentRequests() {
 
                                                 <td className="px-5 py-4">
                                                     <div className="flex max-w-[300px] items-center gap-2">
-                                                        <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                                                        <FileText className="h-4 w-4 shrink-0 text-brand-neutral" />
 
                                                         <span
-                                                            className="min-w-0 flex-1 truncate text-sm text-slate-700"
+                                                            className="min-w-0 flex-1 truncate text-sm text-brand-text"
                                                             title={
                                                                 cvFileName
                                                             }
@@ -544,7 +544,7 @@ export default function RecruitmentRequests() {
                                                                         application
                                                                     )
                                                                 }
-                                                                className="shrink-0 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                                                                className="shrink-0 rounded-md border border-brand-border bg-brand-surface px-2.5 py-1.5 text-xs font-medium text-brand-text transition hover:bg-brand-surface-tint"
                                                             >
                                                                 View CV
                                                             </button>
@@ -554,7 +554,7 @@ export default function RecruitmentRequests() {
 
                                                 <td className="px-5 py-4">
                                                     <p
-                                                        className="max-w-[350px] truncate text-sm text-slate-600"
+                                                        className="max-w-[350px] truncate text-sm text-brand-muted"
                                                         title={
                                                             message
                                                         }
@@ -564,8 +564,8 @@ export default function RecruitmentRequests() {
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                        <Calendar className="h-4 w-4 text-slate-400" />
+                                                    <div className="flex items-center gap-2 text-sm text-brand-muted">
+                                                        <Calendar className="h-4 w-4 text-brand-neutral" />
 
                                                         {formatDate(
                                                             createdAt
@@ -581,7 +581,7 @@ export default function RecruitmentRequests() {
                                                                 application
                                                             )
                                                         }
-                                                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                                                        className="inline-flex h-9 items-center gap-2 rounded-lg border border-brand-border bg-brand-surface px-3 text-sm font-medium text-brand-text transition hover:bg-brand-surface-tint"
                                                     >
                                                         <Eye className="h-4 w-4" />
 
@@ -600,14 +600,14 @@ export default function RecruitmentRequests() {
                 {/* Pagination */}
                 {!loading &&
                     filteredApplications.length > 0 && (
-                        <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
-                            <p className="text-sm text-slate-500">
+                        <div className="flex items-center justify-between border-t border-brand-border px-5 py-4">
+                            <p className="text-sm text-brand-muted">
                                 Page{' '}
-                                <span className="font-medium text-slate-700">
+                                <span className="font-medium text-brand-text">
                                     {page}
                                 </span>{' '}
                                 of{' '}
-                                <span className="font-medium text-slate-700">
+                                <span className="font-medium text-brand-text">
                                     {totalPages}
                                 </span>
                             </p>
@@ -619,7 +619,7 @@ export default function RecruitmentRequests() {
                                         goToPreviousPage
                                     }
                                     disabled={page <= 1}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-border bg-brand-surface text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -630,7 +630,7 @@ export default function RecruitmentRequests() {
                                     disabled={
                                         page >= totalPages
                                     }
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-brand-border bg-brand-surface text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
@@ -658,11 +658,11 @@ export default function RecruitmentRequests() {
                             {/* Modal Header */}
                             <div className="ils-dashboard-modal-header flex items-center justify-between gap-4">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Recruitment Request Details
                                     </h2>
 
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Review the submitted recruitment
                                         request.
                                     </p>
@@ -671,7 +671,7 @@ export default function RecruitmentRequests() {
                                 <button
                                     type="button"
                                     onClick={closeDetails}
-                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-text"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -681,19 +681,19 @@ export default function RecruitmentRequests() {
                             <div className="ils-recruitment-modal-body">
                                 {detailsLoading ? (
                                     <div className="flex items-center justify-center py-16">
-                                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <div className="flex items-center gap-2 text-sm text-brand-muted">
                                             <RefreshCw className="h-4 w-4 animate-spin" />
 
                                             Loading request details...
                                         </div>
                                     </div>
                                 ) : detailsError ? (
-                                    <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    <div className="flex items-center justify-between rounded-xl border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                                         <span>{detailsError}</span>
                                         <button
                                             type="button"
                                             onClick={() => setDetailsError('')}
-                                            className="ml-3 font-bold text-red-500 hover:text-red-700"
+                                            className="ml-3 font-bold text-brand-danger hover:text-brand-danger"
                                             title="Close"
                                         >
                                             ✕
@@ -703,21 +703,21 @@ export default function RecruitmentRequests() {
                                     <div className="space-y-6">
                                         {/* Application Information */}
                                         <div>
-                                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-muted">
                                                 Application Information
                                             </h3>
 
                                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="rounded-xl border border-brand-border bg-brand-surface-tint p-4">
                                                     <div className="flex items-center gap-2">
-                                                        <BriefcaseBusiness className="h-4 w-4 text-slate-400" />
+                                                        <BriefcaseBusiness className="h-4 w-4 text-brand-neutral" />
 
-                                                        <p className="text-xs text-slate-400">
+                                                        <p className="text-xs text-brand-neutral">
                                                             Department
                                                         </p>
                                                     </div>
 
-                                                    <p className="mt-2 font-medium text-slate-900">
+                                                    <p className="mt-2 font-medium text-brand-text">
                                                         {formatValue(
                                                             getValue(
                                                                 selectedApplication,
@@ -728,16 +728,16 @@ export default function RecruitmentRequests() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                                <div className="rounded-xl border border-brand-border bg-brand-surface-tint p-4">
                                                     <div className="flex items-center gap-2">
-                                                        <FileText className="h-4 w-4 text-slate-400" />
+                                                        <FileText className="h-4 w-4 text-brand-neutral" />
 
-                                                        <p className="text-xs text-slate-400">
+                                                        <p className="text-xs text-brand-neutral">
                                                             CV File
                                                         </p>
                                                     </div>
 
-                                                    <p className="mt-2 break-all font-medium text-slate-900">
+                                                    <p className="mt-2 break-all font-medium text-brand-text">
                                                         {formatValue(
                                                             getValue(
                                                                 selectedApplication,
@@ -759,7 +759,7 @@ export default function RecruitmentRequests() {
                                                                         selectedApplication
                                                                     )
                                                                 }
-                                                                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                                                                className="mt-3 inline-flex items-center gap-2 rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-sm font-medium text-brand-text transition hover:bg-brand-surface-muted"
                                                             >
                                                                 <Eye className="h-4 w-4" />
                                                                 View CV
@@ -772,15 +772,15 @@ export default function RecruitmentRequests() {
                                         {/* Message */}
                                         <div>
                                             <div className="mb-3 flex items-center gap-2">
-                                                <MessageSquare className="h-4 w-4 text-slate-500" />
+                                                <MessageSquare className="h-4 w-4 text-brand-muted" />
 
-                                                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                                <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-muted">
                                                     Message
                                                 </h3>
                                             </div>
 
-                                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                                                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                            <div className="rounded-xl border border-brand-border bg-brand-surface-tint p-4">
+                                                <p className="whitespace-pre-wrap text-sm leading-6 text-brand-text">
                                                     {formatValue(
                                                         getValue(
                                                             selectedApplication,
@@ -793,13 +793,13 @@ export default function RecruitmentRequests() {
                                         </div>
 
                                         {/* Meta */}
-                                        <div className="border-t border-slate-200 pt-5">
-                                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <div className="border-t border-brand-border pt-5">
+                                            <div className="flex items-center gap-2 text-sm text-brand-muted">
                                                 <Calendar className="h-4 w-4" />
 
                                                 <span>
                                                     Submitted:{' '}
-                                                    <span className="font-medium text-slate-700">
+                                                    <span className="font-medium text-brand-text">
                                                         {formatDateTime(
                                                             getValue(
                                                                 selectedApplication,

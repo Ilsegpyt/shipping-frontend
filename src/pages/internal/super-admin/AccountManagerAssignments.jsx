@@ -419,8 +419,8 @@ export default function AccountManagerAssignments() {
 
             {/* Loading */}
             {loading && (
-                <div className="rounded-none border border-slate-200 bg-white px-6 py-12 text-center">
-                    <p className="text-sm text-slate-500">
+                <div className="rounded-none border border-brand-border bg-brand-surface px-6 py-12 text-center">
+                    <p className="text-sm text-brand-muted">
                         Loading account managers...
                     </p>
                 </div>
@@ -428,14 +428,14 @@ export default function AccountManagerAssignments() {
 
             {/* Error */}
             {!loading && error && (
-                <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 px-5 py-4 shadow-xs transition">
-                    <p className="text-sm text-red-700">
+                <div className="flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft px-5 py-4 shadow-xs transition">
+                    <p className="text-sm text-brand-danger">
                         {error}
                     </p>
                     <button
                         type="button"
                         onClick={() => setError("")}
-                        className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded-none cursor-pointer"
+                        className="text-brand-danger hover:text-brand-danger font-bold px-2 py-0.5 rounded-none cursor-pointer"
                         title="إغلاق"
                     >
                         ✕
@@ -448,18 +448,18 @@ export default function AccountManagerAssignments() {
                     {/* Summary */}
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                         {/* Account Managers */}
-                        <div className="rounded-none border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-brand-border bg-brand-surface p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
-                                    <Users className="h-5 w-5 text-slate-700" />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-brand-surface-muted">
+                                    <Users className="h-5 w-5 text-brand-text" />
                                 </div>
 
                                 <div>
-                                    <p className="text-sm text-slate-500">
+                                    <p className="text-sm text-brand-muted">
                                         Account Managers
                                     </p>
 
-                                    <p className="mt-1 text-2xl font-semibold text-slate-900">
+                                    <p className="mt-1 text-2xl font-semibold text-brand-text">
                                         {assignments.length}
                                     </p>
                                 </div>
@@ -467,18 +467,18 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         {/* Assigned Account Managers */}
-                        <div className="rounded-none border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-brand-border bg-brand-surface p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
-                                    <Users className="h-5 w-5 text-slate-700" />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-brand-surface-muted">
+                                    <Users className="h-5 w-5 text-brand-text" />
                                 </div>
 
                                 <div>
-                                    <p className="text-sm text-slate-500">
+                                    <p className="text-sm text-brand-muted">
                                         Assigned Account Managers
                                     </p>
 
-                                    <p className="mt-1 text-2xl font-semibold text-slate-900">
+                                    <p className="mt-1 text-2xl font-semibold text-brand-text">
                                         {assignedAccountManagersCount}
                                     </p>
                                 </div>
@@ -486,18 +486,18 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         {/* Assigned Customers */}
-                        <div className="rounded-none border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-brand-border bg-brand-surface p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
-                                    <Building2 className="h-5 w-5 text-slate-700" />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-brand-surface-muted">
+                                    <Building2 className="h-5 w-5 text-brand-text" />
                                 </div>
 
                                 <div>
-                                    <p className="text-sm text-slate-500">
+                                    <p className="text-sm text-brand-muted">
                                         Assigned Customers
                                     </p>
 
-                                    <p className="mt-1 text-2xl font-semibold text-slate-900">
+                                    <p className="mt-1 text-2xl font-semibold text-brand-text">
                                         {assignedCustomersCount}
                                     </p>
                                 </div>
@@ -505,18 +505,18 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         {/* Unassigned Customers */}
-                        <div className="rounded-none border border-slate-200 bg-white p-5">
+                        <div className="rounded-none border border-brand-border bg-brand-surface p-5">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
-                                    <Building2 className="h-5 w-5 text-slate-700" />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-none bg-brand-surface-muted">
+                                    <Building2 className="h-5 w-5 text-brand-text" />
                                 </div>
 
                                 <div>
-                                    <p className="text-sm text-slate-500">
+                                    <p className="text-sm text-brand-muted">
                                         Unassigned Customers
                                     </p>
 
-                                    <p className="mt-1 text-2xl font-semibold text-slate-900">
+                                    <p className="mt-1 text-2xl font-semibold text-brand-text">
                                         {unassignedCustomers.length}
                                     </p>
                                 </div>
@@ -572,7 +572,7 @@ export default function AccountManagerAssignments() {
                                     Account Managers
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Customers currently assigned to each account manager.
                                 </p>
                             </div>
@@ -580,13 +580,13 @@ export default function AccountManagerAssignments() {
                             <div className="ils-dashboard-table-surface">
                                 {paginatedManagers.length === 0 ? (
                                     <div className="px-6 py-12 text-center">
-                                        <Users className="mx-auto h-8 w-8 text-slate-300" />
+                                        <Users className="mx-auto h-8 w-8 text-brand-neutral" />
 
-                                        <p className="mt-3 text-sm font-medium text-slate-700">
+                                        <p className="mt-3 text-sm font-medium text-brand-text">
                                             No account managers found
                                         </p>
 
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-sm text-brand-muted">
                                             Try changing your search.
                                         </p>
                                     </div>
@@ -597,15 +597,15 @@ export default function AccountManagerAssignments() {
                                                 <tr className="border-b">
                                                     <th className="w-8 px-4 py-3"></th>
 
-                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Account Manager
                                                     </th>
 
-                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Email
                                                     </th>
 
-                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Customers
                                                     </th>
                                                 </tr>
@@ -636,22 +636,22 @@ export default function AccountManagerAssignments() {
                                                                                 manager.accountManagerId
                                                                             )
                                                                         }
-                                                                        className="flex w-full items-center text-left transition hover:bg-slate-50"
+                                                                        className="flex w-full items-center text-left transition hover:bg-brand-surface-tint"
                                                                     >
                                                                         <div className="flex w-8 shrink-0 justify-center">
                                                                             {isExpanded ? (
-                                                                                <ChevronDown className="h-4 w-4 text-slate-400" />
+                                                                                <ChevronDown className="h-4 w-4 text-brand-neutral" />
                                                                             ) : (
-                                                                                <ChevronRight className="h-4 w-4 text-slate-400" />
+                                                                                <ChevronRight className="h-4 w-4 text-brand-neutral" />
                                                                             )}
                                                                         </div>
 
                                                                         <div className="grid flex-1 grid-cols-[1.2fr_1.5fr_100px] items-center gap-4 px-5 py-4">
                                                                             <div>
                                                                                 <div className="flex items-center gap-2">
-                                                                                    <Users className="h-4 w-4 text-slate-400" />
+                                                                                    <Users className="h-4 w-4 text-brand-neutral" />
 
-                                                                                    <span className="text-sm font-medium text-slate-900">
+                                                                                    <span className="text-sm font-medium text-brand-text">
                                                                                         {
                                                                                             manager.accountManagerName
                                                                                         }
@@ -660,9 +660,9 @@ export default function AccountManagerAssignments() {
                                                                             </div>
 
                                                                             <div className="flex items-center gap-2">
-                                                                                <Mail className="h-4 w-4 text-slate-400" />
+                                                                                <Mail className="h-4 w-4 text-brand-neutral" />
 
-                                                                                <span className="text-sm text-slate-600">
+                                                                                <span className="text-sm text-brand-muted">
                                                                                     {
                                                                                         manager.accountManagerEmail
                                                                                     }
@@ -670,7 +670,7 @@ export default function AccountManagerAssignments() {
                                                                             </div>
 
                                                                             <div>
-                                                                                <span className="inline-flex rounded-none bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                                                                <span className="inline-flex rounded-none bg-brand-surface-muted px-2.5 py-1 text-xs font-medium text-brand-text">
                                                                                     {
                                                                                         manager
                                                                                             .customers
@@ -692,7 +692,7 @@ export default function AccountManagerAssignments() {
                                                                     </button>
 
                                                                     {isExpanded && (
-                                                                        <div className="border-t border-slate-100 bg-slate-50 px-12 py-4">
+                                                                        <div className="border-t border-brand-border bg-brand-surface-tint px-12 py-4">
                                                                             {(
                                                                                 manager
                                                                                     .customers
@@ -700,35 +700,35 @@ export default function AccountManagerAssignments() {
                                                                                 0
                                                                             ) ===
                                                                                 0 ? (
-                                                                                <div className="rounded-none border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
-                                                                                    <Building2 className="mx-auto h-7 w-7 text-slate-300" />
+                                                                                <div className="rounded-none border border-dashed border-brand-border bg-brand-surface px-5 py-8 text-center">
+                                                                                    <Building2 className="mx-auto h-7 w-7 text-brand-neutral" />
 
-                                                                                    <p className="mt-2 text-sm font-medium text-slate-700">
+                                                                                    <p className="mt-2 text-sm font-medium text-brand-text">
                                                                                         No customers assigned
                                                                                     </p>
 
-                                                                                    <p className="mt-1 text-xs text-slate-500">
+                                                                                    <p className="mt-1 text-xs text-brand-muted">
                                                                                         This account manager currently has no customers.
                                                                                     </p>
                                                                                 </div>
                                                                             ) : (
-                                                                                <div className="overflow-x-auto rounded-none border border-slate-200 bg-white">
+                                                                                <div className="overflow-x-auto rounded-none border border-brand-border bg-brand-surface">
                                                                                     <table className="w-full min-w-[850px]">
                                                                                         <thead>
                                                                                             <tr className="border-b">
-                                                                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                                                                     Customer
                                                                                                 </th>
 
-                                                                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                                                                     Owner
                                                                                                 </th>
 
-                                                                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                                                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                                                                     Status
                                                                                                 </th>
 
-                                                                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                                                                <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                                                                     Action
                                                                                                 </th>
                                                                                             </tr>
@@ -747,9 +747,9 @@ export default function AccountManagerAssignments() {
                                                                                                     >
                                                                                                         <td className="px-4 py-3">
                                                                                                             <div className="flex items-center gap-2">
-                                                                                                                <Building2 className="h-4 w-4 text-slate-400" />
+                                                                                                                <Building2 className="h-4 w-4 text-brand-neutral" />
 
-                                                                                                                <span className="text-sm font-medium text-slate-900">
+                                                                                                                <span className="text-sm font-medium text-brand-text">
                                                                                                                     {
                                                                                                                         customer.companyName
                                                                                                                     }
@@ -757,7 +757,7 @@ export default function AccountManagerAssignments() {
                                                                                                             </div>
                                                                                                         </td>
 
-                                                                                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                                                                                        <td className="px-4 py-3 text-sm text-brand-muted">
                                                                                                             {
                                                                                                                 customer.ownerName
                                                                                                             }
@@ -849,7 +849,7 @@ export default function AccountManagerAssignments() {
                                     Unassigned Customers
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Customers that are not currently assigned to any account manager.
                                 </p>
                             </div>
@@ -858,13 +858,13 @@ export default function AccountManagerAssignments() {
                                 {paginatedUnassignedCustomers.length ===
                                     0 ? (
                                     <div className="px-6 py-12 text-center">
-                                        <Building2 className="mx-auto h-8 w-8 text-slate-300" />
+                                        <Building2 className="mx-auto h-8 w-8 text-brand-neutral" />
 
-                                        <p className="mt-3 text-sm font-medium text-slate-700">
+                                        <p className="mt-3 text-sm font-medium text-brand-text">
                                             No unassigned customers found
                                         </p>
 
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-sm text-brand-muted">
                                             All customers are currently assigned or no customer matches your search.
                                         </p>
                                     </div>
@@ -873,19 +873,19 @@ export default function AccountManagerAssignments() {
                                         <table className="w-full min-w-[800px]">
                                             <thead>
                                                 <tr className="border-b">
-                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Customer
                                                     </th>
 
-                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Owner
                                                     </th>
 
-                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Status
                                                     </th>
 
-                                                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                         Action
                                                     </th>
                                                 </tr>
@@ -902,9 +902,9 @@ export default function AccountManagerAssignments() {
                                                         >
                                                             <td className="px-5 py-4">
                                                                 <div className="flex items-center gap-3">
-                                                                    <Building2 className="h-4 w-4 text-slate-400" />
+                                                                    <Building2 className="h-4 w-4 text-brand-neutral" />
 
-                                                                    <span className="text-sm font-medium text-slate-900">
+                                                                    <span className="text-sm font-medium text-brand-text">
                                                                         {
                                                                             customer.companyName
                                                                         }
@@ -912,7 +912,7 @@ export default function AccountManagerAssignments() {
                                                                 </div>
                                                             </td>
 
-                                                            <td className="px-5 py-4 text-sm text-slate-600">
+                                                            <td className="px-5 py-4 text-sm text-brand-muted">
                                                                 {
                                                                     customer.ownerName
                                                                 }
@@ -976,7 +976,7 @@ export default function AccountManagerAssignments() {
                                         Assign Customer
                                     </h2>
 
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Assign this customer to an Account Manager.
                                     </p>
                                 </div>
@@ -985,7 +985,7 @@ export default function AccountManagerAssignments() {
                                     type="button"
                                     onClick={closeAssignModal}
                                     disabled={assigning}
-                                    className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-none p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <XCircle className="h-5 w-5" />
                                 </button>
@@ -993,18 +993,18 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         <div className="ils-dashboard-modal-body">
-                            <div className="rounded-none border border-slate-200 bg-slate-50 px-4 py-3">
-                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            <div className="rounded-none border border-brand-border bg-brand-surface-tint px-4 py-3">
+                                <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                     Customer
                                 </p>
 
-                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                <p className="mt-1 text-sm font-semibold text-brand-text">
                                     {
                                         assignModalCustomer.companyName
                                     }
                                 </p>
 
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-brand-muted">
                                     {
                                         assignModalCustomer.ownerName
                                     }
@@ -1012,7 +1012,7 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                <label className="mb-2 block text-sm font-medium text-brand-text">
                                     Account Manager
                                 </label>
 
@@ -1052,8 +1052,8 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             {assignError && (
-                                <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3">
-                                    <p className="text-sm text-red-700">
+                                <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3">
+                                    <p className="text-sm text-brand-danger">
                                         {assignError}
                                     </p>
                                 </div>
@@ -1097,7 +1097,7 @@ export default function AccountManagerAssignments() {
                                         Change Account Manager
                                     </h2>
 
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Move this customer to another Account Manager.
                                     </p>
                                 </div>
@@ -1108,7 +1108,7 @@ export default function AccountManagerAssignments() {
                                         closeChangeModal
                                     }
                                     disabled={changing}
-                                    className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-none p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <XCircle className="h-5 w-5" />
                                 </button>
@@ -1116,18 +1116,18 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         <div className="ils-dashboard-modal-body">
-                            <div className="rounded-none border border-slate-200 bg-slate-50 px-4 py-3">
-                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            <div className="rounded-none border border-brand-border bg-brand-surface-tint px-4 py-3">
+                                <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                     Customer
                                 </p>
 
-                                <p className="mt-1 text-sm font-semibold text-slate-900">
+                                <p className="mt-1 text-sm font-semibold text-brand-text">
                                     {
                                         changeModalCustomer.companyName
                                     }
                                 </p>
 
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 text-xs text-brand-muted">
                                     {
                                         changeModalCustomer.ownerName
                                     }
@@ -1135,7 +1135,7 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-slate-700">
+                                <label className="mb-2 block text-sm font-medium text-brand-text">
                                     New Account Manager
                                 </label>
 
@@ -1181,8 +1181,8 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             {changeError && (
-                                <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3">
-                                    <p className="text-sm text-red-700">
+                                <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3">
+                                    <p className="text-sm text-brand-danger">
                                         {changeError}
                                     </p>
                                 </div>
@@ -1230,7 +1230,7 @@ export default function AccountManagerAssignments() {
                                         Remove Account Manager
                                     </h2>
 
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Remove the current Account Manager assignment from this customer.
                                     </p>
                                 </div>
@@ -1239,7 +1239,7 @@ export default function AccountManagerAssignments() {
                                     type="button"
                                     onClick={closeRemoveModal}
                                     disabled={removing}
-                                    className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-none p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     <XCircle className="h-5 w-5" />
                                 </button>
@@ -1247,26 +1247,26 @@ export default function AccountManagerAssignments() {
                         </div>
 
                         <div className="ils-dashboard-modal-body">
-                            <div className="rounded-none border border-red-200 bg-red-50 px-4 py-4">
+                            <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-4">
                                 <div className="flex items-start gap-3">
-                                    <UserMinus className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                                    <UserMinus className="mt-0.5 h-5 w-5 shrink-0 text-brand-danger" />
 
                                     <div>
-                                        <p className="text-sm font-semibold text-red-800">
+                                        <p className="text-sm font-semibold text-brand-danger">
                                             Are you sure?
                                         </p>
 
-                                        <p className="mt-1 text-sm text-red-700">
+                                        <p className="mt-1 text-sm text-brand-danger">
                                             This will remove the Account Manager assignment from:
                                         </p>
 
-                                        <p className="mt-2 text-sm font-semibold text-red-900">
+                                        <p className="mt-2 text-sm font-semibold text-brand-danger">
                                             {
                                                 removeModalCustomer.companyName
                                             }
                                         </p>
 
-                                        <p className="mt-1 text-xs text-red-700">
+                                        <p className="mt-1 text-xs text-brand-danger">
                                             {
                                                 removeModalCustomer.ownerName
                                             }
@@ -1276,8 +1276,8 @@ export default function AccountManagerAssignments() {
                             </div>
 
                             {removeError && (
-                                <div className="rounded-none border border-red-200 bg-red-50 px-4 py-3">
-                                    <p className="text-sm text-red-700">
+                                <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3">
+                                    <p className="text-sm text-brand-danger">
                                         {removeError}
                                     </p>
                                 </div>
@@ -1332,8 +1332,8 @@ function Pagination({
     );
 
     return (
-        <div className="flex flex-col gap-3 border-t border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs text-slate-500">
+        <div className="flex flex-col gap-3 border-t border-brand-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-brand-muted">
                 Showing {start}-{end} of {totalItems}
             </p>
 
@@ -1344,7 +1344,7 @@ function Pagination({
                     onClick={() =>
                         onPageChange(page - 1)
                     }
-                    className="rounded-none border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-none border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     Previous
                 </button>
@@ -1360,8 +1360,8 @@ function Pagination({
                             onPageChange(pageNumber)
                         }
                         className={`h-8 min-w-8 rounded-none px-2 text-xs font-medium transition ${pageNumber === page
-                                ? "bg-brand-primary text-white"
-                                : "text-slate-600 hover:bg-slate-100"
+                                ? "bg-brand-primary text-brand-inverse"
+                                : "text-brand-muted hover:bg-brand-surface-muted"
                             }`}
                     >
                         {pageNumber}
@@ -1376,7 +1376,7 @@ function Pagination({
                     onClick={() =>
                         onPageChange(page + 1)
                     }
-                    className="rounded-none border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    className="rounded-none border border-brand-border px-3 py-1.5 text-xs font-medium text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                 >
                     Next
                 </button>

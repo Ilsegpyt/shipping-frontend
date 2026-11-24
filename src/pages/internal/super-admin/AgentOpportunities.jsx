@@ -196,11 +196,11 @@ export default function AgentOpportunities() {
                         </div>
 
                         <div>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-brand-muted">
                                 Total Applications
                             </p>
 
-                            <p className="mt-1 text-lg font-semibold text-slate-900">
+                            <p className="mt-1 text-lg font-semibold text-brand-text">
                                 {totalCount}
                             </p>
                         </div>
@@ -214,11 +214,11 @@ export default function AgentOpportunities() {
                         </div>
 
                         <div>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-brand-muted">
                                 Current Page
                             </p>
 
-                            <p className="mt-1 text-lg font-semibold text-slate-900">
+                            <p className="mt-1 text-lg font-semibold text-brand-text">
                                 {filteredApplications.length}
                             </p>
                         </div>
@@ -232,11 +232,11 @@ export default function AgentOpportunities() {
                         </div>
 
                         <div>
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-brand-muted">
                                 Page
                             </p>
 
-                            <p className="mt-1 text-lg font-semibold text-slate-900">
+                            <p className="mt-1 text-lg font-semibold text-brand-text">
                                 {pageNumber} / {totalPages}
                             </p>
                         </div>
@@ -264,12 +264,12 @@ export default function AgentOpportunities() {
 
                 {/* Error */}
                 {error && (
-                    <div className="flex items-center justify-between border-b border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+                    <div className="flex items-center justify-between border-b border-brand-danger-soft bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{error}</span>
                         <button
                             type="button"
                             onClick={() => setError('')}
-                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            className="ml-3 text-brand-danger hover:text-brand-danger font-bold"
                             title="Close"
                         >
                             ✕
@@ -282,25 +282,25 @@ export default function AgentOpportunities() {
                     <table className="min-w-full">
 
                         <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50/70">
+                            <tr className="border-b border-brand-border bg-brand-surface-tint/70">
 
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                                     Applicant
                                 </th>
 
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                                     Location
                                 </th>
 
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                                     Contact
                                 </th>
 
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                                     Industry
                                 </th>
 
-                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-brand-muted">
                                     Submitted
                                 </th>
 
@@ -316,7 +316,7 @@ export default function AgentOpportunities() {
                                 <tr>
                                     <td
                                         colSpan="6"
-                                        className="px-4 py-12 text-center text-sm text-slate-500"
+                                        className="px-4 py-12 text-center text-sm text-brand-muted"
                                     >
                                         Loading agent opportunities...
                                     </td>
@@ -331,15 +331,15 @@ export default function AgentOpportunities() {
                                     >
                                         <div className="flex flex-col items-center">
 
-                                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-none bg-slate-50 text-slate-400">
+                                            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-none bg-brand-surface-tint text-brand-neutral">
                                                 <BriefcaseBusiness className="h-5 w-5" />
                                             </div>
 
-                                            <p className="text-sm font-medium text-slate-700">
+                                            <p className="text-sm font-medium text-brand-text">
                                                 No applications found
                                             </p>
 
-                                            <p className="mt-1 text-xs text-slate-400">
+                                            <p className="mt-1 text-xs text-brand-neutral">
                                                 No agent opportunity
                                                 applications match your
                                                 search.
@@ -356,19 +356,19 @@ export default function AgentOpportunities() {
 
                                         <tr
                                             key={application.id}
-                                            className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50"
+                                            className="border-b border-brand-border last:border-b-0 hover:bg-brand-surface-tint/50"
                                         >
 
                                             {/* Applicant */}
                                             <td className="px-4 py-3">
                                                 <div className="flex items-center gap-3">
 
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none bg-slate-50 text-slate-500">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-none bg-brand-surface-tint text-brand-muted">
                                                         <Users className="h-4 w-4" />
                                                     </div>
 
                                                     <div>
-                                                        <p className="text-sm font-medium text-slate-800">
+                                                        <p className="text-sm font-medium text-brand-text">
                                                             {
                                                                 application.firstName
                                                             }{' '}
@@ -377,7 +377,7 @@ export default function AgentOpportunities() {
                                                             }
                                                         </p>
 
-                                                        <p className="mt-0.5 text-xs text-slate-400">
+                                                        <p className="mt-0.5 text-xs text-brand-neutral">
                                                             #{application.id}
                                                         </p>
                                                     </div>
@@ -389,7 +389,7 @@ export default function AgentOpportunities() {
                                             <td className="px-4 py-3">
                                                 <div>
 
-                                                    <p className="text-sm text-slate-600">
+                                                    <p className="text-sm text-brand-muted">
                                                         {
                                                             application.city
                                                         }
@@ -399,7 +399,7 @@ export default function AgentOpportunities() {
                                                         }
                                                     </p>
 
-                                                    <p className="mt-0.5 max-w-xs truncate text-xs text-slate-400">
+                                                    <p className="mt-0.5 max-w-xs truncate text-xs text-brand-neutral">
                                                         {
                                                             application.address
                                                         }
@@ -412,13 +412,13 @@ export default function AgentOpportunities() {
                                             <td className="px-4 py-3">
                                                 <div className="space-y-0.5">
 
-                                                    <p className="text-xs text-slate-600">
+                                                    <p className="text-xs text-brand-muted">
                                                         {
                                                             application.email
                                                         }
                                                     </p>
 
-                                                    <p className="text-xs text-slate-400">
+                                                    <p className="text-xs text-brand-neutral">
                                                         {formatPhone(
                                                             application
                                                         )}
@@ -429,7 +429,7 @@ export default function AgentOpportunities() {
 
                                             {/* Industry */}
                                             <td className="px-4 py-3">
-                                                <span className="inline-flex rounded-none bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700">
+                                                <span className="inline-flex rounded-none bg-brand-surface-muted px-2.5 py-1 text-[11px] font-medium text-brand-text">
                                                     {
                                                         application.mainIndustry
                                                     }
@@ -438,7 +438,7 @@ export default function AgentOpportunities() {
 
                                             {/* Submitted */}
                                             <td className="px-4 py-3">
-                                                <p className="text-xs text-slate-600">
+                                                <p className="text-xs text-brand-muted">
                                                     {formatDate(
                                                         application.createdAtUtc
                                                     )}
@@ -480,9 +480,9 @@ export default function AgentOpportunities() {
 
                 {/* Footer */}
                 {!loading && (
-                    <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3">
+                    <div className="flex items-center justify-between border-t border-brand-border px-4 py-3">
 
-                        <p className="text-xs text-slate-400">
+                        <p className="text-xs text-brand-neutral">
                             Showing{' '}
                             {totalCount === 0
                                 ? 0
@@ -513,12 +513,12 @@ export default function AgentOpportunities() {
                                             )
                                     )
                                 }
-                                className="rounded-none border border-slate-200 p-1.5 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-none border border-brand-border p-1.5 text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </button>
 
-                            <span className="px-2 text-xs text-slate-500">
+                            <span className="px-2 text-xs text-brand-muted">
                                 {pageNumber} / {totalPages}
                             </span>
 
@@ -537,7 +537,7 @@ export default function AgentOpportunities() {
                                             )
                                     )
                                 }
-                                className="rounded-none border border-slate-200 p-1.5 text-slate-500 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-none border border-brand-border p-1.5 text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </button>
@@ -557,11 +557,11 @@ export default function AgentOpportunities() {
                         <div className="ils-dashboard-modal-header flex items-center justify-between">
 
                             <div>
-                                <h2 className="text-base font-semibold text-slate-900">
+                                <h2 className="text-base font-semibold text-brand-text">
                                     Agent Opportunity
                                 </h2>
 
-                                <p className="mt-0.5 text-xs text-slate-400">
+                                <p className="mt-0.5 text-xs text-brand-neutral">
                                     Application details
                                 </p>
                             </div>
@@ -570,7 +570,7 @@ export default function AgentOpportunities() {
                                 type="button"
                                 onClick={closeDetails}
                                 disabled={detailsLoading}
-                                className="rounded-none p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                                className="rounded-none p-1.5 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-text disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -579,7 +579,7 @@ export default function AgentOpportunities() {
 
                         {detailsLoading ? (
 
-                            <div className="px-5 py-16 text-center text-sm text-slate-500">
+                            <div className="px-5 py-16 text-center text-sm text-brand-muted">
                                 Loading application details...
                             </div>
 
@@ -591,14 +591,14 @@ export default function AgentOpportunities() {
                                     <div className="ils-agent-detail-card p-4">
 
                                         <div className="mb-3 flex items-center gap-2">
-                                            <Users className="h-4 w-4 text-slate-500" />
+                                            <Users className="h-4 w-4 text-brand-muted" />
 
-                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                 Applicant
                                             </h3>
                                         </div>
 
-                                        <p className="text-sm font-medium text-slate-800">
+                                        <p className="text-sm font-medium text-brand-text">
                                             {
                                                 selectedApplication.firstName
                                             }{' '}
@@ -607,7 +607,7 @@ export default function AgentOpportunities() {
                                             }
                                         </p>
 
-                                        <p className="mt-1 text-xs text-slate-400">
+                                        <p className="mt-1 text-xs text-brand-neutral">
                                             Application #
                                             {selectedApplication.id}
                                         </p>
@@ -617,14 +617,14 @@ export default function AgentOpportunities() {
                                     <div className="ils-agent-detail-card p-4">
 
                                         <div className="mb-3 flex items-center gap-2">
-                                            <BriefcaseBusiness className="h-4 w-4 text-slate-500" />
+                                            <BriefcaseBusiness className="h-4 w-4 text-brand-muted" />
 
-                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                 Industry
                                             </h3>
                                         </div>
 
-                                        <p className="text-sm text-slate-700">
+                                        <p className="text-sm text-brand-text">
                                             {
                                                 selectedApplication.mainIndustry
                                             }
@@ -635,14 +635,14 @@ export default function AgentOpportunities() {
                                     <div className="ils-agent-detail-card p-4">
 
                                         <div className="mb-3 flex items-center gap-2">
-                                            <Mail className="h-4 w-4 text-slate-500" />
+                                            <Mail className="h-4 w-4 text-brand-muted" />
 
-                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                 Email
                                             </h3>
                                         </div>
 
-                                        <p className="break-all text-sm text-slate-700">
+                                        <p className="break-all text-sm text-brand-text">
                                             {
                                                 selectedApplication.email
                                             }
@@ -653,14 +653,14 @@ export default function AgentOpportunities() {
                                     <div className="ils-agent-detail-card p-4">
 
                                         <div className="mb-3 flex items-center gap-2">
-                                            <Phone className="h-4 w-4 text-slate-500" />
+                                            <Phone className="h-4 w-4 text-brand-muted" />
 
-                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                 Phone
                                             </h3>
                                         </div>
 
-                                        <p className="text-sm text-slate-700">
+                                        <p className="text-sm text-brand-text">
                                             {formatPhone(
                                                 selectedApplication
                                             )}
@@ -668,17 +668,17 @@ export default function AgentOpportunities() {
 
                                     </div>
 
-                                    <div className="rounded-none border border-slate-200 p-4 md:col-span-2">
+                                    <div className="rounded-none border border-brand-border p-4 md:col-span-2">
 
                                         <div className="mb-3 flex items-center gap-2">
-                                            <MapPin className="h-4 w-4 text-slate-500" />
+                                            <MapPin className="h-4 w-4 text-brand-muted" />
 
-                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                 Location
                                             </h3>
                                         </div>
 
-                                        <p className="text-sm text-slate-700">
+                                        <p className="text-sm text-brand-text">
                                             {
                                                 selectedApplication.city
                                             }
@@ -688,7 +688,7 @@ export default function AgentOpportunities() {
                                             }
                                         </p>
 
-                                        <p className="mt-1 text-sm text-slate-500">
+                                        <p className="mt-1 text-sm text-brand-muted">
                                             {
                                                 selectedApplication.address
                                             }
@@ -696,17 +696,17 @@ export default function AgentOpportunities() {
 
                                     </div>
 
-                                    <div className="rounded-none border border-slate-200 p-4 md:col-span-2">
+                                    <div className="rounded-none border border-brand-border p-4 md:col-span-2">
 
                                         <div className="mb-3 flex items-center gap-2">
-                                            <CalendarDays className="h-4 w-4 text-slate-500" />
+                                            <CalendarDays className="h-4 w-4 text-brand-muted" />
 
-                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                                 Submitted
                                             </h3>
                                         </div>
 
-                                        <p className="text-sm text-slate-700">
+                                        <p className="text-sm text-brand-text">
                                             {formatDate(
                                                 selectedApplication.createdAtUtc
                                             )}
@@ -714,13 +714,13 @@ export default function AgentOpportunities() {
 
                                     </div>
 
-                                    <div className="rounded-none border border-slate-200 p-4 md:col-span-2">
+                                    <div className="rounded-none border border-brand-border p-4 md:col-span-2">
 
-                                        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                        <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                             Message
                                         </h3>
 
-                                        <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">
+                                        <p className="whitespace-pre-wrap text-sm leading-6 text-brand-muted">
                                             {
                                                 selectedApplication.message
                                             }

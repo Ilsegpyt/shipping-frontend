@@ -1,0 +1,66 @@
+/* Internal management portal only: shared ILS tokens, no impact on other portals. */
+.ils-internal-portal {
+  --ils-sidebar-bg: color-mix(in srgb, var(--color-primary) 78%, black);
+  --ils-sidebar-hover: color-mix(in srgb, var(--color-primary) 86%, var(--color-accent));
+  --ils-sidebar-active: var(--color-accent);
+  --ils-sidebar-fg: var(--color-text-inverse);
+  --ils-sidebar-muted: var(--color-secondary-l);
+  --ils-scroll-track: transparent;
+  --ils-scroll-thumb: color-mix(in srgb, var(--color-primary) 48%, var(--color-surface));
+  --ils-scroll-hover: var(--color-accent);
+}
+.ils-internal-portal > aside,
+.ils-internal-portal #mobile-portal-sidebar { background: var(--ils-sidebar-bg); border-color: color-mix(in srgb, var(--color-text-inverse) 20%, transparent); }
+.ils-internal-portal > aside > div:first-child,
+.ils-internal-portal #mobile-portal-sidebar > div:first-child { border-color: color-mix(in srgb, var(--color-text-inverse) 20%, transparent); }
+.ils-internal-portal .ils-internal-nav { color: var(--ils-sidebar-fg); }
+.ils-internal-portal .ils-internal-nav p { color: var(--ils-sidebar-muted); }
+.ils-internal-portal .ils-internal-nav a,
+.ils-internal-portal .ils-internal-nav button { border-radius: 0; }
+.ils-internal-portal .ils-internal-nav a:not([aria-current="page"]),
+.ils-internal-portal .ils-internal-nav button { color: var(--ils-sidebar-muted); }
+.ils-internal-portal .ils-internal-nav a:hover,
+.ils-internal-portal .ils-internal-nav button:hover { background: var(--ils-sidebar-hover); color: var(--ils-sidebar-fg); }
+.ils-internal-portal .ils-internal-nav a[aria-current="page"] { background: color-mix(in srgb, var(--ils-sidebar-active) 18%, var(--ils-sidebar-bg)); color: var(--ils-sidebar-fg); border-left: 3px solid var(--ils-sidebar-active); }
+.ils-internal-portal .ils-internal-nav a[aria-current="page"] svg { color: var(--ils-sidebar-active); }
+.ils-internal-portal .ils-internal-nav .border-sky-500\/30 { border-color: var(--ils-sidebar-active); }
+.ils-internal-portal .ils-internal-nav .bg-gradient-to-t { background-image: linear-gradient(to top, var(--ils-sidebar-bg), transparent); }
+.ils-internal-portal .ils-branded-scrollbar,
+.ils-internal-portal .overflow-y-auto,
+.ils-internal-portal .overflow-auto,
+.ils-internal-portal .ils-dashboard-modal-body,
+.ils-internal-portal .ils-dashboard-modal-panel {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ils-scroll-thumb) transparent;
+}
+.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar,
+.ils-internal-portal .overflow-y-auto::-webkit-scrollbar,
+.ils-internal-portal .overflow-auto::-webkit-scrollbar,
+.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar,
+.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar { width: 9px; height: 9px; }
+.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-track,
+.ils-internal-portal .overflow-y-auto::-webkit-scrollbar-track,
+.ils-internal-portal .overflow-auto::-webkit-scrollbar-track,
+.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar-track,
+.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar-track { background: transparent; }
+.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb,
+.ils-internal-portal .overflow-y-auto::-webkit-scrollbar-thumb,
+.ils-internal-portal .overflow-auto::-webkit-scrollbar-thumb,
+.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar-thumb,
+.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar-thumb { background: var(--ils-scroll-thumb); border: 3px solid transparent; background-clip: padding-box; border-radius: 999px; min-height: 32px; }
+.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb:hover,
+.ils-internal-portal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.ils-internal-portal .overflow-auto::-webkit-scrollbar-thumb:hover,
+.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar-thumb:hover,
+.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar-thumb:hover { background: var(--ils-scroll-hover); }
+
+/* Sidebar-specific floating thumb: understated until hovered. */
+.ils-internal-portal .ils-branded-scrollbar {
+  --ils-scroll-thumb: color-mix(in srgb, var(--color-text-inverse) 28%, transparent);
+  --ils-scroll-hover: var(--color-accent);
+  scrollbar-color: var(--ils-scroll-thumb) transparent;
+}
+.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--ils-scroll-hover);
+  background-clip: padding-box;
+}

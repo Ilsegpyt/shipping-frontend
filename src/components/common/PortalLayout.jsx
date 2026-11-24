@@ -9,6 +9,7 @@ export default function PortalLayout({
     Sidebar,
     headerActions = null,
     mainClassName = '',
+    portalClassName = '',
 }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [isDesktopCollapsed, setIsDesktopCollapsed] = useState(() => {
@@ -83,7 +84,7 @@ export default function PortalLayout({
     );
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-900">
+        <div className={`min-h-screen bg-slate-50 text-slate-900 ${portalClassName}`}>
             {/* Desktop Sidebar */}
             <aside
                 className={`fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r border-slate-800 bg-slate-900 transition-transform duration-300 ease-in-out md:flex ${

@@ -632,7 +632,7 @@ export default function Customers() {
                 </DashboardToolbar>
 
                 {deleteError && !loading && (
-                    <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{deleteError}</span>
                         <button
                             type="button"
@@ -645,22 +645,22 @@ export default function Customers() {
                 )}
 
                 {loading && (
-                    <div className="rounded-none border border-slate-200 bg-white py-16 text-center text-sm text-slate-500 shadow-sm">
+                    <div className="rounded-none border border-brand-border bg-brand-surface py-16 text-center text-sm text-brand-muted shadow-sm">
                         <RefreshCw
                             size={20}
-                            className="mx-auto mb-3 animate-spin text-slate-400"
+                            className="mx-auto mb-3 animate-spin text-brand-neutral"
                         />
                         Loading customers...
                     </div>
                 )}
 
                 {!loading && error && (
-                    <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 p-4 text-sm text-red-700 shadow-xs transition">
+                    <div className="flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger shadow-xs transition">
                         <span>{error}</span>
                         <button
                             type="button"
                             onClick={() => setError('')}
-                            className="text-red-400 hover:text-red-700 font-bold px-2 py-0.5 rounded cursor-pointer"
+                            className="text-brand-danger hover:text-brand-danger font-bold px-2 py-0.5 rounded cursor-pointer"
                             title="إغلاق"
                         >
                             ✕
@@ -672,19 +672,19 @@ export default function Customers() {
                     <>
                         {/* Customers Table */}
                         <div className="ils-dashboard-table-surface">
-                            <div className="flex flex-col gap-1 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-1 border-b border-brand-border px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                    <h2 className="text-sm font-semibold text-slate-900">
+                                    <h2 className="text-sm font-semibold text-brand-text">
                                         Customer Accounts
                                     </h2>
-                                    <p className="mt-0.5 text-xs text-slate-500">
+                                    <p className="mt-0.5 text-xs text-brand-muted">
                                         {totalCount} customer
                                         {totalCount === 1 ? '' : 's'} in this view
                                     </p>
                                 </div>
 
                                 {selectedCustomerIds.length > 0 && (
-                                    <span className="text-xs font-medium text-slate-500">
+                                    <span className="text-xs font-medium text-brand-muted">
                                         {selectedCustomerIds.length} selected
                                     </span>
                                 )}
@@ -692,13 +692,13 @@ export default function Customers() {
 
                             <div className="overflow-x-auto">
                                 <table className="min-w-[900px] w-full">
-                                    <thead className="border-b border-slate-200 bg-slate-50/80">
+                                    <thead className="border-b border-brand-border bg-brand-surface-tint/80">
                                         <tr>
                                             {!isAccountManager && (
                                                 <th className="w-12 px-4 py-3.5 text-left">
                                                     <input
                                                         type="checkbox"
-                                                        className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                                        className="h-4 w-4 rounded border-brand-border text-brand-text focus:ring-brand-border"
                                                         checked={
                                                             filteredCustomers.length >
                                                             0 &&
@@ -724,19 +724,19 @@ export default function Customers() {
                                                 </th>
                                             )}
 
-                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-muted">
                                                 Customer
                                             </th>
-                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-muted">
                                                 Contact
                                             </th>
-                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-muted">
                                                 Industry
                                             </th>
-                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                            <th className="px-4 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-brand-muted">
                                                 Status
                                             </th>
-                                            <th className="w-20 px-4 py-3.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                            <th className="w-20 px-4 py-3.5 text-right text-[11px] font-semibold uppercase tracking-wider text-brand-muted">
                                                 Actions
                                             </th>
                                         </tr>
@@ -752,16 +752,16 @@ export default function Customers() {
                                                     className="px-6 py-16 text-center"
                                                 >
                                                     <div className="mx-auto max-w-sm">
-                                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-none bg-slate-100">
+                                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-none bg-brand-surface-muted">
                                                             <Search
                                                                 size={19}
-                                                                className="text-slate-400"
+                                                                className="text-brand-neutral"
                                                             />
                                                         </div>
-                                                        <p className="mt-3 text-sm font-medium text-slate-700">
+                                                        <p className="mt-3 text-sm font-medium text-brand-text">
                                                             No customers found
                                                         </p>
-                                                        <p className="mt-1 text-xs text-slate-500">
+                                                        <p className="mt-1 text-xs text-brand-muted">
                                                             Try changing your search
                                                             or record filter.
                                                         </p>
@@ -773,13 +773,13 @@ export default function Customers() {
                                                 (customer) => (
                                                     <tr
                                                         key={customer.id}
-                                                        className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/60"
+                                                        className="border-b border-brand-border last:border-b-0 hover:bg-brand-surface-tint/60"
                                                     >
                                                         {!isAccountManager && (
                                                             <td className="px-4 py-4 align-middle">
                                                                 <input
                                                                     type="checkbox"
-                                                                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-200"
+                                                                    className="h-4 w-4 rounded border-brand-border text-brand-text focus:ring-brand-border"
                                                                     checked={selectedCustomerIds.includes(
                                                                         customer.id
                                                                     )}
@@ -802,7 +802,7 @@ export default function Customers() {
 
                                                         <td className="px-4 py-4">
                                                             <div className="flex min-w-0 items-center gap-3">
-                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-none bg-slate-100 text-xs font-semibold text-slate-600">
+                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-none bg-brand-surface-muted text-xs font-semibold text-brand-muted">
                                                                     {(
                                                                         customer.companyName ||
                                                                         customer.ownerName ||
@@ -812,11 +812,11 @@ export default function Customers() {
                                                                         .toUpperCase()}
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                                                    <p className="truncate text-sm font-semibold text-brand-text">
                                                                         {customer.companyName ||
                                                                             '-'}
                                                                     </p>
-                                                                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                                                                    <p className="mt-0.5 truncate text-xs text-brand-muted">
                                                                         {customer.ownerName ||
                                                                             'No owner name'}
                                                                     </p>
@@ -826,11 +826,11 @@ export default function Customers() {
 
                                                         <td className="px-4 py-4">
                                                             <div className="min-w-0">
-                                                                <p className="truncate text-sm text-slate-700">
+                                                                <p className="truncate text-sm text-brand-text">
                                                                     {customer.ownerEmail ||
                                                                         '-'}
                                                                 </p>
-                                                                <p className="mt-1 text-xs text-slate-500">
+                                                                <p className="mt-1 text-xs text-brand-muted">
                                                                     {customer.ownerPhone ||
                                                                         '-'}
                                                                 </p>
@@ -838,7 +838,7 @@ export default function Customers() {
                                                         </td>
 
                                                         <td className="px-4 py-4">
-                                                            <span className="inline-flex max-w-[180px] truncate rounded-none bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                                            <span className="inline-flex max-w-[180px] truncate rounded-none bg-brand-surface-muted px-2.5 py-1 text-xs font-medium text-brand-muted">
                                                                 {customer.industry ||
                                                                     '—'}
                                                             </span>
@@ -861,7 +861,7 @@ export default function Customers() {
                                                                         customer.id
                                                                     );
                                                                 }}
-                                                                className="rounded-none p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                                                className="rounded-none p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-text"
                                                                 id={`customer-actions-${customer.id}`}
                                                                 aria-label="Customer actions"
                                                                 aria-expanded={openActionsId === customer.id}
@@ -987,7 +987,7 @@ export default function Customers() {
 
                         {/* Pagination */}
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="text-xs text-slate-500">
+                            <p className="text-xs text-brand-muted">
                                 Showing page {pageNumber} of {totalPages} ·{' '}
                                 {totalCount} total customer
                                 {totalCount === 1 ? '' : 's'}
@@ -998,12 +998,12 @@ export default function Customers() {
                                     type="button"
                                     onClick={handlePreviousPage}
                                     disabled={pageNumber === 1}
-                                    className="rounded-none border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="rounded-none border border-brand-border bg-brand-surface px-3.5 py-2 text-sm font-medium text-brand-text shadow-sm transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Previous
                                 </button>
 
-                                <span className="min-w-20 text-center text-sm font-medium text-slate-600">
+                                <span className="min-w-20 text-center text-sm font-medium text-brand-muted">
                                     {pageNumber} / {totalPages}
                                 </span>
 
@@ -1011,7 +1011,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={handleNextPage}
                                     disabled={pageNumber >= totalPages}
-                                    className="rounded-none border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="rounded-none border border-brand-border bg-brand-surface px-3.5 py-2 text-sm font-medium text-brand-text shadow-sm transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     Next
                                 </button>
@@ -1023,19 +1023,19 @@ export default function Customers() {
                 {/* Delete Confirmation Modal */}
                 {isDeleteModalOpen && (
                     <div
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/50 p-4 backdrop-blur-[2px]"
                         onClick={closeDeleteConfirmation}
                     >
                         <div
-                            className="ils-dashboard-dialog-panel w-full max-w-md overflow-hidden rounded-none bg-white shadow-2xl"
+                            className="ils-dashboard-dialog-panel w-full max-w-md overflow-hidden rounded-none bg-brand-surface shadow-2xl"
                             onClick={(event) => event.stopPropagation()}
                         >
-                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                            <div className="flex items-start justify-between border-b border-brand-border px-6 py-5">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Delete Selected Customers
                                     </h2>
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         This will remove the selected customer
                                         accounts.
                                     </p>
@@ -1044,7 +1044,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeDeleteConfirmation}
                                     disabled={isDeleting}
-                                    className="rounded-none p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-muted disabled:opacity-50"
                                     aria-label="Close"
                                 >
                                     <X size={20} />
@@ -1053,14 +1053,14 @@ export default function Customers() {
 
                             <div className="px-6 py-6">
                                 {deleteError && (
-                                    <div className="mb-4 rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="mb-4 rounded-none border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                                         {deleteError}
                                     </div>
                                 )}
 
-                                <p className="text-sm text-slate-600">
+                                <p className="text-sm text-brand-muted">
                                     Are you sure you want to delete{' '}
-                                    <span className="font-semibold text-slate-900">
+                                    <span className="font-semibold text-brand-text">
                                         {pendingDeleteIds.length}
                                     </span>{' '}
                                     selected customer
@@ -1069,17 +1069,17 @@ export default function Customers() {
                                         : 's'}
                                     ?
                                 </p>
-                                <p className="mt-2 text-sm font-medium text-red-600">
+                                <p className="mt-2 text-sm font-medium text-brand-danger">
                                     This action cannot be undone.
                                 </p>
                             </div>
 
-                            <div className="flex justify-end gap-2 border-t border-slate-200 px-6 py-4">
+                            <div className="flex justify-end gap-2 border-t border-brand-border px-6 py-4">
                                 <button
                                     type="button"
                                     onClick={closeDeleteConfirmation}
                                     disabled={isDeleting}
-                                    className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                    className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface-tint disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
@@ -1087,7 +1087,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={handleConfirmDelete}
                                     disabled={isDeleting}
-                                    className="rounded-none bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                                    className="rounded-none bg-brand-danger px-4 py-2.5 text-sm font-semibold text-brand-inverse hover:bg-brand-danger disabled:opacity-50"
                                 >
                                     {isDeleting
                                         ? 'Deleting...'
@@ -1100,14 +1100,14 @@ export default function Customers() {
 
                 {/* Add Customer Modal */}
                 {isAddModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-white shadow-2xl">
-                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/50 p-4 backdrop-blur-[2px]">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-brand-surface shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-brand-border px-6 py-5">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Add Customer
                                     </h2>
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Create a new customer account.
                                     </p>
                                 </div>
@@ -1115,7 +1115,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeAddCustomerModal}
                                     disabled={creatingCustomer}
-                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-brand-neutral hover:bg-brand-surface-muted disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1126,7 +1126,7 @@ export default function Customers() {
                                 className="space-y-4 p-6"
                             >
                                 {createError && (
-                                    <div className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                                         {createError}
                                     </div>
                                 )}
@@ -1147,7 +1147,7 @@ export default function Customers() {
                                                     : ''
                                             }
                                         >
-                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                            <label className="mb-1.5 block text-sm font-medium text-brand-text">
                                                 {label}
                                             </label>
                                             <input
@@ -1165,26 +1165,26 @@ export default function Customers() {
                                                 }
                                                 required={name !== 'industry'}
                                                 disabled={creatingCustomer}
-                                                className="w-full rounded-none border border-slate-200 px-3.5 py-2.5 text-sm outline-none transition focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                className="w-full rounded-none border border-brand-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-border focus:ring-2 focus:ring-brand-border disabled:bg-brand-surface-tint"
                                                 placeholder={placeholder}
                                             />
                                         </div>
                                     ))}
                                 </div>
 
-                                <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                <div className="flex justify-end gap-2 border-t border-brand-border pt-4">
                                     <button
                                         type="button"
                                         onClick={closeAddCustomerModal}
                                         disabled={creatingCustomer}
-                                        className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                        className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface-tint disabled:opacity-50"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={creatingCustomer}
-                                        className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                        className="rounded-none bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-inverse hover:bg-brand-primary-hover disabled:opacity-50"
                                     >
                                         {creatingCustomer
                                             ? 'Creating...'
@@ -1198,14 +1198,14 @@ export default function Customers() {
 
                 {/* Customer Details Modal */}
                 {isDetailsModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="ils-dashboard-dialog-panel w-full max-w-2xl overflow-hidden rounded-none bg-white shadow-2xl">
-                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/50 p-4 backdrop-blur-[2px]">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-2xl overflow-hidden rounded-none bg-brand-surface shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-brand-border px-6 py-5">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Customer Details
                                     </h2>
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         View customer account information.
                                     </p>
                                 </div>
@@ -1213,7 +1213,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeDetailsModal}
                                     disabled={loadingDetails}
-                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-brand-neutral hover:bg-brand-surface-muted disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1224,7 +1224,7 @@ export default function Customers() {
                                     <div className="flex items-center justify-center py-12">
                                         <RefreshCw
                                             size={24}
-                                            className="animate-spin text-slate-400"
+                                            className="animate-spin text-brand-neutral"
                                         />
                                     </div>
                                 ) : selectedCustomer ? (
@@ -1239,12 +1239,12 @@ export default function Customers() {
                                         ].map(([label, value]) => (
                                             <div
                                                 key={label}
-                                                className="rounded-none border border-slate-200 bg-slate-50/70 p-4"
+                                                className="rounded-none border border-brand-border bg-brand-surface-tint/70 p-4"
                                             >
-                                                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                                                <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                                     {label}
                                                 </p>
-                                                <p className="mt-1.5 break-all text-sm font-semibold text-slate-900">
+                                                <p className="mt-1.5 break-all text-sm font-semibold text-brand-text">
                                                     {value || '-'}
                                                 </p>
                                             </div>
@@ -1252,18 +1252,18 @@ export default function Customers() {
 
                                     </div>
                                 ) : (
-                                    <div className="py-10 text-center text-sm text-slate-500">
+                                    <div className="py-10 text-center text-sm text-brand-muted">
                                         No customer details found.
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+                            <div className="flex justify-end border-t border-brand-border px-6 py-4">
                                 <button
                                     type="button"
                                     onClick={closeDetailsModal}
                                     disabled={loadingDetails}
-                                    className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                    className="rounded-none bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-inverse hover:bg-brand-primary-hover disabled:opacity-50"
                                 >
                                     Close
                                 </button>
@@ -1274,14 +1274,14 @@ export default function Customers() {
 
                 {/* Edit Customer Modal */}
                 {isEditModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-white shadow-2xl">
-                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/50 p-4 backdrop-blur-[2px]">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-brand-surface shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-brand-border px-6 py-5">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Edit Customer
                                     </h2>
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Update customer information.
                                     </p>
                                 </div>
@@ -1289,7 +1289,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeEditModal}
                                     disabled={updatingCustomer}
-                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-brand-neutral hover:bg-brand-surface-muted disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1300,7 +1300,7 @@ export default function Customers() {
                                 className="space-y-4 p-6"
                             >
                                 {updateError && (
-                                    <div className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                                         {updateError}
                                     </div>
                                 )}
@@ -1309,7 +1309,7 @@ export default function Customers() {
                                     <div className="flex items-center justify-center py-10">
                                         <RefreshCw
                                             size={24}
-                                            className="animate-spin text-slate-400"
+                                            className="animate-spin text-brand-neutral"
                                         />
                                     </div>
                                 ) : (
@@ -1328,7 +1328,7 @@ export default function Customers() {
                                                         placeholder,
                                                     ]) => (
                                                         <div key={name}>
-                                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                                            <label className="mb-1.5 block text-sm font-medium text-brand-text">
                                                                 {label}
                                                             </label>
                                                             <input
@@ -1354,7 +1354,7 @@ export default function Customers() {
                                                                 disabled={
                                                                     updatingCustomer
                                                                 }
-                                                                className="w-full rounded-none border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                                className="w-full rounded-none border border-brand-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-border focus:ring-2 focus:ring-brand-border disabled:bg-brand-surface-tint"
                                                                 placeholder={
                                                                     placeholder
                                                                 }
@@ -1364,14 +1364,14 @@ export default function Customers() {
                                                 )}
                                             </div>
 
-                                            <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                            <div className="flex justify-end gap-2 border-t border-brand-border pt-4">
                                                 <button
                                                     type="button"
                                                     onClick={closeEditModal}
                                                     disabled={
                                                         updatingCustomer
                                                     }
-                                                    className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                    className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface-tint disabled:opacity-50"
                                                 >
                                                     Cancel
                                                 </button>
@@ -1380,7 +1380,7 @@ export default function Customers() {
                                                     disabled={
                                                         updatingCustomer
                                                     }
-                                                    className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                                    className="rounded-none bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-inverse hover:bg-brand-primary-hover disabled:opacity-50"
                                                 >
                                                     {updatingCustomer
                                                         ? 'Saving...'
@@ -1397,14 +1397,14 @@ export default function Customers() {
 
                 {/* Change Email Modal */}
                 {isEmailModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-[2px]">
-                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-white shadow-2xl">
-                            <div className="flex items-start justify-between border-b border-slate-200 px-6 py-5">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-text/50 p-4 backdrop-blur-[2px]">
+                        <div className="ils-dashboard-dialog-panel w-full max-w-lg overflow-hidden rounded-none bg-brand-surface shadow-2xl">
+                            <div className="flex items-start justify-between border-b border-brand-border px-6 py-5">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Change Customer Email
                                     </h2>
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Update the email address associated with
                                         this customer.
                                     </p>
@@ -1413,7 +1413,7 @@ export default function Customers() {
                                     type="button"
                                     onClick={closeEmailModal}
                                     disabled={updatingEmail}
-                                    className="rounded-none p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-50"
+                                    className="rounded-none p-1.5 text-brand-neutral hover:bg-brand-surface-muted disabled:opacity-50"
                                 >
                                     <X size={20} />
                                 </button>
@@ -1424,7 +1424,7 @@ export default function Customers() {
                                 className="space-y-4 p-6"
                             >
                                 {emailError && (
-                                    <div className="rounded-none border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                    <div className="rounded-none border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                                         {emailError}
                                     </div>
                                 )}
@@ -1433,13 +1433,13 @@ export default function Customers() {
                                     <div className="flex items-center justify-center py-10">
                                         <RefreshCw
                                             size={24}
-                                            className="animate-spin text-slate-400"
+                                            className="animate-spin text-brand-neutral"
                                         />
                                     </div>
                                 ) : (
                                     <>
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                            <label className="mb-1.5 block text-sm font-medium text-brand-text">
                                                 Customer
                                             </label>
                                             <input
@@ -1449,12 +1449,12 @@ export default function Customers() {
                                                     ''
                                                 }
                                                 disabled
-                                                className="w-full rounded-none border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-500 outline-none"
+                                                className="w-full rounded-none border border-brand-border bg-brand-surface-tint px-3.5 py-2.5 text-sm text-brand-muted outline-none"
                                             />
                                         </div>
 
                                         <div>
-                                            <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                                            <label className="mb-1.5 block text-sm font-medium text-brand-text">
                                                 New Email
                                             </label>
                                             <input
@@ -1467,24 +1467,24 @@ export default function Customers() {
                                                 }
                                                 required
                                                 disabled={updatingEmail}
-                                                className="w-full rounded-none border border-slate-200 px-3.5 py-2.5 text-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100 disabled:bg-slate-50"
+                                                className="w-full rounded-none border border-brand-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-border focus:ring-2 focus:ring-brand-border disabled:bg-brand-surface-tint"
                                                 placeholder="Enter new email address"
                                             />
                                         </div>
 
-                                        <div className="flex justify-end gap-2 border-t border-slate-200 pt-4">
+                                        <div className="flex justify-end gap-2 border-t border-brand-border pt-4">
                                             <button
                                                 type="button"
                                                 onClick={closeEmailModal}
                                                 disabled={updatingEmail}
-                                                className="rounded-none border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                                                className="rounded-none border border-brand-border px-4 py-2.5 text-sm font-medium text-brand-text hover:bg-brand-surface-tint disabled:opacity-50"
                                             >
                                                 Cancel
                                             </button>
                                             <button
                                                 type="submit"
                                                 disabled={updatingEmail}
-                                                className="rounded-none bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+                                                className="rounded-none bg-brand-primary px-4 py-2.5 text-sm font-semibold text-brand-inverse hover:bg-brand-primary-hover disabled:opacity-50"
                                             >
                                                 {updatingEmail
                                                     ? 'Saving...'

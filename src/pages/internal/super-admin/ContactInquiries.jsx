@@ -155,31 +155,31 @@ export default function ContactInquiries() {
             {/* Stats */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div className="ils-contact-stat">
-                    <p className="text-sm font-medium text-slate-500">
+                    <p className="text-sm font-medium text-brand-muted">
                         Total Inquiries
                     </p>
 
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    <p className="mt-2 text-2xl font-semibold text-brand-text">
                         {totalCount}
                     </p>
                 </div>
 
                 <div className="ils-contact-stat">
-                    <p className="text-sm font-medium text-slate-500">
+                    <p className="text-sm font-medium text-brand-muted">
                         Current Page
                     </p>
 
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    <p className="mt-2 text-2xl font-semibold text-brand-text">
                         {filteredInquiries.length}
                     </p>
                 </div>
 
                 <div className="ils-contact-stat">
-                    <p className="text-sm font-medium text-slate-500">
+                    <p className="text-sm font-medium text-brand-muted">
                         Page
                     </p>
 
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">
+                    <p className="mt-2 text-2xl font-semibold text-brand-text">
                         {page} / {totalPages}
                     </p>
                 </div>
@@ -201,12 +201,12 @@ export default function ContactInquiries() {
 
             {/* Error Banner */}
             {error && (
-                <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                <div className="flex items-center justify-between rounded-xl border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                     <span>{error}</span>
                     <button
                         type="button"
                         onClick={() => setError('')}
-                        className="ml-3 font-bold text-red-500 hover:text-red-700"
+                        className="ml-3 font-bold text-brand-danger hover:text-brand-danger"
                         title="Close"
                     >
                         ✕
@@ -217,41 +217,41 @@ export default function ContactInquiries() {
             {/* Table */}
             <DashboardTableSurface>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead className="bg-slate-50">
+                    <table className="min-w-full divide-y divide-brand-border">
+                        <thead className="bg-brand-surface-tint">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Contact
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Company
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Contact Info
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Service
                                 </th>
 
-                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Submitted
                                 </th>
 
-                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
 
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-brand-border">
                             {loading ? (
                                 <tr>
                                     <td
                                         colSpan="6"
-                                        className="px-6 py-12 text-center text-sm text-slate-500"
+                                        className="px-6 py-12 text-center text-sm text-brand-muted"
                                     >
                                         Loading inquiries...
                                     </td>
@@ -260,7 +260,7 @@ export default function ContactInquiries() {
                                 <tr>
                                     <td
                                         colSpan="6"
-                                        className="px-6 py-12 text-center text-sm text-slate-500"
+                                        className="px-6 py-12 text-center text-sm text-brand-muted"
                                     >
                                         No contact inquiries
                                         found.
@@ -271,29 +271,29 @@ export default function ContactInquiries() {
                                     (inquiry) => (
                                         <tr
                                             key={inquiry.id}
-                                            className="transition hover:bg-slate-50"
+                                            className="transition hover:bg-brand-surface-tint"
                                         >
                                             <td className="whitespace-nowrap px-6 py-4">
-                                                <div className="font-medium text-slate-900">
+                                                <div className="font-medium text-brand-text">
                                                     {inquiry.fullName ||
                                                         '—'}
                                                 </div>
 
-                                                <div className="mt-1 text-xs text-slate-500">
+                                                <div className="mt-1 text-xs text-brand-muted">
                                                     #{inquiry.id}
                                                 </div>
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-brand-text">
                                                 {inquiry.company ||
                                                     '—'}
                                             </td>
 
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-2 text-sm text-slate-700">
+                                                <div className="flex items-center gap-2 text-sm text-brand-text">
                                                     <Mail
                                                         size={14}
-                                                        className="shrink-0 text-slate-400"
+                                                        className="shrink-0 text-brand-neutral"
                                                     />
 
                                                     <span>
@@ -302,10 +302,10 @@ export default function ContactInquiries() {
                                                     </span>
                                                 </div>
 
-                                                <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
+                                                <div className="mt-1 flex items-center gap-2 text-xs text-brand-muted">
                                                     <Phone
                                                         size={13}
-                                                        className="shrink-0 text-slate-400"
+                                                        className="shrink-0 text-brand-neutral"
                                                     />
 
                                                     <span>
@@ -315,12 +315,12 @@ export default function ContactInquiries() {
                                                 </div>
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-700">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-brand-text">
                                                 {inquiry.service ||
                                                     '—'}
                                             </td>
 
-                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-500">
+                                            <td className="whitespace-nowrap px-6 py-4 text-sm text-brand-muted">
                                                 {formatDate(
                                                     inquiry.createdAtUtc
                                                 )}
@@ -356,8 +356,8 @@ export default function ContactInquiries() {
 
                 {/* Pagination */}
                 {totalCount > 0 && (
-                    <div className="flex items-center justify-between border-t border-slate-200 px-6 py-4">
-                        <p className="text-sm text-slate-500">
+                    <div className="flex items-center justify-between border-t border-brand-border px-6 py-4">
+                        <p className="text-sm text-brand-muted">
                             Page {page} of {totalPages}
                         </p>
 
@@ -376,7 +376,7 @@ export default function ContactInquiries() {
                                     page === 1 ||
                                     loading
                                 }
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-sm font-medium text-brand-text transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Previous
                             </button>
@@ -395,7 +395,7 @@ export default function ContactInquiries() {
                                     page === totalPages ||
                                     loading
                                 }
-                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-lg border border-brand-border bg-brand-surface px-3 py-2 text-sm font-medium text-brand-text transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Next
                             </button>
@@ -411,11 +411,11 @@ export default function ContactInquiries() {
                         {/* Modal Header */}
                         <div className="ils-dashboard-modal-header flex items-center justify-between">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">
+                                <h2 className="text-lg font-semibold text-brand-text">
                                     Contact Inquiry
                                 </h2>
 
-                                <p className="mt-1 text-sm text-slate-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Inquiry #
                                     {selectedInquiry.id}
                                 </p>
@@ -426,7 +426,7 @@ export default function ContactInquiries() {
                                 onClick={() =>
                                     setSelectedInquiry(null)
                                 }
-                                className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                                className="rounded-lg p-2 text-brand-neutral transition hover:bg-brand-surface-muted hover:text-brand-text"
                             >
                                 <X size={20} />
                             </button>
@@ -435,73 +435,73 @@ export default function ContactInquiries() {
                         {/* Modal Body */}
                         <div className="ils-dashboard-modal-body ils-contact-modal-body">
                             {detailsLoading ? (
-                                <div className="py-12 text-center text-sm text-slate-500">
+                                <div className="py-12 text-center text-sm text-brand-muted">
                                     Loading inquiry details...
                                 </div>
                             ) : (
                                 <div className="space-y-6">
                                     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                                         <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                                 Full Name
                                             </p>
 
-                                            <p className="mt-1 text-sm font-medium text-slate-900">
+                                            <p className="mt-1 text-sm font-medium text-brand-text">
                                                 {selectedInquiry.fullName ||
                                                     '—'}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                                 Company
                                             </p>
 
-                                            <p className="mt-1 text-sm font-medium text-slate-900">
+                                            <p className="mt-1 text-sm font-medium text-brand-text">
                                                 {selectedInquiry.company ||
                                                     '—'}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                                 Email
                                             </p>
 
-                                            <p className="mt-1 break-all text-sm font-medium text-slate-900">
+                                            <p className="mt-1 break-all text-sm font-medium text-brand-text">
                                                 {selectedInquiry.email ||
                                                     '—'}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                                 Phone
                                             </p>
 
-                                            <p className="mt-1 text-sm font-medium text-slate-900">
+                                            <p className="mt-1 text-sm font-medium text-brand-text">
                                                 {selectedInquiry.phone ||
                                                     '—'}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                                 Service
                                             </p>
 
-                                            <p className="mt-1 text-sm font-medium text-slate-900">
+                                            <p className="mt-1 text-sm font-medium text-brand-text">
                                                 {selectedInquiry.service ||
                                                     '—'}
                                             </p>
                                         </div>
 
                                         <div>
-                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                                 Submitted
                                             </p>
 
-                                            <p className="mt-1 text-sm font-medium text-slate-900">
+                                            <p className="mt-1 text-sm font-medium text-brand-text">
                                                 {formatDate(
                                                     selectedInquiry.createdAtUtc
                                                 )}
@@ -510,12 +510,12 @@ export default function ContactInquiries() {
                                     </div>
 
                                     <div>
-                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-brand-neutral">
                                             Message
                                         </p>
 
                                         <div className="ils-contact-message">
-                                            <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                            <p className="whitespace-pre-wrap text-sm leading-6 text-brand-text">
                                                 {selectedInquiry.message ||
                                                     'No message provided.'}
                                             </p>

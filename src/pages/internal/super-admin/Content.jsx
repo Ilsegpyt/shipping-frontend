@@ -1182,13 +1182,13 @@ export default function Content() {
         <div className="ils-content-editor border border-brand-border bg-brand-surface shadow-sm">
           {/* Form Header */}
 
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <div className="flex items-center justify-between border-b border-brand-border px-5 py-4">
             <div>
-              <h2 className="text-base font-semibold text-slate-900">
+              <h2 className="text-base font-semibold text-brand-text">
                 {editingContentId ? "Edit Content" : "Add Content"}
               </h2>
 
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="mt-1 text-xs text-brand-muted">
                 {editingContentId
                   ? "Edit website content."
                   : "Create a new website content item."}
@@ -1204,7 +1204,7 @@ export default function Content() {
 
                 setSaveError("");
               }}
-              className="text-sm text-slate-400 hover:text-slate-700"
+              className="text-sm text-brand-neutral hover:text-brand-text"
             >
               ✕
             </button>
@@ -1216,7 +1216,7 @@ export default function Content() {
             {/* Title */}
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-brand-text">
                 Title
               </label>
 
@@ -1226,14 +1226,14 @@ export default function Content() {
                 value={form.title}
                 onChange={handleFormChange}
                 placeholder="Enter title"
-                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-brand-border px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
               />
             </div>
 
             {/* Type */}
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-brand-text">
                 Type
               </label>
 
@@ -1241,7 +1241,7 @@ export default function Content() {
                 name="type"
                 value={form.type}
                 onChange={handleTypeChange}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
               >
                 <option value="Category">Category</option>
 
@@ -1256,7 +1256,7 @@ export default function Content() {
             {/* Parent Content */}
 
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
+              <label className="mb-2 block text-sm font-medium text-brand-text">
                 Parent Content
               </label>
 
@@ -1264,7 +1264,7 @@ export default function Content() {
                 name="parentId"
                 value={form.parentId}
                 onChange={handleFormChange}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
               >
                 <option value="">No Parent (Root Content)</option>
 
@@ -1299,7 +1299,7 @@ export default function Content() {
                     */}
 
                     {legacyPageNeedsMigration && (
-                      <p className="border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+                      <p className="border border-brand-warning-border bg-brand-warning-soft p-3 text-sm text-brand-warning">
                         This page has existing V1 content. V2 cannot edit it safely until the content is converted.
                         Saving is disabled to protect the original content.
                       </p>
@@ -1308,7 +1308,7 @@ export default function Content() {
                   </div>
                 ) : (
                   <>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
+                    <label className="mb-2 block text-sm font-medium text-brand-text">
                       Body
                     </label>
                     <RichTextEditor
@@ -1327,7 +1327,7 @@ export default function Content() {
             {form.type === "Post" && (
               <>
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                  <label className="mb-2 block text-sm font-medium text-brand-text">
                     Category
                   </label>
 
@@ -1337,12 +1337,12 @@ export default function Content() {
                     value={form.category}
                     onChange={handleFormChange}
                     placeholder="e.g. Company News"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                    className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm font-medium text-slate-700">
+                  <label className="mb-2 block text-sm font-medium text-brand-text">
                     Published Date
                   </label>
 
@@ -1351,7 +1351,7 @@ export default function Content() {
                     name="publishedAt"
                     value={form.publishedAt}
                     onChange={handleFormChange}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                    className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                   />
                 </div>
               </>
@@ -1361,7 +1361,7 @@ export default function Content() {
 
             {supportsHeroUpload(form.type, form.linkUrl, form.title) && (
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-brand-text">
                   {form.type === "Post" ? "Featured Image" : "Hero Image (optional — uses default when empty)"}
                 </label>
 
@@ -1370,11 +1370,11 @@ export default function Content() {
                   accept="image/*"
                   onChange={handleFeaturedImageChange}
                   disabled={uploadingImage}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                 />
 
                 {uploadingImage && (
-                  <p className="mt-2 text-xs text-slate-500">
+                  <p className="mt-2 text-xs text-brand-muted">
                     Uploading image...
                   </p>
                 )}
@@ -1384,7 +1384,7 @@ export default function Content() {
                     <img
                       src={cleanImageUrl(form.featuredImage, API_BASE_URL)}
                       alt="Hero / featured image preview"
-                      className="h-32 w-48 rounded-none border border-slate-200 object-cover"
+                      className="h-32 w-48 rounded-none border border-brand-border object-cover"
                     />
 
 
@@ -1397,7 +1397,7 @@ export default function Content() {
                           featuredImage: "",
                         }))
                       }
-                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-none bg-red-500 text-xs font-bold text-white shadow hover:bg-red-600"
+                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-none bg-brand-danger text-xs font-bold text-brand-inverse shadow hover:bg-brand-danger"
                     >
                       ×
                     </button>
@@ -1410,7 +1410,7 @@ export default function Content() {
 
             {form.type === "Link" && (
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">
+                <label className="mb-2 block text-sm font-medium text-brand-text">
                   Link URL
                 </label>
 
@@ -1420,7 +1420,7 @@ export default function Content() {
                   value={form.linkUrl}
                   onChange={handleFormChange}
                   placeholder="https\\://example.com"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+                  className="w-full rounded-lg border border-brand-border px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                 />
               </div>
             )}
@@ -1429,12 +1429,12 @@ export default function Content() {
           {/* Save Error */}
 
           {saveError && (
-            <div className="mx-5 mb-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="mx-5 mb-4 flex items-center justify-between rounded-lg border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
               <span>{saveError}</span>
               <button
                 type="button"
                 onClick={() => setSaveError("")}
-                className="ml-3 font-bold text-red-500 hover:text-red-700"
+                className="ml-3 font-bold text-brand-danger hover:text-brand-danger"
                 title="Close"
               >
                 ✕
@@ -1444,7 +1444,7 @@ export default function Content() {
 
           {/* Form Actions */}
 
-          <div className="flex justify-end gap-3 border-t border-slate-200 px-5 py-4">
+          <div className="flex justify-end gap-3 border-t border-brand-border px-5 py-4">
             <button
               type="button"
               onClick={() => {
@@ -1479,18 +1479,18 @@ export default function Content() {
       {deleteConfirm.open && (
         <div className="ils-dashboard-modal-overlay fixed inset-0 z-[100] flex items-center justify-center px-4">
           <div role="alertdialog" aria-modal="true" aria-labelledby="content-delete-title" className="ils-dashboard-dialog ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm w-full bg-brand-surface shadow-2xl">
-            <div className="border-b border-red-100 px-6 py-5">
+            <div className="border-b border-brand-danger-soft px-6 py-5">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-50 text-red-600">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-danger-soft text-brand-danger">
                   <span className="text-lg font-bold">!</span>
                 </div>
 
                 <div>
-                  <h3 id="content-delete-title" className="text-lg font-semibold text-slate-900">
+                  <h3 id="content-delete-title" className="text-lg font-semibold text-brand-text">
                     Delete Content
                   </h3>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-brand-muted">
                     This action cannot be undone.
                   </p>
                 </div>
@@ -1498,16 +1498,16 @@ export default function Content() {
             </div>
 
             <div className="px-6 py-5">
-              <p className="text-sm leading-6 text-slate-600">
+              <p className="text-sm leading-6 text-brand-muted">
                 Are you sure you want to delete{" "}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-brand-text">
                   {deleteConfirm.title || "this content"}
                 </span>
                 ?
               </p>
             </div>
 
-            <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-4">
+            <div className="flex justify-end gap-3 border-t border-brand-border px-6 py-4">
               <button
                 type="button"
                 onClick={() =>
@@ -1541,12 +1541,12 @@ export default function Content() {
       {/* Delete Error */}
 
       {deleteError && (
-        <div className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+        <div className="flex items-center justify-between rounded-lg border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
           <span>{deleteError}</span>
           <button
             type="button"
             onClick={() => setDeleteError("")}
-            className="ml-3 font-bold text-red-500 hover:text-red-700"
+            className="ml-3 font-bold text-brand-danger hover:text-brand-danger"
             title="Close"
           >
             ✕
@@ -1556,26 +1556,26 @@ export default function Content() {
 
       {/* Content List */}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-5 py-4">
-          <h2 className="text-sm font-semibold text-slate-900">
+      <div className="overflow-hidden rounded-xl border border-brand-border bg-brand-surface shadow-sm">
+        <div className="border-b border-brand-border px-5 py-4">
+          <h2 className="text-sm font-semibold text-brand-text">
             Website Content
           </h2>
         </div>
 
         {loading && (
-          <div className="px-5 py-8 text-center text-sm text-slate-500">
+          <div className="px-5 py-8 text-center text-sm text-brand-muted">
             Loading content...
           </div>
         )}
 
         {!loading && error && (
-          <div className="flex items-center justify-between px-5 py-4 text-sm text-red-600 bg-red-50 border-b border-red-100">
+          <div className="flex items-center justify-between px-5 py-4 text-sm text-brand-danger bg-brand-danger-soft border-b border-brand-danger-soft">
             <span>{error}</span>
             <button
               type="button"
               onClick={() => setError("")}
-              className="ml-3 font-bold text-red-500 hover:text-red-700"
+              className="ml-3 font-bold text-brand-danger hover:text-brand-danger"
               title="Close"
             >
               ✕
@@ -1584,13 +1584,13 @@ export default function Content() {
         )}
 
         {!loading && !error && contents.length === 0 && (
-          <div className="px-5 py-8 text-center text-sm text-slate-500">
+          <div className="px-5 py-8 text-center text-sm text-brand-muted">
             No content found.
           </div>
         )}
 
         {!loading && !error && contents.length > 0 && (
-          <div className="divide-y divide-slate-100">
+          <div className="divide-y divide-brand-border">
             {contents.map((content) => {
               const isExpanded = expandedId === content.id;
 
@@ -1608,7 +1608,7 @@ export default function Content() {
 
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-900">
+                          <span className="font-semibold text-brand-text">
                             {content.title}
                           </span>
 
@@ -1617,7 +1617,7 @@ export default function Content() {
                           </span>
                         </div>
 
-                        <p className="mt-1 text-xs text-slate-400">
+                        <p className="mt-1 text-xs text-brand-neutral">
                           Root Content
                         </p>
                       </div>
@@ -1635,30 +1635,30 @@ export default function Content() {
                   </div>
 
                   {isExpanded && (
-                    <div className="border-t border-slate-100 bg-slate-50 px-5 py-4">
+                    <div className="border-t border-brand-border bg-brand-surface-tint px-5 py-4">
                       {loadingChildren === content.id && (
-                        <div className="py-3 text-sm text-slate-500">
+                        <div className="py-3 text-sm text-brand-muted">
                           Loading children...
                         </div>
                       )}
 
                       {loadingChildren !== content.id &&
                         contentChildren.length === 0 && (
-                          <div className="py-3 text-sm text-slate-500">
+                          <div className="py-3 text-sm text-brand-muted">
                             No children found.
                           </div>
                         )}
 
                       {loadingChildren !== content.id &&
                         contentChildren.length > 0 && (
-                          <div className="ml-8 space-y-2 border-l border-slate-200 pl-4">
+                          <div className="ml-8 space-y-2 border-l border-brand-border pl-4">
                             {contentChildren.map((child) => (
                               <div
                                 key={child.id}
                                 className="flex items-center justify-between gap-3 border border-brand-border bg-brand-surface px-4 py-3"
                               >
                                 <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium text-slate-700">
+                                  <span className="text-sm font-medium text-brand-text">
                                     {child.title}
                                   </span>
 

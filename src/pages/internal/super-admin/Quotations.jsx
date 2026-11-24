@@ -350,17 +350,17 @@ export default function Quotations() {
                 <div className="ils-quotations-stat">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-slate-500">
+                            <p className="text-sm font-medium text-brand-muted">
                                 Total Requests
                             </p>
 
-                            <p className="mt-2 text-2xl font-semibold text-slate-900">
+                            <p className="mt-2 text-2xl font-semibold text-brand-text">
                                 {totalCount}
                             </p>
                         </div>
 
-                        <div className="flex h-10 w-10 items-center justify-center rounded-none bg-slate-100">
-                            <FileText className="h-5 w-5 text-slate-700" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-none bg-brand-surface-muted">
+                            <FileText className="h-5 w-5 text-brand-text" />
                         </div>
                     </div>
                 </div>
@@ -385,12 +385,12 @@ export default function Quotations() {
 
                 {/* Error */}
                 {error && (
-                    <div className="flex items-center justify-between border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="flex items-center justify-between border-b border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{error}</span>
                         <button
                             type="button"
                             onClick={() => setError('')}
-                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            className="ml-3 text-brand-danger hover:text-brand-danger font-bold"
                             title="Close"
                         >
                             ✕
@@ -402,49 +402,49 @@ export default function Quotations() {
                 <div className="overflow-x-auto">
                     <table className="min-w-full">
                         <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50">
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            <tr className="border-b border-brand-border bg-brand-surface-tint">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Customer
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Company
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Country
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Contact
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Interest
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Transport Modes
                                 </th>
 
-                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Submitted
                                 </th>
 
-                                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                <th className="px-5 py-3 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
 
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-brand-border">
                             {loading ? (
                                 <tr>
                                     <td
                                         colSpan="8"
                                         className="px-5 py-12 text-center"
                                     >
-                                        <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+                                        <div className="flex items-center justify-center gap-2 text-sm text-brand-muted">
                                             <RefreshCw className="h-4 w-4 animate-spin" />
                                             Loading quotations...
                                         </div>
@@ -457,15 +457,15 @@ export default function Quotations() {
                                         className="px-5 py-12 text-center"
                                     >
                                         <div className="flex flex-col items-center">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-none bg-slate-100">
-                                                <FileText className="h-5 w-5 text-slate-400" />
+                                            <div className="flex h-12 w-12 items-center justify-center rounded-none bg-brand-surface-muted">
+                                                <FileText className="h-5 w-5 text-brand-neutral" />
                                             </div>
 
-                                            <p className="mt-3 text-sm font-medium text-slate-700">
+                                            <p className="mt-3 text-sm font-medium text-brand-text">
                                                 No quotation requests found
                                             </p>
 
-                                            <p className="mt-1 text-sm text-slate-400">
+                                            <p className="mt-1 text-sm text-brand-neutral">
                                                 Try changing your search
                                                 criteria.
                                             </p>
@@ -551,59 +551,59 @@ export default function Quotations() {
                                         return (
                                             <tr
                                                 key={id}
-                                                className="transition hover:bg-slate-50"
+                                                className="transition hover:bg-brand-surface-tint"
                                             >
                                                 <td className="px-5 py-4">
-                                                    <div className="font-medium text-slate-900">
+                                                    <div className="font-medium text-brand-text">
                                                         {name}
                                                     </div>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                                                        <Building2 className="h-4 w-4 text-slate-400" />
+                                                    <div className="flex items-center gap-2 text-sm text-brand-text">
+                                                        <Building2 className="h-4 w-4 text-brand-neutral" />
                                                         {company}
                                                     </div>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-700">
-                                                        <MapPin className="h-4 w-4 text-slate-400" />
+                                                    <div className="flex items-center gap-2 text-sm text-brand-text">
+                                                        <MapPin className="h-4 w-4 text-brand-neutral" />
                                                         {country}
                                                     </div>
                                                 </td>
 
                                                 <td className="px-5 py-4">
                                                     <div className="space-y-1">
-                                                        <div className="flex items-center gap-2 text-xs text-slate-600">
-                                                            <Mail className="h-3.5 w-3.5 text-slate-400" />
+                                                        <div className="flex items-center gap-2 text-xs text-brand-muted">
+                                                            <Mail className="h-3.5 w-3.5 text-brand-neutral" />
                                                             <span className="max-w-[180px] truncate">
                                                                 {email}
                                                             </span>
                                                         </div>
 
-                                                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                                                            <Phone className="h-3.5 w-3.5 text-slate-400" />
+                                                        <div className="flex items-center gap-2 text-xs text-brand-muted">
+                                                            <Phone className="h-3.5 w-3.5 text-brand-neutral" />
                                                             {phone}
                                                         </div>
                                                     </div>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-none bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                                    <span className="inline-flex rounded-none bg-brand-surface-muted px-2.5 py-1 text-xs font-medium text-brand-text">
                                                         {interestType}
                                                     </span>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-none bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700">
+                                                    <span className="inline-flex rounded-none bg-brand-surface-blue px-2.5 py-1 text-xs font-medium text-brand-accent">
                                                         {transportModes}
                                                     </span>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                        <Calendar className="h-4 w-4 text-slate-400" />
+                                                    <div className="flex items-center gap-2 text-sm text-brand-muted">
+                                                        <Calendar className="h-4 w-4 text-brand-neutral" />
                                                         {formatDate(
                                                             createdAt
                                                         )}
@@ -636,14 +636,14 @@ export default function Quotations() {
                 {/* Pagination */}
                 {!loading &&
                     filteredQuotations.length > 0 && (
-                        <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
-                            <p className="text-sm text-slate-500">
+                        <div className="flex items-center justify-between border-t border-brand-border px-5 py-4">
+                            <p className="text-sm text-brand-muted">
                                 Page{' '}
-                                <span className="font-medium text-slate-700">
+                                <span className="font-medium text-brand-text">
                                     {page}
                                 </span>{' '}
                                 of{' '}
-                                <span className="font-medium text-slate-700">
+                                <span className="font-medium text-brand-text">
                                     {totalPages}
                                 </span>
                             </p>
@@ -655,7 +655,7 @@ export default function Quotations() {
                                         goToPreviousPage
                                     }
                                     disabled={page <= 1}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-none border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-none border border-brand-border bg-brand-surface text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -666,7 +666,7 @@ export default function Quotations() {
                                     disabled={
                                         page >= totalPages
                                     }
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-none border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-none border border-brand-border bg-brand-surface text-brand-muted transition hover:bg-brand-surface-tint disabled:cursor-not-allowed disabled:opacity-40"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
@@ -694,11 +694,11 @@ export default function Quotations() {
                             {/* Modal Header */}
                             <div className="ils-dashboard-modal-header flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-lg font-semibold text-slate-900">
+                                    <h2 className="text-lg font-semibold text-brand-text">
                                         Quotation Details
                                     </h2>
 
-                                    <p className="mt-1 text-sm text-slate-500">
+                                    <p className="mt-1 text-sm text-brand-muted">
                                         Review the submitted quotation
                                         request.
                                     </p>
@@ -717,18 +717,18 @@ export default function Quotations() {
                             <div className="ils-quotations-modal-content">
                                 {detailsLoading ? (
                                     <div className="flex items-center justify-center py-16">
-                                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <div className="flex items-center gap-2 text-sm text-brand-muted">
                                             <RefreshCw className="h-4 w-4 animate-spin" />
                                             Loading quotation details...
                                         </div>
                                     </div>
                                 ) : detailsError ? (
-                                    <div className="flex items-center justify-between rounded-none border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    <div className="flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                                         <span>{detailsError}</span>
                                         <button
                                             type="button"
                                             onClick={() => setDetailsError('')}
-                                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                                            className="ml-3 text-brand-danger hover:text-brand-danger font-bold"
                                             title="Close"
                                         >
                                             ✕
@@ -738,29 +738,29 @@ export default function Quotations() {
                                     <div className="space-y-6">
                                         {/* Customer */}
                                         <div>
-                                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-muted">
                                                 Customer Information
                                             </h3>
 
                                             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
-                                                    <p className="text-xs text-slate-400">
+                                                <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4">
+                                                    <p className="text-xs text-brand-neutral">
                                                         Name
                                                     </p>
 
-                                                    <p className="mt-1 font-medium text-slate-900">
+                                                    <p className="mt-1 font-medium text-brand-text">
                                                         {getFullName(
                                                             selectedQuotation
                                                         )}
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
-                                                    <p className="text-xs text-slate-400">
+                                                <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4">
+                                                    <p className="text-xs text-brand-neutral">
                                                         Company
                                                     </p>
 
-                                                    <p className="mt-1 font-medium text-slate-900">
+                                                    <p className="mt-1 font-medium text-brand-text">
                                                         {formatValue(
                                                             getValue(
                                                                 selectedQuotation,
@@ -771,12 +771,12 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
-                                                    <p className="text-xs text-slate-400">
+                                                <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4">
+                                                    <p className="text-xs text-brand-neutral">
                                                         Country
                                                     </p>
 
-                                                    <p className="mt-1 font-medium text-slate-900">
+                                                    <p className="mt-1 font-medium text-brand-text">
                                                         {formatValue(
                                                             getValue(
                                                                 selectedQuotation,
@@ -787,12 +787,12 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
-                                                    <p className="text-xs text-slate-400">
+                                                <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4">
+                                                    <p className="text-xs text-brand-neutral">
                                                         Phone
                                                     </p>
 
-                                                    <p className="mt-1 font-medium text-slate-900">
+                                                    <p className="mt-1 font-medium text-brand-text">
                                                         {formatValue(
                                                             getValue(
                                                                 selectedQuotation,
@@ -803,12 +803,12 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-none border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-                                                    <p className="text-xs text-slate-400">
+                                                <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4 md:col-span-2">
+                                                    <p className="text-xs text-brand-neutral">
                                                         Email
                                                     </p>
 
-                                                    <p className="mt-1 font-medium text-slate-900">
+                                                    <p className="mt-1 font-medium text-brand-text">
                                                         {formatValue(
                                                             getValue(
                                                                 selectedQuotation,
@@ -823,21 +823,21 @@ export default function Quotations() {
 
                                         {/* Request */}
                                         <div>
-                                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand-muted">
                                                 Request Information
                                             </h3>
 
                                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                                <div className="rounded-none border border-slate-200 p-4">
+                                                <div className="rounded-none border border-brand-border p-4">
                                                     <div className="flex items-center gap-2">
-                                                        <FileText className="h-4 w-4 text-slate-400" />
+                                                        <FileText className="h-4 w-4 text-brand-neutral" />
 
-                                                        <p className="text-xs text-slate-400">
+                                                        <p className="text-xs text-brand-neutral">
                                                             Interest Type
                                                         </p>
                                                     </div>
 
-                                                    <p className="mt-2 font-medium text-slate-900">
+                                                    <p className="mt-2 font-medium text-brand-text">
                                                         {formatEnum(
                                                             getValue(
                                                                 selectedQuotation,
@@ -848,16 +848,16 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-none border border-slate-200 p-4">
+                                                <div className="rounded-none border border-brand-border p-4">
                                                     <div className="flex items-center gap-2">
-                                                        <Ship className="h-4 w-4 text-slate-400" />
+                                                        <Ship className="h-4 w-4 text-brand-neutral" />
 
-                                                        <p className="text-xs text-slate-400">
+                                                        <p className="text-xs text-brand-neutral">
                                                             Transport Modes
                                                         </p>
                                                     </div>
 
-                                                    <p className="mt-2 font-medium text-slate-900">
+                                                    <p className="mt-2 font-medium text-brand-text">
                                                         {formatTransportModes(
                                                             getValue(
                                                                 selectedQuotation,
@@ -868,16 +868,16 @@ export default function Quotations() {
                                                     </p>
                                                 </div>
 
-                                                <div className="rounded-none border border-slate-200 p-4">
+                                                <div className="rounded-none border border-brand-border p-4">
                                                     <div className="flex items-center gap-2">
-                                                        <FileText className="h-4 w-4 text-slate-400" />
+                                                        <FileText className="h-4 w-4 text-brand-neutral" />
 
-                                                        <p className="text-xs text-slate-400">
+                                                        <p className="text-xs text-brand-neutral">
                                                             Annual Shipments
                                                         </p>
                                                     </div>
 
-                                                    <p className="mt-2 font-medium text-slate-900">
+                                                    <p className="mt-2 font-medium text-brand-text">
                                                         {formatEnum(
                                                             getValue(
                                                                 selectedQuotation,
@@ -893,15 +893,15 @@ export default function Quotations() {
                                         {/* Message */}
                                         <div>
                                             <div className="mb-3 flex items-center gap-2">
-                                                <MessageSquare className="h-4 w-4 text-slate-500" />
+                                                <MessageSquare className="h-4 w-4 text-brand-muted" />
 
-                                                <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                                                <h3 className="text-sm font-semibold uppercase tracking-wide text-brand-muted">
                                                     Message
                                                 </h3>
                                             </div>
 
-                                            <div className="rounded-none border border-slate-200 bg-slate-50 p-4">
-                                                <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">
+                                            <div className="rounded-none border border-brand-border bg-brand-surface-tint p-4">
+                                                <p className="whitespace-pre-wrap text-sm leading-6 text-brand-text">
                                                     {formatValue(
                                                         getValue(
                                                             selectedQuotation,
@@ -914,13 +914,13 @@ export default function Quotations() {
                                         </div>
 
                                         {/* Meta */}
-                                        <div className="border-t border-slate-200 pt-5">
-                                            <div className="flex items-center gap-2 text-sm text-slate-500">
+                                        <div className="border-t border-brand-border pt-5">
+                                            <div className="flex items-center gap-2 text-sm text-brand-muted">
                                                 <Calendar className="h-4 w-4" />
 
                                                 <span>
                                                     Submitted:{' '}
-                                                    <span className="font-medium text-slate-700">
+                                                    <span className="font-medium text-brand-text">
                                                         {formatDateTime(
                                                             getValue(
                                                                 selectedQuotation,
