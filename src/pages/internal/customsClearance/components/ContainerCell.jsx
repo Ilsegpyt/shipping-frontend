@@ -31,6 +31,17 @@ export default function ContainerCell({ row, editing, onChange }) {
         ) : (
           <span>{parts[0] ? optionLabel(parts[0]) : "—"}</span>
         )}
+        {(count > 1 || split) && (
+          <span
+            className="merge-toggle merge-toggle-preview"
+            title={t(
+              "Click Edit on this row first to change or unmerge container types",
+              "اضغط على زرار تعديل (Edit) في أول السطر لتعديل أو فك دمج الحاويات",
+            )}
+          >
+            {split ? t("Merge", "دمج") : t("Unmerge", "فك الدمج")}
+          </span>
+        )}
       </div>
     );
 

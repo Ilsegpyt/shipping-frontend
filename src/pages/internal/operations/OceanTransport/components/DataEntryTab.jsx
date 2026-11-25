@@ -1995,50 +1995,139 @@ export default function DataEntryTab({
   const [newUpdateText, setNewUpdateText] = useState('');
   const [isSubmittingUpdate, setIsSubmittingUpdate] = useState(false);
 
+  // Active Shipment Read-Only Details + Editable Updates Slide-Over Drawer State
+  const [activeDetailDrawer, setActiveDetailDrawer] = useState(null);
+  const [drawerUpdateText, setDrawerUpdateText] = useState('');
+  const [isSubmittingDrawerUpdate, setIsSubmittingDrawerUpdate] = useState(false);
+  const drawerUpdateInputRef = useRef(null);
+
   const openUpdatesModal = (row, shipRef) => {
     setActiveUpdateRow({ row, shipRef });
     setNewUpdateText('');
     setUpdatesModalOpen(true);
   };
 
+  const openActiveDetailDrawer = (shipRef, shipRows, clickedRow = null, isShipmentLevelClick = false) => {
+    if (isDeliveredTab || currentDir === 'Deleted') return;
+    if (editingShipments[shipRef] || savingShipments[shipRef]) return;
+    if (!shipRows || shipRows.length === 0) return;
+
+    const initialRowId =
+      shipRows.length === 1
+        ? shipRows[0]._rowId
+        : !isShipmentLevelClick && clickedRow?._rowId
+          ? clickedRow._rowId
+          : null;
+
+    setDrawerUpdateText('');
+    setActiveDetailDrawer({
+      shipRef,
+      dir: currentDir,
+      selectedRowId: initialRowId,
+      rowsSnapshot: shipRows,
+    });
+  };
+
+  const closeActiveDetailDrawer = useCallback(() => {
+    setActiveDetailDrawer(null);
+    setDrawerUpdateText('');
+  }, []);
+
+  // Auto-focus the update input immediately whenever the drawer opens with a selected container or container selection changes
+  useEffect(() => {
+    if (!activeDetailDrawer?.selectedRowId) return;
+    const focusInput = () => {
+      const el = drawerUpdateInputRef.current;
+      if (el && !el.disabled) {
+        el.focus();
+      }
+    };
+    const rafId = requestAnimationFrame(focusInput);
+    const timerId = setTimeout(focusInput, 60);
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+    };
+  }, [activeDetailDrawer?.shipRef, activeDetailDrawer?.selectedRowId]);
+
+  const persistContainerUpdate = async ({ targetRow, allRows, dir, text }) => {
+    const containerId = targetRow._containerId;
+    const partnerRow = targetRow._pairId
+      ? allRows.find(
+          (r) =>
+            r._pairId === targetRow._pairId &&
+            r._rowId !== targetRow._rowId &&
+            r._containerId !== targetRow._containerId
+        )
+      : null;
+
+    const isDummyOrDraft =
+      !containerId ||
+      String(containerId).includes('dummy') ||
+      !targetRow._operationId ||
+      String(targetRow._operationId).startsWith('DRAFT_');
+
+    if (isDummyOrDraft) {
+      throw new Error(
+        lang === 'ar'
+          ? 'يجب حفظ الشحنة في قاعدة البيانات أولاً قبل إضافة تحديثات على الحاوية.'
+          : 'Please save the shipment to the database first before adding container updates.'
+      );
+    }
+
+    const createdUpdate = await addContainerUpdate(containerId, text);
+
+    let partnerCreatedUpdate = null;
+    if (partnerRow?._containerId && !String(partnerRow._containerId).includes('dummy')) {
+      try {
+        partnerCreatedUpdate = await addContainerUpdate(partnerRow._containerId, text);
+      } catch (partnerErr) {
+        console.warn('Could not add update to partner container:', partnerErr);
+      }
+    }
+
+    const buildUpdateObj = (res, cId) => ({
+      id: res?.id || `local_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      operationContainerId: cId,
+      details: res?.details || text,
+      createdAtUtc: res?.createdAtUtc || new Date().toISOString(),
+      createdByName: res?.createdByName || currentUserName,
+    });
+
+    const newObj = buildUpdateObj(createdUpdate, containerId);
+    const updatedList = [newObj, ...(targetRow.updates || [])];
+    onUpdateCell && onUpdateCell(dir, targetRow._rowId, 'updates', updatedList);
+
+    let partnerUpdatedList = null;
+    if (partnerRow) {
+      const partnerObj = partnerCreatedUpdate
+        ? buildUpdateObj(partnerCreatedUpdate, partnerRow._containerId)
+        : newObj;
+      partnerUpdatedList = [partnerObj, ...(partnerRow.updates || [])];
+      onUpdateCell && onUpdateCell(dir, partnerRow._rowId, 'updates', partnerUpdatedList);
+    }
+
+    return { updatedList, partnerRow, partnerUpdatedList };
+  };
+
   const handleAddUpdate = async () => {
     if (!newUpdateText.trim() || !activeUpdateRow) return;
     const text = newUpdateText.trim();
     const targetRow = activeUpdateRow.row;
-    const containerId = targetRow._containerId;
-
-    const currentList = isServerSide ? serverPageRows : (currentDir === 'Export' ? activeExportRows : activeImportRows);
-    const partnerRow = targetRow._pairId
-      ? currentList.find((r) => r._pairId === targetRow._pairId && r._rowId !== targetRow._rowId && r._containerId !== targetRow._containerId)
-      : null;
+    const currentList = isServerSide
+      ? serverPageRows
+      : currentDir === 'Export'
+        ? activeExportRows
+        : activeImportRows;
 
     setIsSubmittingUpdate(true);
     try {
-      let createdUpdate = null;
-      if (containerId && !String(containerId).includes('dummy')) {
-        createdUpdate = await addContainerUpdate(containerId, text);
-      }
-      if (partnerRow?._containerId && !String(partnerRow._containerId).includes('dummy')) {
-        try {
-          await addContainerUpdate(partnerRow._containerId, text);
-        } catch (partnerErr) {
-          console.warn('Could not add update to partner container:', partnerErr);
-        }
-      }
-
-      const newObj = {
-        id: createdUpdate?.id || `local_${Date.now()}`,
-        operationContainerId: containerId,
-        details: text,
-        createdAtUtc: createdUpdate?.createdAtUtc || new Date().toISOString(),
-        createdByName: createdUpdate?.createdByName || currentUserName,
-      };
-
-      const updatedList = [newObj, ...(targetRow.updates || [])];
-      onUpdateCell && onUpdateCell(currentDir, targetRow._rowId, 'updates', updatedList);
-      if (partnerRow) {
-        onUpdateCell && onUpdateCell(currentDir, partnerRow._rowId, 'updates', updatedList);
-      }
+      const { updatedList } = await persistContainerUpdate({
+        targetRow,
+        allRows: currentList,
+        dir: currentDir,
+        text,
+      });
 
       setActiveUpdateRow((prev) => ({
         ...prev,
@@ -2051,29 +2140,72 @@ export default function DataEntryTab({
       setNewUpdateText('');
     } catch (err) {
       console.error('Failed to add container update to server:', err);
-      // Fallback locally
-      const fallbackObj = {
-        id: `local_${Date.now()}`,
-        operationContainerId: containerId,
-        details: text,
-        createdAtUtc: new Date().toISOString(),
-        createdByName: currentUserName,
-      };
-      const updatedList = [fallbackObj, ...(targetRow.updates || [])];
-      onUpdateCell && onUpdateCell(currentDir, targetRow._rowId, 'updates', updatedList);
-      if (partnerRow) {
-        onUpdateCell && onUpdateCell(currentDir, partnerRow._rowId, 'updates', updatedList);
-      }
-      setActiveUpdateRow((prev) => ({
-        ...prev,
-        row: {
-          ...prev.row,
-          updates: updatedList,
-        },
-      }));
-      setNewUpdateText('');
+      const errMsg = extractErrorMessage(err) || err?.message;
+      notify(
+        errMsg ||
+          (lang === 'ar'
+            ? 'تعذر حفظ التحديث في قاعدة البيانات. برجاء المحاولة مرة أخرى.'
+            : 'Failed to save update to database. Please try again.'),
+        'error'
+      );
     } finally {
       setIsSubmittingUpdate(false);
+    }
+  };
+
+  const handleDrawerAddUpdate = async () => {
+    if (!drawerUpdateText.trim() || !activeDetailDrawer?.selectedRowId) return;
+    const text = drawerUpdateText.trim();
+    const drawerDir = activeDetailDrawer.dir || currentDir;
+    const sourceList = isServerSide
+      ? serverPageRows
+      : drawerDir === 'Export'
+        ? activeExportRows
+        : activeImportRows;
+    const liveShipRows = sourceList.filter((r) => r._ref === activeDetailDrawer.shipRef);
+    const drawerRows = liveShipRows.length > 0 ? liveShipRows : activeDetailDrawer.rowsSnapshot || [];
+    const targetRow = drawerRows.find((r) => r._rowId === activeDetailDrawer.selectedRowId);
+    if (!targetRow) return;
+
+    setIsSubmittingDrawerUpdate(true);
+    try {
+      const { updatedList, partnerRow, partnerUpdatedList } = await persistContainerUpdate({
+        targetRow,
+        allRows: drawerRows,
+        dir: drawerDir,
+        text,
+      });
+
+      setActiveDetailDrawer((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          rowsSnapshot: (prev.rowsSnapshot || []).map((r) => {
+            if (r._rowId === targetRow._rowId) return { ...r, updates: updatedList };
+            if (partnerRow && r._rowId === partnerRow._rowId) return { ...r, updates: partnerUpdatedList };
+            return r;
+          }),
+        };
+      });
+
+      setDrawerUpdateText('');
+      requestAnimationFrame(() => {
+        if (drawerUpdateInputRef.current && !drawerUpdateInputRef.current.disabled) {
+          drawerUpdateInputRef.current.focus();
+        }
+      });
+    } catch (err) {
+      console.error('Failed to add container update from drawer:', err);
+      const errMsg = extractErrorMessage(err) || err?.message;
+      notify(
+        errMsg ||
+          (lang === 'ar'
+            ? 'تعذر حفظ التحديث في قاعدة البيانات. برجاء المحاولة مرة أخرى.'
+            : 'Failed to save update to database. Please try again.'),
+        'error'
+      );
+    } finally {
+      setIsSubmittingDrawerUpdate(false);
     }
   };
 
@@ -2082,6 +2214,18 @@ export default function DataEntryTab({
   const [statusHistoryTarget, setStatusHistoryTarget] = useState(null);
   const [statusHistoryList, setStatusHistoryList] = useState([]);
   const [isLoadingStatusHistory, setIsLoadingStatusHistory] = useState(false);
+
+  // Close active details drawer on Escape (unless Status History modal is open on top)
+  useEffect(() => {
+    if (!activeDetailDrawer) return;
+    const handleEsc = (e) => {
+      if (e.key === 'Escape' && !statusHistoryOpen) {
+        closeActiveDetailDrawer();
+      }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [activeDetailDrawer, statusHistoryOpen, closeActiveDetailDrawer]);
 
   const openStatusHistoryModal = async (shipRef, shipRows) => {
     if (!shipRows || shipRows.length === 0) return;
@@ -5062,6 +5206,21 @@ export default function DataEntryTab({
                             let isDisabled = !isShipmentEditing || isDelivered || isSavingThisShipment;
                             let inputPlaceholder = '';
 
+                            const isActiveClickable =
+                              !isDeliveredTab &&
+                              currentDir !== 'Deleted' &&
+                              !isShipmentEditing &&
+                              !isSavingThisShipment &&
+                              !['actions', 'sel', 'status', 'updates'].includes(c.k);
+                            const isShipmentLevelClick = isMergedCol || c.k === 'opEntered';
+                            const handleCellDrawerClick = (e) => {
+                              if (!isActiveClickable) return;
+                              if (e?.target && e.target.closest('button, a, input[type="checkbox"]')) return;
+                              const selText = window.getSelection ? String(window.getSelection() || '') : '';
+                              if (selText.trim().length > 0) return;
+                              openActiveDetailDrawer(shipRef, shipRows, r, isShipmentLevelClick);
+                            };
+
                             const valStr = val !== null && val !== undefined ? String(val).trim() : '';
                             const nonEditableLabel = lang === 'ar' ? 'حقل غير قابل للتعديل' : 'Non-editable field';
                             const nonEditableTitle = valStr ? `${valStr} (${nonEditableLabel})` : nonEditableLabel;
@@ -5072,8 +5231,8 @@ export default function DataEntryTab({
                                 : (lang === 'ar' ? 'العملية مسلّمة ولا يمكن تعديلها (Delivered)' : 'Delivered shipment'))
                               : !isShipmentEditing
                                 ? (valStr
-                                  ? `${valStr} (${lang === 'ar' ? 'انقر على "تعديل" لتعديل هذه الشحنة' : 'Click "Edit" to edit'})`
-                                  : (lang === 'ar' ? 'انقر على زر "تعديل" لتعديل هذه الشحنة' : 'Click "Edit" to edit'))
+                                  ? `${valStr} (${lang === 'ar' ? 'انقر لعرض التفاصيل وإضافة تحديث' : 'Click to view details & add update'})`
+                                  : (lang === 'ar' ? 'انقر لعرض التفاصيل وإضافة تحديث' : 'Click to view details & add update'))
                                 : valStr;
 
                             if (currentDir === 'Export') {
@@ -5413,7 +5572,11 @@ export default function DataEntryTab({
                                     padding: '4px',
                                   }}
                                 >
-                                  <div className="flex flex-col items-center justify-center py-2 px-3 rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-sky-50/40 shadow-sm text-center w-full min-h-[58px]">
+                                  <div
+                                    onClick={handleCellDrawerClick}
+                                    title={isActiveClickable ? (lang === 'ar' ? 'انقر لعرض تفاصيل الشحنة وإضافة تحديث' : 'Click to view shipment details & add update') : undefined}
+                                    className={`flex flex-col items-center justify-center py-2 px-3 rounded-2xl border border-slate-200/90 bg-gradient-to-b from-white to-sky-50/40 shadow-sm text-center w-full min-h-[58px] ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:shadow-md transition-all' : ''}`}
+                                  >
                                     <span className="text-[12px] font-semibold text-slate-700 tracking-tight leading-tight">
                                       {r._ref}
                                     </span>
@@ -5651,7 +5814,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -5662,31 +5827,33 @@ export default function DataEntryTab({
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <SearchableSelect
-                                      compact={true}
-                                      value={selectedPodVal}
-                                      disabled={isDisabled}
-                                      allowCustom={true}
-                                      title={cellTitle}
-                                      placeholder="Select POD"
-                                      options={portOptions}
-                                      onChange={(nextPort, opt) => {
-                                        const match = opt?.raw || opt?.item || (lookups.ports || []).find(
-                                          (p) => (p.name || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
-                                            (p.code || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
-                                            p.id === nextPort
-                                        );
-                                        const finalName = match ? match.name : nextPort;
-                                        const finalId = match ? match.id : null;
-                                        if (isMergedCol) {
-                                          handleMergedColChange(shipRows, 'pod', finalName);
-                                          handleMergedColChange(shipRows, 'podId', finalId);
-                                        } else {
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'pod', finalName);
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'podId', finalId);
-                                        }
-                                      }}
-                                    />
+                                    <div className={`w-full ${isActiveClickable ? 'pointer-events-none' : ''}`}>
+                                      <SearchableSelect
+                                        compact={true}
+                                        value={selectedPodVal}
+                                        disabled={isDisabled}
+                                        allowCustom={true}
+                                        title={cellTitle}
+                                        placeholder="Select POD"
+                                        options={portOptions}
+                                        onChange={(nextPort, opt) => {
+                                          const match = opt?.raw || opt?.item || (lookups.ports || []).find(
+                                            (p) => (p.name || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
+                                              (p.code || '').toLowerCase().trim() === String(nextPort || '').toLowerCase().trim() ||
+                                              p.id === nextPort
+                                          );
+                                          const finalName = match ? match.name : nextPort;
+                                          const finalId = match ? match.id : null;
+                                          if (isMergedCol) {
+                                            handleMergedColChange(shipRows, 'pod', finalName);
+                                            handleMergedColChange(shipRows, 'podId', finalId);
+                                          } else {
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'pod', finalName);
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'podId', finalId);
+                                          }
+                                        }}
+                                      />
+                                    </div>
                                   </div>
                                 </td>
                               );
@@ -5714,7 +5881,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -5725,31 +5894,33 @@ export default function DataEntryTab({
                                       justifyContent: 'center',
                                     }}
                                   >
-                                    <SearchableSelect
-                                      compact={true}
-                                      value={selectedPowVal}
-                                      disabled={isDisabled}
-                                      allowCustom={true}
-                                      title={cellTitle}
-                                      placeholder={lang === 'ar' ? '-- اختياري --' : 'None (Optional)'}
-                                      options={portOptions}
-                                      onChange={(nextPow, opt) => {
-                                        const pObj = opt?.raw || opt?.item || (lookups.ports || []).find(
-                                          (p) => (p.name || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
-                                            (p.code || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
-                                            p.id === nextPow
-                                        );
-                                        const finalName = pObj ? pObj.name : nextPow;
-                                        const finalId = pObj ? pObj.id : null;
-                                        if (isMergedCol) {
-                                          handleMergedColChange(shipRows, 'pow', finalName);
-                                          handleMergedColChange(shipRows, 'powId', finalId);
-                                        } else {
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'pow', finalName);
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'powId', finalId);
-                                        }
-                                      }}
-                                    />
+                                    <div className={`w-full ${isActiveClickable ? 'pointer-events-none' : ''}`}>
+                                      <SearchableSelect
+                                        compact={true}
+                                        value={selectedPowVal}
+                                        disabled={isDisabled}
+                                        allowCustom={true}
+                                        title={cellTitle}
+                                        placeholder={lang === 'ar' ? '-- اختياري --' : 'None (Optional)'}
+                                        options={portOptions}
+                                        onChange={(nextPow, opt) => {
+                                          const pObj = opt?.raw || opt?.item || (lookups.ports || []).find(
+                                            (p) => (p.name || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
+                                              (p.code || '').toLowerCase().trim() === String(nextPow || '').toLowerCase().trim() ||
+                                              p.id === nextPow
+                                          );
+                                          const finalName = pObj ? pObj.name : nextPow;
+                                          const finalId = pObj ? pObj.id : null;
+                                          if (isMergedCol) {
+                                            handleMergedColChange(shipRows, 'pow', finalName);
+                                            handleMergedColChange(shipRows, 'powId', finalId);
+                                          } else {
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'pow', finalName);
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'powId', finalId);
+                                          }
+                                        }}
+                                      />
+                                    </div>
                                   </div>
                                 </td>
                               );
@@ -5769,7 +5940,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g} flex flex-col items-center justify-center`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} flex flex-col items-center justify-center ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -5783,7 +5956,7 @@ export default function DataEntryTab({
                                       onChange={(e) =>
                                         onUpdateCell && onUpdateCell(currentDir, r._rowId, 'size', e.target.value)
                                       }
-                                      className={`w-full text-xs font-semibold bg-transparent outline-none cursor-pointer px-1 truncate ${!normalizeContainerType(val) ? 'text-slate-400 italic font-normal' : 'text-slate-700 font-semibold'
+                                      className={`w-full text-xs font-semibold bg-transparent outline-none px-1 truncate ${isActiveClickable ? 'pointer-events-none' : 'cursor-pointer'} ${!normalizeContainerType(val) ? 'text-slate-400 italic font-normal' : 'text-slate-700 font-semibold'
                                         }`}
                                       title="نوع ومقاس الحاوية (Container Type)"
                                     >
@@ -5988,8 +6161,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g} relative`}
-                                    title={truckerTitle}
+                                    onClick={handleCellDrawerClick}
+                                    className={`cbox grp-${c.g} relative ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
+                                    title={isActiveClickable ? cellTitle : truckerTitle}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -6029,28 +6203,30 @@ export default function DataEntryTab({
                                       </button>
                                     )}
 
-                                    <SearchableSelect
-                                      compact={true}
-                                      value={val}
-                                      disabled={isDisabled || isReadOnly}
-                                      placeholder={lang === 'ar' ? '-- اختر المقاول --' : 'Select Transporter'}
-                                      options={transporterOptions}
-                                      onChange={(selectedName, opt) => {
-                                        const match = opt?.item || (lookups.transporters || []).find((t) => t.name === selectedName || t.id === selectedName);
-                                        const truckerId = match ? match.id : null;
-                                        if (isMergedCol) {
-                                          handleMergedColChange(shipRows, 'trucker', selectedName);
-                                          if (truckerId !== null && truckerId !== undefined) {
-                                            handleMergedColChange(shipRows, 'truckerId', truckerId);
+                                    <div className={`w-full ${isActiveClickable ? 'pointer-events-none' : ''}`}>
+                                      <SearchableSelect
+                                        compact={true}
+                                        value={val}
+                                        disabled={isDisabled || isReadOnly}
+                                        placeholder={lang === 'ar' ? '-- اختر المقاول --' : 'Select Transporter'}
+                                        options={transporterOptions}
+                                        onChange={(selectedName, opt) => {
+                                          const match = opt?.item || (lookups.transporters || []).find((t) => t.name === selectedName || t.id === selectedName);
+                                          const truckerId = match ? match.id : null;
+                                          if (isMergedCol) {
+                                            handleMergedColChange(shipRows, 'trucker', selectedName);
+                                            if (truckerId !== null && truckerId !== undefined) {
+                                              handleMergedColChange(shipRows, 'truckerId', truckerId);
+                                            }
+                                          } else {
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'trucker', selectedName);
+                                            if (truckerId !== null && truckerId !== undefined) {
+                                              onUpdateCell && onUpdateCell(currentDir, r._rowId, 'truckerId', truckerId);
+                                            }
                                           }
-                                        } else {
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, 'trucker', selectedName);
-                                          if (truckerId !== null && truckerId !== undefined) {
-                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'truckerId', truckerId);
-                                          }
-                                        }
-                                      }}
-                                    />
+                                        }}
+                                      />
+                                    </div>
                                   </div>
                                 </td>
                               );
@@ -6070,7 +6246,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -6093,7 +6271,8 @@ export default function DataEntryTab({
                                         width: '100%',
                                         minWidth: `${c.w - 24}px`,
                                         textAlign: 'start',
-                                        cursor: isReadOnly ? 'not-allowed' : 'text',
+                                        cursor: isActiveClickable ? 'pointer' : (isReadOnly ? 'not-allowed' : 'text'),
+                                        pointerEvents: isActiveClickable ? 'none' : 'auto',
                                         opacity: isReadOnly ? 0.78 : 1,
                                       }}
                                     />
@@ -6116,7 +6295,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -6142,7 +6323,8 @@ export default function DataEntryTab({
                                         width: '100%',
                                         minWidth: `${c.w - 24}px`,
                                         textAlign: 'start',
-                                        cursor: isReadOnly ? 'not-allowed' : 'text',
+                                        cursor: isActiveClickable ? 'pointer' : (isReadOnly ? 'not-allowed' : 'text'),
+                                        pointerEvents: isActiveClickable ? 'none' : 'auto',
                                         opacity: isReadOnly ? 0.78 : 1,
                                         backgroundColor: isReadOnly ? 'transparent' : (isShipmentEditing ? '#ffffff' : 'transparent'),
                                         borderRadius: isReadOnly ? '0px' : '6px',
@@ -6170,7 +6352,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g}`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -6195,7 +6379,8 @@ export default function DataEntryTab({
                                         width: '100%',
                                         minWidth: `${c.w - 24}px`,
                                         textAlign: 'start',
-                                        cursor: isReadOnly ? 'not-allowed' : 'text',
+                                        cursor: isActiveClickable ? 'pointer' : (isReadOnly ? 'not-allowed' : 'text'),
+                                        pointerEvents: isActiveClickable ? 'none' : 'auto',
                                         opacity: isReadOnly ? 0.78 : 1,
                                         backgroundColor: isReadOnly ? 'transparent' : (isShipmentEditing ? '#ffffff' : 'transparent'),
                                         borderRadius: isReadOnly ? '0px' : '6px',
@@ -6226,7 +6411,9 @@ export default function DataEntryTab({
                                   }}
                                 >
                                   <div
-                                    className={`cbox grp-${c.g} relative`}
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} relative ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                     style={{
                                       width: '100%',
                                       minWidth: `${c.w - 12}px`,
@@ -6264,21 +6451,23 @@ export default function DataEntryTab({
                                       </button>
                                     )}
 
-                                    <SearchableSelect
-                                      compact={true}
-                                      value={val}
-                                      disabled={isDisabled || isReadOnly}
-                                      allowCustom={true}
-                                      placeholder={lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}
-                                      options={destinationOptions}
-                                      onChange={(selectedVal) => {
-                                        if (isMergedCol) {
-                                          handleMergedColChange(shipRows, c.k, selectedVal);
-                                        } else {
-                                          onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, selectedVal);
-                                        }
-                                      }}
-                                    />
+                                    <div className={`w-full ${isActiveClickable ? 'pointer-events-none' : ''}`}>
+                                      <SearchableSelect
+                                        compact={true}
+                                        value={val}
+                                        disabled={isDisabled || isReadOnly}
+                                        allowCustom={true}
+                                        placeholder={lang === 'ar' ? '-- اختر الوجهة --' : '-- Select Destination --'}
+                                        options={destinationOptions}
+                                        onChange={(selectedVal) => {
+                                          if (isMergedCol) {
+                                            handleMergedColChange(shipRows, c.k, selectedVal);
+                                          } else {
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, c.k, selectedVal);
+                                          }
+                                        }}
+                                      />
+                                    </div>
                                   </div>
                                 </td>
                               );
@@ -6301,7 +6490,8 @@ export default function DataEntryTab({
                                 }}
                               >
                                 <div
-                                  className={`cbox grp-${c.g} relative`}
+                                  onClick={handleCellDrawerClick}
+                                  className={`cbox grp-${c.g} relative ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
                                   title={cellTitle}
                                   style={{
                                     width: '100%',
@@ -7916,6 +8106,557 @@ export default function DataEntryTab({
                   <button
                     type="button"
                     onClick={() => setViewDeliveredDetailOp(null)}
+                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer"
+                  >
+                    {lang === 'ar' ? 'إغلاق' : 'Close'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 10. Active Operation Full Details Slide-over Drawer (Read-Only Master/Containers + Editable Latest Update) */}
+      {activeDetailDrawer && !isDeliveredTab && currentDir !== 'Deleted' && (() => {
+        const drawerDir = activeDetailDrawer.dir || currentDir;
+        const sourceList = isServerSide
+          ? serverPageRows
+          : drawerDir === 'Export'
+            ? activeExportRows
+            : activeImportRows;
+        const liveShipRows = sourceList.filter((r) => r._ref === activeDetailDrawer.shipRef);
+        const shipRows = liveShipRows.length > 0 ? liveShipRows : activeDetailDrawer.rowsSnapshot || [];
+        if (shipRows.length === 0) return null;
+
+        const firstRow = shipRows[0];
+        const isImport = drawerDir === 'Import' || firstRow.operationType === 'Import';
+        const refNum = isImport ? firstRow.bl : (firstRow.booking || firstRow.bl);
+        const portName = isImport ? (firstRow.pod || '—') : (firstRow.pol || '—');
+        const podExportName = !isImport ? (firstRow.pod || '—') : null;
+        const powName = !isImport ? (firstRow.pow || '—') : null;
+        const clearanceType = !isImport ? (firstRow.clrType || '—') : null;
+        const customs = !isImport ? (firstRow.customs || '—') : null;
+
+        const selectedRow = activeDetailDrawer.selectedRowId
+          ? shipRows.find((r) => r._rowId === activeDetailDrawer.selectedRowId) || null
+          : null;
+        const pairedPartner = selectedRow?._pairId
+          ? shipRows.find(
+              (r) =>
+                r._pairId === selectedRow._pairId &&
+                r._rowId !== selectedRow._rowId &&
+                r._containerId !== selectedRow._containerId
+            )
+          : null;
+
+        const isManualUpdate = (up) =>
+          !up?.details ||
+          (!up.details.startsWith('Export container updated') &&
+            !up.details.startsWith('Import container updated'));
+
+        // Show manual updates for the selected container (or all containers in this shipment if none selected yet)
+        const visibleUpdates = selectedRow
+          ? (selectedRow.updates || [])
+              .filter(isManualUpdate)
+              .map((u) => ({
+                ...u,
+                _cntrLabel: selectedRow.cntr || `#${selectedRow._ordinal || 1}`,
+              }))
+          : shipRows
+              .flatMap((rowItem, idx) =>
+                (rowItem.updates || [])
+                  .filter(isManualUpdate)
+                  .map((u) => ({
+                    ...u,
+                    _cntrLabel: rowItem.cntr || `#${rowItem._ordinal || idx + 1}`,
+                  }))
+              )
+              .sort((a, b) => new Date(b.createdAtUtc || 0) - new Date(a.createdAtUtc || 0));
+
+        const selectDrawerContainer = (rowId) => {
+          setActiveDetailDrawer((prev) => (prev ? { ...prev, selectedRowId: rowId } : prev));
+        };
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={closeActiveDetailDrawer}
+          >
+            <div
+              className="w-full max-w-3xl h-full bg-white shadow-2xl flex flex-col border-s border-slate-200 animate-in slide-in-from-right duration-250 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-50/70 via-white to-slate-50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center shrink-0 shadow-2xs">
+                    <Eye size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm font-bold text-slate-800">
+                        {lang === 'ar' ? 'تفاصيل العملية الكاملة' : 'Operation Full Details'}
+                      </h3>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          isImport
+                            ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                            : 'bg-purple-50 text-purple-700 border border-purple-200'
+                        }`}
+                      >
+                        {isImport ? 'Import' : 'Export'}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        <Lock size={10} />
+                        {lang === 'ar' ? 'البيانات للقراءة فقط' : 'Read-Only Info'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                      {firstRow.shipNo || refNum || firstRow._ref} · {firstRow._ref}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeActiveDetailDrawer}
+                  className="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition cursor-pointer"
+                  title={lang === 'ar' ? 'إغلاق' : 'Close'}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Operation Summary Banner */}
+              <div className="px-6 py-3 bg-sky-50/70 border-b border-sky-100 flex items-center justify-between gap-3 text-xs flex-wrap">
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span>
+                    <span className="text-slate-600">
+                      {lang === 'ar' ? 'أنشئت بواسطة:' : 'Created By:'}{' '}
+                      <strong className="text-sky-950">{firstRow.oper || firstRow._createdByName || '—'}</strong>
+                    </span>
+                  </div>
+                  <div className="text-slate-500 text-[11px]">
+                    <span>{lang === 'ar' ? 'تاريخ الإنشاء:' : 'Created At:'} </span>
+                    <strong className="text-slate-700">{fmtEnteredDate(firstRow._createdAtUtc) || '—'}</strong>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openStatusHistoryModal(activeDetailDrawer.shipRef, shipRows)}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                  title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
+                >
+                  <History size={12} className="text-sky-600" />
+                  <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                {/* 1. Shipment & Master Info (Read-Only) */}
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                    <span className="w-1.5 h-3.5 bg-sky-600 rounded-full"></span>
+                    <span>{lang === 'ar' ? 'بيانات الشحنة والعملية الأساسية' : 'Shipment & Master Info'}</span>
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'العميل' : 'Client'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={firstRow.client}>
+                        {firstRow.client || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'الخط الملاحي' : 'Shipping Line'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={firstRow.line}>
+                        {firstRow.line || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'البوليصة / البوكينج' : 'BL / Booking'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={refNum}>
+                        {refNum || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'رقم الشهادة' : 'Certificate No.'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">
+                        {firstRow.cert || '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? (isImport ? 'ميناء الوصول (POD)' : 'ميناء الشحن (POL)') : (isImport ? 'POD' : 'POL')}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block">
+                        {portName}
+                      </span>
+                    </div>
+
+                    {!isImport && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'ميناء الوصول (POD)' : 'POD'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {podExportName}
+                        </span>
+                      </div>
+                    )}
+
+                    {!isImport && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'ميناء العبور (POW)' : 'POW'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {powName}
+                        </span>
+                      </div>
+                    )}
+
+                    {!isImport && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'نوع التخليص' : 'Clearance Type'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {clearanceType}
+                        </span>
+                      </div>
+                    )}
+
+                    {!isImport && customs && customs !== '—' && (
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] text-slate-400 block font-medium">
+                          {lang === 'ar' ? 'الجمارك' : 'Customs'}
+                        </span>
+                        <span className="text-xs font-bold text-slate-800 truncate block">
+                          {customs}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'تاريخ استلام الفواتير' : 'Invoices Rcv'}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-700 block">
+                        {firstRow.invRcv ? fmtDay(firstRow.invRcv) : '—'}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'عدد الحاويات' : 'CNTR Volume'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 block">
+                        {firstRow.vol || shipRows.length}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'الحالة' : 'Status'}
+                      </span>
+                      <span className="text-xs font-bold text-sky-700 block">
+                        {firstRow.status || 'Open'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Containers & Trips Table (Read-Only, click row to select container for update) */}
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-3.5 bg-sky-600 rounded-full"></span>
+                      <span>
+                        {lang === 'ar'
+                          ? `تفاصيل الحاويات ورحلات النقل (${shipRows.length})`
+                          : `Containers & Trips (${shipRows.length})`}
+                      </span>
+                    </h4>
+                    {shipRows.length > 1 && (
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        {lang === 'ar' ? 'اضغط على أي حاوية لتحديدها لإضافة تحديث' : 'Click any container row to select it for update'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="overflow-x-auto rounded-2xl border border-slate-200/90 shadow-2xs">
+                    <table className="w-full text-xs text-start border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold text-[11px]">
+                          <th className="py-2.5 px-3 text-start">#</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'رقم الحاوية والنوع' : 'Container & Type'}</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مكان التحميل / التعتيق' : 'Destination'}</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'مقاول النقل' : 'Transporter'}</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'السيارة والسائق' : 'Car & Driver'}</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'تاريخ الوصول' : 'Actual Arrival'}</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'الخروج من بوابة العميل' : 'Gate Out'}</th>
+                          <th className="py-2.5 px-3 text-start">{lang === 'ar' ? 'المستندات الناقصة' : 'Missing Docs'}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {shipRows.map((cRow, cIdx) => {
+                          const isSelectedCntr = selectedRow?._rowId === cRow._rowId;
+                          return (
+                            <tr
+                              key={cRow._rowId || cIdx}
+                              onClick={() => selectDrawerContainer(cRow._rowId)}
+                              className={`cursor-pointer transition-colors ${
+                                isSelectedCntr
+                                  ? 'bg-sky-50/90 ring-1 ring-inset ring-sky-300'
+                                  : 'hover:bg-slate-50/80'
+                              }`}
+                            >
+                              <td className="py-2.5 px-3 font-semibold text-slate-500">
+                                <div className="flex items-center gap-1.5">
+                                  {isSelectedCntr && <span className="w-2 h-2 rounded-full bg-sky-600 shrink-0" />}
+                                  <span>{cRow._ordinal || cIdx + 1}</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-bold text-slate-900 font-mono">
+                                  {cRow.cntr || '—'}
+                                </div>
+                                <div className="text-[10px] text-slate-500">
+                                  {cRow.size || '—'}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-slate-700">
+                                {cRow.dest || '—'}
+                              </td>
+                              <td className="py-2.5 px-3 font-medium text-slate-700">
+                                {cRow.trucker || '—'}
+                              </td>
+                              <td className="py-2.5 px-3">
+                                <div className="font-semibold text-slate-800">
+                                  {cRow.car || '—'}
+                                </div>
+                                <div className="text-[10.5px] text-slate-500">
+                                  {cRow.driver || '—'} {cRow.mob ? `(${cRow.mob})` : ''}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                {cRow.arrDate ? `${fmtDay(cRow.arrDate)} ${cRow.arrTime ? fmtTime12(cRow.arrTime) : ''}` : '—'}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                {cRow.gateOut ? `${fmtDay(cRow.gateOut)} ${cRow.gateOutT ? fmtTime12(cRow.gateOutT) : ''}` : '—'}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-600 text-[11px]">
+                                {cRow.missDoc ? (
+                                  <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 font-semibold text-[10.5px]">
+                                    {cRow.missDoc}
+                                  </span>
+                                ) : '—'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 3. Editable Latest Update + Container Updates Log */}
+                <div className="rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50/50 to-white p-4 shadow-xs space-y-3.5">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-3.5 bg-cyan-600 rounded-full"></span>
+                      <span>{lang === 'ar' ? 'أحدث التحديثات (Latest Update - قابل للتعديل)' : 'Latest Update (Editable)'}</span>
+                    </h4>
+                    {selectedRow && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-100 text-sky-900 border border-sky-200 text-[11px] font-bold font-mono">
+                        <span>{selectedRow.cntr || `#${selectedRow._ordinal || 1}`}</span>
+                        {pairedPartner && (
+                          <span className="text-sky-700 font-sans font-semibold">
+                            + {pairedPartner.cntr || `#${pairedPartner._ordinal || ''}`} (Paired)
+                          </span>
+                        )}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Container Selector Pills when shipment has multiple containers (Method B: require explicit single-container choice) */}
+                  {shipRows.length > 1 && (
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] font-semibold text-slate-600">
+                        {selectedRow
+                          ? (lang === 'ar' ? 'الحاوية المحددة للتحديث:' : 'Selected container for update:')
+                          : (lang === 'ar' ? 'اختر حاوية واحدة أولاً لكتابة التحديث:' : 'Select one container first to write an update:')}
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {shipRows.map((cRow, idx) => {
+                          const isSelectedCntr = selectedRow?._rowId === cRow._rowId;
+                          const label = cRow.cntr || `${lang === 'ar' ? 'حاوية' : 'Container'} #${cRow._ordinal || idx + 1}`;
+                          return (
+                            <button
+                              key={cRow._rowId || idx}
+                              type="button"
+                              onClick={() => selectDrawerContainer(cRow._rowId)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-1.5 ${
+                                isSelectedCntr
+                                  ? 'bg-[#0f4c81] text-white border-[#0f4c81] shadow-xs'
+                                  : 'bg-white text-slate-700 border-slate-300 hover:border-sky-400 hover:bg-sky-50'
+                              }`}
+                            >
+                              <span className="font-mono">{label}</span>
+                              {cRow.size && (
+                                <span className={`text-[10px] font-medium ${isSelectedCntr ? 'text-sky-100' : 'text-slate-400'}`}>
+                                  ({cRow.size})
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Warning prompt if multi-container shipment opened from shipment-level cell */}
+                  {!selectedRow && shipRows.length > 1 && (
+                    <div className="px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2">
+                      <AlertTriangle size={15} className="text-amber-600 shrink-0" />
+                      <span>
+                        {lang === 'ar'
+                          ? 'هذه الشحنة تحتوي على أكثر من حاوية — اختر رقم الحاوية المطلوبة أعلاه لتفعيل خانة كتابة التحديث.'
+                          : 'This shipment has multiple containers — please select the target container above to enable the update input.'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Add Update Input Form */}
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={drawerUpdateInputRef}
+                        type="text"
+                        disabled={!selectedRow || isSubmittingDrawerUpdate}
+                        placeholder={
+                          !selectedRow
+                            ? (lang === 'ar' ? 'اختر الحاوية أولاً لإضافة التحديث...' : 'Select a container first...')
+                            : (lang === 'ar' ? 'اكتب التحديث واضغط Enter...' : 'Type the update and press Enter...')
+                        }
+                        value={drawerUpdateText}
+                        onChange={(e) => setDrawerUpdateText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleDrawerAddUpdate();
+                          }
+                        }}
+                        className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                      />
+                      <button
+                        type="button"
+                        disabled={!selectedRow || isSubmittingDrawerUpdate || !drawerUpdateText.trim()}
+                        onClick={handleDrawerAddUpdate}
+                        className="px-5 py-2.5 rounded-xl bg-[#0f4c81] hover:bg-[#0c3c66] text-white text-sm font-semibold transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0 flex items-center gap-1 shadow-sm cursor-pointer"
+                      >
+                        {isSubmittingDrawerUpdate ? (
+                          <RefreshCw size={14} className="animate-spin" />
+                        ) : (
+                          '+ Add update'
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-400 mt-1.5 font-medium">
+                      {lang === 'ar' ? 'سيتم التسجيل باسم ' : 'Will be recorded as '}
+                      <span className="font-semibold text-slate-600">{currentUserName}</span>
+                    </p>
+                  </div>
+
+                  {/* Container Updates Log (Latest First) */}
+                  <div className="pt-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                        {lang === 'ar' ? 'سجل تحديثات الحاويات (Container Updates Log)' : 'Container Updates Log'}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-400">
+                        {visibleUpdates.length}
+                      </span>
+                    </div>
+
+                    {visibleUpdates.length === 0 ? (
+                      <div className="py-6 rounded-xl bg-slate-50 border border-slate-100 text-center text-xs text-slate-400 italic font-medium">
+                        {lang === 'ar' ? 'لا توجد تحديثات يدوية حتى الآن' : 'No manual updates yet'}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-72 overflow-y-auto pr-0.5">
+                        {visibleUpdates.map((u, uIdx) => {
+                          const itemNumber = visibleUpdates.length - uIdx;
+                          const isLatest = uIdx === 0;
+                          return (
+                            <div
+                              key={u.id || `${u._cntrLabel}_${uIdx}`}
+                              className="flex items-start justify-between gap-3 p-3 rounded-xl border border-slate-200/90 bg-white hover:border-slate-300 transition shadow-2xs"
+                            >
+                              <div className="flex items-start gap-2.5 min-w-0">
+                                <div className="w-6 h-6 rounded-full bg-[#0f4c81] text-white font-bold text-[11px] flex items-center justify-center shrink-0 mt-0.5">
+                                  {itemNumber}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
+                                    <span className="font-mono font-bold text-xs text-slate-800">{u._cntrLabel}</span>
+                                    <span className="text-[10.5px] text-slate-400">· {fmtUpdateDateTime(u.createdAtUtc)}</span>
+                                    <span className="text-[10.5px] font-semibold text-slate-600">
+                                      · {u.createdByName || currentUserName}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs font-semibold text-slate-800 leading-relaxed break-words">
+                                    {u.details}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {isLatest && (
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-[10.5px] font-semibold border border-emerald-200/70 shrink-0">
+                                  latest
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                  <Lock size={12} className="text-slate-400" />
+                  {lang === 'ar' ? 'عرض تفاصيل الشحنة (التحديثات فقط متاحة)' : 'Operation Details (Updates Only Editable)'}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openStatusHistoryModal(activeDetailDrawer.shipRef, shipRows)}
+                    className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-sky-50 hover:bg-sky-100 text-sky-900 border border-sky-200 shadow-2xs transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <History size={12} className="text-sky-700" />
+                    <span>{lang === 'ar' ? 'سجل وتاريخ الحالات' : 'Status History'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeActiveDetailDrawer}
                     className="px-5 py-2 rounded-xl text-xs font-semibold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition cursor-pointer"
                   >
                     {lang === 'ar' ? 'إغلاق' : 'Close'}

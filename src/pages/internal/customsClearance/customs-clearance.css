@@ -1083,3 +1083,17 @@
 .ccl-root .act-btn.save{background:var(--good);border-color:var(--good);color:#fff}
 .ccl-root tr.row-editing td>.cbox{box-shadow:0 0 0 2px color-mix(in srgb,var(--aqua) 30%,transparent)}
 .ccl-root tr.row-editing td>.cbox.cell-locked{box-shadow:none}
+.ccl-root .merge-toggle-preview {
+  display: inline-block;
+  opacity: 0.5;
+  filter: blur(0.3px);
+  cursor: not-allowed;
+  user-select: none;
+  font-size: 9.5px;
+  margin-top: 2px;
+  transition: opacity 0.2s, filter 0.2s;
+}
+.ccl-root .merge-toggle-preview:hover {
+  opacity: 0.85;
+  filter: none;
+}
