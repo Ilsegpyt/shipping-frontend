@@ -590,14 +590,14 @@ export default function Quotations() {
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-none bg-brand-surface-muted px-2.5 py-1 text-xs font-medium text-brand-text">
-                                                        {interestType}
+                                                    <span className="text-sm text-brand-text">
+                                                        {interestType || '—'}
                                                     </span>
                                                 </td>
 
                                                 <td className="px-5 py-4">
-                                                    <span className="inline-flex rounded-none bg-brand-surface-blue px-2.5 py-1 text-xs font-medium text-brand-accent">
-                                                        {transportModes}
+                                                    <span className="text-sm text-brand-text">
+                                                        {transportModes || '—'}
                                                     </span>
                                                 </td>
 

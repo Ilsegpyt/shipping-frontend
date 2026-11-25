@@ -1599,29 +1599,30 @@ export default function Content() {
               return (
                 <div key={content.id}>
                   <div className="flex items-center justify-between gap-3 px-5 py-4">
-                    <button
+                    <div className="flex items-center w-60 justify-between gap-3">
+                      <button
                       type="button"
                       onClick={() => handleExpand(content.id)}
-                      className="flex min-w-0 items-center gap-3 text-left"
+                      className="flex min-w-2 items-center gap-3 text-left"
                     >
                       {isExpanded ? <ChevronDown size={17} aria-hidden="true" /> : <ChevronRight size={17} aria-hidden="true" />}
-
+                      
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-brand-text">
                             {content.title}
                           </span>
 
+                        </div>
+                        <p className="mt-1 text-xs text-brand-neutral">
+                          Root Content
+                        </p>
+                        </div>
+                    </button>
                           <span className={`ils-dashboard-status ils-content-type-badge ils-content-type-badge--${String(getTypeName(content.type)).toLowerCase()}`}>
                             {content.type}
                           </span>
                         </div>
-
-                        <p className="mt-1 text-xs text-brand-neutral">
-                          Root Content
-                        </p>
-                      </div>
-                    </button>
 
                     <div className="relative shrink-0">
                       <button type="button" id={`content-actions-${content.id}`} className="ils-content-action-trigger" aria-label={`Actions for ${content.title}`} aria-expanded={openActionMenu === `root-${content.id}`} onClick={() => setOpenActionMenu((current) => current === `root-${content.id}` ? null : `root-${content.id}`)}>
@@ -1657,7 +1658,7 @@ export default function Content() {
                                 key={child.id}
                                 className="flex items-center justify-between gap-3 border border-brand-border bg-brand-surface px-4 py-3"
                               >
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center w-64 justify-between gap-2">
                                   <span className="text-sm font-medium text-brand-text">
                                     {child.title}
                                   </span>

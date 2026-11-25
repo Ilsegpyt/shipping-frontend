@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Users } from 'lucide-react';
+import { Users, LayoutDashboard } from 'lucide-react';
 
 import { useAuth } from '../../../auth/AuthContext';
 import dashboardHero from '../../../assets/branding/dashboard-hero.png';
+
+import { DashboardPage, DashboardPageHeader } from '../../../components/dashboard/DashboardUI';
+import './main-dashboard.css';
 
 import { getCustomers } from '../../../services/customersService';
 
@@ -29,7 +32,7 @@ export default function Dashboard() {
         !user?.roleName?.includes('Operations')
     );
 
-    const [totalCustomers, setTotalCustomers] = useState(0);
+    const [totalCustomers, setTotalCustomers] = useState(null);
     const [loadingCustomers, setLoadingCustomers] = useState(true);
 
     useEffect(() => {
@@ -52,7 +55,7 @@ export default function Dashboard() {
             } catch (error) {
                 console.error('Failed to load dashboard data:', error);
 
-                setTotalCustomers(0);
+                setTotalCustomers(null);
             } finally {
                 setLoadingCustomers(false);
             }
@@ -66,59 +69,33 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="space-y-4">
-            {/* Hero */}
-            <section
-                className="relative overflow-hidden rounded-2xl"
-                style={{
-                    backgroundImage: `url(${dashboardHero})`,
-                    backgroundPosition: 'center',
-                    backgroundSize: 'cover',
-                }}
-            >
-                <div className="absolute inset-0 bg-slate-950/60" />
-
-                <div className="relative flex min-h-48 items-center px-6 py-7 sm:px-8">
-                    <div className="max-w-2xl text-white">
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-200">
-                            Operations Dashboard
-                        </p>
-
-                        <h1 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                            Welcome back, {user?.name || 'User'}
-                        </h1>
-
-                        <p className="mt-3 max-w-xl text-sm leading-6 text-slate-200">
-                            Manage your operational activity from one place.
-                        </p>
-                    </div>
+        <DashboardPage className="ils-main-dashboard">
+            <DashboardPageHeader title="Dashboard" description="Your internal workspace at a glance." />
+            <section className="ils-main-hero" style={{ backgroundImage: `url(${dashboardHero})` }}>
+                <div className="ils-main-hero-copy">
+                    <p className="ils-main-eyebrow"><LayoutDashboard size={16} aria-hidden="true" /> Internal workspace</p>
+                    <h2>Welcome back, {user?.name || 'User'}</h2>
+                    <p>Manage your daily activity from one place.</p>
+                    {user?.roleName && <span className="ils-main-role">{user.roleName}</span>}
                 </div>
             </section>
-
-            {/* Quick Overview (Hidden from Operations Manager) */}
             {canViewCustomers && (
-                <section className="grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-lg border border-slate-200 bg-white px-5 py-4 shadow-none">
-                        <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-slate-500">
-                                Total Customers
-                            </p>
-
-                            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-slate-100 text-slate-600">
-                                <Users size={19} />
+                <section aria-labelledby="dashboard-overview-title">
+                    <h2 id="dashboard-overview-title" className="ils-main-section-title">Overview</h2>
+                    <div className="ils-main-overview">
+                        <article className="ils-main-stat">
+                            <div className="ils-main-stat-heading">
+                                <h3>Total Customers</h3>
+                                <span className="ils-main-stat-icon"><Users size={22} aria-hidden="true" /></span>
                             </div>
-                        </div>
-
-                        <p className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-                            {loadingCustomers ? '...' : totalCustomers}
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                            Active customer accounts
-                        </p>
+                            <p className="ils-main-stat-value" aria-live="polite">
+                                {loadingCustomers ? '…' : totalCustomers === null ? '—' : totalCustomers.toLocaleString('en-US')}
+                            </p>
+                            <p className="ils-main-stat-note">{loadingCustomers ? 'Loading customer data…' : totalCustomers === null ? 'Customer data unavailable' : 'Customer accounts (excluding deleted)'}</p>
+                        </article>
                     </div>
                 </section>
             )}
-        </div>
+        </DashboardPage>
     );
 }

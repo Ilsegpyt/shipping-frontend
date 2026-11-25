@@ -838,9 +838,8 @@ export default function Customers() {
                                                         </td>
 
                                                         <td className="px-4 py-4">
-                                                            <span className="inline-flex max-w-[180px] truncate rounded-none bg-brand-surface-muted px-2.5 py-1 text-xs font-medium text-brand-muted">
-                                                                {customer.industry ||
-                                                                    '—'}
+                                                            <span className="text-sm text-brand-text">
+                                                                {customer.industry || '—'}
                                                             </span>
                                                         </td>
 

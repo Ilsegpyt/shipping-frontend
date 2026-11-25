@@ -429,9 +429,9 @@ export default function AgentOpportunities() {
 
                                             {/* Industry */}
                                             <td className="px-4 py-3">
-                                                <span className="inline-flex rounded-none bg-brand-surface-muted px-2.5 py-1 text-[11px] font-medium text-brand-text">
+                                                <span className="text-sm text-brand-text">
                                                     {
-                                                        application.mainIndustry
+                                                        application.mainIndustry || "—"
                                                     }
                                                 </span>
                                             </td>

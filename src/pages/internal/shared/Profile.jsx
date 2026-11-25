@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react';
+import { UserRound, ShieldCheck } from 'lucide-react';
+import { DashboardPage, DashboardPageHeader, DashboardButton } from '../../../components/dashboard/DashboardUI';
+import './profile-dashboard.css';
 import { useAuth } from '../../../auth/AuthContext';
 import { updateProfile, updateEmail } from '../../../auth/authService';
 import api from '../../../services/api';
@@ -254,48 +257,47 @@ export default function Profile() {
     };
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-2xl font-semibold text-gray-900">
-                    Profile
-                </h2>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    View and manage your account information.
-                </p>
+        <DashboardPage className="ils-profile">
+            <DashboardPageHeader title="Profile" description="View and manage your account information." />
+            <div className="ils-profile-summary">
+                <span className="ils-profile-avatar"><UserRound size={30} aria-hidden="true" /></span>
+                <div className="min-w-0 break-words">
+                    <h2>{user?.name || 'User'}</h2>
+                    <p>{user?.email || '—'}</p>
+                </div>
+                {user?.roleName && <span className="ils-profile-role">{user.roleName}</span>}
             </div>
-
             {/* Personal Information */}
-            <div className="w-full max-w-5xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-start justify-between border-b border-gray-100 pb-5">
+            <div className="ils-profile-panel">
+                <div className="flex flex-wrap gap-4 items-start justify-between border-b border-brand-border pb-5">
                     <div>
-                        <h3 className="text-base font-semibold text-gray-900">
-                            Personal Information
+                        <h3 className="ils-profile-section-title">
+                            <UserRound size={20} aria-hidden="true" /> Personal Information
                         </h3>
 
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-brand-muted">
                             Manage your personal information.
                         </p>
                     </div>
 
                     {!isEditing && canEditProfile && (
-                        <button
+                        <DashboardButton
                             type="button"
                             onClick={handleEdit}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                            variant="secondary"
                         >
                             Edit Profile
-                        </button>
+                        </DashboardButton>
                     )}
                 </div>
 
                 {error && (
-                    <div className="mt-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="mt-5 flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{error}</span>
                         <button
                             type="button"
                             onClick={() => setError('')}
-                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            className="ml-3 text-brand-danger hover:text-brand-danger font-bold"
                             title="Close"
                         >
                             ✕
@@ -304,14 +306,14 @@ export default function Profile() {
                 )}
 
                 {success && (
-                    <div className="mt-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <div className="mt-5 rounded-none border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                         {success}
                     </div>
                 )}
 
                 <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
                     <div>
-                        <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                             Name
                         </label>
 
@@ -322,7 +324,7 @@ export default function Profile() {
                                 onChange={(event) =>
                                     setName(event.target.value)
                                 }
-                                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                             />
                         ) : isAccountManager ? (
                             <input
@@ -330,17 +332,17 @@ export default function Profile() {
                                 value={user?.name || ''}
                                 readOnly
                                 disabled
-                                className="mt-2 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+                                className="mt-2 w-full cursor-not-allowed rounded-none border border-brand-border bg-brand-surface-tint px-3 py-2 text-sm text-brand-muted"
                             />
                         ) : (
-                            <p className="mt-1 text-sm font-medium text-gray-900">
+                            <p className="mt-1 text-sm font-medium text-brand-text">
                                 {user?.name || '-'}
                             </p>
                         )}
                     </div>
 
                     <div>
-                        <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                             Email
                         </label>
 
@@ -351,7 +353,7 @@ export default function Profile() {
                                 onChange={(event) =>
                                     setEmail(event.target.value)
                                 }
-                                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                             />
                         ) : isAccountManager ? (
                             <input
@@ -359,17 +361,17 @@ export default function Profile() {
                                 value={user?.email || ''}
                                 readOnly
                                 disabled
-                                className="mt-2 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+                                className="mt-2 w-full cursor-not-allowed rounded-none border border-brand-border bg-brand-surface-tint px-3 py-2 text-sm text-brand-muted"
                             />
                         ) : (
-                            <p className="mt-1 text-sm font-medium text-gray-900">
+                            <p className="mt-1 text-sm font-medium text-brand-text">
                                 {user?.email || '-'}
                             </p>
                         )}
                     </div>
 
                     <div>
-                        <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                             Phone
                         </label>
 
@@ -380,7 +382,7 @@ export default function Profile() {
                                 onChange={(event) =>
                                     setPhone(event.target.value)
                                 }
-                                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                             />
                         ) : isAccountManager ? (
                             <input
@@ -388,10 +390,10 @@ export default function Profile() {
                                 value={user?.phone || ''}
                                 readOnly
                                 disabled
-                                className="mt-2 w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+                                className="mt-2 w-full cursor-not-allowed rounded-none border border-brand-border bg-brand-surface-tint px-3 py-2 text-sm text-brand-muted"
                             />
                         ) : (
-                            <p className="mt-1 text-sm font-medium text-gray-900">
+                            <p className="mt-1 text-sm font-medium text-brand-text">
                                 {user?.phone || '-'}
                             </p>
                         )}
@@ -399,11 +401,11 @@ export default function Profile() {
 
                     {user?.tokenType === 'internal' && (
                         <div>
-                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                 Role
                             </label>
 
-                            <p className="mt-1 text-sm font-medium text-gray-900">
+                            <p className="mt-1 text-sm font-medium text-brand-text">
                                 {user?.roleName || '-'}
                             </p>
                         </div>
@@ -411,69 +413,69 @@ export default function Profile() {
 
                     {user?.companyName && (
                         <div>
-                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                 Company
                             </label>
 
-                            <p className="mt-1 text-sm font-medium text-gray-900">
+                            <p className="mt-1 text-sm font-medium text-brand-text">
                                 {user.companyName}
                             </p>
                         </div>
                     )}
 
                     <div>
-                        <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                             Account Type
                         </label>
 
-                        <p className="mt-1 text-sm font-medium capitalize text-gray-900">
+                        <p className="mt-1 text-sm font-medium capitalize text-brand-text">
                             {user?.tokenType || '-'}
                         </p>
                     </div>
                 </div>
 
                 {isEditing && canEditProfile && (
-                    <div className="mt-6 flex justify-end gap-3 border-t border-gray-100 pt-5">
-                        <button
+                    <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-brand-border pt-5">
+                        <DashboardButton
                             type="button"
                             onClick={handleCancel}
                             disabled={saving}
-                            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            variant="secondary"
                         >
                             Cancel
-                        </button>
+                        </DashboardButton>
 
-                        <button
+                        <DashboardButton
                             type="button"
                             onClick={handleSave}
                             disabled={saving}
-                            className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            variant="primary"
                         >
                             {saving ? 'Saving...' : 'Save Changes'}
-                        </button>
+                        </DashboardButton>
                     </div>
                 )}
             </div>
 
             {/* Change Password */}
-            <div className="w-full max-w-5xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="border-b border-gray-100 pb-5">
-                    <h3 className="text-base font-semibold text-gray-900">
-                        Change Password
+            <div className="ils-profile-panel">
+                <div className="border-b border-brand-border pb-5">
+                    <h3 className="ils-profile-section-title">
+                        <ShieldCheck size={20} aria-hidden="true" /> Change Password
                     </h3>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-brand-muted">
                         Update your account password.
                     </p>
                 </div>
 
                 {passwordError && (
-                    <div className="mt-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="mt-5 flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{passwordError}</span>
                         <button
                             type="button"
                             onClick={() => setPasswordError('')}
-                            className="ml-3 text-red-500 hover:text-red-700 font-bold"
+                            className="ml-3 text-brand-danger hover:text-brand-danger font-bold"
                             title="Close"
                         >
                             ✕
@@ -482,16 +484,16 @@ export default function Profile() {
                 )}
 
                 {passwordSuccess && (
-                    <div className="mt-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <div className="mt-5 rounded-none border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                         {passwordSuccess}
                     </div>
                 )}
 
-                <div className="mx-auto mt-6 w-full max-w-3xl rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <div className="mt-6 w-full border border-brand-border bg-brand-surface-tint p-4 sm:p-6">
                     <form onSubmit={handleChangePassword}>
                         {/* Current Password */}
                         <div>
-                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                            <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                 Current Password
                             </label>
 
@@ -508,7 +510,7 @@ export default function Profile() {
                                             event.target.value
                                         )
                                     }
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                    className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                                     placeholder="Enter your current password"
                                     disabled={changingPassword}
                                     required
@@ -521,7 +523,7 @@ export default function Profile() {
                                             !showCurrentPassword
                                         )
                                     }
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-primary"
                                     aria-label={
                                         showCurrentPassword
                                             ? 'Hide password'
@@ -538,7 +540,7 @@ export default function Profile() {
                         {/* New Password + Confirm Password */}
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
                             <div>
-                                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                     New Password
                                 </label>
 
@@ -555,7 +557,7 @@ export default function Profile() {
                                                 event.target.value
                                             )
                                         }
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                        className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                                         placeholder="Enter your new password"
                                         minLength={8}
                                         disabled={changingPassword}
@@ -569,7 +571,7 @@ export default function Profile() {
                                                 !showNewPassword
                                             )
                                         }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-primary"
                                         aria-label={
                                             showNewPassword
                                                 ? 'Hide password'
@@ -582,13 +584,13 @@ export default function Profile() {
                                     </button>
                                 </div>
 
-                                <p className="mt-1.5 text-xs text-gray-500">
-                                    Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-gray-700 bg-gray-100 px-1 py-0.5 rounded font-semibold">Pass@1234</span>).
+                                <p className="mt-1.5 text-xs text-brand-muted">
+                                    Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-brand-text bg-brand-border px-1 py-0.5 rounded-none font-semibold">Pass@1234</span>).
                                 </p>
                             </div>
 
                             <div>
-                                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                                     Confirm New Password
                                 </label>
 
@@ -605,7 +607,7 @@ export default function Profile() {
                                                 event.target.value
                                             )
                                         }
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                        className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                                         placeholder="Confirm your new password"
                                         minLength={6}
                                         disabled={changingPassword}
@@ -619,7 +621,7 @@ export default function Profile() {
                                                 !showConfirmPassword
                                             )
                                         }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-primary"
                                         aria-label={
                                             showConfirmPassword
                                                 ? 'Hide password'
@@ -635,20 +637,20 @@ export default function Profile() {
                         </div>
 
                         {/* Action */}
-                        <div className="mt-6 flex justify-end border-t border-gray-200 pt-5">
-                            <button
+                        <div className="mt-6 flex justify-end border-t border-brand-border pt-5">
+                            <DashboardButton
                                 type="submit"
                                 disabled={changingPassword}
-                                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="primary"
                             >
                                 {changingPassword
                                     ? 'Changing Password...'
                                     : 'Change Password'}
-                            </button>
+                            </DashboardButton>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
+        </DashboardPage>
     );
 }
