@@ -1,3 +1,5 @@
+import ApiFieldError from '../../../components/common/ApiFieldError';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils.js';
 import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import React, { useState } from 'react';
 import recruitmentApplicationsService from '../../../services/recruitmentApplicationsService';
@@ -22,6 +24,7 @@ const labelClass = 'text-sm font-medium text-brand-text';
 export default function Recruitment() {
     const [submitted, setSubmitted] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
     const [cvError, setCvError] = useState('');
 
     const handleCvChange = (event) => {
@@ -29,6 +32,7 @@ export default function Recruitment() {
 
         setCvError('');
         setErrorMessage('');
+        setFieldErrors({});
         setSubmitted(false);
 
         if (file && file.size > MAX_CV_SIZE) {
@@ -45,6 +49,7 @@ export default function Recruitment() {
         const cvFile = cvInput?.files?.[0];
 
         setErrorMessage('');
+        setFieldErrors({});
         setSubmitted(false);
 
         if (cvFile && cvFile.size > MAX_CV_SIZE) {
@@ -74,13 +79,8 @@ export default function Recruitment() {
                 error.response?.data
             );
 
-            setErrorMessage(
-                typeof error.response?.data === 'string'
-                    ? error.response.data
-                    : error.response?.data?.message ||
-                    error.response?.data?.error ||
-                    'Failed to submit your application.'
-            );
+            setFieldErrors(extractApiFieldErrors(error));
+            setErrorMessage(extractApiErrorMessage(error, 'Failed to submit your application.'));
         }
     };
 
@@ -111,7 +111,11 @@ export default function Recruitment() {
                     </div>
 
                     <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-6 shadow-sm sm:p-9">
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} onChange={(event) => {
+                            const name = event.target.name?.toLowerCase();
+                            const field = name === "cellphone" ? "phone" : name;
+                            if (field) setFieldErrors(current => { const next = { ...current }; delete next[field]; return next; });
+                        }} className="space-y-6">
                             <div>
                                 <label htmlFor="department" className={labelClass}>
                                     Department
@@ -119,7 +123,7 @@ export default function Recruitment() {
 
                                 <select
                                     id="department"
-                                    name="department"
+                                    name="department" aria-invalid={Boolean(fieldErrors["department"]?.length)}
                                     required
                                     defaultValue=""
                                     className={inputClass}
@@ -134,6 +138,7 @@ export default function Recruitment() {
                                         </option>
                                     ))}
                                 </select>
+                                    <ApiFieldError errors={fieldErrors} field="department" />
                             </div>
 
                             <div>
@@ -143,7 +148,7 @@ export default function Recruitment() {
 
                                 <input
                                     id="cv"
-                                    name="cv"
+                                    name="cv" aria-invalid={Boolean(fieldErrors["cv"]?.length)}
                                     type="file"
                                     accept=".pdf,application/pdf"
                                     required
@@ -152,6 +157,7 @@ export default function Recruitment() {
                                     aria-describedby={cvError ? 'cv-error' : undefined}
                                     className="mt-2 block w-full cursor-pointer rounded-none border border-brand-primary-hover bg-brand-surface text-sm text-brand-text file:mr-4 file:border-0 file:bg-brand-surface file:px-4 file:py-3 file:text-sm file:font-medium file:text-brand-text hover:file:bg-brand-border"
                                 />
+                                    <ApiFieldError errors={fieldErrors} field="cv" />
 
                                 {cvError && (
                                     <p
@@ -171,11 +177,12 @@ export default function Recruitment() {
 
                                 <textarea
                                     id="message"
-                                    name="message"
+                                    name="message" aria-invalid={Boolean(fieldErrors["message"]?.length)}
                                     rows={6}
                                     placeholder="Tell us anything you'd like us to know about your application..."
                                     className={`${inputClass} resize-y`}
                                 />
+                                    <ApiFieldError errors={fieldErrors} field="message" />
                             </div>
 
                             <div className="flex flex-col gap-4 border-t border-brand-surface pt-6 sm:flex-row sm:items-center sm:justify-between">

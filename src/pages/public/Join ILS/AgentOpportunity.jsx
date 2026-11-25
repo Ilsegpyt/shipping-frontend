@@ -1,3 +1,6 @@
+import { countryCodes, sanitizeCountryCode, sanitizeNationalPhoneInput } from "../../../utils/phoneInput.js";
+import ApiFieldError from '../../../components/common/ApiFieldError';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils.js';
 import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import React, { useState } from 'react';
 import agentApplicationsService from '../../../services/agentApplicationsService';
@@ -13,17 +16,6 @@ const countries = [
     'Jordan',
     'Other',
 ];
-
-const countryCodes = {
-    Egypt: '+20',
-    'Saudi Arabia': '+966',
-    'United Arab Emirates': '+971',
-    Qatar: '+974',
-    Kuwait: '+965',
-    Bahrain: '+973',
-    Oman: '+968',
-    Jordan: '+962',
-};
 
 const citiesByCountry = {
     Egypt: ['Cairo', 'Alexandria', 'Giza', 'Port Said', 'Other'],
@@ -44,10 +36,11 @@ const labelClass = 'text-sm font-medium text-brand-text';
 
 export default function AgentOpportunity() {
     const [country, setCountry] = useState('');
-    const [countryCode, setCountryCode] = useState('+20');
+    const [countryCode, setCountryCode] = useState('');
     const [submitted, setSubmitted] = useState(false);
     const [phoneError, setPhoneError] = useState('');
     const [submissionError, setSubmissionError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const cities = country ? citiesByCountry[country] ?? ['Other'] : [];
 
@@ -56,6 +49,7 @@ export default function AgentOpportunity() {
 
         const form = event.currentTarget;
         setSubmissionError('');
+        setFieldErrors({});
         const formData = new FormData(form);
 
         const data = {
@@ -78,7 +72,7 @@ export default function AgentOpportunity() {
 
             form.reset();
             setCountry('');
-            setCountryCode('+20');
+            setCountryCode('');
         } catch (error) {
             console.error(
                 'Failed to submit agent application:',
@@ -86,10 +80,8 @@ export default function AgentOpportunity() {
             );
 
             setSubmitted(false);
-            setSubmissionError(
-                error?.response?.data?.message ||
-                'Your request could not be submitted. Please check your information and try again.'
-            );
+            setFieldErrors(extractApiFieldErrors(error));
+            setSubmissionError(extractApiErrorMessage(error, 'Your request could not be submitted. Please check your information and try again.'));
         }
     };
 
@@ -119,7 +111,11 @@ export default function AgentOpportunity() {
                     </div>
 
                     <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-3 shadow-sm sm:p-9">
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} onChange={(event) => {
+                            const name = event.target.name?.toLowerCase();
+                            const field = name === "cellphone" ? "phone" : name;
+                            if (field) setFieldErrors(current => { const next = { ...current }; delete next[field]; return next; });
+                        }} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
                                     <label htmlFor="firstName" className={labelClass}>
@@ -127,12 +123,13 @@ export default function AgentOpportunity() {
                                     </label>
                                     <input
                                         id="firstName"
-                                        name="firstName"
+                                        name="firstName" aria-invalid={Boolean(fieldErrors["firstname"]?.length)}
                                         type="text"
                                         placeholder="First Name"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="firstName" />
                                 </div>
 
                                 <div>
@@ -141,12 +138,13 @@ export default function AgentOpportunity() {
                                     </label>
                                     <input
                                         id="lastName"
-                                        name="lastName"
+                                        name="lastName" aria-invalid={Boolean(fieldErrors["lastname"]?.length)}
                                         type="text"
                                         placeholder="Last Name"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="lastName" />
                                 </div>
 
                                 <div>
@@ -155,12 +153,12 @@ export default function AgentOpportunity() {
                                     </label>
                                     <select
                                         id="country"
-                                        name="country"
+                                        name="country" aria-invalid={Boolean(fieldErrors["country"]?.length)}
                                         value={country}
                                         onChange={(event) => {
                                             const selectedCountry = event.target.value;
                                             setCountry(selectedCountry);
-                                            setCountryCode(countryCodes[selectedCountry] ?? '+20');
+                                            setCountryCode(countryCodes[selectedCountry] ?? '');
                                         }}
                                         required
                                         className={inputClass}
@@ -173,6 +171,7 @@ export default function AgentOpportunity() {
                                             </option>
                                         ))}
                                     </select>
+                                    <ApiFieldError errors={fieldErrors} field="country" />
                                 </div>
 
                                 <div>
@@ -181,7 +180,7 @@ export default function AgentOpportunity() {
                                     </label>
                                     <select
                                         id="city"
-                                        name="city"
+                                        name="city" aria-invalid={Boolean(fieldErrors["city"]?.length)}
                                         disabled={!country}
                                         required
                                         className={`${inputClass} disabled:cursor-not-allowed disabled:bg-brand-surface disabled:text-brand-muted`}
@@ -198,6 +197,7 @@ export default function AgentOpportunity() {
                                             </option>
                                         ))}
                                     </select>
+                                    <ApiFieldError errors={fieldErrors} field="city" />
                                 </div>
 
                                 <div>
@@ -206,12 +206,13 @@ export default function AgentOpportunity() {
                                     </label>
                                     <input
                                         id="address"
-                                        name="address"
+                                        name="address" aria-invalid={Boolean(fieldErrors["address"]?.length)}
                                         type="text"
                                         placeholder="Address"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="address" />
                                 </div>
 
                                 <div>
@@ -220,12 +221,13 @@ export default function AgentOpportunity() {
                                     </label>
                                     <input
                                         id="email"
-                                        name="email"
+                                        name="email" aria-invalid={Boolean(fieldErrors["email"]?.length)}
                                         type="email"
                                         placeholder="you@company.com"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="email" />
                                 </div>
 
                                 <div>
@@ -235,28 +237,34 @@ export default function AgentOpportunity() {
 
                                     <div className="mt-2 flex gap-3">
                                         <input
-                                            name="countryCode"
+                                            name="countryCode" required pattern="[+]?[1-9][0-9]{0,2}" inputMode="tel" aria-invalid={Boolean(fieldErrors["countrycode"]?.length)}
                                             type="text"
                                             value={countryCode}
-                                            onChange={(event) => setCountryCode(event.target.value)}
+                                            onChange={(event) => setCountryCode(sanitizeCountryCode(event.target.value))}
                                             autoComplete="tel-country-code"
                                             aria-label="Country code"
                                             className="w-24 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
 
                                         <input
+                                            onInput={sanitizeNationalPhoneInput}
+                                            inputMode="numeric" pattern="[0-9]+"
                                             id="cellPhone"
-                                            name="cellPhone"
+                                            name="cellPhone" aria-invalid={Boolean(fieldErrors["phone"]?.length || phoneError)}
                                             type="tel"
                                             placeholder="Cell Phone"
                                             autoComplete="tel-national"
                                             required
-                                            aria-invalid={Boolean(phoneError)}
+                                            
                                             aria-describedby={phoneError ? 'cellPhone-error' : undefined}
                                             onInvalid={() => setPhoneError('Please enter your cell phone number.')}
                                             onChange={() => setPhoneError('')}
                                             className="min-w-0 flex-1 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
+                                    </div>
+                                    <div className="mt-1 min-w-0 break-words">
+                                        <ApiFieldError errors={fieldErrors} field="countryCode" />
+                                        <ApiFieldError errors={fieldErrors} field="phone" />
                                     </div>
                                     {phoneError && (
                                         <p id="cellPhone-error" role="alert" className="mt-2 text-sm text-red-600">
@@ -271,12 +279,13 @@ export default function AgentOpportunity() {
                                     </label>
                                     <input
                                         id="mainIndustry"
-                                        name="mainIndustry"
+                                        name="mainIndustry" aria-invalid={Boolean(fieldErrors["mainindustry"]?.length)}
                                         type="text"
                                         placeholder="Main Industry"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="mainIndustry" />
                                 </div>
                             </div>
 
@@ -287,12 +296,13 @@ export default function AgentOpportunity() {
 
                                 <textarea
                                     id="message"
-                                    name="message"
+                                    name="message" aria-invalid={Boolean(fieldErrors["message"]?.length)}
                                     rows={6}
                                     placeholder="Tell us about your business and opportunity..."
                                     required
                                     className={`${inputClass} resize-y`}
                                 />
+                                    <ApiFieldError errors={fieldErrors} field="message" />
                             </div>
 
                             <div className="flex flex-col gap-4 border-t border-brand-surface pt-6 sm:flex-row sm:items-center sm:justify-between">

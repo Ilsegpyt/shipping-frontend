@@ -1,3 +1,4 @@
+import ApiFieldError from "../../../components/common/ApiFieldError";
 import "../../../components/dashboard/dashboard-ui.css";
 import { DashboardStatusBadge, DashboardPageHeader, DashboardToolbar, DashboardSearchField, DashboardActionMenu, DashboardActionItem, DashboardButton } from "../../../components/dashboard/DashboardUI";
 import { useEffect, useMemo, useState } from "react";
@@ -21,7 +22,7 @@ import {
     changeAccountManager,
     removeAccountManager,
 } from "../../../services/accountManagerAssignmentsService";
-import { extractApiErrorMessage } from "../../../utils/errorUtils";
+import { extractApiErrorMessage, extractApiFieldErrors } from "../../../utils/errorUtils";
 
 const PAGE_SIZE = 10;
 
@@ -68,6 +69,7 @@ export default function AccountManagerAssignments() {
 
     const [assigning, setAssigning] = useState(false);
     const [assignError, setAssignError] = useState("");
+    const [assignFields, setAssignFields] = useState({});
 
     // Change manager modal
     const [changeModalCustomer, setChangeModalCustomer] =
@@ -81,6 +83,7 @@ export default function AccountManagerAssignments() {
 
     const [changing, setChanging] = useState(false);
     const [changeError, setChangeError] = useState("");
+    const [changeFields, setChangeFields] = useState({});
 
     // Remove manager modal
     const [removeModalCustomer, setRemoveModalCustomer] =
@@ -127,12 +130,6 @@ export default function AccountManagerAssignments() {
         loadAssignments();
     }, []);
 
-    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(""), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
     const filteredAssignments = useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -265,7 +262,7 @@ export default function AccountManagerAssignments() {
     const openAssignModal = (customer) => {
         setAssignModalCustomer(customer);
         setSelectedAccountManagerId("");
-        setAssignError("");
+        setAssignError(""); setAssignFields({});
     };
 
     const closeAssignModal = () => {
@@ -275,7 +272,7 @@ export default function AccountManagerAssignments() {
 
         setAssignModalCustomer(null);
         setSelectedAccountManagerId("");
-        setAssignError("");
+        setAssignError(""); setAssignFields({});
     };
 
     const handleAssign = async () => {
@@ -288,7 +285,7 @@ export default function AccountManagerAssignments() {
 
         try {
             setAssigning(true);
-            setAssignError("");
+            setAssignError(""); setAssignFields({});
 
             await assignAccountManager(
                 selectedAccountManagerId,
@@ -300,6 +297,7 @@ export default function AccountManagerAssignments() {
             await loadAssignments();
         } catch (error) {
             console.error(error);
+            setAssignFields(extractApiFieldErrors(error));
             setAssignError(
                 extractApiErrorMessage(error, "Failed to assign customer.")
             );
@@ -321,7 +319,7 @@ export default function AccountManagerAssignments() {
             currentManagerId
         );
         setSelectedNewAccountManagerId("");
-        setChangeError("");
+        setChangeError(""); setChangeFields({});
     };
 
     const closeChangeModal = () => {
@@ -332,7 +330,7 @@ export default function AccountManagerAssignments() {
         setChangeModalCustomer(null);
         setChangeModalCurrentManagerId("");
         setSelectedNewAccountManagerId("");
-        setChangeError("");
+        setChangeError(""); setChangeFields({});
     };
 
     const handleChangeAccountManager = async () => {
@@ -345,7 +343,7 @@ export default function AccountManagerAssignments() {
 
         try {
             setChanging(true);
-            setChangeError("");
+            setChangeError(""); setChangeFields({});
 
             await changeAccountManager(
                 changeModalCustomer.customerId,
@@ -357,6 +355,7 @@ export default function AccountManagerAssignments() {
             await loadAssignments();
         } catch (error) {
             console.error(error);
+            setChangeFields(extractApiFieldErrors(error));
             setChangeError(
                 extractApiErrorMessage(error, "Failed to change account manager.")
             );
@@ -1049,6 +1048,7 @@ export default function AccountManagerAssignments() {
                                         )
                                     )}
                                 </select>
+<ApiFieldError errors={assignFields} field="accountManagerId" />
                             </div>
 
                             {assignError && (
@@ -1178,6 +1178,7 @@ export default function AccountManagerAssignments() {
                                             )
                                         )}
                                 </select>
+<ApiFieldError errors={changeFields} field="accountManagerId" />
                             </div>
 
                             {changeError && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { extractApiErrorMessage } from '../../utils/errorUtils';
@@ -17,11 +17,6 @@ export default function ResetPassword() {
     const [loading, setLoading] = useState(false);
     const [isResetComplete, setIsResetComplete] = useState(false);
 
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -89,12 +84,12 @@ export default function ResetPassword() {
                 </div>
 
                 {error && (
-                    <div className="mb-5 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                    <div role="alert" className="mb-5 flex items-center justify-between rounded-lg border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                         <span>{error}</span>
                         <button
                             type="button"
                             onClick={() => setError('')}
-                            className="ml-3 font-bold text-red-500 hover:text-red-700"
+                            className="ml-3 font-bold text-brand-danger hover:underline"
                             title="Close"
                         >
                             ✕
@@ -117,6 +112,7 @@ export default function ResetPassword() {
 
                             <input
                                 type="password"
+                                autoComplete="new-password"
                                 value={password}
                                 onChange={(e) =>
                                     setPassword(e.target.value)
@@ -139,6 +135,7 @@ export default function ResetPassword() {
 
                             <input
                                 type="password"
+                                autoComplete="new-password"
                                 value={confirmPassword}
                                 onChange={(e) =>
                                     setConfirmPassword(e.target.value)

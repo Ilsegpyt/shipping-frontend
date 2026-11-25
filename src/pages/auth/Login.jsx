@@ -1,3 +1,4 @@
+import { extractApiErrorMessage } from '../../utils/errorUtils.js';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, getMe } from '../../auth/authService';
@@ -49,16 +50,9 @@ export default function Login() {
         } catch (err) {
             console.error(err);
 
-            if (err.response?.status === 429) {
-                setError(
-                    err.response.data?.message ||
-                    'You have exceeded the allowed number of requests. Please try again later.'
-                );
-            } else {
-                setError(
-                    'Login failed. Please check your email or password.'
-                );
-            }
+            setError(err.response?.status === 401
+                ? 'Login failed. Please check your email or password.'
+                : extractApiErrorMessage(err, 'Login failed. Please try again.'));
         }
 
         finally {
@@ -81,7 +75,7 @@ export default function Login() {
                 </h2>
 
                 {error && (
-                    <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">
+                    <div role="alert" className="mb-4 rounded-lg border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                         {error}
                     </div>
                 )}
@@ -94,6 +88,7 @@ export default function Login() {
 
                         <input
                             type="email"
+                            autoComplete="username"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 p-2.5 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -108,6 +103,7 @@ export default function Login() {
 
                         <input
                             type="password"
+                            autoComplete="current-password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className="w-full rounded-lg border border-gray-300 p-2.5 text-gray-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

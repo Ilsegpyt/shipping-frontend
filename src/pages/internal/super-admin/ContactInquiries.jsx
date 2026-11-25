@@ -34,11 +34,6 @@ export default function ContactInquiries() {
         setPage(1);
     }, [debouncedSearch]);
 
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
     const [page, setPage] = useState(1);
     const [pageSize] = useState(10);

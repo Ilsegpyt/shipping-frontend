@@ -1,10 +1,12 @@
+import ApiFieldError from '../../components/common/ApiFieldError';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/errorUtils';
 import { useState } from 'react';
 import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../services/api';
 
 function PasswordField({
-    id, label, value, onChange, visible, onToggle, placeholder, disabled,
+    id, label, value, onChange, visible, onToggle, placeholder, disabled, errors, field,
 }) {
     return (
         <div>
@@ -20,7 +22,7 @@ function PasswordField({
                     placeholder={placeholder}
                     disabled={disabled}
                     required
-                    minLength={id === 'current-password' ? undefined : 6}
+                    minLength={id === 'current-password' ? undefined : 8}
                     autoComplete={id === 'current-password' ? 'current-password' : 'new-password'}
                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
                 />
@@ -33,6 +35,7 @@ function PasswordField({
                     {visible ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
             </div>
+            <ApiFieldError errors={errors} field={field} />
         </div>
     );
 }
@@ -48,11 +51,13 @@ export default function SubAccountProfile() {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [changingPassword, setChangingPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
+    const [passwordFieldErrors, setPasswordFieldErrors] = useState({});
     const [passwordSuccess, setPasswordSuccess] = useState('');
 
     const handleChangePassword = async (event) => {
         event.preventDefault();
         setPasswordError('');
+        setPasswordFieldErrors({});
         setPasswordSuccess('');
 
         if (!currentPassword) {
@@ -70,8 +75,8 @@ export default function SubAccountProfile() {
             return;
         }
 
-        if (newPassword.length < 6) {
-            setPasswordError('New password must be at least 6 characters.');
+        if (newPassword.length < 8) {
+            setPasswordError('New password must be at least 8 characters.');
             return;
         }
 
@@ -90,12 +95,8 @@ export default function SubAccountProfile() {
             setShowConfirmPassword(false);
             setPasswordSuccess('Password changed successfully.');
         } catch (requestError) {
-            const responseData = requestError?.response?.data;
-            const message = typeof responseData === 'string'
-                ? responseData
-                : responseData?.error || responseData?.message ||
-                'Failed to change password. Please try again.';
-            setPasswordError(message);
+            setPasswordFieldErrors(extractApiFieldErrors(requestError));
+            setPasswordError(extractApiErrorMessage(requestError, 'Failed to change password. Please try again.'));
         } finally {
             setChangingPassword(false);
         }
@@ -178,7 +179,8 @@ export default function SubAccountProfile() {
                             id="current-password"
                             label="Current Password"
                             value={currentPassword}
-                            onChange={(event) => setCurrentPassword(event.target.value)}
+                            errors={passwordFieldErrors} field="currentPassword"
+                            onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
                             visible={showCurrentPassword}
                             onToggle={() => setShowCurrentPassword((value) => !value)}
                             placeholder="Enter your current password"
@@ -190,7 +192,8 @@ export default function SubAccountProfile() {
                                 id="new-password"
                                 label="New Password"
                                 value={newPassword}
-                                onChange={(event) => setNewPassword(event.target.value)}
+                            errors={passwordFieldErrors} field="newPassword"
+                                onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
                                 visible={showNewPassword}
                                 onToggle={() => setShowNewPassword((value) => !value)}
                                 placeholder="Enter your new password"
@@ -200,7 +203,8 @@ export default function SubAccountProfile() {
                                 id="confirm-password"
                                 label="Confirm New Password"
                                 value={confirmPassword}
-                                onChange={(event) => setConfirmPassword(event.target.value)}
+                            errors={passwordFieldErrors} field="confirmPassword"
+                                onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
                                 visible={showConfirmPassword}
                                 onToggle={() => setShowConfirmPassword((value) => !value)}
                                 placeholder="Confirm your new password"

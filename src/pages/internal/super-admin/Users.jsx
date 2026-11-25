@@ -1,3 +1,5 @@
+import { sanitizePhoneInput } from "../../../utils/phoneInput.js";
+import ApiFieldError from '../../../components/common/ApiFieldError';
 import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from '../../../components/dashboard/DashboardUI';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -20,7 +22,7 @@ import {
     deactivateInternalUser,
     deleteInternalUsers,
 } from "../../../services/internalUsersService";
-import { extractApiErrorMessage } from '../../../utils/errorUtils';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils';
 
 const PAGE_SIZE = 20;
 
@@ -46,6 +48,7 @@ export default function Users() {
 
     const [saving, setSaving] = useState(false);
     const [modalError, setModalError] = useState('');
+    const [modalErrorFields, setModalErrorFields] = useState({});
 
     const [statusUser, setStatusUser] = useState(null);
     const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
@@ -66,6 +69,7 @@ export default function Users() {
     const [rolesLoading, setRolesLoading] = useState(false);
     const [creatingUser, setCreatingUser] = useState(false);
     const [addUserError, setAddUserError] = useState('');
+    const [addUserErrorFields, setAddUserErrorFields] = useState({});
     const [createdPassword, setCreatedPassword] = useState('');
     const [createSuccess, setCreateSuccess] = useState(false);
 
@@ -115,12 +119,6 @@ export default function Users() {
         loadUsers(pageNumber, debouncedSearch);
     }, [pageNumber, debouncedSearch]);
 
-    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
     const filteredUsers = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -221,6 +219,8 @@ export default function Users() {
         });
 
         setAddUserError('');
+
+        setAddUserErrorFields({});
         setCreatedPassword('');
         setCreateSuccess(false);
         setIsAddUserModalOpen(true);
@@ -243,11 +243,13 @@ export default function Users() {
 
         setIsAddUserModalOpen(false);
         setAddUserError('');
+        setAddUserErrorFields({});
         setCreatedPassword('');
         setCreateSuccess(false);
     }
 
     function handleNewUserChange(event) {
+        setAddUserErrorFields(current => { const next = { ...current }; delete next[event.target.name.toLowerCase()]; return next; });
         const { name, value } = event.target;
 
         setNewUser((currentUser) => ({
@@ -280,6 +282,7 @@ export default function Users() {
         try {
             setCreatingUser(true);
             setAddUserError('');
+            setAddUserErrorFields({});
 
             const result = await createInternalUser({
                 name,
@@ -293,6 +296,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
+            setAddUserErrorFields(extractApiFieldErrors(error));
             setAddUserError(extractApiErrorMessage(error, 'Failed to create user.'));
         } finally {
             setCreatingUser(false);
@@ -312,6 +316,8 @@ export default function Users() {
         });
 
         setModalError('');
+
+        setModalErrorFields({});
         setIsEditModalOpen(true);
     }
 
@@ -321,9 +327,11 @@ export default function Users() {
         setIsEditModalOpen(false);
         setSelectedUser(null);
         setModalError('');
+        setModalErrorFields({});
     }
 
     function handleFormChange(event) {
+        setModalErrorFields(current => { const next = { ...current }; delete next[event.target.name.toLowerCase()]; return next; });
         const { name, value } = event.target;
 
         setEditForm((currentForm) => ({
@@ -352,6 +360,7 @@ export default function Users() {
         try {
             setSaving(true);
             setModalError('');
+            setModalErrorFields({});
 
             await updateInternalUserProfile(
                 selectedUser.id,
@@ -372,6 +381,7 @@ export default function Users() {
             await loadUsers(pageNumber);
         } catch (error) {
             console.error(error);
+            setModalErrorFields(extractApiFieldErrors(error));
             setModalError(extractApiErrorMessage(error, 'Failed to update user.'));
         } finally {
             setSaving(false);
@@ -814,6 +824,7 @@ export default function Users() {
 
                                 <input
                                     id="new-user-name"
+                                    aria-invalid={Boolean(addUserErrorFields["name"]?.length)}
                                     name="name"
                                     type="text"
                                     value={newUser.name}
@@ -821,6 +832,7 @@ export default function Users() {
                                     disabled={creatingUser || createSuccess}
                                     className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
+                                <ApiFieldError errors={addUserErrorFields} field="name" />
                             </div>
 
                             <div>
@@ -833,6 +845,7 @@ export default function Users() {
 
                                 <input
                                     id="new-user-email"
+                                    aria-invalid={Boolean(addUserErrorFields["email"]?.length)}
                                     name="email"
                                     type="email"
                                     value={newUser.email}
@@ -840,6 +853,7 @@ export default function Users() {
                                     disabled={creatingUser || createSuccess}
                                     className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
+                                <ApiFieldError errors={addUserErrorFields} field="email" />
                             </div>
 
                             <div>
@@ -851,14 +865,17 @@ export default function Users() {
                                 </label>
 
                                 <input
+                                            onInput={sanitizePhoneInput}
                                     id="new-user-phone"
+                                    aria-invalid={Boolean(addUserErrorFields["phone"]?.length)}
                                     name="phone"
-                                    type="text"
+                                    type="tel"
                                     value={newUser.phone}
                                     onChange={handleNewUserChange}
                                     disabled={creatingUser || createSuccess}
                                     className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
+                                <ApiFieldError errors={addUserErrorFields} field="phone" />
                             </div>
 
                             <div>
@@ -871,6 +888,7 @@ export default function Users() {
 
                                 <select
                                     id="new-user-role"
+                                    aria-invalid={Boolean(addUserErrorFields["roleid"]?.length)}
                                     name="roleId"
                                     value={newUser.roleId}
                                     onChange={handleNewUserChange}
@@ -896,6 +914,7 @@ export default function Users() {
                                         </option>
                                     ))}
                                 </select>
+                                <ApiFieldError errors={addUserErrorFields} field="roleId" />
                             </div>
                         </div>
 
@@ -979,6 +998,7 @@ export default function Users() {
 
                                 <input
                                     id="edit-user-name"
+                                    aria-invalid={Boolean(modalErrorFields["name"]?.length)}
                                     name="name"
                                     type="text"
                                     value={editForm.name}
@@ -986,6 +1006,7 @@ export default function Users() {
                                     disabled={saving}
                                     className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
+                                <ApiFieldError errors={modalErrorFields} field="name" />
                             </div>
 
                             <div>
@@ -998,6 +1019,7 @@ export default function Users() {
 
                                 <input
                                     id="edit-user-email"
+                                    aria-invalid={Boolean(modalErrorFields["email"]?.length)}
                                     name="email"
                                     type="email"
                                     value={editForm.email}
@@ -1005,6 +1027,7 @@ export default function Users() {
                                     disabled={saving}
                                     className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
+                                <ApiFieldError errors={modalErrorFields} field="email" />
                             </div>
 
                             <div>
@@ -1016,14 +1039,17 @@ export default function Users() {
                                 </label>
 
                                 <input
+                                            onInput={sanitizePhoneInput}
                                     id="edit-user-phone"
+                                    aria-invalid={Boolean(modalErrorFields["phone"]?.length)}
                                     name="phone"
-                                    type="text"
+                                    type="tel"
                                     value={editForm.phone}
                                     onChange={handleFormChange}
                                     disabled={saving}
                                     className="h-11 w-full rounded-lg border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
                                 />
+                                <ApiFieldError errors={modalErrorFields} field="phone" />
                             </div>
                         </div>
 

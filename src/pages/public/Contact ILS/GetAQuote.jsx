@@ -1,3 +1,6 @@
+import { countryCodes, sanitizeCountryCode, sanitizeNationalPhoneInput } from "../../../utils/phoneInput.js";
+import ApiFieldError from '../../../components/common/ApiFieldError';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils.js';
 import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import { useState } from 'react';
 import quoteRequestsService from '../../../services/quoteRequestsService';
@@ -23,10 +26,13 @@ const optionClass =
     'relative flex min-h-12 cursor-pointer items-center justify-center border border-brand-primary-hover bg-brand-surface px-4 py-3 text-center text-sm font-semibold text-brand-text transition hover:border-brand-accent hover:bg-brand-bg hover:text-brand-accent';
 
 export default function GetAQuote() {
+    const [countryCode, setCountryCode] = useState('');
     const [interests, setInterests] = useState([]);
     const [transport, setTransport] = useState([]);
     const [shipments, setShipments] = useState('');
     const [submitted, setSubmitted] = useState(false);
+    const [submissionError, setSubmissionError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -35,6 +41,8 @@ export default function GetAQuote() {
         const formData = new FormData(form);
 
         setSubmitted(false);
+        setSubmissionError('');
+        setFieldErrors({});
 
         const interestType =
             interests.includes('Import') && interests.includes('Export')
@@ -83,6 +91,7 @@ export default function GetAQuote() {
             setSubmitted(true);
 
             form.reset();
+            setCountryCode('');
             setInterests([]);
             setTransport([]);
             setShipments('');
@@ -98,6 +107,8 @@ export default function GetAQuote() {
             );
 
             setSubmitted(false);
+            setFieldErrors(extractApiFieldErrors(error));
+            setSubmissionError(extractApiErrorMessage(error, 'Failed to submit your quote request.'));
         }
     };
 
@@ -135,7 +146,11 @@ export default function GetAQuote() {
                     </div>
 
                     <div className="rounded-none border border-brand-primary-hover bg-brand-surface p-4 shadow-sm sm:p-9">
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={handleSubmit} onChange={(event) => {
+                            const name = event.target.name?.toLowerCase();
+                            const field = name === "cellphone" ? "phone" : name;
+                            if (field) setFieldErrors(current => { const next = { ...current }; delete next[field]; return next; });
+                        }} className="space-y-6">
                             <div className="grid gap-5 sm:grid-cols-2">
                                 <div>
                                     <label
@@ -147,12 +162,13 @@ export default function GetAQuote() {
 
                                     <input
                                         id="firstName"
-                                        name="firstName"
+                                        name="firstName" aria-invalid={Boolean(fieldErrors["firstname"]?.length)}
                                         type="text"
                                         placeholder="First Name"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="firstName" />
                                 </div>
 
                                 <div>
@@ -165,12 +181,13 @@ export default function GetAQuote() {
 
                                     <input
                                         id="lastName"
-                                        name="lastName"
+                                        name="lastName" aria-invalid={Boolean(fieldErrors["lastname"]?.length)}
                                         type="text"
                                         placeholder="Last Name"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="lastName" />
                                 </div>
 
                                 <div>
@@ -183,12 +200,13 @@ export default function GetAQuote() {
 
                                     <input
                                         id="company"
-                                        name="company"
+                                        name="company" aria-invalid={Boolean(fieldErrors["company"]?.length)}
                                         type="text"
                                         placeholder="Company"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="company" />
                                 </div>
 
                                 <div>
@@ -201,8 +219,9 @@ export default function GetAQuote() {
 
                                     <select
                                         id="country"
-                                        name="country"
+                                        name="country" aria-invalid={Boolean(fieldErrors["country"]?.length)}
                                         defaultValue=""
+                                        onChange={(event) => setCountryCode(countryCodes[event.target.value] ?? '')}
                                         required
                                         className={inputClass}
                                     >
@@ -219,6 +238,7 @@ export default function GetAQuote() {
                                             </option>
                                         ))}
                                     </select>
+                                    <ApiFieldError errors={fieldErrors} field="country" />
                                 </div>
 
                                 <div>
@@ -231,21 +251,30 @@ export default function GetAQuote() {
 
                                     <div className="mt-2 flex gap-3">
                                         <input
-                                            name="countryCode"
+                                            name="countryCode" required pattern="[+]?[1-9][0-9]{0,2}" inputMode="tel" aria-invalid={Boolean(fieldErrors["countrycode"]?.length)}
                                             type="text"
                                             placeholder="+20"
+                                            value={countryCode}
+                                            onChange={(event) => setCountryCode(sanitizeCountryCode(event.target.value))}
+                                            autoComplete="tel-country-code"
                                             aria-label="Country code"
                                             className="w-24 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
 
                                         <input
+                                            onInput={sanitizeNationalPhoneInput}
+                                            inputMode="numeric" pattern="[0-9]+"
                                             id="cellPhone"
-                                            name="cellPhone"
+                                            name="cellPhone" aria-invalid={Boolean(fieldErrors["phone"]?.length)}
                                             type="tel"
                                             placeholder="Cell Phone"
                                             required
                                             className="min-w-0 flex-1 rounded-none border border-brand-primary-hover bg-brand-surface px-4 py-3 text-sm text-brand-text outline-none transition placeholder:text-brand-muted focus:border-brand-accent focus:ring-2 focus:ring-brand-accent/15"
                                         />
+                                    </div>
+                                    <div className="mt-1 min-w-0 break-words">
+                                        <ApiFieldError errors={fieldErrors} field="countryCode" />
+                                        <ApiFieldError errors={fieldErrors} field="phone" />
                                     </div>
                                 </div>
 
@@ -259,12 +288,13 @@ export default function GetAQuote() {
 
                                     <input
                                         id="email"
-                                        name="email"
+                                        name="email" aria-invalid={Boolean(fieldErrors["email"]?.length)}
                                         type="email"
                                         placeholder="you@company.com"
                                         required
                                         className={inputClass}
                                     />
+                                    <ApiFieldError errors={fieldErrors} field="email" />
                                 </div>
                             </div>
 
@@ -278,11 +308,12 @@ export default function GetAQuote() {
 
                                 <textarea
                                     id="message"
-                                    name="message"
+                                    name="message" aria-invalid={Boolean(fieldErrors["message"]?.length)}
                                     rows={5}
                                     placeholder="Tell us about your requirements..."
                                     className={`${inputClass} resize-y`}
                                 />
+                                    <ApiFieldError errors={fieldErrors} field="message" />
                             </div>
 
                             <div className="grid gap-6 lg:grid-cols-2">
@@ -469,6 +500,11 @@ export default function GetAQuote() {
                                 </button>
                             </div>
 
+                            {submissionError && (
+                                <div role="alert" className="border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
+                                    {submissionError}
+                                </div>
+                            )}
                             {submitted && (
                                 <div className="rounded-none border border-brand-accent bg-brand-bg px-4 py-3 text-sm font-medium text-brand-accent">
                                     Your quote request has been submitted successfully.

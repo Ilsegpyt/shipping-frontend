@@ -1,3 +1,5 @@
+import { sanitizePhoneInput } from "../../../utils/phoneInput.js";
+import ApiFieldError from "../../../components/common/ApiFieldError";
 import { DashboardActionItem } from "../../../components/dashboard/DashboardUI";
 import "../../../components/dashboard/management-customers.css";
 import { DashboardActionMenu, DashboardButton, DashboardPageHeader, DashboardToolbar, DashboardSearchField } from "../../../components/dashboard/DashboardUI";
@@ -38,7 +40,7 @@ import {
     getCustomerOwner,
     impersonateCustomer,
 } from '../../../services/customersService';
-import { extractApiErrorMessage } from '../../../utils/errorUtils';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils';
 
 const PAGE_SIZE = 10;
 
@@ -85,6 +87,7 @@ export default function Customers() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [creatingCustomer, setCreatingCustomer] = useState(false);
     const [createError, setCreateError] = useState('');
+    const [createFields, setCreateFields] = useState({});
 
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -94,12 +97,14 @@ export default function Customers() {
     const [editingCustomer, setEditingCustomer] = useState(null);
     const [updatingCustomer, setUpdatingCustomer] = useState(false);
     const [updateError, setUpdateError] = useState('');
+    const [updateFields, setUpdateFields] = useState({});
 
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [emailCustomer, setEmailCustomer] = useState(null);
     const [newEmail, setNewEmail] = useState('');
     const [updatingEmail, setUpdatingEmail] = useState(false);
     const [emailError, setEmailError] = useState('');
+    const [emailFields, setEmailFields] = useState({});
 
     const [newCustomer, setNewCustomer] = useState({
         ownerName: '',
@@ -144,12 +149,6 @@ export default function Customers() {
         loadCustomers(pageNumber, debouncedSearch);
     }, [pageNumber, debouncedSearch, recordStatus]);
 
-    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
     const handleRecordStatusChange = (event) => {
         setRecordStatus(event.target.value);
@@ -193,7 +192,7 @@ export default function Customers() {
             industry: '',
         });
 
-        setCreateError('');
+        setCreateError(''); setCreateFields({});
         setIsAddModalOpen(true);
     };
 
@@ -201,7 +200,7 @@ export default function Customers() {
         if (creatingCustomer) return;
 
         setIsAddModalOpen(false);
-        setCreateError('');
+        setCreateError(''); setCreateFields({});
     };
 
     const handleCreateCustomer = async (event) => {
@@ -209,7 +208,7 @@ export default function Customers() {
 
         try {
             setCreatingCustomer(true);
-            setCreateError('');
+            setCreateError(''); setCreateFields({});
 
             await registerCustomer({
                 ownerName: newCustomer.ownerName.trim(),
@@ -225,6 +224,7 @@ export default function Customers() {
         } catch (err) {
             console.error(err);
 
+            setCreateFields(extractApiFieldErrors(err));
             setCreateError(
                 getApiErrorMessage(err, 'Failed to create customer.')
             );
@@ -296,7 +296,7 @@ export default function Customers() {
     const handleEditCustomer = async (customerId) => {
         try {
             setOpenActionsId(null);
-            setUpdateError('');
+            setUpdateError(''); setUpdateFields({});
             setEditingCustomer(null);
             setIsEditModalOpen(true);
 
@@ -335,7 +335,7 @@ export default function Customers() {
 
         setIsEditModalOpen(false);
         setEditingCustomer(null);
-        setUpdateError('');
+        setUpdateError(''); setUpdateFields({});
     };
 
     const handleUpdateCustomer = async (event) => {
@@ -345,7 +345,7 @@ export default function Customers() {
 
         try {
             setUpdatingCustomer(true);
-            setUpdateError('');
+            setUpdateError(''); setUpdateFields({});
 
             await updateCustomerProfile(editingCustomer.id, {
                 ownerName: editingCustomer.ownerName.trim(),
@@ -361,6 +361,7 @@ export default function Customers() {
         } catch (err) {
             console.error(err);
 
+            setUpdateFields(extractApiFieldErrors(err));
             setUpdateError(
                 getApiErrorMessage(err, 'Failed to update customer.')
             );
@@ -372,7 +373,7 @@ export default function Customers() {
     const handleChangeEmail = async (customerId) => {
         try {
             setOpenActionsId(null);
-            setEmailError('');
+            setEmailError(''); setEmailFields({});
             setEmailCustomer(null);
             setNewEmail('');
             setIsEmailModalOpen(true);
@@ -399,7 +400,7 @@ export default function Customers() {
         setIsEmailModalOpen(false);
         setEmailCustomer(null);
         setNewEmail('');
-        setEmailError('');
+        setEmailError(''); setEmailFields({});
     };
 
     const handleUpdateEmail = async (event) => {
@@ -409,7 +410,7 @@ export default function Customers() {
 
         try {
             setUpdatingEmail(true);
-            setEmailError('');
+            setEmailError(''); setEmailFields({});
 
             await updateCustomerEmail(
                 emailCustomer.id,
@@ -424,6 +425,7 @@ export default function Customers() {
         } catch (err) {
             console.error(err);
 
+            setEmailFields(extractApiFieldErrors(err));
             setEmailError(
                 getApiErrorMessage(
                     err,
@@ -459,11 +461,7 @@ export default function Customers() {
         } catch (err) {
             console.error('Failed to update customer status:', err);
 
-            setError(
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                'Failed to update customer status.'
-            );
+            setError(extractApiErrorMessage(err, 'Failed to update customer status.'));
         } finally {
             setLoading(false);
         }
@@ -1150,6 +1148,7 @@ export default function Customers() {
                                                 {label}
                                             </label>
                                             <input
+                                                onInput={name === 'ownerPhone' ? sanitizePhoneInput : undefined}
                                                 type={
                                                     name === 'ownerEmail'
                                                         ? 'email'
@@ -1167,6 +1166,7 @@ export default function Customers() {
                                                 className="w-full rounded-none border border-brand-border px-3.5 py-2.5 text-sm outline-none transition focus:border-brand-border focus:ring-2 focus:ring-brand-border disabled:bg-brand-surface-tint"
                                                 placeholder={placeholder}
                                             />
+<ApiFieldError errors={createFields} field={name} />
                                         </div>
                                     ))}
                                 </div>
@@ -1331,6 +1331,7 @@ export default function Customers() {
                                                                 {label}
                                                             </label>
                                                             <input
+                                                onInput={name === 'ownerPhone' ? sanitizePhoneInput : undefined}
                                                                 type={
                                                                     name ===
                                                                         'ownerPhone'
@@ -1358,6 +1359,7 @@ export default function Customers() {
                                                                     placeholder
                                                                 }
                                                             />
+<ApiFieldError errors={updateFields} field={name} />
                                                         </div>
                                                     )
                                                 )}
@@ -1469,6 +1471,8 @@ export default function Customers() {
                                                 className="w-full rounded-none border border-brand-border px-3.5 py-2.5 text-sm outline-none focus:border-brand-border focus:ring-2 focus:ring-brand-border disabled:bg-brand-surface-tint"
                                                 placeholder="Enter new email address"
                                             />
+<ApiFieldError errors={emailFields} field="email" />
+<ApiFieldError errors={emailFields} field="ownerEmail" />
                                         </div>
 
                                         <div className="flex justify-end gap-2 border-t border-brand-border pt-4">

@@ -1,3 +1,4 @@
+import ApiFieldError from "../../../components/common/ApiFieldError";
 import { DashboardStatusBadge, DashboardPage, DashboardPageHeader, DashboardButton, DashboardTableSurface, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
 import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
 import "../../../components/dashboard/management-heading.css";
@@ -27,7 +28,7 @@ import {
   Ellipsis
 } from 'lucide-react';
 import * as opsService from '../../../services/operationsService';
-import { extractApiErrorMessage } from '../../../utils/errorUtils';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils';
 
 const TABS = [
   { key: 'lines', label: 'Shipping Lines', icon: Ship },
@@ -53,6 +54,7 @@ export default function OperationsLookups() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [error, setError] = useState('');
+    const [lookupFields, setLookupFields] = useState({});
   const [successMsg, setSuccessMsg] = useState('');
 
   // Modals
@@ -83,10 +85,10 @@ export default function OperationsLookups() {
 
   // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
   useEffect(() => {
-    if (!error) return;
+    if (!error || addModalOpen || editModalOpen || deleteModalOpen) return;
     const timer = setTimeout(() => setError(''), 5000);
     return () => clearTimeout(timer);
-  }, [error]);
+  }, [error, addModalOpen, editModalOpen, deleteModalOpen]);
 
   const loadData = async (
     tab = activeTab,
@@ -97,7 +99,7 @@ export default function OperationsLookups() {
   ) => {
     try {
       setLoading(true);
-      setError('');
+      setError(''); setLookupFields({});
       const params = {
         page: targetPage,
         pageSize: targetPageSize,
@@ -173,7 +175,7 @@ export default function OperationsLookups() {
       carNumber: '',
       isActive: true
     });
-    setError('');
+    setError(''); setLookupFields({});
     setAddModalOpen(true);
   };
 
@@ -189,14 +191,14 @@ export default function OperationsLookups() {
       carNumber: item.carNumber || '',
       isActive: item.isActive !== false
     });
-    setError('');
+    setError(''); setLookupFields({});
     setEditModalOpen(true);
   };
 
   // Open Delete / Deactivate
   const handleOpenDelete = (item) => {
     setSelectedItem(item);
-    setError('');
+    setError(''); setLookupFields({});
     setDeleteModalOpen(true);
   };
 
@@ -205,7 +207,7 @@ export default function OperationsLookups() {
     e.preventDefault();
     try {
       setSubmitting(true);
-      setError('');
+      setError(''); setLookupFields({});
       if (activeTab === 'ports') {
         await opsService.createPort({ name: formData.name, code: formData.code || null });
       } else if (activeTab === 'destinations') {
@@ -230,7 +232,8 @@ export default function OperationsLookups() {
       await loadData(activeTab);
     } catch (err) {
       console.error(err);
-      setError(extractApiErrorMessage(err, 'Error creating item'));
+      setLookupFields(extractApiFieldErrors(err));
+            setError(extractApiErrorMessage(err, 'Error creating item'));
     } finally {
       setSubmitting(false);
     }
@@ -242,7 +245,7 @@ export default function OperationsLookups() {
     if (!selectedItem) return;
     try {
       setSubmitting(true);
-      setError('');
+      setError(''); setLookupFields({});
       if (activeTab === 'ports') {
         await opsService.updatePort(selectedItem.id, {
           name: formData.name,
@@ -285,7 +288,8 @@ export default function OperationsLookups() {
       await loadData(activeTab);
     } catch (err) {
       console.error(err);
-      setError(extractApiErrorMessage(err, 'Error updating item'));
+      setLookupFields(extractApiFieldErrors(err));
+            setError(extractApiErrorMessage(err, 'Error updating item'));
     } finally {
       setSubmitting(false);
     }
@@ -296,7 +300,7 @@ export default function OperationsLookups() {
     if (!selectedItem) return;
     try {
       setSubmitting(true);
-      setError('');
+      setError(''); setLookupFields({});
       if (activeTab === 'ports') await opsService.deactivatePort(selectedItem.id);
       else if (activeTab === 'destinations') await opsService.deactivateDestination(selectedItem.id);
       else if (activeTab === 'drivers') await opsService.deactivateDriver(selectedItem.id);
@@ -320,7 +324,7 @@ export default function OperationsLookups() {
   const handleDirectActivate = async (item) => {
     try {
       setSubmitting(true);
-      setError('');
+      setError(''); setLookupFields({});
       if (activeTab === 'ports') {
         await opsService.updatePort(item.id, {
           name: item.name,
@@ -743,6 +747,7 @@ export default function OperationsLookups() {
             </div>
 
             <form onSubmit={handleCreate} className="ils-ops-modal-form space-y-4">
+{error && <div role="alert" className="border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">{error}</div>}
               {activeTab === 'ports' && (
                 <>
                   <div>
@@ -755,6 +760,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"name"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Port Code</label>
@@ -765,6 +771,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none uppercase"
                     />
+<ApiFieldError errors={lookupFields} field={"code"} />
                   </div>
                 </>
               )}
@@ -780,6 +787,7 @@ export default function OperationsLookups() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                   />
+<ApiFieldError errors={lookupFields} field={"name"} />
                 </div>
               )}
 
@@ -795,6 +803,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, driverNumber: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"driverNumber"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Driver Full Name *</label>
@@ -806,6 +815,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"name"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Mobile Number</label>
@@ -816,6 +826,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"mobileNumber"} />
                   </div>
                 </>
               )}
@@ -831,6 +842,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none mb-3"
                     />
+<ApiFieldError errors={lookupFields} field={"abbreviation"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Shipping Line Name *</label>
@@ -842,6 +854,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"name"} />
                   </div>
                 </>
               )}
@@ -857,6 +870,7 @@ export default function OperationsLookups() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                   />
+<ApiFieldError errors={lookupFields} field={"name"} />
                 </div>
               )}
 
@@ -871,6 +885,7 @@ export default function OperationsLookups() {
                     onChange={(e) => setFormData({ ...formData, carNumber: e.target.value })}
                     className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                   />
+<ApiFieldError errors={lookupFields} field={"carNumber"} />
                 </div>
               )}
 
@@ -911,6 +926,7 @@ export default function OperationsLookups() {
             </div>
 
             <form onSubmit={handleUpdate} className="ils-ops-modal-form space-y-4">
+{error && <div role="alert" className="border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">{error}</div>}
               {activeTab === 'ports' && (
                 <>
                   <div>
@@ -922,6 +938,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"name"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Port Code</label>
@@ -931,6 +948,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none uppercase"
                     />
+<ApiFieldError errors={lookupFields} field={"code"} />
                   </div>
                 </>
               )}
@@ -945,6 +963,7 @@ export default function OperationsLookups() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                   />
+<ApiFieldError errors={lookupFields} field={"name"} />
                 </div>
               )}
 
@@ -959,6 +978,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, driverNumber: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"driverNumber"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Driver Full Name *</label>
@@ -969,6 +989,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"name"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Mobile Number</label>
@@ -978,6 +999,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"mobileNumber"} />
                   </div>
                 </>
               )}
@@ -993,6 +1015,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, abbreviation: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none mb-3"
                     />
+<ApiFieldError errors={lookupFields} field={"abbreviation"} />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-brand-text mb-1">Shipping Line Name *</label>
@@ -1003,6 +1026,7 @@ export default function OperationsLookups() {
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                     />
+<ApiFieldError errors={lookupFields} field={"name"} />
                   </div>
                 </>
               )}
@@ -1017,6 +1041,7 @@ export default function OperationsLookups() {
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                   />
+<ApiFieldError errors={lookupFields} field={"name"} />
                 </div>
               )}
 
@@ -1030,6 +1055,7 @@ export default function OperationsLookups() {
                     onChange={(e) => setFormData({ ...formData, carNumber: e.target.value })}
                     className="w-full rounded-lg border border-brand-border px-3 py-2 text-sm focus:border-brand-accent focus:outline-none"
                   />
+<ApiFieldError errors={lookupFields} field={"carNumber"} />
                 </div>
               )}
 

@@ -1,3 +1,4 @@
+import ApiFieldError from '../../../components/common/ApiFieldError';
 import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
 import "../../../components/dashboard/management-locations.css";
 import ManagementHeaderTitle from "../../../components/dashboard/ManagementHeaderTitle";
@@ -18,7 +19,7 @@ import {
 } from 'lucide-react';
 
 import api from '../../../services/api';
-import { extractApiErrorMessage } from '../../../utils/errorUtils';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils';
 
 const EMPTY_FORM = {
     name: '',
@@ -84,21 +85,13 @@ export default function Locations() {
 
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState('');
+    const [formErrorFields, setFormErrorFields] = useState({});
 
     const [deactivateLocation, setDeactivateLocation] = useState(null);
     const [deactivating, setDeactivating] = useState(false);
 
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
-    useEffect(() => {
-        if (!formError) return;
-        const timer = setTimeout(() => setFormError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [formError]);
+
 
     const loadLocations = async () => {
         try {
@@ -175,6 +168,7 @@ export default function Locations() {
         setEditingLocation(null);
         setForm(EMPTY_FORM);
         setFormError('');
+        setFormErrorFields({});
         setIsModalOpen(true);
         setOpenActionsId(null);
     };
@@ -182,6 +176,7 @@ export default function Locations() {
     const openEditModal = async (location) => {
         try {
             setFormError('');
+            setFormErrorFields({});
             setOpenActionsId(null);
 
             const response = await api.get(
@@ -222,9 +217,11 @@ export default function Locations() {
         setEditingLocation(null);
         setForm(EMPTY_FORM);
         setFormError('');
+        setFormErrorFields({});
     };
 
     const handleChange = (event) => {
+        setFormErrorFields(current => { const next = { ...current }; delete next[event.target.name.toLowerCase()]; return next; });
         const { name, value, type, checked } = event.target;
 
         setForm((current) => ({
@@ -239,6 +236,7 @@ export default function Locations() {
         try {
             setSaving(true);
             setFormError('');
+            setFormErrorFields({});
 
             const payload = {
                 name: form.name.trim(),
@@ -267,6 +265,7 @@ export default function Locations() {
             await loadLocations();
         } catch (err) {
             console.error('Failed to save location:', err);
+            setFormErrorFields(extractApiFieldErrors(err));
             setFormError(extractApiErrorMessage(err, 'Failed to save location.'));
         } finally {
             setSaving(false);
@@ -651,12 +650,14 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="name"
+                                        aria-invalid={Boolean(formErrorFields["name"]?.length)}
+                                    name="name"
                                         value={form.name}
                                         onChange={handleChange}
                                         required
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="name" />
                                 </div>
 
                                 <div className="md:col-span-2">
@@ -665,13 +666,15 @@ export default function Locations() {
                                     </label>
 
                                     <textarea
-                                        name="address"
+                                        aria-invalid={Boolean(formErrorFields["address"]?.length)}
+                                    name="address"
                                         value={form.address}
                                         onChange={handleChange}
                                         required
                                         rows={3}
                                         className="ils-locations-field ils-locations-textarea"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="address" />
                                 </div>
 
                                 <div>
@@ -680,7 +683,8 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="latitude"
+                                        aria-invalid={Boolean(formErrorFields["latitude"]?.length)}
+                                    name="latitude"
                                         type="number"
                                         step="any"
                                         value={form.latitude}
@@ -688,6 +692,7 @@ export default function Locations() {
                                         required
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="latitude" />
                                 </div>
 
                                 <div>
@@ -696,7 +701,8 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="longitude"
+                                        aria-invalid={Boolean(formErrorFields["longitude"]?.length)}
+                                    name="longitude"
                                         type="number"
                                         step="any"
                                         value={form.longitude}
@@ -704,6 +710,7 @@ export default function Locations() {
                                         required
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="longitude" />
                                 </div>
 
                                 <div className="ils-locations-section-divider md:col-span-2">
@@ -718,11 +725,13 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="ceoName"
+                                        aria-invalid={Boolean(formErrorFields["ceoname"]?.length)}
+                                    name="ceoName"
                                         value={form.ceoName}
                                         onChange={handleChange}
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="ceoName" />
                                 </div>
 
                                 <div>
@@ -731,12 +740,14 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="ceoEmail"
+                                        aria-invalid={Boolean(formErrorFields["ceoemail"]?.length)}
+                                    name="ceoEmail"
                                         type="email"
                                         value={form.ceoEmail}
                                         onChange={handleChange}
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="ceoEmail" />
                                 </div>
 
                                 <div>
@@ -745,11 +756,13 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="gmName"
+                                        aria-invalid={Boolean(formErrorFields["gmname"]?.length)}
+                                    name="gmName"
                                         value={form.gmName}
                                         onChange={handleChange}
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="gmName" />
                                 </div>
 
                                 <div>
@@ -758,12 +771,14 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="gmEmail"
+                                        aria-invalid={Boolean(formErrorFields["gmemail"]?.length)}
+                                    name="gmEmail"
                                         type="email"
                                         value={form.gmEmail}
                                         onChange={handleChange}
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="gmEmail" />
                                 </div>
 
                                 <div>
@@ -772,11 +787,13 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="branchManagerName"
+                                        aria-invalid={Boolean(formErrorFields["branchmanagername"]?.length)}
+                                    name="branchManagerName"
                                         value={form.branchManagerName}
                                         onChange={handleChange}
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="branchManagerName" />
                                 </div>
 
                                 <div>
@@ -785,22 +802,26 @@ export default function Locations() {
                                     </label>
 
                                     <input
-                                        name="branchManagerEmail"
+                                        aria-invalid={Boolean(formErrorFields["branchmanageremail"]?.length)}
+                                    name="branchManagerEmail"
                                         type="email"
                                         value={form.branchManagerEmail}
                                         onChange={handleChange}
                                         className="ils-locations-field"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="branchManagerEmail" />
                                 </div>
 
                                 <label className="ils-locations-checkbox-row md:col-span-2">
                                     <input
                                         type="checkbox"
-                                        name="isActive"
+                                        aria-invalid={Boolean(formErrorFields["isactive"]?.length)}
+                                    name="isActive"
                                         checked={form.isActive}
                                         onChange={handleChange}
                                         className="ils-locations-checkbox"
                                     />
+                                <ApiFieldError errors={formErrorFields} field="isActive" />
 
                                     <span className="ils-locations-checkbox-text">
                                         Active location

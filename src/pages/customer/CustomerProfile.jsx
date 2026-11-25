@@ -1,3 +1,6 @@
+import { sanitizePhoneInput } from "../../utils/phoneInput.js";
+import ApiFieldError from '../../components/common/ApiFieldError';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/errorUtils.js';
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
@@ -13,6 +16,7 @@ export default function CustomerProfile() {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [profileFieldErrors, setProfileFieldErrors] = useState({});
 
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
@@ -20,6 +24,7 @@ export default function CustomerProfile() {
 
     const [changingPassword, setChangingPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
+    const [passwordFieldErrors, setPasswordFieldErrors] = useState({});
     const [passwordSuccess, setPasswordSuccess] = useState('');
 
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -36,6 +41,7 @@ export default function CustomerProfile() {
         setPhone(user?.phone ?? '');
         setMessage('');
         setError('');
+        setProfileFieldErrors({});
         setIsEditing(false);
     };
 
@@ -54,6 +60,7 @@ export default function CustomerProfile() {
 
         setIsSaving(true);
         setError('');
+        setProfileFieldErrors({});
         setMessage('');
 
         try {
@@ -65,11 +72,8 @@ export default function CustomerProfile() {
             setMessage('Profile updated successfully.');
             setIsEditing(false);
         } catch (requestError) {
-            setError(
-                requestError?.response?.data?.error ||
-                requestError?.response?.data?.message ||
-                'Could not save your profile. Please try again.'
-            );
+            setProfileFieldErrors(extractApiFieldErrors(requestError));
+            setError(extractApiErrorMessage(requestError, 'Could not save your profile. Please try again.'));
         } finally {
             setIsSaving(false);
         }
@@ -79,6 +83,8 @@ export default function CustomerProfile() {
         e.preventDefault();
 
         setPasswordError('');
+
+        setPasswordFieldErrors({});
         setPasswordSuccess('');
 
         if (!currentPassword) {
@@ -118,15 +124,9 @@ export default function CustomerProfile() {
         } catch (error) {
             console.error(error);
 
-            const message =
-                error.response?.data ||
-                'Failed to change password. Please try again.';
+            setPasswordFieldErrors(extractApiFieldErrors(error));
 
-            setPasswordError(
-                typeof message === 'string'
-                    ? message
-                    : 'Failed to change password. Please try again.'
-            );
+            setPasswordError(extractApiErrorMessage(error, 'Failed to change password. Please try again.'));
         } finally {
             setChangingPassword(false);
         }
@@ -204,6 +204,7 @@ export default function CustomerProfile() {
                             onClick={() => {
                                 setMessage('');
                                 setError('');
+                                setProfileFieldErrors({});
                                 setIsEditing(true);
                             }}
                             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
@@ -226,10 +227,11 @@ export default function CustomerProfile() {
                             id="profile-name"
                             type="text"
                             value={name}
-                            onChange={(event) => setName(event.target.value)}
+                            onChange={(event) => { setName(event.target.value); setProfileFieldErrors(previous => ({ ...previous, ownername: undefined })); }}
                             disabled={!isEditing || isSaving}
                             className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:text-gray-700"
-                        />
+                         autoComplete="name" />
+<ApiFieldError errors={profileFieldErrors} field="ownerName" />
                     </div>
 
                     <div>
@@ -259,13 +261,15 @@ export default function CustomerProfile() {
                             Phone
                         </label>
                         <input
+                                            onInput={sanitizePhoneInput}
                             id="profile-phone"
                             type="tel"
                             value={phone}
-                            onChange={(event) => setPhone(event.target.value)}
+                            onChange={(event) => { setPhone(event.target.value); setProfileFieldErrors(previous => ({ ...previous, ownerphone: undefined })); }}
                             disabled={!isEditing || isSaving}
                             className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:text-gray-700"
-                        />
+                         autoComplete="tel" />
+<ApiFieldError errors={profileFieldErrors} field="ownerPhone" />
                     </div>
 
                     <div>
@@ -377,16 +381,12 @@ export default function CustomerProfile() {
                                             : 'password'
                                     }
                                     value={currentPassword}
-                                    onChange={(event) =>
-                                        setCurrentPassword(
-                                            event.target.value
-                                        )
-                                    }
+                                    onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
                                     className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                     placeholder="Enter your current password"
                                     disabled={changingPassword}
                                     required
-                                />
+                                 autoComplete="current-password" />
 
                                 <button
                                     type="button"
@@ -407,6 +407,7 @@ export default function CustomerProfile() {
                                     />
                                 </button>
                             </div>
+<ApiFieldError errors={passwordFieldErrors} field="currentPassword" />
                         </div>
 
                         {/* New Password + Confirm Password */}
@@ -424,17 +425,13 @@ export default function CustomerProfile() {
                                                 : 'password'
                                         }
                                         value={newPassword}
-                                        onChange={(event) =>
-                                            setNewPassword(
-                                                event.target.value
-                                            )
-                                        }
+                                        onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
                                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                         placeholder="Enter your new password"
                                         minLength={6}
                                         disabled={changingPassword}
                                         required
-                                    />
+                                     autoComplete="new-password" />
 
                                     <button
                                         type="button"
@@ -455,6 +452,7 @@ export default function CustomerProfile() {
                                         />
                                     </button>
                                 </div>
+<ApiFieldError errors={passwordFieldErrors} field="newPassword" />
                             </div>
 
                             <div>
@@ -470,17 +468,13 @@ export default function CustomerProfile() {
                                                 : 'password'
                                         }
                                         value={confirmPassword}
-                                        onChange={(event) =>
-                                            setConfirmPassword(
-                                                event.target.value
-                                            )
-                                        }
+                                        onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
                                         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                         placeholder="Confirm your new password"
                                         minLength={6}
                                         disabled={changingPassword}
                                         required
-                                    />
+                                     autoComplete="new-password" />
 
                                     <button
                                         type="button"
@@ -501,6 +495,7 @@ export default function CustomerProfile() {
                                         />
                                     </button>
                                 </div>
+<ApiFieldError errors={passwordFieldErrors} field="confirmPassword" />
                             </div>
                         </div>
 

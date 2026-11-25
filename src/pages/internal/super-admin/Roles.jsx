@@ -1,3 +1,4 @@
+import ApiFieldError from '../../../components/common/ApiFieldError';
 import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardToolbar, DashboardSearchField, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from '../../../components/dashboard/DashboardUI';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -21,7 +22,7 @@ import {
 } from 'lucide-react';
 
 import rolesService from '../../../services/rolesService';
-import { extractApiErrorMessage } from '../../../utils/errorUtils';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils';
 
 const PERMISSION_GROUPS = [
 
@@ -271,6 +272,7 @@ export default function Roles() {
     const [creatingRole, setCreatingRole] = useState(false);
 
     const [addRoleError, setAddRoleError] = useState('');
+    const [addRoleErrorFields, setAddRoleErrorFields] = useState({});
 
     const [createSuccess, setCreateSuccess] = useState(false);
 
@@ -340,12 +342,6 @@ export default function Roles() {
         loadRoles();
     }, []);
 
-    // Auto-clear page error after 5 seconds so it doesn't get stuck permanently
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
     const ROLE_ARABIC_ALIASES = {
         'super admin': 'مدير النظام سوبر ادمن ادمنز',
@@ -401,6 +397,8 @@ export default function Roles() {
 
         setAddRoleError('');
 
+        setAddRoleErrorFields({});
+
         setCreateSuccess(false);
 
         setIsAddRoleModalOpen(true);
@@ -415,11 +413,14 @@ export default function Roles() {
 
         setAddRoleError('');
 
+        setAddRoleErrorFields({});
+
         setCreateSuccess(false);
 
     }
 
     function handleNewRoleChange(event) {
+        setAddRoleErrorFields(current => { const next = { ...current }; delete next[event.target.name.toLowerCase()]; return next; });
 
         const { name, value } = event.target;
 
@@ -453,6 +454,8 @@ export default function Roles() {
 
             setAddRoleError('');
 
+            setAddRoleErrorFields({});
+
             await rolesService.create({
 
                 name,
@@ -467,6 +470,7 @@ export default function Roles() {
 
         } catch (error) {
             console.error(error);
+            setAddRoleErrorFields(extractApiFieldErrors(error));
             setAddRoleError(extractApiErrorMessage(error, 'Failed to create role.'));
         } finally {
 
@@ -1091,6 +1095,7 @@ export default function Roles() {
 
                                     id="new-role-name"
 
+                                    aria-invalid={Boolean(addRoleErrorFields["name"]?.length)}
                                     name="name"
 
                                     type="text"
@@ -1110,6 +1115,7 @@ export default function Roles() {
                                     className="h-11 w-full rounded-none border border-brand-border px-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
 
                                 />
+                                <ApiFieldError errors={addRoleErrorFields} field="name" />
 
                             </div>
 
@@ -1131,6 +1137,7 @@ export default function Roles() {
 
                                     id="new-role-description"
 
+                                    aria-invalid={Boolean(addRoleErrorFields["description"]?.length)}
                                     name="description"
 
                                     rows="4"
@@ -1150,6 +1157,7 @@ export default function Roles() {
                                     className="w-full rounded-none border border-brand-border px-3 py-3 text-sm text-brand-text outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue disabled:cursor-not-allowed disabled:bg-brand-surface-tint"
 
                                 />
+                                <ApiFieldError errors={addRoleErrorFields} field="description" />
 
                             </div>
 

@@ -1,3 +1,5 @@
+import { sanitizePhoneInput } from "../../../utils/phoneInput.js";
+import ApiFieldError from '../../../components/common/ApiFieldError';
 import { useState, useEffect } from 'react';
 import { UserRound, ShieldCheck } from 'lucide-react';
 import { DashboardPage, DashboardPageHeader, DashboardButton } from '../../../components/dashboard/DashboardUI';
@@ -5,7 +7,7 @@ import './profile-dashboard.css';
 import { useAuth } from '../../../auth/AuthContext';
 import { updateProfile, updateEmail } from '../../../auth/authService';
 import api from '../../../services/api';
-import { extractApiErrorMessage } from '../../../utils/errorUtils';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../../utils/errorUtils';
 
 export default function Profile() {
     const { user, setUser } = useAuth();
@@ -46,6 +48,7 @@ export default function Profile() {
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [profileFieldErrors, setProfileFieldErrors] = useState({});
     const [success, setSuccess] = useState('');
 
     const [currentPassword, setCurrentPassword] = useState('');
@@ -54,29 +57,21 @@ export default function Profile() {
 
     const [changingPassword, setChangingPassword] = useState(false);
     const [passwordError, setPasswordError] = useState('');
+    const [passwordFieldErrors, setPasswordFieldErrors] = useState({});
     const [passwordSuccess, setPasswordSuccess] = useState('');
 
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
-    useEffect(() => {
-        if (!passwordError) return;
-        const timer = setTimeout(() => setPasswordError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [passwordError]);
 
     const handleEdit = () => {
         setName(user?.name || '');
         setPhone(user?.phone || '');
         setEmail(user?.email || '');
         setError('');
+        setProfileFieldErrors({});
         setSuccess('');
         setIsEditing(true);
     };
@@ -86,11 +81,13 @@ export default function Profile() {
         setPhone(user?.phone || '');
         setEmail(user?.email || '');
         setError('');
+        setProfileFieldErrors({});
         setIsEditing(false);
     };
 
     const handleSave = async () => {
         setError('');
+        setProfileFieldErrors({});
         setSuccess('');
 
         if (!name.trim()) {
@@ -139,6 +136,7 @@ export default function Profile() {
             setIsEditing(false);
         } catch (error) {
             console.error(error);
+            setProfileFieldErrors(extractApiFieldErrors(error));
             setError(
                 extractApiErrorMessage(
                     error,
@@ -154,6 +152,8 @@ export default function Profile() {
         e.preventDefault();
 
         setPasswordError('');
+
+        setPasswordFieldErrors({});
         setPasswordSuccess('');
 
         if (!currentPassword) {
@@ -197,6 +197,7 @@ export default function Profile() {
             );
         } catch (error) {
             console.error(error);
+            setPasswordFieldErrors(extractApiFieldErrors(error));
             setPasswordError(
                 extractApiErrorMessage(
                     error,
@@ -318,14 +319,12 @@ export default function Profile() {
                         </label>
 
                         {isEditing && canEditProfile ? (
-                            <input
+                            <> <input
                                 type="text"
                                 value={name}
-                                onChange={(event) =>
-                                    setName(event.target.value)
-                                }
+                                onChange={(event) => { setName(event.target.value); setProfileFieldErrors(previous => ({ ...previous, name: undefined })); }}
                                 className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                            />
+                             autoComplete="name" /><ApiFieldError errors={profileFieldErrors} field="name" /></>
                         ) : isAccountManager ? (
                             <input
                                 type="text"
@@ -347,14 +346,12 @@ export default function Profile() {
                         </label>
 
                         {isEditing && canEditProfile ? (
-                            <input
+                            <> <input
                                 type="email"
                                 value={email}
-                                onChange={(event) =>
-                                    setEmail(event.target.value)
-                                }
+                                onChange={(event) => { setEmail(event.target.value); setProfileFieldErrors(previous => ({ ...previous, email: undefined })); }}
                                 className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                            />
+                             autoComplete="email" /><ApiFieldError errors={profileFieldErrors} field="email" /></>
                         ) : isAccountManager ? (
                             <input
                                 type="email"
@@ -376,14 +373,13 @@ export default function Profile() {
                         </label>
 
                         {isEditing && canEditProfile ? (
-                            <input
-                                type="text"
+                            <> <input
+                                            onInput={sanitizePhoneInput}
+                                type="tel"
                                 value={phone}
-                                onChange={(event) =>
-                                    setPhone(event.target.value)
-                                }
+                                onChange={(event) => { setPhone(event.target.value); setProfileFieldErrors(previous => ({ ...previous, phone: undefined })); }}
                                 className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                            />
+                             autoComplete="tel" /><ApiFieldError errors={profileFieldErrors} field="phone" /></>
                         ) : isAccountManager ? (
                             <input
                                 type="text"
@@ -505,12 +501,9 @@ export default function Profile() {
                                             : 'password'
                                     }
                                     value={currentPassword}
-                                    onChange={(event) =>
-                                        setCurrentPassword(
-                                            event.target.value
-                                        )
-                                    }
+                                    onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
                                     className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
+                                    autoComplete="current-password"
                                     placeholder="Enter your current password"
                                     disabled={changingPassword}
                                     required
@@ -535,6 +528,7 @@ export default function Profile() {
                                     />
                                 </button>
                             </div>
+<ApiFieldError errors={passwordFieldErrors} field="currentPassword" />
                         </div>
 
                         {/* New Password + Confirm Password */}
@@ -552,13 +546,10 @@ export default function Profile() {
                                                 : 'password'
                                         }
                                         value={newPassword}
-                                        onChange={(event) =>
-                                            setNewPassword(
-                                                event.target.value
-                                            )
-                                        }
+                                        onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
                                         className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                                        placeholder="Enter your new password"
+                                        autoComplete="new-password"
+                                    placeholder="Enter your new password"
                                         minLength={8}
                                         disabled={changingPassword}
                                         required
@@ -583,6 +574,7 @@ export default function Profile() {
                                         />
                                     </button>
                                 </div>
+<ApiFieldError errors={passwordFieldErrors} field="newPassword" />
 
                                 <p className="mt-1.5 text-xs text-brand-muted">
                                     Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-brand-text bg-brand-border px-1 py-0.5 rounded-none font-semibold">Pass@1234</span>).
@@ -602,13 +594,10 @@ export default function Profile() {
                                                 : 'password'
                                         }
                                         value={confirmPassword}
-                                        onChange={(event) =>
-                                            setConfirmPassword(
-                                                event.target.value
-                                            )
-                                        }
+                                        onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
                                         className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                                        placeholder="Confirm your new password"
+                                        autoComplete="new-password"
+                                    placeholder="Confirm your new password"
                                         minLength={6}
                                         disabled={changingPassword}
                                         required
@@ -633,6 +622,7 @@ export default function Profile() {
                                         />
                                     </button>
                                 </div>
+<ApiFieldError errors={passwordFieldErrors} field="confirmPassword" />
                             </div>
                         </div>
 

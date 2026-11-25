@@ -140,17 +140,7 @@ export default function RecruitmentRequests() {
         setPage(1);
     }, [debouncedSearch]);
 
-    useEffect(() => {
-        if (!error) return;
-        const timer = setTimeout(() => setError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [error]);
 
-    useEffect(() => {
-        if (!detailsError) return;
-        const timer = setTimeout(() => setDetailsError(''), 5000);
-        return () => clearTimeout(timer);
-    }, [detailsError]);
 
     const totalPages = Math.max(
         1,

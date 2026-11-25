@@ -1,3 +1,6 @@
+import { sanitizePhoneInput } from "../../utils/phoneInput.js";
+import ApiFieldError from "../../components/common/ApiFieldError";
+import { extractApiFieldErrors, extractApiErrorMessage } from '../../utils/errorUtils.js';
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -214,6 +217,7 @@ function Home() {
     useState(null);
   const [contactSubmitted, setContactSubmitted] = useState(false);
   const [contactError, setContactError] = useState("");
+  const [contactFields, setContactFields] = useState({});
 
   useEffect(() => {
     if (!hash) return;
@@ -423,6 +427,7 @@ function Home() {
 
     setContactSubmitted(false);
     setContactError("");
+    setContactFields({});
 
     const data = {
       fullName: formData.get("fullName"),
@@ -441,13 +446,8 @@ function Home() {
       console.error("Failed to submit contact inquiry:", error);
       console.error("Backend error:", error.response?.data);
       setContactSubmitted(false);
-      setContactError(
-        typeof error.response?.data === "string"
-          ? error.response.data
-          : error.response?.data?.message ||
-          error.response?.data?.error ||
-          "Failed to send your inquiry.",
-      );
+      setContactFields(extractApiFieldErrors(error));
+      setContactError(extractApiErrorMessage(error, 'Failed to send your inquiry.'));
     }
   };
 
@@ -910,7 +910,14 @@ function Home() {
             {/* Right */}
 
             <div className="min-w-0  border border-slate-200/80 bg-white p-4 shadow-sm  sm:p-6 lg:p-8 xl:p-9">
-              <form onSubmit={handleContactSubmit} className="space-y-5">
+              <form onChange={(event) => {
+                const field = event.target.name?.toLowerCase();
+                if (field) setContactFields(previous => {
+                  const next = { ...previous };
+                  delete next[field];
+                  return next;
+                });
+              }} onSubmit={handleContactSubmit} className="space-y-5">
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium text-slate-700">
@@ -920,10 +927,13 @@ function Home() {
                     <input
                       type="text"
                       name="fullName"
+                      aria-invalid={Boolean(contactFields.fullname?.length)}
+                      autoComplete="name"
                       placeholder="Your name"
                       required
                       className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
+                    <ApiFieldError errors={contactFields} field="fullName" />
                   </div>
 
                   <div>
@@ -934,10 +944,13 @@ function Home() {
                     <input
                       type="text"
                       name="company"
+                      aria-invalid={Boolean(contactFields.company?.length)}
+                      autoComplete="organization"
                       placeholder="Company name"
                       required
                       className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
+                    <ApiFieldError errors={contactFields} field="company" />
                   </div>
                 </div>
 
@@ -950,10 +963,13 @@ function Home() {
                     <input
                       type="email"
                       name="email"
+                      aria-invalid={Boolean(contactFields.email?.length)}
+                      autoComplete="email"
                       placeholder="you@company.com"
                       required
                       className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
+                    <ApiFieldError errors={contactFields} field="email" />
                   </div>
 
                   <div>
@@ -962,12 +978,16 @@ function Home() {
                     </label>
 
                     <input
+                                            onInput={sanitizePhoneInput}
                       type="tel"
                       name="phone"
+                      aria-invalid={Boolean(contactFields.phone?.length)}
+                      autoComplete="tel"
                       placeholder="+20"
                       required
                       className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     />
+                    <ApiFieldError errors={contactFields} field="phone" />
                   </div>
                 </div>
 
@@ -978,6 +998,7 @@ function Home() {
 
                   <select
                     name="service"
+                      aria-invalid={Boolean(contactFields.service?.length)}
                     required
                     className="mt-2 min-h-12 w-full  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                     defaultValue=""
@@ -1002,6 +1023,7 @@ function Home() {
 
                     <option>Cargo</option>
                   </select>
+                    <ApiFieldError errors={contactFields} field="service" />
                 </div>
 
                 <div>
@@ -1011,11 +1033,13 @@ function Home() {
 
                   <textarea
                     name="message"
+                      aria-invalid={Boolean(contactFields.message?.length)}
                     rows={5}
                     required
                     placeholder="Tell us about your requirements..."
                     className="mt-2 w-full resize-none  border border-slate-200 bg-white px-4 py-3 text-sm text-brand-primary outline-none transition placeholder:text-slate-400 focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                   />
+                    <ApiFieldError errors={contactFields} field="message" />
                 </div>
 
                 <button
@@ -1033,7 +1057,7 @@ function Home() {
                 )}
 
                 {contactError && (
-                  <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  <div role="alert" className="border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm font-medium text-brand-danger">
                     {contactError}
                   </div>
                 )}

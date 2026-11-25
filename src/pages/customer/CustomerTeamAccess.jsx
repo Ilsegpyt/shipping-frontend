@@ -1,3 +1,5 @@
+import ApiFieldError from '../../components/common/ApiFieldError';
+import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/errorUtils.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Loader2,
@@ -62,6 +64,7 @@ export default function CustomerTeamAccess() {
     const [memberToEdit, setMemberToEdit] = useState(null);
     const [editing, setEditing] = useState(false);
     const [editError, setEditError] = useState('');
+    const [editFieldErrors, setEditFieldErrors] = useState({});
     const [editForm, setEditForm] = useState({
         name: '',
         email: '',
@@ -74,6 +77,7 @@ export default function CustomerTeamAccess() {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState('');
+    const [createFieldErrors, setCreateFieldErrors] = useState({});
     const [createSuccess, setCreateSuccess] = useState(false);
 
     const [form, setForm] = useState({
@@ -296,6 +300,7 @@ export default function CustomerTeamAccess() {
 
         setScopes([]);
         setCreateError('');
+        setCreateFieldErrors({});
         setCreateSuccess(false);
     };
 
@@ -313,6 +318,7 @@ export default function CustomerTeamAccess() {
 
     const handleFormChange = (event) => {
         const { name, value } = event.target;
+        setCreateFieldErrors(previous => ({ ...previous, [name.toLowerCase()]: undefined }));
 
         setForm((previous) => ({
             ...previous,
@@ -389,6 +395,8 @@ export default function CustomerTeamAccess() {
         });
 
         setCreateError('');
+
+        setCreateFieldErrors({});
     };
 
     const removeScope = (indexToRemove) => {
@@ -427,6 +435,8 @@ export default function CustomerTeamAccess() {
 
         setCreateError('');
 
+        setCreateFieldErrors({});
+
         if (!form.name.trim()) {
             setCreateError('Please enter the member name.');
             return;
@@ -462,12 +472,9 @@ export default function CustomerTeamAccess() {
         } catch (err) {
             console.error('Failed to create sub account:', err);
 
-            setCreateError(
-                err?.response?.data?.message ??
-                err?.response?.data?.detail ??
-                err?.response?.data?.title ??
-                'Unable to create team member.'
-            );
+            setCreateFieldErrors(extractApiFieldErrors(err));
+
+            setCreateError(extractApiErrorMessage(err, 'Unable to save team member.'));
         } finally {
             setCreating(false);
         }
@@ -495,12 +502,7 @@ export default function CustomerTeamAccess() {
         setShowScopeAddForm(false);
     };
 
-    const getApiErrorMessage = (err, fallback) =>
-        err?.response?.data?.message ??
-        err?.response?.data?.detail ??
-        err?.response?.data?.title ??
-        (typeof err?.response?.data === 'string' ? err.response.data : null) ??
-        fallback;
+    const getApiErrorMessage = (err, fallback) => extractApiErrorMessage(err, fallback);
 
     // Current API response has ScopeDescriptions (strings). Removal requires the
     // original numeric Category/Service/Type tuple, so use structured scopes when
@@ -752,6 +754,7 @@ export default function CustomerTeamAccess() {
         setOpenMenuId(null);
         setMemberToEdit(member);
         setEditError('');
+        setEditFieldErrors({});
 
         setEditForm({
             name: getMemberName(member) === '-' ? '' : getMemberName(member),
@@ -767,10 +770,12 @@ export default function CustomerTeamAccess() {
 
         setMemberToEdit(null);
         setEditError('');
+        setEditFieldErrors({});
     };
 
     const handleEditFormChange = (event) => {
         const { name, value } = event.target;
+        setEditFieldErrors(previous => ({ ...previous, [name.toLowerCase()]: undefined }));
 
         setEditForm((previous) => ({
             ...previous,
@@ -804,6 +809,7 @@ export default function CustomerTeamAccess() {
         try {
             setEditing(true);
             setEditError('');
+            setEditFieldErrors({});
 
             await updateSubAccountProfile(memberId, name);
 
@@ -820,13 +826,9 @@ export default function CustomerTeamAccess() {
         } catch (err) {
             console.error('Failed to update sub account:', err);
 
-            setEditError(
-                err?.response?.data?.message ??
-                err?.response?.data?.detail ??
-                err?.response?.data?.title ??
-                err?.message ??
-                'Unable to update team member.'
-            );
+            setEditFieldErrors(extractApiFieldErrors(err));
+
+            setEditError(extractApiErrorMessage(err, 'Unable to save team member.'));
         } finally {
             setEditing(false);
         }
@@ -1645,7 +1647,8 @@ export default function CustomerTeamAccess() {
                                     onChange={handleEditFormChange}
                                     disabled={editing}
                                     className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                                />
+                                 autoComplete="name" />
+<ApiFieldError errors={editFieldErrors} field="name" />
                             </div>
 
                             <div>
@@ -1664,7 +1667,8 @@ export default function CustomerTeamAccess() {
                                     onChange={handleEditFormChange}
                                     disabled={editing}
                                     className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                                />
+                                 autoComplete="email" />
+<ApiFieldError errors={editFieldErrors} field="email" />
                             </div>
 
                             <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
@@ -1769,7 +1773,8 @@ export default function CustomerTeamAccess() {
                                         disabled={creating}
                                         placeholder="Enter full name"
                                         className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                                    />
+                                     autoComplete="name" />
+<ApiFieldError errors={createFieldErrors} field="name" />
                                 </div>
 
                                 <div>
@@ -1789,7 +1794,8 @@ export default function CustomerTeamAccess() {
                                         disabled={creating}
                                         placeholder="member@company.com"
                                         className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
-                                    />
+                                     autoComplete="email" />
+<ApiFieldError errors={createFieldErrors} field="email" />
                                 </div>
 
                                 <div>

@@ -1,3 +1,4 @@
+import ApiFieldError from "../../../components/common/ApiFieldError";
 import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
 import { Plus, ChevronDown, ChevronRight, Ellipsis } from "lucide-react";
 import "../../../components/dashboard/content-management.css";
@@ -12,7 +13,7 @@ import RepeatableSection from "../../../components/common/RepeatableSection";
 import ContentBlockEditor from "../../../components/common/ContentBlockEditor";
 import { createEmptyAboutPage, parseAboutPage, serializeAboutPage, StructuredAboutEditor } from "../../../components/common/StructuredAboutContent";
 import { cleanImageUrl } from "../../../utils/mediaUrl";
-import { extractApiErrorMessage } from "../../../utils/errorUtils";
+import { extractApiErrorMessage, extractApiFieldErrors } from "../../../utils/errorUtils";
 
 const PHILOSOPHY_SCHEMA = "ils-philosophy-v2";
 const PHILOSOPHY_MARKER = "<!--ILS_PHILOSOPHY_V1-->";
@@ -480,26 +481,13 @@ export default function Content() {
   const [savingContent, setSavingContent] = useState(false);
 
   const [saveError, setSaveError] = useState("");
+    const [saveFields, setSaveFields] = useState({});
 
   const [deleteError, setDeleteError] = useState("");
 
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(""), 5000);
-    return () => clearTimeout(timer);
-  }, [error]);
 
-  useEffect(() => {
-    if (!saveError) return;
-    const timer = setTimeout(() => setSaveError(""), 5000);
-    return () => clearTimeout(timer);
-  }, [saveError]);
 
-  useEffect(() => {
-    if (!deleteError) return;
-    const timer = setTimeout(() => setDeleteError(""), 5000);
-    return () => clearTimeout(timer);
-  }, [deleteError]);
+
 
   const [deleteConfirm, setDeleteConfirm] = useState({
 
@@ -672,7 +660,7 @@ export default function Content() {
     setLegacyPageNeedsMigration(false);
     setDynamicPage(createEmptyDynamicPage());
     setPhilosophyForm(createEmptyPhilosophyContent());
-    setSaveError("");
+    setSaveError(""); setSaveFields({});
 
   };
 
@@ -690,7 +678,7 @@ export default function Content() {
 
       setUploadingImage(true);
 
-      setSaveError("");
+      setSaveError(""); setSaveFields({});
 
       const response = await contentService.uploadImage(file);
 
@@ -714,7 +702,7 @@ export default function Content() {
 
   const handleSaveContent = async () => {
 
-    setSaveError("");
+    setSaveError(""); setSaveFields({});
 
     if (!form.title.trim()) {
 
@@ -876,7 +864,8 @@ export default function Content() {
         "Failed to save content:",
         err,
       );
-      setSaveError(extractApiErrorMessage(err, "Failed to save content."));
+      setSaveFields(extractApiFieldErrors(err));
+            setSaveError(extractApiErrorMessage(err, "Failed to save content."));
     } finally {
       setSavingContent(false);
     }
@@ -944,7 +933,7 @@ export default function Content() {
 
     try {
 
-      setSaveError("");
+      setSaveError(""); setSaveFields({});
 
       let content = findContentInLoadedTree(contentId);
 
@@ -1168,7 +1157,7 @@ export default function Content() {
             setDynamicPage(createEmptyDynamicPage());
             setShowAddForm(true);
 
-            setSaveError("");
+            setSaveError(""); setSaveFields({});
           }}
         >
           Add Content
@@ -1202,7 +1191,7 @@ export default function Content() {
 
                 setEditingContentId(null);
 
-                setSaveError("");
+                setSaveError(""); setSaveFields({});
               }}
               className="text-sm text-brand-neutral hover:text-brand-text"
             >
@@ -1228,6 +1217,7 @@ export default function Content() {
                 placeholder="Enter title"
                 className="w-full rounded-lg border border-brand-border px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
               />
+<ApiFieldError errors={saveFields} field={"title"} />
             </div>
 
             {/* Type */}
@@ -1251,6 +1241,7 @@ export default function Content() {
 
                 <option value="Link">Link</option>
               </select>
+<ApiFieldError errors={saveFields} field="type" />
             </div>
 
             {/* Parent Content */}
@@ -1274,6 +1265,7 @@ export default function Content() {
                   </option>
                 ))}
               </select>
+<ApiFieldError errors={saveFields} field="parentId" />
             </div>
 
             {/* Page / Post Body */}
@@ -1339,6 +1331,7 @@ export default function Content() {
                     placeholder="e.g. Company News"
                     className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                   />
+<ApiFieldError errors={saveFields} field={"category"} />
                 </div>
 
                 <div>
@@ -1353,6 +1346,7 @@ export default function Content() {
                     onChange={handleFormChange}
                     className="w-full rounded-lg border border-brand-border bg-brand-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                   />
+<ApiFieldError errors={saveFields} field={"publishedAt"} />
                 </div>
               </>
             )}
@@ -1422,6 +1416,7 @@ export default function Content() {
                   placeholder="https\\://example.com"
                   className="w-full rounded-lg border border-brand-border px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                 />
+<ApiFieldError errors={saveFields} field={"linkUrl"} />
               </div>
             )}
           </div>
@@ -1452,7 +1447,7 @@ export default function Content() {
 
                 setEditingContentId(null);
 
-                setSaveError("");
+                setSaveError(""); setSaveFields({});
               }}
               disabled={savingContent}
               className="ils-dashboard-button ils-dashboard-button--secondary"

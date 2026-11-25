@@ -52,11 +52,28 @@ function getRawApiErrorMessage(error, fallbackMessage = 'حدث خطأ أثنا�
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       return 'انتهت مهلة الاتصال بالخادم، يرجى المحاولة مرة أخرى.';
     }
-    return error.message || fallbackMessage;
+    return error.isAxiosError ? fallbackMessage : (error.message || fallbackMessage);
   }
 
   const status = res.status;
   const data = res.data;
+  // Never expose server exception details or HTML proxy error pages.
+  if (status >= 500) return 'The server could not process your request. Please try again later.';
+  if (typeof data === 'string' && /^\s*</.test(data)) return fallbackMessage;
+  const validation = data?.errors ?? data?.Errors ?? (Array.isArray(data) ? data : null);
+  const collect = (value) => {
+    if (typeof value === 'string') return value.trim() ? [value.trim()] : [];
+    if (Array.isArray(value)) return value.flatMap(collect);
+    if (value && typeof value === 'object') {
+      const message = value.description ?? value.Description ?? value.errorMessage ?? value.ErrorMessage ?? value.message ?? value.Message;
+      return typeof message === 'string' ? collect(message) : [];
+    }
+    return [];
+  };
+  const messages = Array.isArray(validation) ? collect(validation) :
+    validation && typeof validation === 'object' ? Object.values(validation).flatMap(collect) : collect(validation);
+  if (messages.length) return [...new Set(messages)].join(' | ');
+  if (status === 429 && !data) return 'Too many requests. Please try again later.';
 
   // 3. Status code defaults if no data body is returned
   if (!data) {
@@ -149,6 +166,19 @@ function getRawApiErrorMessage(error, fallbackMessage = 'حدث خطأ أثنا�
 
 export function extractApiErrorMessage(error, fallbackMessage = 'حدث خطأ أثناء معالجة الطلب، يرجى المحاولة مرة أخرى.') {
   const raw = getRawApiErrorMessage(error, fallbackMessage);
-  return sanitizeErrorMessage(raw);
+  return raw.includes(" | ") ? raw : sanitizeErrorMessage(raw);
 }
 
+
+// Preserve backend property names (case-insensitive lookup in the UI).
+export function extractApiFieldErrors(error) {
+  const response = error?.response;
+  if (!response || response.status !== 400) return {};
+  const errors = response.data?.errors ?? response.data?.Errors;
+  if (!errors || typeof errors !== 'object' || Array.isArray(errors)) return {};
+  return Object.fromEntries(Object.entries(errors).flatMap(([key, value]) => {
+    const messages = (Array.isArray(value) ? value : [value])
+      .filter(item => typeof item === 'string' && item.trim());
+    return messages.length ? [[key.toLowerCase(), messages]] : [];
+  }));
+}
