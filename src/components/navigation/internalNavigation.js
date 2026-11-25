@@ -85,6 +85,24 @@ export const getInternalNavigation = (user) => [
                     },
                 ],
             },
+            {
+                label: "Customs Clearance",
+                icon: FileCheck,
+                subItems: [
+                    {
+                        label: "Customs Dashboard",
+                        path: "/customs-clearance/dashboard",
+                        permission: "customsclearance.shipments.view",
+                        icon: LayoutDashboard,
+                    },
+                    {
+                        label: "Customs Data Entry",
+                        path: "/customs-clearance/entry",
+                        permission: "customsclearance.shipments.view",
+                        icon: FileSpreadsheet,
+                    },
+                ],
+            },
         ],
     },
     {

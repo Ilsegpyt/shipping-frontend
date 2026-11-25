@@ -186,7 +186,7 @@ export function createLiveApi({
       return null;
     },
 
-    async getPagedOperations(params = {}) {
+    async getPagedOperations(params = {}, config = {}) {
       const query = new URLSearchParams();
       if (params.page != null) query.append('page', params.page);
       if (params.pageSize != null) query.append('pageSize', params.pageSize);
@@ -204,8 +204,9 @@ export function createLiveApi({
       if (params.dateTo) query.append('dateTo', params.dateTo);
       if (params.sortBy) query.append('sortBy', params.sortBy);
       if (params.sortDirection) query.append('sortDirection', params.sortDirection);
+      if (params.rulesJson) query.append('rulesJson', params.rulesJson);
 
-      const res = await api.get(`/api/operations/ftl?${query.toString()}`);
+      const res = await api.get(`/api/operations/ftl?${query.toString()}`, config);
       return res.data;
     },
 

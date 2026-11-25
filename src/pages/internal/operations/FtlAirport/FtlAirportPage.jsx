@@ -127,6 +127,7 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
 
     if (defaultView === 'entry') {
       dashboardRef.current.showDataEntry();
+      dashboardRef.current.switchDir?.('Import');
     } else if (defaultView === 'dashboard') {
       dashboardRef.current.showDashboard();
     }
@@ -139,6 +140,7 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
     }
     if (defaultView === 'entry') {
       dashboardRef.current?.showDataEntry();
+      dashboardRef.current?.switchDir?.('Import');
     } else if (defaultView === 'dashboard') {
       dashboardRef.current?.showDashboard();
     }
@@ -265,6 +267,7 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
               onTotalCountChange={(cnt) => {
                 setCounts(prev => ({ ...prev, deliveredCount: cnt }));
               }}
+              onOperationReopened={() => dashboardRef.current?.invalidateLoadedDirs?.()}
               onBackToActive={() => handleTabClick('Import')}
               lang={language}
               canReopen={canReopen}

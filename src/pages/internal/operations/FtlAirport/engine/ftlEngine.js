@@ -78,10 +78,15 @@ export function createFtlEngine(root, options = {}) {
     modalObserver.disconnect();
     root.classList.remove('ftl-has-modal');
     document.body.classList.remove('ftl-modal-open');
+    resolveDiscardConfirm(false);
   });
 
   __on(document, 'keydown', e => {
     if (e.key === 'Escape') {
+      if ($('ftlDiscardConfirmModal')?.classList.contains('open')) {
+        closeM('ftlDiscardConfirmModal');
+        return;
+      }
       const openModals = root.querySelectorAll('.modal.open');
       if (openModals.length) {
         openModals.forEach(m => m.classList.remove('open'));
@@ -1767,8 +1772,30 @@ export function createFtlEngine(root, options = {}) {
   let ARCHIVE_FILTER_DIR = '';
   const ARCHIVE_STORE = {
     delivered: { Import: { ships: {}, entry: [], rowmeta: {} }, Export: { ships: {}, entry: [], rowmeta: {} } },
-    inactive: { Import: { ships: {}, entry: [], rowmeta: {} }, Export: { ships: {}, entry: [], rowmeta: {} } }
+    inactive: { Import: { ships: {}, entry: [], rowmeta: {} }, Export: { ships: {}, entry: [], rowmeta: {} } },
+    activeExport: { Import: { ships: {}, entry: [], rowmeta: {} }, Export: { ships: {}, entry: [], rowmeta: {} } }
   };
+  const isArchiveScope = (scope) => scope === 'delivered' || scope === 'inactive' || scope === 'activeExport';
+  const isServerPagedEntry = () => LIVE && typeof ILS.api?.getPagedOperations === 'function';
+  const ENTRY_PAGING = {
+    Import: { totalCount: 0, totalTrucks: 0, totalPages: 1, loading: false, cache: {}, seq: 0, abort: null },
+    Export: { totalCount: 0, totalTrucks: 0, totalPages: 1, loading: false, cache: {}, seq: 0, abort: null }
+  };
+  function invalidateEntryCache(dir) {
+    if (dir && ENTRY_PAGING[dir]) {
+      ENTRY_PAGING[dir].cache = {};
+    } else {
+      ENTRY_PAGING.Import.cache = {};
+      ENTRY_PAGING.Export.cache = {};
+    }
+  }
+  function hasUnsavedActiveEdits() {
+    if (typeof ACTIVE_EDIT_SHIPS !== 'undefined' && ACTIVE_EDIT_SHIPS.size > 0) {
+      toast(AR() ? 'يرجى حفظ أو إلغاء التعديلات المفتوحة أولاً قبل الانتقال أو البحث' : 'Please save or cancel open edits before changing page or searching', 'warning');
+      return true;
+    }
+    return false;
+  }
 
   /* =====================================================================
      ENTRY ENGINE
@@ -1993,7 +2020,113 @@ export function createFtlEngine(root, options = {}) {
     return rules.reduce((result, r, i) => i === 0 ? match(r) : r.join === 'OR' ? result || match(r) : r.join === 'NOT' ? result && !match(r) : result && match(r), false);
   }
   let ENTRY_QUICK_SEARCH = '';
-  let entryBackendSearchTimer = null;
+  let entryQuickSearchTimer = null;
+  function getActiveEntryRules(dir) {
+    return (TRIP_SEARCH[dir] || [])
+      .filter(r => String(r.v ?? '').trim() !== '')
+      .map(r => ({ k: r.k || '__all', v: String(r.v).trim(), join: r.join || 'AND' }));
+  }
+  function entryQueryKey(dir) {
+    const page = (TRIP_PAGE[dir] || 0) + 1;
+    const ps = TRIPS_PER_PAGE || 20;
+    const q = ENTRY_QUICK_SEARCH.trim().toLowerCase();
+    const s = TRIP_SORT[dir] || { key: '__tripNo', dir: 'asc' };
+    const r = getActiveEntryRules(dir);
+    return `p_${page}_ps_${ps}_q_${q}_sk_${s.key}_sd_${s.dir}_r_${JSON.stringify(r)}`;
+  }
+  async function loadEntryPage(dir, { silent = false, force = false } = {}) {
+    if (!isServerPagedEntry()) {
+      renderEntry();
+      return;
+    }
+    const pg = ENTRY_PAGING[dir];
+    if (!pg) return;
+    const key = entryQueryKey(dir);
+    const cached = !force ? pg.cache[key] : null;
+    if (cached) {
+      pg.totalCount = cached.totalCount;
+      pg.totalTrucks = cached.totalTrucks;
+      pg.totalPages = cached.totalPages;
+      pg.loading = false;
+      hydrateWorkspace({ shipments: cached.items }, dir);
+      LOADED_DIRS.add(dir);
+      renderEntry();
+      if (!silent) {
+        loadEntryPage(dir, { silent: true, force: true });
+      }
+      return;
+    }
+
+    if (pg.abort) {
+      try { pg.abort.abort(); } catch (e) { }
+    }
+    const controller = new AbortController();
+    pg.abort = controller;
+    const seq = ++pg.seq;
+
+    if (!silent) {
+      pg.loading = true;
+      renderEntry();
+    }
+
+    try {
+      const rules = getActiveEntryRules(dir);
+      const q = ENTRY_QUICK_SEARCH.trim();
+      const sort = TRIP_SORT[dir] || { key: '__tripNo', dir: 'asc' };
+      const res = await ILS.api.getPagedOperations(
+        {
+          page: (TRIP_PAGE[dir] || 0) + 1,
+          pageSize: TRIPS_PER_PAGE || 20,
+          operationType: dir,
+          onlyActive: true,
+          isDeleted: false,
+          search: q || undefined,
+          sortBy: sort.key || '__tripNo',
+          sortDirection: sort.dir || 'asc',
+          rulesJson: rules.length ? JSON.stringify(rules) : undefined,
+        },
+        { signal: controller.signal }
+      );
+
+      if (seq !== pg.seq || destroyed) return;
+
+      const items = Array.isArray(res?.items) ? res.items : [];
+      const totalCount = res?.totalCount ?? 0;
+      const totalTrucks = res?.totalTrucksCount ?? 0;
+      const totalPages = Math.max(1, res?.totalPages ?? 1);
+
+      if ((TRIP_PAGE[dir] || 0) >= totalPages && totalPages > 0) {
+        TRIP_PAGE[dir] = Math.max(0, totalPages - 1);
+        pg.loading = false;
+        return loadEntryPage(dir, { silent, force: true });
+      }
+
+      pg.totalCount = totalCount;
+      pg.totalTrucks = totalTrucks;
+      pg.totalPages = totalPages;
+      pg.loading = false;
+
+      hydrateWorkspace({ shipments: items }, dir);
+      LOADED_DIRS.add(dir);
+
+      if (!q && !rules.length) {
+        LAST_COUNTS = LAST_COUNTS || {};
+        if (dir === 'Import') LAST_COUNTS.activeImportCount = totalCount;
+        if (dir === 'Export') LAST_COUNTS.activeExportCount = totalCount;
+        setCounts(LAST_COUNTS);
+      }
+
+      pg.cache[key] = { items, totalCount, totalTrucks, totalPages, timestamp: Date.now() };
+      renderEntry();
+    } catch (err) {
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
+      if (seq === pg.seq) {
+        pg.loading = false;
+        console.error('Failed to load paged FTL operations for ' + dir + ':', err);
+        if (!silent) renderEntry();
+      }
+    }
+  }
   function sortedTripShips(dir, sort = TRIP_SORT[dir], rules = TRIP_SEARCH[dir]) {
     const keys = tripSearchKeys(dir), kind = keys.find(k => k.k === sort.key)?.t || 'text';
     const original = Object.keys(SHIPS[dir]);
@@ -2036,55 +2169,43 @@ export function createFtlEngine(root, options = {}) {
     dir.options[0].textContent = AR() ? 'تصاعدي ↑' : 'Ascending ↑'; dir.options[1].textContent = AR() ? 'تنازلي ↓' : 'Descending ↓';
     $('tripSortLabel').textContent = AR() ? 'ترتيب حسب' : 'Sort by';
   }
-  $('tripSortKey').addEventListener('change', e => { TRIP_SORT[EDIR].key = e.target.value; TRIP_PAGE[EDIR] = 0; renderEntry(); });
-  $('tripSortDir').addEventListener('change', e => { TRIP_SORT[EDIR].dir = e.target.value; TRIP_PAGE[EDIR] = 0; renderEntry(); });
+  $('tripSortKey').addEventListener('change', e => {
+    if (isServerPagedEntry() && hasUnsavedActiveEdits()) { e.target.value = TRIP_SORT[EDIR].key; return; }
+    TRIP_SORT[EDIR].key = e.target.value; TRIP_PAGE[EDIR] = 0;
+    if (isServerPagedEntry()) loadEntryPage(EDIR); else renderEntry();
+  });
+  $('tripSortDir').addEventListener('change', e => {
+    if (isServerPagedEntry() && hasUnsavedActiveEdits()) { e.target.value = TRIP_SORT[EDIR].dir; return; }
+    TRIP_SORT[EDIR].dir = e.target.value; TRIP_PAGE[EDIR] = 0;
+    if (isServerPagedEntry()) loadEntryPage(EDIR); else renderEntry();
+  });
 
   const qsInput = $('entryQuickSearch');
   const qsClear = $('entryQuickSearchClear');
 
   if (qsInput) {
     qsInput.addEventListener('input', e => {
+      if (isServerPagedEntry() && hasUnsavedActiveEdits()) { e.target.value = ENTRY_QUICK_SEARCH; return; }
       ENTRY_QUICK_SEARCH = e.target.value;
       if (qsClear) qsClear.style.display = ENTRY_QUICK_SEARCH ? 'inline-flex' : 'none';
       TRIP_PAGE[EDIR] = 0;
-      renderEntry();
-
-      clearTimeout(entryBackendSearchTimer);
-      entryBackendSearchTimer = setTimeout(async () => {
-        const term = ENTRY_QUICK_SEARCH.trim();
-        if (!term || !ILS.api || typeof ILS.api.getPagedOperations !== 'function') return;
-        try {
-          const res = await ILS.api.getPagedOperations({
-            operationType: EDIR,
-            onlyActive: true,
-            search: term,
-            pageSize: 50,
-          });
-          if (res && Array.isArray(res.items) && res.items.length) {
-            let added = false;
-            for (const op of res.items) {
-              if (hydrateSingleShipment(op)) {
-                added = true;
-              }
-            }
-            if (added) {
-              renderEntry();
-            }
-          }
-        } catch (err) {
-          console.warn('[FTL] Quick search backend sync error:', err);
-        }
-      }, 300);
+      if (isServerPagedEntry()) {
+        clearTimeout(entryQuickSearchTimer);
+        entryQuickSearchTimer = setTimeout(() => { loadEntryPage(EDIR); }, 250);
+      } else {
+        renderEntry();
+      }
     });
 
     qsInput.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
         if (qsInput.value) {
+          if (isServerPagedEntry() && hasUnsavedActiveEdits()) return;
           qsInput.value = '';
           ENTRY_QUICK_SEARCH = '';
           if (qsClear) qsClear.style.display = 'none';
           TRIP_PAGE[EDIR] = 0;
-          renderEntry();
+          if (isServerPagedEntry()) { clearTimeout(entryQuickSearchTimer); loadEntryPage(EDIR); } else renderEntry();
         } else {
           qsInput.blur();
         }
@@ -2094,6 +2215,7 @@ export function createFtlEngine(root, options = {}) {
 
   if (qsClear) {
     qsClear.addEventListener('click', () => {
+      if (isServerPagedEntry() && hasUnsavedActiveEdits()) return;
       ENTRY_QUICK_SEARCH = '';
       if (qsInput) {
         qsInput.value = '';
@@ -2101,7 +2223,7 @@ export function createFtlEngine(root, options = {}) {
       }
       qsClear.style.display = 'none';
       TRIP_PAGE[EDIR] = 0;
-      renderEntry();
+      if (isServerPagedEntry()) { clearTimeout(entryQuickSearchTimer); loadEntryPage(EDIR); } else renderEntry();
     });
   }
 
@@ -2149,7 +2271,11 @@ export function createFtlEngine(root, options = {}) {
   }
   function renderTripSearch() {
     const dir = EDIR; if (TRIP_SEARCH_DIR !== dir + LANG) TRIP_SEARCH_DIR = dir + LANG;
-    renderRuleSearch($('tripSearch'), dir, TRIP_SEARCH[dir], () => { TRIP_PAGE[dir] = 0; renderEntry(); }, renderTripSearch);
+    renderRuleSearch($('tripSearch'), dir, TRIP_SEARCH[dir], () => {
+      if (isServerPagedEntry() && hasUnsavedActiveEdits()) return;
+      TRIP_PAGE[dir] = 0;
+      if (isServerPagedEntry()) loadEntryPage(dir); else renderEntry();
+    }, renderTripSearch);
   }
   function renderDeliveredSearch() {
     const dir = EDIR;
@@ -3012,6 +3138,43 @@ export function createFtlEngine(root, options = {}) {
   function shipmentUpdateLog(dir, rows) {
     const seen = new Set(); return rows.flatMap(i => ROWMETA[dir][i]?.updates || []).filter(u => { const key = JSON.stringify(u); if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => (a.day + ' ' + a.at).localeCompare(b.day + ' ' + b.at));
   }
+  let mergeConfirmCallback = null;
+  function openMergeConfirmModal({ title, sub, msg, confirmTxt, onConfirm }) {
+    mergeConfirmCallback = onConfirm;
+    const isAr = AR();
+    const titleEl = $('ftlMergeConfirmTitle');
+    if (titleEl) titleEl.textContent = title || (isAr ? 'دمج العمود للشحنة' : 'Merge Column Values');
+    const subEl = $('ftlMergeConfirmSub');
+    if (subEl) subEl.textContent = sub || (isAr ? 'تنبيه اختلاف القيم بين النقلات' : 'Different Values Detected');
+    const msgEl = $('ftlMergeConfirmMsg');
+    if (msgEl) msgEl.textContent = msg || (isAr ? 'القيم مختلفة. الدمج هيستخدم قيمة أول نقلة لكل الشحنة. تكمل؟' : 'Values differ. Merge will use the first trip’s value for the whole shipment. Continue?');
+    const cancelEl = $('ftlMergeConfirmCancel');
+    if (cancelEl) cancelEl.textContent = isAr ? 'إلغاء' : 'Cancel';
+    const okTxtEl = $('ftlMergeConfirmOkTxt');
+    if (okTxtEl) okTxtEl.textContent = confirmTxt || (isAr ? 'نعم، ادمج' : 'Yes, Merge');
+
+    const okBtn = $('ftlMergeConfirmOk');
+    if (okBtn) {
+      okBtn.onclick = () => {
+        closeM('ftlMergeConfirmModal');
+        if (typeof mergeConfirmCallback === 'function') {
+          const cb = mergeConfirmCallback;
+          mergeConfirmCallback = null;
+          cb();
+        }
+      };
+    }
+    const cancelBtn = $('ftlMergeConfirmCancel');
+    if (cancelBtn) {
+      cancelBtn.onclick = () => {
+        mergeConfirmCallback = null;
+        closeM('ftlMergeConfirmModal');
+      };
+    }
+
+    $('ftlMergeConfirmModal')?.classList.add('open');
+  }
+
   function toggleMerge(ref, k) {
     const ship = SHIPS[EDIR][ref], col = COLS[EDIR].find(c => c.k === k);
     if (!ship || !canToggleMerge(EDIR, col)) return;
@@ -3020,17 +3183,33 @@ export function createFtlEngine(root, options = {}) {
       if (col.t === 'upd') {
         const log = shipmentUpdateLog(EDIR, ship.rows);
         ship.rows.forEach(i => { ROWMETA[EDIR][i].updates = log.map(u => ({ ...u })); });
+        ship.unmerged.delete(k); toast(t('entry').merged);
+        markDirty(); renderEntry();
       } else {
         const values = ship.rows.map(i => String(ENTRY[EDIR][i][k] ?? ''));
+        const executeColMerge = () => {
+          const v = ENTRY[EDIR][ship.rows[0]][k];
+          ship.rows.forEach(i => ENTRY[EDIR][i][k] = v);
+          ship.unmerged.delete(k);
+          toast(t('entry').merged);
+          markDirty();
+          renderEntry();
+        };
+
         if (new Set(values).size > 1) {
           if (isLocked(EDIR, col)) { toast(AR() ? 'القيم المقفولة مختلفة؛ تفضل منفصلة للحفاظ عليها' : 'Locked values differ; they must remain separate'); return; }
-          if (!confirm(AR() ? 'القيم مختلفة. الدمج هيستخدم قيمة أول نقلة لكل الشحنة. تكمل؟' : 'Values differ. Merge will use the first trip’s value for the whole shipment. Continue?')) return;
+          openMergeConfirmModal({
+            title: AR() ? 'دمج العمود للشحنة' : 'Merge Column Values',
+            sub: AR() ? 'اكتشاف اختلاف القيم بين النقلات' : 'Different Values Detected',
+            msg: AR() ? 'القيم مختلفة. الدمج هيستخدم قيمة أول نقلة لكل الشحنة. تكمل؟' : 'Values differ. Merge will use the first trip’s value for the whole shipment. Continue?',
+            confirmTxt: AR() ? 'نعم، ادمج' : 'Yes, Merge',
+            onConfirm: () => executeColMerge()
+          });
+          return;
         }
-        const v = ENTRY[EDIR][ship.rows[0]][k]; ship.rows.forEach(i => ENTRY[EDIR][i][k] = v);
+        executeColMerge();
       }
-      ship.unmerged.delete(k); toast(t('entry').merged);
-    } else { ship.unmerged.add(k); toast(t('entry').unmerged); }
-    markDirty(); renderEntry();
+    } else { ship.unmerged.add(k); toast(t('entry').unmerged); markDirty(); renderEntry(); }
   }
   function recalculateTruckSpans(dir, ship) {
     if (!ship || !ship.rows || ship.rows.length <= 1) return;
@@ -3245,7 +3424,12 @@ export function createFtlEngine(root, options = {}) {
     stampUpdate(i, null, true);
     if (ship?.ref) {
       try {
-        localStorage.setItem(`ftl_draft_${ship.ref}`, JSON.stringify(ship.rows.map(idx => ENTRY[dir][idx])));
+        localStorage.setItem(`ftl_draft_${ship.ref}`, JSON.stringify({
+          shipRef: ship.ref,
+          dir,
+          savedAt: new Date().toISOString(),
+          rows: ship.rows.map(idx => ENTRY[dir][idx])
+        }));
       } catch (e) { }
     }
     markDirty();
@@ -3334,17 +3518,20 @@ export function createFtlEngine(root, options = {}) {
   }
   function changeTripPage(delta) {
     if (EDITING && !commitEdit()) return;
+    if (isServerPagedEntry() && hasUnsavedActiveEdits()) return;
     TRIP_PAGE[EDIR] += delta; CURSOR = { r: -1, k: null };
-    renderEntry(); root.querySelector('.egrid')?.scrollTo({ top: 0 });
+    if (isServerPagedEntry()) loadEntryPage(EDIR); else renderEntry();
+    root.querySelector('.egrid')?.scrollTo({ top: 0 });
   }
   $('tripPagePrev').addEventListener('click', () => changeTripPage(-1));
   $('tripPageNext').addEventListener('click', () => changeTripPage(1));
   $('tripPageSize')?.addEventListener('change', (e) => {
     if (EDITING && !commitEdit()) return;
+    if (isServerPagedEntry() && hasUnsavedActiveEdits()) { e.target.value = String(TRIPS_PER_PAGE || 20); return; }
     TRIPS_PER_PAGE = Number(e.target.value) || 20;
     TRIP_PAGE[EDIR] = 0;
     CURSOR = { r: -1, k: null };
-    renderEntry();
+    if (isServerPagedEntry()) loadEntryPage(EDIR); else renderEntry();
     root.querySelector('.egrid')?.scrollTo({ top: 0 });
   });
   async function setShipmentStatus(ref, next) {
@@ -3384,7 +3571,13 @@ export function createFtlEngine(root, options = {}) {
     DATA.filter(r => r.dir === EDIR && (r._ref === ref || (ship.uploadGroup && r._uploadGroup === ship.uploadGroup) || ship.rows.some(i => ENTRY[EDIR][i].shipNo && ENTRY[EDIR][i].shipNo === r.shipNo))).forEach(r => r.status = next);
     TRIP_SELECTED[EDIR].delete(ref); CURSOR = { r: -1, k: null }; EDITING = null; markDirty();
     if (LAST_COUNTS) setCounts(LAST_COUNTS);
-    renderEntry();
+    if (isServerPagedEntry()) {
+      invalidateEntryCache(EDIR);
+      ENTRY_PAGING[EDIR].totalCount = Math.max(0, (ENTRY_PAGING[EDIR].totalCount || 1) - 1);
+      await loadEntryPage(EDIR, { force: true });
+    } else {
+      renderEntry();
+    }
     __emit('countsChanged');
     if ($('deliveredModal').classList.contains('open')) renderDelivered();
     if (VIEW_MODE === 'dash') applyFilters();
@@ -3401,26 +3594,40 @@ export function createFtlEngine(root, options = {}) {
       toast(AR() ? `العملية مقفولة حالياً بواسطة ${ship.lockedByName || 'مستخدم آخر'}` : `Operation is currently locked by ${ship.lockedByName || 'another user'}`, 'warning');
       return;
     }
+    const container = btnEl.closest('.fcl-status-container');
     const existing = document.querySelector('.fcl-status-menu');
     if (existing) {
       const isSame = existing.dataset.ref === ref;
+      const prevContainer = existing.closest('.fcl-status-container');
+      if (prevContainer) prevContainer.classList.remove('menu-open');
       existing.remove();
       if (isSame) return;
     }
-    const container = btnEl.closest('.fcl-status-container');
     if (!container) return;
+    container.classList.add('menu-open');
     const isAr = AR();
+    const isDelivered = (ship?.status || 'Open') === 'Delivered';
     const menu = document.createElement('div');
     menu.className = 'fcl-status-menu';
     menu.dataset.ref = ref;
+    menu.onclick = (e) => e.stopPropagation();
+
+    const checkIcon = `<svg class="fcl-check-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+
     menu.innerHTML = `
-      <button type="button" onclick="event.stopPropagation();__FTL__.setAndCloseStatus('${esc(ref)}', 'Open')">
-        <span class="fcl-status-dot open" style="width:8px;height:8px;border-radius:50%;background:#0284c7;display:inline-block"></span>
-        <span>${isAr ? 'قيد التنفيذ (Open)' : 'Open'}</span>
+      <button type="button" class="fcl-menu-item ${!isDelivered ? 'active open' : ''}" onclick="event.stopPropagation();__FTL__.setAndCloseStatus('${esc(ref)}', 'Open')">
+        <div class="fcl-menu-item-left">
+          <span class="fcl-status-dot open"></span>
+          <span>Open</span>
+        </div>
+        ${!isDelivered ? checkIcon : ''}
       </button>
-      <button type="button" onclick="event.stopPropagation();__FTL__.setAndCloseStatus('${esc(ref)}', 'Delivered')">
-        <span class="fcl-status-dot delivered" style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block"></span>
-        <span>${isAr ? 'تم التسليم (Delivered)' : 'Delivered'}</span>
+      <button type="button" class="fcl-menu-item ${isDelivered ? 'active delivered' : ''}" onclick="event.stopPropagation();__FTL__.setAndCloseStatus('${esc(ref)}', 'Delivered')">
+        <div class="fcl-menu-item-left">
+          <span class="fcl-status-dot delivered"></span>
+          <span>Delivered</span>
+        </div>
+        ${isDelivered ? checkIcon : ''}
       </button>
     `;
     container.appendChild(menu);
@@ -3428,6 +3635,7 @@ export function createFtlEngine(root, options = {}) {
     const onDocClick = (e) => {
       if (!menu.contains(e.target)) {
         menu.remove();
+        container.classList.remove('menu-open');
         document.removeEventListener('click', onDocClick);
       }
     };
@@ -3436,7 +3644,11 @@ export function createFtlEngine(root, options = {}) {
 
   async function setAndCloseStatus(ref, newStatus) {
     const existing = document.querySelector('.fcl-status-menu');
-    if (existing) existing.remove();
+    if (existing) {
+      const container = existing.closest('.fcl-status-container');
+      if (container) container.classList.remove('menu-open');
+      existing.remove();
+    }
     await setShipmentStatus(ref, newStatus);
   }
 
@@ -5063,6 +5275,12 @@ export function createFtlEngine(root, options = {}) {
     $('shipmentBreakdownModal').classList.add('open');
   }
   function activeOpCount(d) {
+    if (isServerPagedEntry()) {
+      if (LAST_COUNTS) {
+        return d === 'Import' ? (LAST_COUNTS.activeImportCount ?? 0) : (LAST_COUNTS.activeExportCount ?? 0);
+      }
+      return ENTRY_PAGING[d]?.totalCount ?? 0;
+    }
     const hasLoaded = LOADED_DIRS.has(d) && Object.keys(SHIPS[d] || {}).length > 0;
     if (hasLoaded) {
       return Object.values(SHIPS[d]).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').length;
@@ -5098,24 +5316,31 @@ export function createFtlEngine(root, options = {}) {
       return `<th style="--gc:${GROUPS[c.g].c};--w:${c.w}px" title="${esc(hTxt)}"><span title="${esc(hTxt)}">${esc(hTxt)}<small class="dtype">${tripTypeLabel(tripType(c))}</small></span>${isLocked(dir, c) ? '<i class="lk" title="' + E.lockedTip + '">🔒</i>' : ''}</th>`;
     }).join('')}<th class="actions-head" style="--gc:#8fa3b4;--w:115px" title="${AR() ? 'الإجراءات' : 'Actions'}"><span title="${AR() ? 'الإجراءات' : 'Actions'}">${AR() ? 'الإجراءات' : 'Actions'}</span></th><th class="meta" style="--gc:#8fa3b4;--w:170px" title="${AR() ? 'العملية والمدخل' : 'Operation / entered'}"><span title="${AR() ? 'العملية والمدخل' : 'Operation / entered'}">${AR() ? 'العملية والمدخل' : 'Operation / entered'}</span></th><th class="select-head" style="--w:68px" title="${AR() ? 'تحديد' : 'Select'}"><span title="${AR() ? 'تحديد' : 'Select'}">${AR() ? 'تحديد' : 'Select'}</span></th></tr>`;
     const rows = ENTRY[dir];
-    const visible = sortedTripShips(dir).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive');
-    const pages = shipmentPages(visible);
-    TRIP_PAGE[dir] = Math.max(0, Math.min(TRIP_PAGE[dir], Math.max(0, pages.length - 1)));
-    const shown = pages[TRIP_PAGE[dir]] || [];
-    $('tripPage').hidden = !visible.length;
+    const serverPaged = isServerPagedEntry();
+    const pg = ENTRY_PAGING[dir];
+    const visible = serverPaged
+      ? Object.values(SHIPS[dir]).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive')
+      : sortedTripShips(dir).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive');
+    const pages = serverPaged ? null : shipmentPages(visible);
+    const totalPages = serverPaged ? Math.max(1, pg.totalPages || 1) : Math.max(1, pages.length);
+    TRIP_PAGE[dir] = Math.max(0, Math.min(TRIP_PAGE[dir], totalPages - 1));
+    const shown = serverPaged ? visible : (pages[TRIP_PAGE[dir]] || []);
+    const totalCount = serverPaged ? (pg.totalCount || 0) : visible.length;
+    $('tripPage').hidden = !totalCount;
     $('tripPagePrev').setAttribute('aria-label', AR() ? 'الشحنات السابقة' : 'Previous shipments');
     $('tripPageNext').setAttribute('aria-label', AR() ? 'الشحنات التالية' : 'Next shipments');
     if ($('tripPageSizeLbl')) {
       $('tripPageSizeLbl').textContent = AR() ? 'لكل صفحة:' : 'Per page:';
     }
-    const totalPages = Math.max(1, pages.length);
     const curPage = TRIP_PAGE[dir] + 1;
-    const before = pages.slice(0, TRIP_PAGE[dir]).reduce((n, p) => n + p.length, 0);
+    const before = serverPaged
+      ? (TRIP_PAGE[dir] * (TRIPS_PER_PAGE || 20))
+      : pages.slice(0, TRIP_PAGE[dir]).reduce((n, p) => n + p.length, 0);
     $('tripPageInfo').textContent = AR()
-      ? `شحنات ${visible.length ? before + 1 : 0}–${before + shown.length} من ${visible.length} · صفحة ${curPage}/${totalPages}`
-      : `Shipments ${visible.length ? before + 1 : 0}–${before + shown.length} of ${visible.length} · Page ${curPage}/${totalPages}`;
+      ? `شحنات ${totalCount ? before + 1 : 0}–${before + shown.length} من ${totalCount} · صفحة ${curPage}/${totalPages}`
+      : `Shipments ${totalCount ? before + 1 : 0}–${before + shown.length} of ${totalCount} · Page ${curPage}/${totalPages}`;
     $('tripPagePrev').disabled = TRIP_PAGE[dir] <= 0;
-    $('tripPageNext').disabled = TRIP_PAGE[dir] >= pages.length - 1;
+    $('tripPageNext').disabled = TRIP_PAGE[dir] >= totalPages - 1;
 
     const numsEl = $('tripPageNums');
     if (numsEl) {
@@ -5130,17 +5355,30 @@ export function createFtlEngine(root, options = {}) {
           if (p === TRIP_PAGE[dir]) btn.classList.add('active');
           btn.addEventListener('click', () => {
             if (EDITING && !commitEdit()) return;
+            if (serverPaged && hasUnsavedActiveEdits()) return;
             TRIP_PAGE[dir] = p;
             CURSOR = { r: -1, k: null };
-            renderEntry();
+            if (serverPaged) loadEntryPage(dir); else renderEntry();
             root.querySelector('.egrid')?.scrollTo({ top: 0 });
           });
           numsEl.appendChild(btn);
         }
       }
     }
-    if (!visible.length) { $('eBody').innerHTML = ''; $('eEmpty').style.display = ''; $('eEmpty').textContent = rows.length ? (AR() ? 'لا توجد شحنات مفتوحة مطابقة؛ راجع الشحنات المُسلّمة وغير النشطة' : 'No matching open shipments; check Delivered or Inactive shipments') : E.emptyTable; }
-    else $('eEmpty').style.display = 'none';
+    if (!shown.length) {
+      $('eBody').innerHTML = '';
+      $('eEmpty').style.display = '';
+      if (serverPaged && pg.loading) {
+        $('eEmpty').textContent = AR() ? 'جاري تحميل الشحنات...' : 'Loading shipments...';
+      } else {
+        const hasSearchOrFilter = ENTRY_QUICK_SEARCH.trim() || TRIP_SEARCH[dir].some(r => r.v);
+        $('eEmpty').textContent = (rows.length || hasSearchOrFilter || activeOpCount(dir) > 0)
+          ? (AR() ? 'لا توجد شحنات مفتوحة مطابقة؛ راجع الشحنات المُسلّمة وغير النشطة' : 'No matching open shipments; check Delivered or Inactive shipments')
+          : E.emptyTable;
+      }
+    } else {
+      $('eEmpty').style.display = 'none';
+    }
     const html = [];
     shown.flatMap(sh => sh.rows).forEach(i => {
       const r = rows[i];
@@ -5399,11 +5637,11 @@ export function createFtlEngine(root, options = {}) {
             <div class="fcl-status-container" onclick="event.stopPropagation()">
               <button type="button" class="fcl-status-pill ${isDelivered ? 'delivered' : 'open'}" onclick="__FTL__.toggleStatusMenu('${esc(ship.ref)}', this)" title="${AR() ? 'تغيير حالة الشحنة' : 'Change status'}">
                 <span class="fcl-status-dot ${isDelivered ? 'delivered' : 'open'}"></span>
-                <span class="fcl-status-text">${isDelivered ? (t('workflow')?.delivered || 'Delivered') : (t('workflow')?.open || 'Open')}</span>
-                <span class="fcl-status-arrow" style="font-size:9px;margin-inline-start:2px;opacity:0.7">▾</span>
+                <span class="fcl-status-text">${isDelivered ? 'Delivered' : 'Open'}</span>
+                <svg class="fcl-status-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
               </button>
               <button type="button" class="fcl-status-history-btn" onclick="__FTL__.openStatusHistory('${esc(ship.ref)}', ${ship.rows[0]})" title="${AR() ? 'سجل وتاريخ تغيرات الحالة (Status History Timeline)' : 'Status History Timeline'}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
               </button>
             </div>
           `;
@@ -5436,9 +5674,35 @@ export function createFtlEngine(root, options = {}) {
         const isSavingThis = SAVING_SHIPS.has(ship.ref);
         const isOpeningThis = OPENING_EDIT_SHIPS.has(ship.ref);
         const isCheckingThis = CHECKING_LOCK_SHIPS.has(ship.ref);
-        const hasDraft = !isEditingThis && Boolean(localStorage.getItem('ftl_draft_' + ship.ref));
+        const validDraftRows = getValidFtlDraft(dir, ship.ref);
+        const hasDraft = Boolean(validDraftRows);
         const isDeliveredStatus = ship.status === 'Delivered';
         const lockedByOther = isShipLockedByOther(ship);
+
+        const draftBadge = hasDraft ? (
+          isEditingThis ? `
+            <div class="ftl-draft-pill" style="display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;max-width:95px;border-radius:7px;background:#fffbeb;color:#92400e;border:1px solid #fcd34d;padding:4px;box-shadow:0 1px 2px rgba(0,0,0,0.04);margin-top:2px">
+              <span style="font-size:9.5px;font-weight:750;color:#92400e;text-align:center;line-height:1.2">⚠️ ${AR() ? 'يوجد مسودة' : 'Draft exists'}</span>
+              <div style="display:flex;align-items:center;gap:3px;width:100%">
+                <button type="button" onclick="event.stopPropagation();__FTL__.restoreDraft('${esc(ship.ref)}')" title="${AR() ? 'استرجاع التعديلات التي تم حفظها كمسودة سابقة' : 'Restore saved draft edits'}" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:2px;padding:3.5px 3px;font-size:9.5px;font-weight:800;background:#d97706;color:#ffffff;border:none;border-radius:4px;cursor:pointer">
+                  <span>📝 ${AR() ? 'استرجاع' : 'Restore'}</span>
+                </button>
+                <button type="button" onclick="event.stopPropagation();__FTL__.discardDraft('${esc(ship.ref)}')" title="${AR() ? 'تجاهل وحذف المسودة نهائياً' : 'Discard and delete draft'}" style="display:inline-flex;align-items:center;justify-content:center;padding:3.5px 5px;background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5;border-radius:4px;cursor:pointer;font-weight:800;font-size:10px" onmouseover="this.style.color='#991b1b';this.style.background='#fecaca'" onmouseout="this.style.color='#b91c1c';this.style.background='#fee2e2'">
+                  ✕
+                </button>
+              </div>
+            </div>
+          ` : `
+            <div class="ftl-draft-pill" style="display:inline-flex;align-items:center;justify-content:space-between;width:100%;max-width:95px;border-radius:7px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,0.04);margin-top:2px">
+              <button type="button" onclick="event.stopPropagation();__FTL__.restoreDraft('${esc(ship.ref)}')" title="${AR() ? 'استرجاع التعديلات التي تم حفظها كمسودة سابقة' : 'Restore saved draft edits'}" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:3px;padding:3.5px 4px;font-size:9.5px;font-weight:750;background:transparent;color:#92400e;border:none;cursor:pointer">
+                <span>📝 ${AR() ? 'استرجاع' : 'Restore'}</span>
+              </button>
+              <button type="button" onclick="event.stopPropagation();__FTL__.discardDraft('${esc(ship.ref)}')" title="${AR() ? 'تجاهل وحذف المسودة نهائياً' : 'Discard and delete draft'}" style="display:inline-flex;align-items:center;justify-content:center;padding:3.5px 6px;background:transparent;color:#b45309;border:none;border-inline-start:1px solid #fde68a;cursor:pointer;font-weight:800;font-size:10px" onmouseover="this.style.color='#e11d48';this.style.background='#ffe4e6'" onmouseout="this.style.color='#b45309';this.style.background='transparent'">
+                ✕
+              </button>
+            </div>
+          `
+        ) : '';
 
         let opControls = '';
         if (isEditingThis) {
@@ -5449,6 +5713,7 @@ export function createFtlEngine(root, options = {}) {
             <button type="button" class="cancel-edit-btn" onclick="event.stopPropagation();__FTL__.cancelEditShipment('${esc(ship.ref)}')" ${isSavingThis ? 'disabled' : ''} style="display:inline-flex;align-items:center;justify-content:center;gap:4px;width:100%;max-width:95px;padding:5px 8px;border-radius:8px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;cursor:pointer">
               ✕ ${AR() ? 'إلغاء' : 'Cancel'}
             </button>
+            ${draftBadge}
           `;
         } else if (isDeliveredStatus) {
           opControls = `
@@ -5477,10 +5742,6 @@ export function createFtlEngine(root, options = {}) {
             </div>
           `;
         } else {
-          const draftBadge = hasDraft
-            ? `<button type="button" onclick="event.stopPropagation();__FTL__.restoreDraft('${esc(ship.ref)}')" style="width:100%;max-width:95px;font-size:9.5px;font-weight:750;background:#fef3c7;color:#b45309;border:1px solid #fde68a;padding:2px 4px;border-radius:6px;cursor:pointer">📝 ${AR() ? 'استرجاع المسودة' : 'Restore Draft'}</button>`
-            : '';
-
           opControls = `
             <button type="button" class="start-edit-btn" ${isOpeningThis ? 'disabled' : ''} onclick="event.stopPropagation();__FTL__.startEditShipment('${esc(ship.ref)}')" style="display:inline-flex;align-items:center;justify-content:center;gap:5px;width:100%;max-width:95px;padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;background:#f0f9ff;color:#0369a1;border:1px solid #7dd3fc;cursor:${isOpeningThis ? 'not-allowed' : 'pointer'};opacity:${isOpeningThis ? '0.6' : '1'};transition:all 0.15s;box-shadow:0 1px 2px rgba(0,0,0,0.03)">
               ${isOpeningThis ? `<span class="spin">⏳</span>` : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`}
@@ -5524,10 +5785,17 @@ export function createFtlEngine(root, options = {}) {
       gridEl.scrollTop = prevScrollTop;
     }
     NAV_CELLS = [...$('eBody').querySelectorAll('td.c[tabindex="0"]')].map(td => ({ r: +td.dataset.r, k: td.dataset.k, el: td }));
-    $('tripSearchCount').textContent = TRIP_SEARCH[dir].some(r => r.v) ? (AR() ? `${visible.length} من ${Object.keys(SHIPS[dir]).length} شحنة` : `${visible.length} of ${Object.keys(SHIPS[dir]).length} shipments`) : '';
+    if (serverPaged) {
+      $('tripSearchCount').textContent = TRIP_SEARCH[dir].some(r => r.v)
+        ? (AR() ? `${totalCount} من ${activeOpCount(dir)} شحنة` : `${totalCount} of ${activeOpCount(dir)} shipments`)
+        : '';
+    } else {
+      $('tripSearchCount').textContent = TRIP_SEARCH[dir].some(r => r.v) ? (AR() ? `${visible.length} من ${Object.keys(SHIPS[dir]).length} شحنة` : `${visible.length} of ${Object.keys(SHIPS[dir]).length} shipments`) : '';
+    }
     $('tripCopy').textContent = AR() ? `نسخ المحدد (${TRIP_SELECTED[dir].size})` : `Copy selected (${TRIP_SELECTED[dir].size})`;
     $('tripCopy').disabled = !TRIP_SELECTED[dir].size;
-    const nR = tripRows(dir).length, nS = Object.keys(SHIPS[dir]).length;
+    const nR = serverPaged ? (pg.totalTrucks || tripRows(dir).length) : tripRows(dir).length;
+    const nS = serverPaged ? (pg.totalCount || 0) : Object.keys(SHIPS[dir]).length;
     $('eStatus').innerHTML = `<span class="s-ok">${E.readyShip(fmtN(nS), fmtN(nR))}</span>`;
     $('eApply').disabled = (tripRows('Import').length + tripRows('Export').length) === 0;
     if (LAST_COUNTS) {
@@ -5705,7 +5973,98 @@ export function createFtlEngine(root, options = {}) {
     }
   }
 
-  async function startEditShipment(ref, isAlreadyLocked = false) {
+  /* ---------- FTL Draft Management (Aligned with FCL Robust Concurrency Logic) ---------- */
+  function hasFtlShipmentEdits(rowsA, rowsB) {
+    if (!rowsA || !rowsB) return false;
+    if (rowsA.length !== rowsB.length) return true;
+    const checkKeys = [
+      'shipNo', 'cert', 'client', 'mawb', 'hawb', 'line', 'dest', 'fullAddress',
+      'aod', 'free', 'reqDate', 'reqTime', 'arrDate', 'arrTime', 'gateOut', 'gateOutT',
+      'cntr', 'trucker', 'car', 'driver', 'mob', 'invRcv', 'clrType', 'customs', 'cut',
+      'packages', 'loadedPackages', 'truckType', 'loadStatus', 'trailerPlates', 'transporter'
+    ];
+    for (let i = 0; i < rowsA.length; i++) {
+      const a = rowsA[i];
+      const b = rowsB[i];
+      if (!a || !b) return true;
+      for (const k of checkKeys) {
+        const vA = (a[k] ?? '').toString().trim();
+        const vB = (b[k] ?? '').toString().trim();
+        if (vA !== vB) return true;
+      }
+    }
+    return false;
+  }
+
+  function getValidFtlDraft(dir, ref) {
+    if (!ref) return null;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship || !Array.isArray(ship.rows) || !ship.rows.length) return null;
+    const draftKey = `ftl_draft_${ref}`;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const draftRows = Array.isArray(parsed) ? parsed : (parsed?.rows || []);
+      if (!draftRows || !draftRows.length) {
+        localStorage.removeItem(draftKey);
+        return null;
+      }
+
+      const isEditing = ACTIVE_EDIT_SHIPS.has(ref);
+      const serverRows = (isEditing && OP_SNAPSHOTS[ref])
+        ? OP_SNAPSHOTS[ref]
+        : ship.rows.map(idx => ENTRY[dir]?.[idx]);
+
+      // Check if draft has actual changes compared to the server baseline data
+      const hasEditsVsServer = hasFtlShipmentEdits(draftRows, serverRows);
+      if (!hasEditsVsServer) {
+        // If the draft is identical to server baseline, clean it up!
+        localStorage.removeItem(draftKey);
+        return null;
+      }
+
+      // If user is actively editing, only offer "Restore" if current screen rows differ from draft
+      if (isEditing) {
+        const currentScreenRows = ship.rows.map(idx => ENTRY[dir]?.[idx]);
+        const differsFromScreen = hasFtlShipmentEdits(draftRows, currentScreenRows);
+        if (!differsFromScreen) {
+          // Edits are already in the table screen! Keep localStorage safe, but don't show "Restore" button.
+          return null;
+        }
+      }
+
+      return draftRows;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function applyDraftToShipmentRows(dir, ship, draftRows) {
+    if (!ship || !Array.isArray(draftRows) || !draftRows.length) return;
+    const rows = ENTRY[dir];
+    if (!rows) return;
+    ship.rows.forEach((idx, rIdx) => {
+      const targetRow = rows[idx];
+      if (!targetRow) return;
+      // Prefer matching by trip/truck identifier if present, otherwise by row index
+      const draftRow = draftRows.find((dr) => (
+        (dr._tripId && dr._tripId === targetRow._tripId) ||
+        (dr.car && targetRow.car && String(dr.car).trim() === String(targetRow.car).trim()) ||
+        (dr.cntr && targetRow.cntr && String(dr.cntr).trim() === String(targetRow.cntr).trim())
+      )) || draftRows[rIdx];
+
+      if (draftRow) {
+        Object.keys(draftRow).forEach(k => {
+          if (!k.startsWith('_') || k === '_allocations') {
+            targetRow[k] = draftRow[k];
+          }
+        });
+      }
+    });
+  }
+
+  async function startEditShipment(ref, isAlreadyLocked = false, applyDraft = false) {
     const dir = EDIR;
     const ship = SHIPS[dir]?.[ref];
     if (!ship) return;
@@ -5762,18 +6121,19 @@ export function createFtlEngine(root, options = {}) {
       OP_SNAPSHOTS[ref] = JSON.parse(JSON.stringify(ship.rows.map(idx => ({ ...ENTRY[dir][idx] }))));
       ACTIVE_EDIT_SHIPS.add(ref);
 
-      try {
-        const savedDraft = localStorage.getItem(`ftl_draft_${ref}`);
-        if (savedDraft) {
-          const parsed = JSON.parse(savedDraft);
-          if (Array.isArray(parsed) && parsed.length === ship.rows.length) {
-            toast(AR() ? `📝 تم استعادة مسودة محلية محفوظة تلقائياً للعملية (${ref})` : `Restored local draft for ${ref}`);
-            ship.rows.forEach((idx, rIdx) => {
-              if (parsed[rIdx]) ENTRY[dir][idx] = { ...parsed[rIdx] };
-            });
-          }
+      // Check draft: if applyDraft requested, apply it; otherwise alert user transparently
+      if (applyDraft) {
+        const draftRows = getValidFtlDraft(dir, ref);
+        if (draftRows) {
+          applyDraftToShipmentRows(dir, ship, draftRows);
+          toast(AR() ? `📝 تم استعادة المسودة بنجاح إلى حقول الشحنة (${ref})` : `Restored local draft for ${ref}`, 'success');
         }
-      } catch (e) { }
+      } else {
+        const draftRows = getValidFtlDraft(dir, ref);
+        if (draftRows) {
+          toast(AR() ? `⚠️ يوجد مسودة غير محفوظة للعملية (${ref})، اضغط [استرجاع] لتطبيقها أو [✕] لتجاهلها` : `Unsaved draft exists for ${ref}. Click [Restore] to apply or [✕] to discard.`, 'warning');
+        }
+      }
 
       if (LOCK_HEARTBEATS[ref]) clearInterval(LOCK_HEARTBEATS[ref]);
       LOCK_HEARTBEATS[ref] = setInterval(() => {
@@ -5827,6 +6187,15 @@ export function createFtlEngine(root, options = {}) {
         saveSuccess = true;
       }
     } catch (err) {
+      try {
+        localStorage.setItem(`ftl_draft_${ref}`, JSON.stringify({
+          shipRef: ref,
+          dir,
+          savedAt: new Date().toISOString(),
+          rows: ship.rows.map(idx => ENTRY[dir][idx])
+        }));
+      } catch (e) { }
+
       if (err.status === 409 || String(err.message || '').includes('conflict') || String(err.message || '').includes('changed on the server')) {
         showConflictModal({
           title: AR() ? 'تعارض في حفظ البيانات' : 'Save Conflict',
@@ -5883,6 +6252,7 @@ export function createFtlEngine(root, options = {}) {
       SAVING_SHIPS.delete(ref);
       SAVED_AT = new Date();
       DIRTY = false;
+      if (isServerPagedEntry()) invalidateEntryCache(dir);
 
       renderEntry();
       if (LAST_OPEN_MANIFEST && LAST_OPEN_MANIFEST.ref === ref) {
@@ -5896,6 +6266,51 @@ export function createFtlEngine(root, options = {}) {
     }
   }
 
+  let discardConfirmResolve = null;
+  function resolveDiscardConfirm(confirmed) {
+    $('ftlDiscardConfirmModal')?.classList.remove('open');
+    if (typeof discardConfirmResolve === 'function') {
+      const resolve = discardConfirmResolve;
+      discardConfirmResolve = null;
+      resolve(Boolean(confirmed));
+    }
+  }
+
+  function openDiscardConfirmModal(ref) {
+    if (typeof discardConfirmResolve === 'function') {
+      resolveDiscardConfirm(false);
+    }
+    const modal = $('ftlDiscardConfirmModal');
+    if (!modal) {
+      return Promise.resolve(confirm(AR() ? 'هل أنت متأكد من إلغاء التعديلات والتراجع عن التغييرات غير المحفوظة؟' : 'Discard unsaved changes?'));
+    }
+
+    const isAr = AR();
+    const titleEl = $('ftlDiscardConfirmTitle');
+    if (titleEl) titleEl.textContent = isAr ? 'تجاهل التعديلات غير المحفوظة؟' : 'Discard Unsaved Changes?';
+    const subEl = $('ftlDiscardConfirmSub');
+    if (subEl) subEl.textContent = ref ? `${isAr ? 'العملية:' : 'Operation:'} ${ref}` : (isAr ? 'إلغاء وضع التعديل' : 'Cancel Edit Mode');
+    const msgEl = $('ftlDiscardConfirmMsg');
+    if (msgEl) {
+      msgEl.textContent = isAr
+        ? 'هل أنت متأكد من إلغاء التعديلات؟ سيتم التراجع عن جميع التغييرات غير المحفوظة واسترجاع آخر بيانات محفوظة وفك قفل العملية.'
+        : 'Are you sure you want to cancel editing? All unsaved changes will be discarded, the last saved data will be restored, and the operation lock will be released.';
+    }
+    const cancelEl = $('ftlDiscardConfirmCancel');
+    if (cancelEl) cancelEl.textContent = isAr ? 'إبقاء التعديلات' : 'Keep Editing';
+    const okTxtEl = $('ftlDiscardConfirmOkTxt');
+    if (okTxtEl) okTxtEl.textContent = isAr ? 'نعم، تجاهل التعديلات' : 'Yes, Discard Changes';
+
+    return new Promise((resolve) => {
+      discardConfirmResolve = resolve;
+      const okBtn = $('ftlDiscardConfirmOk');
+      if (okBtn) okBtn.onclick = () => resolveDiscardConfirm(true);
+      if (cancelEl) cancelEl.onclick = () => resolveDiscardConfirm(false);
+      modal.classList.add('open');
+      setTimeout(() => cancelEl?.focus(), 20);
+    });
+  }
+
   async function cancelEditShipment(ref) {
     const dir = EDIR;
     const ship = SHIPS[dir][ref];
@@ -5904,7 +6319,8 @@ export function createFtlEngine(root, options = {}) {
     if (OP_SNAPSHOTS[ref]) {
       const isDirty = JSON.stringify(ship.rows.map(idx => ENTRY[dir][idx])) !== JSON.stringify(OP_SNAPSHOTS[ref]);
       if (isDirty) {
-        if (!confirm(AR() ? 'هل أنت متأكد من إلغاء التعديلات والتراجع عن التغييرات غير المحفوظة؟' : 'Discard unsaved changes?')) {
+        const confirmed = await openDiscardConfirmModal(ref);
+        if (!confirmed) {
           return false;
         }
       }
@@ -6012,7 +6428,37 @@ export function createFtlEngine(root, options = {}) {
   }
 
   function restoreDraft(ref) {
-    startEditShipment(ref);
+    const dir = EDIR;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship) return;
+    if (ACTIVE_EDIT_SHIPS.has(ref)) {
+      const draftRows = getValidFtlDraft(dir, ref);
+      if (draftRows) {
+        applyDraftToShipmentRows(dir, ship, draftRows);
+        markDirty();
+        renderEntry();
+        toast(AR() ? `📝 تم استعادة المسودة بنجاح إلى حقول الشحنة (${ref})` : `Restored local draft for ${ref}`, 'success');
+      }
+    } else {
+      startEditShipment(ref, false, true);
+    }
+  }
+
+  function discardDraft(ref) {
+    try {
+      localStorage.removeItem(`ftl_draft_${ref}`);
+    } catch (e) { }
+    if (ACTIVE_EDIT_SHIPS.has(ref) && OP_SNAPSHOTS[ref]) {
+      const dir = EDIR;
+      const ship = SHIPS[dir]?.[ref];
+      if (ship && Array.isArray(ship.rows)) {
+        ship.rows.forEach((idx, rIdx) => {
+          if (OP_SNAPSHOTS[ref][rIdx]) ENTRY[dir][idx] = { ...OP_SNAPSHOTS[ref][rIdx] };
+        });
+      }
+    }
+    renderEntry();
+    toast(AR() ? '✓ تم تجاهل المسودة وحذفها بنجاح' : 'Draft discarded successfully', 'info');
   }
 
   async function startEditFromManifest(ref, ident, rowIndex, type) {
@@ -6198,7 +6644,14 @@ export function createFtlEngine(root, options = {}) {
       setCounts(LAST_COUNTS);
     }
 
-    if (TRIP_PAGE && TRIP_PAGE[dir] > 0) {
+    if (isServerPagedEntry() && ENTRY_PAGING[dir]) {
+      invalidateEntryCache(dir);
+      ENTRY_PAGING[dir].totalCount = Math.max(0, (ENTRY_PAGING[dir].totalCount || 1) - 1);
+      if (Object.keys(SHIPS[dir] || {}).length === 0 && ENTRY_PAGING[dir].totalCount > 0) {
+        if (TRIP_PAGE[dir] > 0) TRIP_PAGE[dir] = Math.max(0, TRIP_PAGE[dir] - 1);
+        loadEntryPage(dir, { force: true });
+      }
+    } else if (TRIP_PAGE && TRIP_PAGE[dir] > 0) {
       const activeOps = Object.values(SHIPS[dir] || {}).filter(s => s.status !== 'Delivered' && s.status !== 'Inactive');
       const maxPages = Math.ceil(activeOps.length / (TRIPS_PER_PAGE || 20));
       if (TRIP_PAGE[dir] >= maxPages) {
@@ -6334,8 +6787,56 @@ export function createFtlEngine(root, options = {}) {
     CURSOR = { r: +td.dataset.r, k: td.dataset.k };
     if (same || e.detail === 2) startEdit(); else setCursor(CURSOR.r, CURSOR.k, false);
   });
+  let draftSyncTimer = null;
+  function saveActiveDraftNow(shipRef) {
+    const dir = EDIR;
+    let ref = shipRef;
+    if (!ref && EDITING) {
+      const s = rowShip(dir, EDITING.r);
+      if (s) ref = s.ref;
+    }
+    if (!ref && ACTIVE_EDIT_SHIPS.size === 1) {
+      ref = Array.from(ACTIVE_EDIT_SHIPS)[0];
+    }
+    if (!ref) return;
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship || !Array.isArray(ship.rows) || !ship.rows.length) return;
+    try {
+      const activeRows = ship.rows.map(idx => {
+        const rowData = { ...(ENTRY[dir]?.[idx] || {}) };
+        if (EDITING && EDITING.r === idx) {
+          const el = root.querySelector('#eBody .ed');
+          if (el) rowData[EDITING.k] = el.value;
+        }
+        return rowData;
+      });
+      const baseRows = OP_SNAPSHOTS[ref] || ship.rows.map(idx => ENTRY[dir]?.[idx]);
+      if (hasFtlShipmentEdits(activeRows, baseRows)) {
+        localStorage.setItem(`ftl_draft_${ref}`, JSON.stringify({
+          shipRef: ref,
+          dir,
+          savedAt: new Date().toISOString(),
+          rows: activeRows
+        }));
+      }
+    } catch (e) { }
+  }
+
   $('eBody').addEventListener('focusout', e => { if (e.target.classList.contains('ed')) setTimeout(() => { if (EDITING && !DATE_PICKING && !TIME_PICKING && !document.activeElement?.classList.contains('ed')) commitEdit(); }, 80); });
   $('eBody').addEventListener('change', e => { if (e.target.classList.contains('ed') && e.target.tagName === 'SELECT') { commitEdit(); } });
+  $('eBody').addEventListener('input', e => {
+    if (e.target.classList.contains('ed')) {
+      clearTimeout(draftSyncTimer);
+      draftSyncTimer = setTimeout(() => saveActiveDraftNow(), 120);
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    if (EDITING) saveActiveDraftNow();
+  });
+  window.addEventListener('pagehide', () => {
+    if (EDITING) saveActiveDraftNow();
+  });
 
 
   /* =====================================================================
@@ -6351,7 +6852,7 @@ export function createFtlEngine(root, options = {}) {
     const scope = opts.scope || (CURRENT_TAB === 'Delivered' ? 'delivered' : (CURRENT_TAB === 'Inactive' ? 'inactive' : 'active'));
     for (const d of ['Import', 'Export']) {
       if (opts.directions && !opts.directions.includes(d)) continue;
-      const store = (scope === 'delivered' || scope === 'inactive') ? ARCHIVE_STORE[scope]?.[d] : null;
+      const store = isArchiveScope(scope) ? ARCHIVE_STORE[scope]?.[d] : null;
       const targetEntry = store ? store.entry : ENTRY[d];
       const targetShips = store ? store.ships : SHIPS[d];
       const targetRowmeta = store ? store.rowmeta : ROWMETA[d];
@@ -6401,9 +6902,8 @@ export function createFtlEngine(root, options = {}) {
       });
       /* merges: mergeable columns across each shipment (unless un-merged) */
       Object.values(targetShips).filter(sh => !included || included.has(sh.ref)).forEach(sh => {
-        if (sh.rows.length < 2) return;
-        const r0 = rowNumbers.get(sh.rows[0]), r1 = rowNumbers.get(sh.rows[sh.rows.length - 1]);
-        if (!r0 || !r1) return;
+        const renderRows = sh.rows.filter(r => !allowedRows || allowedRows.has(r));
+        if (renderRows.length < 2 || renderRows.length !== sh.rows.length) return;
         pick.forEach((c, ci) => {
           const done = new Set(); sh.rows.forEach((_, ri) => {
             const sp = spanOf(sh, c, ri); if (sp.len < 2 || done.has(sp.start)) return; done.add(sp.start);
@@ -6438,7 +6938,7 @@ export function createFtlEngine(root, options = {}) {
     const log = wb.addWorksheet(AR() ? 'سجل الإدخال' : 'ENTRY LOG');
     log.addRow(AR() ? ['التاب', 'مرجع الشحنة', 'الصف', 'رقم العربية', 'أدخلها', 'التاريخ', 'الوقت', 'التحديثات'] : ['Sheet', 'Shipment ref', 'Row', 'Truck No.', 'Entered by', 'Date', 'Time', 'Updates']).eachCell(c => { c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0B4F7A' } }; });
     ['Import', 'Export'].filter(d => !opts.directions || opts.directions.includes(d)).forEach(d => {
-      const store = (scope === 'delivered' || scope === 'inactive') ? ARCHIVE_STORE[scope]?.[d] : null;
+      const store = isArchiveScope(scope) ? ARCHIVE_STORE[scope]?.[d] : null;
       const targetEntry = store ? store.entry : ENTRY[d];
       const targetShips = store ? store.ships : SHIPS[d];
       const targetRowmeta = store ? store.rowmeta : ROWMETA[d];
@@ -6464,19 +6964,37 @@ export function createFtlEngine(root, options = {}) {
     return { blob, name };
   }
   function tripPickerHTML(dir, prefix, defaults, scope = 'active') {
-    const cols = COLS[dir].filter(c => c.t !== 'upd');
+    const isAll = dir === 'ALL';
+    const cols = isAll
+      ? [...COLS.Import.filter(c => c.t !== 'upd'), ...COLS.Export.filter(c => c.t !== 'upd' && !COLS.Import.some(ic => ic.k === c.k))]
+      : (COLS[dir] || COLS.Import).filter(c => c.t !== 'upd');
     let ships = [];
-    let entryRows = ENTRY[dir] || [];
-    if (scope === 'delivered' || scope === 'inactive') {
-      const store = ARCHIVE_STORE[scope]?.[dir];
-      ships = Object.values(store?.ships || {});
-      entryRows = store?.entry || [];
+    let getRowForShip = null;
+    if (isArchiveScope(scope)) {
+      const store = ARCHIVE_STORE[scope];
+      if (isAll) {
+        const impShips = Object.values(store?.Import?.ships || {}).map(s => ({ ...s, dir: 'Import' }));
+        const expShips = Object.values(store?.Export?.ships || {}).map(s => ({ ...s, dir: 'Export' }));
+        ships = [...impShips, ...expShips];
+        getRowForShip = (sh, ri) => (sh.dir === 'Export' ? store?.Export?.entry?.[ri] : store?.Import?.entry?.[ri]) || {};
+      } else {
+        const dirStore = store?.[dir];
+        ships = Object.values(dirStore?.ships || {}).map(s => ({ ...s, dir }));
+        getRowForShip = (sh, ri) => dirStore?.entry?.[ri] || {};
+      }
     } else {
-      ships = Object.values(SHIPS[dir]).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive');
-      entryRows = ENTRY[dir] || [];
+      if (isAll) {
+        const impShips = Object.values(SHIPS.Import || {}).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').map(s => ({ ...s, dir: 'Import' }));
+        const expShips = Object.values(SHIPS.Export || {}).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').map(s => ({ ...s, dir: 'Export' }));
+        ships = [...impShips, ...expShips];
+        getRowForShip = (sh, ri) => (sh.dir === 'Export' ? ENTRY.Export?.[ri] : ENTRY.Import?.[ri]) || {};
+      } else {
+        ships = Object.values(SHIPS[dir] || {}).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').map(s => ({ ...s, dir }));
+        getRowForShip = (sh, ri) => ENTRY[dir]?.[ri] || {};
+      }
     }
     const chosen = Array.isArray(defaults) ? new Set(defaults) : null;
-    const clientList = [...new Set(ships.map(sh => cellVal(entryRows[sh.rows[0]] || {}, 'client')).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    const clientList = [...new Set(ships.map(sh => cellVal(getRowForShip(sh, sh.rows[0]), 'client')).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     return `<div class="xsec xsec-cols">
       <div class="xsec-head">
         <label class="xall"><input type="checkbox" class="${prefix}AllCols" checked> <b>${AR() ? 'الأعمدة' : 'Columns'}</b></label>
@@ -6514,34 +7032,36 @@ export function createFtlEngine(root, options = {}) {
         </div>
       </div>
       <div class="picklist">${ships.length ? ships.map((sh, i) => {
-      const r = entryRows[sh.rows[0]] || {}; const cl = cellVal(r, 'client');
-      const mawbVal = cellVal(r, 'mawb') || (dir === 'Import' ? cellVal(r, 'bl') : cellVal(r, 'booking'));
+      const r = getRowForShip(sh, sh.rows[0]) || {}; const cl = cellVal(r, 'client');
+      const mawbVal = cellVal(r, 'mawb') || (sh.dir === 'Import' ? cellVal(r, 'bl') : cellVal(r, 'booking'));
       const countInfo = (sh.rows.length > 1) ? ` (${sh.rows.length} ${AR() ? 'نقلات' : 'trips'})` : '';
-      const label = `#${i + 1} · ${sh.ref}${mawbVal ? ' · ' + mawbVal : ''}${cl ? ' · ' + cl : ''}${sh.day ? ' · ' + fmtDay(sh.day) : ''}${countInfo}`;
+      const dirBadge = isAll ? `<span class="op-pick-badge" style="background:${sh.dir === 'Import' ? '#e0f2fe;color:#0369a1' : '#fef3c7;color:#92400e'};margin-inline-end:6px;font-size:10px">${dirLabel(sh.dir)}</span>` : '';
+      const label = `#${i + 1} · ${isAll ? dirLabel(sh.dir) + ' · ' : ''}${sh.ref}${mawbVal ? ' · ' + mawbVal : ''}${cl ? ' · ' + cl : ''}${sh.day ? ' · ' + fmtDay(sh.day) : ''}${countInfo}`;
 
       let subItems = '';
       if (sh.rows.length > 1) {
         subItems = `<div class="sub-pick-list">
           ${sh.rows.map((ri, rIdx) => {
-          const row = entryRows[ri] || {};
+          const row = getRowForShip(sh, ri) || {};
           const trk = row.cntr || row.car || row.driver || '';
           const pkgs = row.loadedPackages || row.packages || '';
           const subLbl = `${AR() ? 'نقلة' : 'Trip'} ${rIdx + 1}: ${row.shipNo ? `#${row.shipNo}` : ''} ${row.hawb || row.cert ? `· ${row.hawb || row.cert}` : ''} ${pkgs ? `· ${pkgs} ${AR() ? 'طرد' : 'pkgs'}` : ''} ${trk ? `· 🚚 ${trk}` : ''}`;
           return `<label class="sub-pick-item">
-              <input type="checkbox" class="${prefix}SubRow" data-ref="${esc(sh.ref)}" data-row="${ri}" value="${ri}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}>
+              <input type="checkbox" class="${prefix}SubRow" data-dir="${esc(sh.dir)}" data-ref="${esc(sh.ref)}" data-row="${ri}" value="${ri}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}>
               <span>${esc(subLbl)}</span>
             </label>`;
         }).join('')}
         </div>`;
       } else {
-        subItems = `<input type="checkbox" class="${prefix}SubRow" data-ref="${esc(sh.ref)}" data-row="${sh.rows[0]}" value="${sh.rows[0]}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''} style="display:none">`;
+        subItems = `<input type="checkbox" class="${prefix}SubRow" data-dir="${esc(sh.dir)}" data-ref="${esc(sh.ref)}" data-row="${sh.rows[0]}" value="${sh.rows[0]}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''} style="display:none">`;
       }
 
       return `<div class="op-pick-group" data-client="${esc(cl || '')}" data-created="${esc(sh.day || '')}">
         <label title="${esc(label)}" class="op-pick-label">
-          <input type="checkbox" class="${prefix}Op" data-ref="${esc(sh.ref)}" value="${esc(sh.ref)}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}>
+          <input type="checkbox" class="${prefix}Op" data-dir="${esc(sh.dir)}" data-ref="${esc(sh.ref)}" value="${esc(sh.ref)}" ${!chosen || chosen.has(sh.ref) ? 'checked' : ''}>
           <span class="op-pick-info">
             <span class="op-pick-badge">#${i + 1}</span>
+            ${dirBadge}
             <span class="op-pick-ref">${esc(sh.ref)}</span>
             ${mawbVal ? `<span class="op-pick-mawb">· ${esc(mawbVal)}</span>` : ''}
             ${cl ? `<span class="op-pick-client">· ${esc(cl)}</span>` : ''}
@@ -6553,38 +7073,67 @@ export function createFtlEngine(root, options = {}) {
       </div>`;
     }).join('') : `<div class="picklist-empty" style="padding:16px;text-align:center;color:#94a3b8;font-size:12px">${AR() ? 'لا توجد شحنات لعرضها' : 'No shipments to display'}</div>`}</div></div>`;
   }
-  function composeClientShipmentSummary(dir, clientName, scope = 'active') {
+  function composeClientShipmentSummary(dir, clientName, scope = 'active', allowedRowIndices = null) {
     if (!clientName) return '';
-    const store = (scope === 'delivered' || scope === 'inactive') ? ARCHIVE_STORE[scope]?.[dir] : null;
-    const targetEntry = store ? store.entry : ENTRY[dir];
-    const rows = (targetEntry || []).filter(r => (r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase());
+    const dirs = dir === 'ALL' ? ['Import', 'Export'] : [dir];
+    const rows = [];
+    dirs.forEach(d => {
+      const store = isArchiveScope(scope) ? ARCHIVE_STORE[scope]?.[d] : null;
+      const targetEntry = store ? store.entry : ENTRY[d];
+      (targetEntry || []).forEach((r, i) => {
+        if ((r.client || '').trim().toLowerCase() === clientName.trim().toLowerCase()) {
+          if (!allowedRowIndices || allowedRowIndices.has(i)) {
+            rows.push(r);
+          }
+        }
+      });
+    });
     if (!rows.length) return '';
-    const totalPkgs = rows.reduce((s, r) => s + (parseInt(normalizeDigits(r.loadedPackages || r.pkgs || '0'), 10) || 0), 0);
+    const totalPkgs = rows.reduce((s, r) => s + (parseInt(normalizeDigits(r.loadedPackages || r.packages || r.pkgs || '0'), 10) || 0), 0);
     const truckMap = new Map();
     rows.forEach(r => {
-      const key = r.cntr || r.driver || 'truck';
-      const label = r.driver ? `سيارة ${r.driver}${r.mob ? ` (${r.mob})` : ''}` : (r.cntr ? `سيارة لوحة (${r.cntr})` : 'سيارة النقل');
-      const pkgs = parseInt(normalizeDigits(r.loadedPackages || r.pkgs || '0'), 10) || 0;
+      const key = r.cntr || r.car || r.driver || 'truck';
+      const label = r.driver ? `سيارة ${r.driver}${r.mob ? ` (${r.mob})` : ''}` : (r.cntr ? `سيارة لوحة (${r.cntr})` : (r.car ? `سيارة لوحة (${r.car})` : 'سيارة النقل'));
+      const pkgs = parseInt(normalizeDigits(r.loadedPackages || r.packages || r.pkgs || '0'), 10) || 0;
       truckMap.set(key, { label, pkgs: (truckMap.get(key)?.pkgs || 0) + pkgs });
     });
     const truckList = Array.from(truckMap.values());
-    const truckDesc = truckList.map(t => `${t.label} (${t.pkgs} طرد)`).join(' و');
-    if (truckList.length > 1) {
+    if (truckList.length === 1) {
       return AR()
-        ? `شحنتكم بإجمالي (${totalPkgs} طرد) محملة على ${truckList.length} سيارات: ${truckDesc}.`
-        : `Your shipment with total (${totalPkgs} packages) is loaded on ${truckList.length} trucks: ${truckDesc}.`;
-    } else if (truckList.length === 1) {
-      return AR()
-        ? `شحنتكم بإجمالي (${totalPkgs} طرد) محملة بالكامل على: ${truckDesc}.`
-        : `Your shipment with total (${totalPkgs} packages) is fully loaded on: ${truckDesc}.`;
+        ? `شحنتكم محملة بالكامل على ${truckList[0].label}${totalPkgs ? ` (${totalPkgs} طرد)` : ''}.`
+        : `Your shipment is fully loaded on ${truckList[0].label}${totalPkgs ? ` (${totalPkgs} pkgs)` : ''}.`;
     }
-    return '';
+    const sep = AR() ? ' و ' : ' and ';
+    const breakdown = truckList.map(t => `${t.label}${t.pkgs ? ` (${t.pkgs} ${AR() ? 'طرد' : 'pkgs'})` : ''}`).join(sep);
+    return AR()
+      ? `شحنتكم ${totalPkgs ? `${totalPkgs} طرد ` : ''}محملة على ${truckList.length} سيارات: ${breakdown}.`
+      : `Your shipment ${totalPkgs ? `(${totalPkgs} pkgs) ` : ''}is loaded on ${truckList.length} trucks: ${breakdown}.`;
   }
 
   function wireTripPicker(root, prefix) {
     root.querySelector(`.${prefix}AllCols`).onchange = e => root.querySelectorAll(`.${prefix}Col`).forEach(c => c.checked = e.target.checked);
     /* "Select all" and the search / created-date filters work together: hidden operations are never (un)selected by Select all */
     const visibleOps = () => [...root.querySelectorAll(`.${prefix}Op`)].filter(c => c.closest('.op-pick-group')?.style.display !== 'none');
+
+    const updateMailNote = () => {
+      if (prefix !== 'm') return;
+      const clientRawName = root.querySelector(`.${prefix}ClientFilter`)?.value || '';
+      if (!clientRawName) return;
+      const checkedSubs = [...root.querySelectorAll(`.${prefix}SubRow:checked`)];
+      const selectedIndices = new Set(checkedSubs.map(x => +x.dataset.row));
+      const summary = composeClientShipmentSummary(root.dataset.dir || EDIR, clientRawName, root.dataset.scope || 'active', selectedIndices);
+      if ($('mSubject')) {
+        $('mSubject').value = AR()
+          ? `بيان شحن وتوزيع البضاعة — ${clientRawName} — ILS Egypt`
+          : `Shipment & Transport Report — ${clientRawName} — ILS Egypt`;
+      }
+      if ($('mNote') && summary) {
+        $('mNote').value = AR()
+          ? `مرحبًا فريق العمل لدى ${clientRawName}،\n\nنحيط سيادتكم علمًا ببيان وتفاصيل نقل شحنتكم من المطار:\n${summary}\n\nيرجى مراجعة الجدول المرفق أدناه للبيانات التفصيلية.\n\nمع التحية والتقدير،\nILS Egypt · فريق العمليات الجوية`
+          : `Dear ${clientRawName} team,\n\nPlease find the transport breakdown of your shipment from airport:\n${summary}\n\nBest regards,\nILS Egypt · Air Operations`;
+      }
+    };
+
     const applyPick = () => {
       const q = (root.querySelector(`.${prefix}OpSearch`).value || '').toLocaleLowerCase();
       const cf = root.querySelector(`.${prefix}CFrom`)?.value || '';
@@ -6610,26 +7159,14 @@ export function createFtlEngine(root, options = {}) {
       const vis = visibleOps();
       root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(c => c.checked);
 
-      if (prefix === 'm' && clFilter) {
-        const clientRawName = root.querySelector(`.${prefix}ClientFilter`)?.value || '';
-        const summary = composeClientShipmentSummary(root.dataset.dir || EDIR, clientRawName, root.dataset.scope || 'active');
-        if ($('mSubject')) {
-          $('mSubject').value = AR()
-            ? `بيان شحن وتوزيع البضاعة — ${clientRawName} — ILS Egypt`
-            : `Shipment & Transport Report — ${clientRawName} — ILS Egypt`;
-        }
-        if ($('mNote') && summary) {
-          $('mNote').value = AR()
-            ? `مرحبًا فريق العمل لدى ${clientRawName}،\n\nنحيط سيادتكم علمًا ببيان وتفاصيل نقل شحنتكم من المطار:\n${summary}\n\nيرجى مراجعة الجدول المرفق أدناه للبيانات التفصيلية.\n\nمع التحية والتقدير،\nILS Egypt · فريق العمليات الجوية`
-            : `Dear ${clientRawName} team,\n\nPlease find the transport breakdown of your shipment from airport:\n${summary}\n\nBest regards,\nILS Egypt · Air Operations`;
-        }
-      }
+      updateMailNote();
     };
     root.querySelector(`.${prefix}AllOps`).onchange = e => {
       visibleOps().forEach(c => {
         c.checked = e.target.checked;
         root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
       });
+      updateMailNote();
     };
     root.querySelector(`.${prefix}OpSearch`).oninput = applyPick;
     root.querySelectorAll(`.${prefix}CFrom,.${prefix}CTo`).forEach(el => el.onchange = applyPick);
@@ -6640,6 +7177,7 @@ export function createFtlEngine(root, options = {}) {
       root.querySelectorAll(`.${prefix}SubRow[data-ref="${ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
       const vis = visibleOps();
       root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked);
+      updateMailNote();
     });
     root.querySelectorAll(`.${prefix}SubRow`).forEach(sub => sub.onchange = (e) => {
       const ref = e.target.dataset.ref;
@@ -6653,72 +7191,173 @@ export function createFtlEngine(root, options = {}) {
       }
       const vis = visibleOps();
       root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked);
+      updateMailNote();
     });
   }
   function pickedTripOptions(root, prefix, dir) {
     const columns = [...root.querySelectorAll(`.${prefix}Col:checked`)].map(x => x.value);
     const checkedSubs = [...root.querySelectorAll(`.${prefix}SubRow:checked`)];
-    const rowIndices = checkedSubs.map(x => +x.dataset.row);
-    const subOps = checkedSubs.map(x => x.dataset.ref).filter(Boolean);
-    const opChecked = [...root.querySelectorAll(`.${prefix}Op:checked`)].map(x => x.value);
-    const operations = [...new Set([...opChecked, ...subOps])];
-    if (!columns.length || (!operations.length && !rowIndices.length)) throw new Error(AR() ? 'اختار عمودًا وشحنة واحدة على الأقل.' : 'Select at least one column and one shipment.');
-    return { directions: [dir], columns: { [dir]: columns }, operations: { [dir]: operations }, rowIndices: { [dir]: rowIndices } };
+    const rowIndices = { Import: [], Export: [] };
+    const operations = { Import: [], Export: [] };
+    const dirsSet = new Set();
+
+    checkedSubs.forEach(x => {
+      const d = x.dataset.dir || (dir !== 'ALL' ? dir : 'Import');
+      if (rowIndices[d]) {
+        dirsSet.add(d);
+        rowIndices[d].push(+x.dataset.row);
+        if (x.dataset.ref) operations[d].push(x.dataset.ref);
+      }
+    });
+
+    const opChecked = [...root.querySelectorAll(`.${prefix}Op:checked`)];
+    opChecked.forEach(x => {
+      const d = x.dataset.dir || (dir !== 'ALL' ? dir : 'Import');
+      if (operations[d]) {
+        dirsSet.add(d);
+        operations[d].push(x.value);
+      }
+    });
+
+    operations.Import = [...new Set(operations.Import)];
+    operations.Export = [...new Set(operations.Export)];
+
+    const hasAnyOps = operations.Import.length > 0 || operations.Export.length > 0;
+    const hasAnyRows = rowIndices.Import.length > 0 || rowIndices.Export.length > 0;
+
+    if (!columns.length || (!hasAnyOps && !hasAnyRows)) {
+      throw new Error(AR() ? 'اختار عمودًا وشحنة واحدة على الأقل.' : 'Select at least one column and one shipment.');
+    }
+
+    const activeDirs = dir === 'ALL'
+      ? ['Import', 'Export'].filter(d => operations[d].length > 0 || rowIndices[d].length > 0)
+      : [dir];
+
+    return {
+      directions: activeDirs.length ? activeDirs : (dir === 'ALL' ? ['Import', 'Export'] : [dir]),
+      columns: {
+        Import: columns.filter(k => COLS.Import.some(c => c.k === k)),
+        Export: columns.filter(k => COLS.Export.some(c => c.k === k)),
+        [dir]: columns
+      },
+      operations: {
+        ...operations,
+        [dir]: dir !== 'ALL' ? operations[dir] : [...operations.Import, ...operations.Export]
+      },
+      rowIndices: {
+        ...rowIndices,
+        [dir]: dir !== 'ALL' ? rowIndices[dir] : [...rowIndices.Import, ...rowIndices.Export]
+      }
+    };
   }
   function tripExportDefaults(dir, scope = 'active') {
-    if (scope === 'delivered' || scope === 'inactive') {
-      const store = ARCHIVE_STORE[scope]?.[dir];
-      return Object.keys(store?.ships || {});
+    if (isArchiveScope(scope)) {
+      if (scope === 'activeExport' && dir !== 'ALL' && TRIP_SELECTED[dir]?.size) {
+        return [...TRIP_SELECTED[dir]];
+      }
+      const store = ARCHIVE_STORE[scope];
+      if (dir === 'ALL') {
+        const impKeys = Object.keys(store?.Import?.ships || {});
+        const expKeys = Object.keys(store?.Export?.ships || {});
+        return [...impKeys, ...expKeys];
+      }
+      return Object.keys(store?.[dir]?.ships || {});
     }
-    if (TRIP_SELECTED[dir].size) return [...TRIP_SELECTED[dir]];
-    if (TRIP_SEARCH[dir].some(r => r.v)) {
-      return Object.values(SHIPS[dir])
+    if (dir === 'ALL') {
+      const selected = [...TRIP_SELECTED.Import, ...TRIP_SELECTED.Export];
+      if (selected.length) return selected;
+      return null;
+    }
+    if (TRIP_SELECTED[dir]?.size) return [...TRIP_SELECTED[dir]];
+    if (TRIP_SEARCH[dir]?.some(r => r.v)) {
+      return Object.values(SHIPS[dir] || {})
         .filter(s => s.status !== 'Delivered' && s.status !== 'Inactive')
         .filter(s => tripMatches(s, dir))
         .map(s => s.ref);
     }
     return null;
   }
-  function openTripExport(scope, forceDir) {
+  async function prepareActiveExportStore(dir) {
+    if (!isServerPagedEntry()) return 'active';
+    const targetDirs = dir === 'ALL' ? ['Import', 'Export'] : [dir];
+    if (
+      dir !== 'ALL' &&
+      LOADED_DIRS.has(dir) &&
+      (ENTRY_PAGING[dir]?.totalCount || 0) <= Object.keys(SHIPS[dir] || {}).length
+    ) {
+      return 'active';
+    }
+    const allOps = [];
+    for (const d of targetDirs) {
+      const q = (d === EDIR ? ENTRY_QUICK_SEARCH.trim() : '');
+      const rules = d === EDIR ? getActiveEntryRules(d) : [];
+      const sort = TRIP_SORT[d] || { key: '__tripNo', dir: 'asc' };
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const res = await ILS.api.getPagedOperations({
+          page,
+          pageSize: 100,
+          operationType: d,
+          onlyActive: true,
+          isDeleted: false,
+          search: q || undefined,
+          sortBy: sort.key || '__tripNo',
+          sortDirection: sort.dir || 'asc',
+          rulesJson: rules.length ? JSON.stringify(rules) : undefined,
+        });
+        if (Array.isArray(res?.items)) allOps.push(...res.items);
+        totalPages = Math.max(1, res?.totalPages ?? 1);
+        page++;
+      } while (page <= totalPages);
+    }
+    hydrateStoreOperations('activeExport', allOps, 'Open');
+    return 'activeExport';
+  }
+  async function openTripExport(scope, forceDir) {
     if (EDITING && !commitEdit()) return;
-    const effectiveScope = scope || (CURRENT_TAB === 'Delivered' ? 'delivered' : (CURRENT_TAB === 'Inactive' ? 'inactive' : 'active'));
-    let dir = forceDir || ((CURRENT_TAB === 'Import' || CURRENT_TAB === 'Export') ? CURRENT_TAB : EDIR);
-    let hasBoth = false;
-    if (effectiveScope === 'delivered' || effectiveScope === 'inactive') {
-      const store = ARCHIVE_STORE[effectiveScope];
-      const hasImp = Object.keys(store?.Import?.ships || {}).length > 0;
-      const hasExp = Object.keys(store?.Export?.ships || {}).length > 0;
-      hasBoth = hasImp && hasExp;
-      if (!forceDir) {
-        if (ARCHIVE_FILTER_DIR === 'Import' || ARCHIVE_FILTER_DIR === 'Export') {
-          dir = ARCHIVE_FILTER_DIR;
+    const isDelivered = scope === 'delivered' || CURRENT_TAB === 'Delivered' || Boolean($('deliveredOpen')?.classList.contains('on'));
+    const isInactive = scope === 'inactive' || CURRENT_TAB === 'Inactive' || Boolean($('inactiveOpen')?.classList.contains('on'));
+    let effectiveScope = isDelivered ? 'delivered' : (isInactive ? 'inactive' : 'active');
+    let dir = forceDir;
+    if (!dir) {
+      if (effectiveScope === 'delivered' || effectiveScope === 'inactive') {
+        if (ARCHIVE_FILTER_DIR === 'Import') {
+          dir = 'Import';
+        } else if (ARCHIVE_FILTER_DIR === 'Export') {
+          dir = 'Export';
         } else {
-          if (hasExp && !hasImp) dir = 'Export';
-          else if (hasImp && !hasExp) dir = 'Import';
-          else dir = EDIR;
+          dir = 'ALL';
         }
+      } else {
+        const activeTabEl = root.querySelector('.etab.on[data-dir]');
+        dir = activeTabEl?.dataset.dir || (CURRENT_TAB === 'Export' || CURRENT_TAB === 'Import' ? CURRENT_TAB : (EDIR || 'Import'));
       }
     }
-    const root = $('tripExportBody');
+    if (effectiveScope === 'active' && isServerPagedEntry()) {
+      try {
+        effectiveScope = await prepareActiveExportStore(dir);
+      } catch (err) {
+        console.warn('[FTL] Failed to fetch all active operations for export, using current page:', err);
+      }
+    }
+    const modalBody = $('tripExportBody');
     $('tripExportTitle').textContent = AR() ? 'تصدير Excel' : 'Export Excel';
     const subKind = effectiveScope === 'delivered' ? ` · ${AR() ? 'الشحنات المسلّمة' : 'Delivered'}` : (effectiveScope === 'inactive' ? ` · ${AR() ? 'غير النشطة' : 'Inactive'}` : '');
-    const dirSwitcher = hasBoth ? `<span style="margin-inline-start:10px;display:inline-flex;gap:4px">
-      <button type="button" class="hbtn ${dir === 'Import' ? 'primary' : ''}" style="height:22px;padding:0 8px;font-size:11px;line-height:22px" onclick="__FTL__.openTripExport('${effectiveScope}','Import')">${dirLabel('Import')}</button>
-      <button type="button" class="hbtn ${dir === 'Export' ? 'primary' : ''}" style="height:22px;padding:0 8px;font-size:11px;line-height:22px" onclick="__FTL__.openTripExport('${effectiveScope}','Export')">${dirLabel('Export')}</button>
-    </span>` : '';
-    root.dataset.dir = dir;
-    root.dataset.scope = effectiveScope;
-    root.innerHTML = `<div class="mkind">${dirLabel(dir)}${subKind} · Excel${dirSwitcher}</div>${tripPickerHTML(dir, 'te', tripExportDefaults(dir, effectiveScope), effectiveScope)}`;
+    const dirTitle = dir === 'ALL' ? (AR() ? 'كل الشحنات' : 'All Shipments') : dirLabel(dir);
+    modalBody.dataset.dir = dir;
+    modalBody.dataset.scope = effectiveScope;
+    modalBody.innerHTML = `<div class="mkind">${dirTitle}${subKind} · Excel</div>${tripPickerHTML(dir, 'te', tripExportDefaults(dir, effectiveScope), effectiveScope)}`;
     $('tripExportGo').textContent = AR() ? 'تحميل Excel' : 'Download Excel';
     if ($('tripExportCancel')) $('tripExportCancel').textContent = AR() ? 'إلغاء' : 'Cancel';
-    wireTripPicker(root, 'te');
-    root.scrollTop = 0;
+    wireTripPicker(modalBody, 'te');
+    modalBody.scrollTop = 0;
     $('tripExportModal').classList.add('open');
   }
   async function saveTripExport() {
     try {
-      const root = $('tripExportBody'), opts = pickedTripOptions(root, 'te', root.dataset.dir);
-      opts.scope = root.dataset.scope || 'active';
+      const modalBody = $('tripExportBody'), opts = pickedTripOptions(modalBody, 'te', modalBody.dataset.dir);
+      opts.scope = modalBody.dataset.scope || 'active';
       $('tripExportGo').disabled = true; await downloadEntry(opts); closeM('tripExportModal');
     } catch (e) { toast(e.message); } finally { $('tripExportGo').disabled = false; }
   }
@@ -6746,16 +7385,30 @@ export function createFtlEngine(root, options = {}) {
     if (userEl) userEl.textContent = E.byUser(AR() ? 'آي إل إس · الشحن الجوي' : OP_USER);
     const opsEl = $('sysOps');
     if (opsEl) {
-      const activeShips = Object.values(SHIPS[EDIR] || {}).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive');
-      const allOps = activeShips.length;
-      const allTrips = activeShips.reduce((acc, sh) => acc + (sh.rows?.length || 0), 0);
-      if (ENTRY_QUICK_SEARCH.trim()) {
-        const visibleOps = sortedTripShips(EDIR).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').length;
-        opsEl.textContent = AR()
-          ? `${visibleOps} من أصل ${allOps} عمليات (${allTrips} نقلة)`
-          : `${visibleOps} of ${allOps} operations (${allTrips} trips)`;
+      if (isServerPagedEntry()) {
+        const pg = ENTRY_PAGING[EDIR] || { totalCount: 0, totalTrucks: 0 };
+        const filteredTotal = pg.totalCount || 0;
+        const totalTrucks = pg.totalTrucks || 0;
+        const unfilteredTotal = activeOpCount(EDIR);
+        if (ENTRY_QUICK_SEARCH.trim() || getActiveEntryRules(EDIR).length) {
+          opsEl.textContent = AR()
+            ? `${filteredTotal} من أصل ${unfilteredTotal} عمليات (${totalTrucks} نقلة)`
+            : `${filteredTotal} of ${unfilteredTotal} operations (${totalTrucks} trips)`;
+        } else {
+          opsEl.textContent = E.opsCount(filteredTotal, totalTrucks);
+        }
       } else {
-        opsEl.textContent = E.opsCount(allOps, allTrips);
+        const activeShips = Object.values(SHIPS[EDIR] || {}).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive');
+        const allOps = activeShips.length;
+        const allTrips = activeShips.reduce((acc, sh) => acc + (sh.rows?.length || 0), 0);
+        if (ENTRY_QUICK_SEARCH.trim()) {
+          const visibleOps = sortedTripShips(EDIR).filter(sh => sh.status !== 'Delivered' && sh.status !== 'Inactive').length;
+          opsEl.textContent = AR()
+            ? `${visibleOps} من أصل ${allOps} عمليات (${allTrips} نقلة)`
+            : `${visibleOps} of ${allOps} operations (${allTrips} trips)`;
+        } else {
+          opsEl.textContent = E.opsCount(allOps, allTrips);
+        }
       }
     }
     const qInp = $('entryQuickSearch');
@@ -7004,15 +7657,19 @@ export function createFtlEngine(root, options = {}) {
     $('deliveredOpen')?.classList.remove('on');
     $('inactiveOpen')?.classList.remove('on');
 
-    if (LIVE && ILS.api?.load && !LOADED_DIRS.has(d)) {
-      try {
-        const payload = await ILS.api.load(d);
-        if (payload && Array.isArray(payload.shipments)) {
-          hydrateWorkspace(payload, d);
-          LOADED_DIRS.add(d);
+    if (LIVE && !LOADED_DIRS.has(d)) {
+      if (isServerPagedEntry()) {
+        await loadEntryPage(d);
+      } else if (ILS.api?.load) {
+        try {
+          const payload = await ILS.api.load(d);
+          if (payload && Array.isArray(payload.shipments)) {
+            hydrateWorkspace(payload, d);
+            LOADED_DIRS.add(d);
+          }
+        } catch (err) {
+          console.error('Failed to lazy load ' + d + ' operations:', err);
         }
-      } catch (err) {
-        console.error('Failed to lazy load ' + d + ' operations:', err);
       }
     }
 
@@ -7020,27 +7677,12 @@ export function createFtlEngine(root, options = {}) {
     __emit('tabChange', d);
   }
 
-  function setArchiveOperations(tab, ops, directionFilter = '', totalCount = null) {
-    ARCHIVE_FILTER_DIR = directionFilter || '';
-    const key = tab === 'Delivered' ? 'delivered' : (tab === 'Inactive' ? 'inactive' : null);
-    if (!key) return;
-
-    const effectiveCount = totalCount != null ? totalCount : (Array.isArray(ops) ? ops.length : null);
-    if (effectiveCount != null) {
-      LAST_COUNTS = LAST_COUNTS || {};
-      if (tab === 'Delivered') LAST_COUNTS.deliveredCount = effectiveCount;
-      if (tab === 'Inactive') LAST_COUNTS.inactiveCount = effectiveCount;
-      const dCnt = root.querySelector('#deliveredOpenCnt') || $('deliveredOpenCnt');
-      if (dCnt && LAST_COUNTS.deliveredCount != null) dCnt.textContent = fmtN(LAST_COUNTS.deliveredCount);
-      const iCnt = root.querySelector('#inactiveOpenCnt') || $('inactiveOpenCnt');
-      if (iCnt && LAST_COUNTS.inactiveCount != null) iCnt.textContent = fmtN(LAST_COUNTS.inactiveCount);
-    }
+  function hydrateStoreOperations(key, ops, targetStatus) {
     ARCHIVE_STORE[key] = {
       Import: { ships: {}, entry: [], rowmeta: {} },
       Export: { ships: {}, entry: [], rowmeta: {} }
     };
     if (!Array.isArray(ops) || !ops.length) return;
-    const targetStatus = tab === 'Delivered' ? 'Delivered' : 'Inactive';
     for (const sh of ops) {
       const d = sh.direction || 'Import';
       if (!COLS[d] || !sh.ref) continue;
@@ -7117,6 +7759,25 @@ export function createFtlEngine(root, options = {}) {
     }
   }
 
+  function setArchiveOperations(tab, ops, directionFilter = '', totalCount = null) {
+    ARCHIVE_FILTER_DIR = directionFilter || '';
+    const key = tab === 'Delivered' ? 'delivered' : (tab === 'Inactive' ? 'inactive' : null);
+    if (!key) return;
+
+    const effectiveCount = totalCount != null ? totalCount : (Array.isArray(ops) ? ops.length : null);
+    if (effectiveCount != null) {
+      LAST_COUNTS = LAST_COUNTS || {};
+      if (tab === 'Delivered') LAST_COUNTS.deliveredCount = effectiveCount;
+      if (tab === 'Inactive') LAST_COUNTS.inactiveCount = effectiveCount;
+      const dCnt = root.querySelector('#deliveredOpenCnt') || $('deliveredOpenCnt');
+      if (dCnt && LAST_COUNTS.deliveredCount != null) dCnt.textContent = fmtN(LAST_COUNTS.deliveredCount);
+      const iCnt = root.querySelector('#inactiveOpenCnt') || $('inactiveOpenCnt');
+      if (iCnt && LAST_COUNTS.inactiveCount != null) iCnt.textContent = fmtN(LAST_COUNTS.inactiveCount);
+    }
+    const targetStatus = tab === 'Delivered' ? 'Delivered' : 'Inactive';
+    hydrateStoreOperations(key, ops, targetStatus);
+  }
+
   function setTab(tab) {
     CURRENT_TAB = tab;
     if ($('entryView')?.style.display === 'none') {
@@ -7136,7 +7797,11 @@ export function createFtlEngine(root, options = {}) {
         EDIR = tab;
         CURSOR = { r: -1, k: null };
         EDITING = null;
-        renderEntry();
+        if (isServerPagedEntry() && !LOADED_DIRS.has(tab)) {
+          loadEntryPage(tab);
+        } else {
+          renderEntry();
+        }
       }
       root.querySelectorAll('.etab[data-dir]').forEach(b => b.classList.toggle('on', b.dataset.dir === tab));
       $('deliveredOpen')?.classList.remove('on');
@@ -7317,6 +7982,10 @@ export function createFtlEngine(root, options = {}) {
     $('qModal').classList.add('open');
   }
   function closeM(id) {
+    if (id === 'ftlDiscardConfirmModal') {
+      resolveDiscardConfirm(false);
+      return;
+    }
     $(id)?.classList.remove('open');
     if (id === 'truckManifestModal' || id === 'shipmentBreakdownModal') {
       LAST_OPEN_MANIFEST = null;
@@ -7364,7 +8033,7 @@ export function createFtlEngine(root, options = {}) {
       if (toInput) toInput.focus();
     }, 50);
   }
-  ['hModal', 'qModal', 'rModal', 'xModal', 'uModal', 'mModal', 'tripExportModal', 'deliveredModal', 'ftlStatusHistoryModal', 'mToAlertModal'].forEach(id => $(id)?.addEventListener('click', e => { if (e.target.id === id) closeM(id); }));
+  ['hModal', 'qModal', 'rModal', 'xModal', 'uModal', 'mModal', 'tripExportModal', 'deliveredModal', 'ftlStatusHistoryModal', 'mToAlertModal', 'ftlMergeConfirmModal', 'ftlDiscardConfirmModal'].forEach(id => $(id)?.addEventListener('click', e => { if (e.target.id === id) closeM(id); }));
 
   /* upload */
   function openTptUpload() { if (VIEW_MODE === 'entry' && EDITING && !commitEdit()) return; $('fileInput').click(); }
@@ -7406,7 +8075,16 @@ export function createFtlEngine(root, options = {}) {
         try {
           if (DIRTY) { await flushWorkspace(); if (DIRTY) throw Error('Save pending changes before import'); }
           await ILS.api.importTrips({ requestId: crypto.randomUUID(), trips: added.map(r => ({ direction: r.dir, group: r._uploadGroup || r.shipKey, fields: Object.fromEntries(COLS[r.dir].filter(c => !c.auto).map(c => [c.k, r[c.k] ?? ''])) })) });
-          hydrateWorkspace(await ILS.api.load());
+          LOADED_DIRS.clear();
+          invalidateEntryCache();
+          if (isServerPagedEntry()) {
+            TRIP_PAGE[EDIR] = 0;
+            await loadEntryPage(EDIR, { force: true });
+          } else {
+            hydrateWorkspace(await ILS.api.load(EDIR), EDIR);
+            LOADED_DIRS.add(EDIR);
+          }
+          __emit('countsChanged');
           initFilters(); buildFields(); if (openedFromEntry) showEntry(true); else { showDash(true); resetFilters(); }
           SAVED_AT = new Date(); DIRTY = false; renderSysBar(); updateTag(); toast(t('loadedOk')(fmtN(added.length)));
         } catch (e) { toast(e.message || 'Import failed'); openQuality(true); }
@@ -7721,13 +8399,26 @@ export function createFtlEngine(root, options = {}) {
   /* The versioned aggregate contract and SQL constraints are specified in the
      companion developer handoff. Server IDs, audit identity and authorization
      are authoritative; the local state is only a UI projection. */
-  function hydrateWorkspace(payload) {
+  function hydrateWorkspace(payload, targetDir) {
     if (!payload || !Array.isArray(payload.shipments)) throw Error('Invalid workspace payload');
     if (payload.version != null) WORKSPACE_VERSION = payload.version;
-    ENTRY = { Import: [], Export: [] }; SHIPS = { Import: {}, Export: {} }; ROWMETA = { Import: {}, Export: {} };
-    ['Import', 'Export'].forEach(d => { TRIP_SELECTED[d].clear(); DELIVERED_SELECTED[d].clear(); });
+    if (targetDir === 'Import' || targetDir === 'Export') {
+      ENTRY[targetDir] = [];
+      SHIPS[targetDir] = {};
+      ROWMETA[targetDir] = {};
+      TRIP_SELECTED[targetDir]?.clear();
+      DELIVERED_SELECTED[targetDir]?.clear();
+    } else {
+      ENTRY = { Import: [], Export: [] };
+      SHIPS = { Import: {}, Export: {} };
+      ROWMETA = { Import: {}, Export: {} };
+      ['Import', 'Export'].forEach(d => { TRIP_SELECTED[d]?.clear(); DELIVERED_SELECTED[d]?.clear(); });
+    }
     for (const sh of payload.shipments) {
-      const d = sh.direction; if (!SHIPS[d] || !sh.ref || !Array.isArray(sh.trips) || !sh.trips.length || SHIPS[d][sh.ref]) throw Error('Invalid shipment payload');
+      const d = sh.direction;
+      if (targetDir && d !== targetDir) continue;
+      if (!SHIPS[d] || !sh.ref || !Array.isArray(sh.trips) || !sh.trips.length) throw Error('Invalid shipment payload');
+      if (SHIPS[d][sh.ref]) continue;
       const idxs = [], status = sh.status === 'Delivered' ? 'Delivered' : 'Open';
       for (const tr of sh.trips) {
         if (!tr.id || !tr.fields) throw Error('Missing server trip ID or fields');
@@ -7833,10 +8524,24 @@ export function createFtlEngine(root, options = {}) {
       const api = ILS.api;
       for (const name of ['getCurrentUser', 'loadMaster', 'load', 'createOperation', 'updateOperation', 'updateShipmentStatus', 'loadPermissions', 'addMaster', 'importTrips'])
         if (typeof api[name] !== 'function') throw Error('Missing ILS_API.' + name);
+      const bootDir = EDIR || 'Import';
+      LOADED_DIRS.clear();
+      invalidateEntryCache();
+      const usePagedBoot = typeof api.getPagedOperations === 'function';
       const [identity, m, d, perms] = await Promise.all([
         api.getCurrentUser(),
         api.loadMaster(),
-        api.load(),
+        usePagedBoot
+          ? api.getPagedOperations({
+              page: (TRIP_PAGE[bootDir] || 0) + 1,
+              pageSize: TRIPS_PER_PAGE || 20,
+              operationType: bootDir,
+              onlyActive: true,
+              isDeleted: false,
+              sortBy: TRIP_SORT[bootDir]?.key || '__tripNo',
+              sortDirection: TRIP_SORT[bootDir]?.dir || 'asc',
+            })
+          : api.load(bootDir),
         api.loadPermissions ? api.loadPermissions().catch(() => ({})) : Promise.resolve({})
       ]);
       if (destroyed) return false;
@@ -7853,9 +8558,23 @@ export function createFtlEngine(root, options = {}) {
       if (Array.isArray(m?.lines) && m.lines.length) MASTER.line = m.lines;
       if (Array.isArray(m?.destinations) && m.destinations.length) MASTER.dest = m.destinations;
       if (Array.isArray(m?.truckers) && m.truckers.length) MASTER.trucker = m.truckers;
-      hydrateWorkspace(d); LIVE = true;
+      LIVE = true;
+      if (usePagedBoot) {
+        const items = Array.isArray(d?.items) ? d.items : (Array.isArray(d?.shipments) ? d.shipments : []);
+        const totalCount = d?.totalCount ?? items.length;
+        const totalTrucks = d?.totalTrucksCount ?? items.reduce((a, s) => a + (s.trips?.length || 0), 0);
+        const totalPages = Math.max(1, d?.totalPages ?? 1);
+        ENTRY_PAGING[bootDir].totalCount = totalCount;
+        ENTRY_PAGING[bootDir].totalTrucks = totalTrucks;
+        ENTRY_PAGING[bootDir].totalPages = totalPages;
+        hydrateWorkspace({ shipments: items }, bootDir);
+        ENTRY_PAGING[bootDir].cache[entryQueryKey(bootDir)] = { items, totalCount, totalTrucks, totalPages, timestamp: Date.now() };
+      } else {
+        hydrateWorkspace(d, bootDir);
+      }
+      LOADED_DIRS.add(bootDir);
       if (destroyed) return false;
-      initFilters(); buildFields(); if (DATA.length) { showDash(true); resetFilters(); } else renderEntry();
+      initFilters(); buildFields(); if (!usePagedBoot && DATA.length) { showDash(true); resetFilters(); } else renderEntry();
       SAVED_AT = new Date(); DIRTY = false; renderSysBar(); updateTag();
       return true;
     } catch (e) {
@@ -7962,35 +8681,40 @@ export function createFtlEngine(root, options = {}) {
     $('mToAlertModal')?.classList.add('open');
   }
 
-  function openMail(kind, scope = 'active', forceDir) {
+  async function openMail(kind, scope = 'active', forceDir) {
     if (EDITING && !commitEdit()) return;
     if (!entryIdentityValid()) return;
-    const effectiveScope = (scope && scope !== 'active') ? scope : (CURRENT_TAB === 'Delivered' ? 'delivered' : (CURRENT_TAB === 'Inactive' ? 'inactive' : 'active'));
+    const isDelivered = (scope && scope === 'delivered') || CURRENT_TAB === 'Delivered' || Boolean($('deliveredOpen')?.classList.contains('on'));
+    const isInactive = (scope && scope === 'inactive') || CURRENT_TAB === 'Inactive' || Boolean($('inactiveOpen')?.classList.contains('on'));
+    let effectiveScope = isDelivered ? 'delivered' : (isInactive ? 'inactive' : 'active');
     MAIL_KIND = (kind === 'excel' || kind === 'table') ? 'table' : 'dash';
-    let d = forceDir || ((CURRENT_TAB === 'Import' || CURRENT_TAB === 'Export') ? CURRENT_TAB : mailDirection());
-    let hasBoth = false;
-    if (effectiveScope === 'delivered' || effectiveScope === 'inactive') {
-      const store = ARCHIVE_STORE[effectiveScope];
-      const hasImp = Object.keys(store?.Import?.ships || {}).length > 0;
-      const hasExp = Object.keys(store?.Export?.ships || {}).length > 0;
-      hasBoth = hasImp && hasExp;
-      if (!forceDir) {
-        if (ARCHIVE_FILTER_DIR === 'Import' || ARCHIVE_FILTER_DIR === 'Export') {
-          d = ARCHIVE_FILTER_DIR;
+    let d = forceDir;
+    if (!d) {
+      if (effectiveScope === 'delivered' || effectiveScope === 'inactive') {
+        if (ARCHIVE_FILTER_DIR === 'Import') {
+          d = 'Import';
+        } else if (ARCHIVE_FILTER_DIR === 'Export') {
+          d = 'Export';
         } else {
-          if (hasExp && !hasImp) d = 'Export';
-          else if (hasImp && !hasExp) d = 'Import';
+          d = 'ALL';
         }
+      } else {
+        const activeTabEl = root.querySelector('.etab.on[data-dir]');
+        d = activeTabEl?.dataset.dir || (CURRENT_TAB === 'Export' || CURRENT_TAB === 'Import' ? CURRENT_TAB : (EDIR || mailDirection()));
+      }
+    }
+    if (MAIL_KIND === 'table' && effectiveScope === 'active' && isServerPagedEntry()) {
+      try {
+        effectiveScope = await prepareActiveExportStore(d);
+      } catch (err) {
+        console.warn('[FTL] Failed to fetch all active operations for email, using current page:', err);
       }
     }
     const isTable = MAIL_KIND === 'table', P = mailProvider();
     $('mTitleTxt').textContent = P.label();
     const subKind = effectiveScope === 'delivered' ? ` · ${AR() ? 'الشحنات المسلّمة' : 'Delivered'}` : (effectiveScope === 'inactive' ? ` · ${AR() ? 'غير النشطة' : 'Inactive'}` : '');
-    const dirSwitcher = (isTable && hasBoth) ? `<span style="margin-inline-start:10px;display:inline-flex;gap:4px">
-      <button type="button" class="hbtn ${d === 'Import' ? 'primary' : ''}" style="height:22px;padding:0 8px;font-size:11px;line-height:22px" onclick="__FTL__.openMail('${kind}','${effectiveScope}','Import')">${dirLabel('Import')}</button>
-      <button type="button" class="hbtn ${d === 'Export' ? 'primary' : ''}" style="height:22px;padding:0 8px;font-size:11px;line-height:22px" onclick="__FTL__.openMail('${kind}','${effectiveScope}','Export')">${dirLabel('Export')}</button>
-    </span>` : '';
-    const subject = isTable ? `${t('mail').subjExcel(dirLabel(d))}${subKind}` : t('mail').subjDash(dirLabel(d), new Date().toISOString().slice(0, 10));
+    const dirTitle = d === 'ALL' ? (AR() ? 'كل الشحنات' : 'All Shipments') : dirLabel(d);
+    const subject = isTable ? `${t('mail').subjExcel(dirTitle)}${subKind}` : t('mail').subjDash(dirTitle, new Date().toISOString().slice(0, 10));
     const defaultNote = isTable
       ? (AR() ? 'مرحبًا،\n\nبرجاء الاطلاع على بيانات الشحنات أدناه.\n\nمع التحية،\nILS Egypt' : 'Dear team,\n\nPlease find the shipment details below.\n\nBest regards,\nILS Egypt')
       : (AR() ? 'مرحبًا،\n\nبرجاء الاطلاع على ملخص الداشبورد أدناه.\n\nمع التحية،\nILS Egypt' : 'Dear team,\n\nPlease find the dashboard summary below.\n\nBest regards,\nILS Egypt');
@@ -7998,7 +8722,7 @@ export function createFtlEngine(root, options = {}) {
       `<div class="xsec"><label class="xall"><input type="checkbox" id="mAllCh" checked><b>${AR() ? 'كل الرسومات' : 'All charts'}</b></label><div class="xgrid">${visibleCharts().map(id => `<label><input class="mCh" type="checkbox" value="${id}" checked>${esc(root.querySelector(`h3[data-c="${id}"]`).textContent)}</label>`).join('')}</div></div><div class="xsec"><label class="xall"><input type="checkbox" id="mKpis" checked>${AR() ? 'المؤشرات' : 'KPIs'}</label><label class="xall"><input type="checkbox" id="mInsights" checked>${AR() ? 'القراءات' : 'Insights'}</label><label class="xall"><input type="checkbox" id="mPdf" checked>${AR() ? 'إرفاق نسخة PDF' : 'Attach a PDF copy'}</label></div>`;
     $('mBody').dataset.scope = effectiveScope;
     $('mBody').dataset.dir = d;
-    $('mBody').innerHTML = `<div class="mkind">${dirLabel(d)}${subKind} · ${isTable ? (AR() ? 'الجدول داخل الإيميل' : 'Table embedded in the email') : (AR() ? 'الداشبورد داخل الإيميل' : 'Dashboard embedded in the email')}${dirSwitcher}</div>
+    $('mBody').innerHTML = `<div class="mkind">${dirTitle}${subKind} · ${isTable ? (AR() ? 'الجدول داخل الإيميل' : 'Table embedded in the email') : (AR() ? 'الداشبورد داخل الإيميل' : 'Dashboard embedded in the email')}</div>
       <div class="xsec email-field-sec" id="mToWrap">
         <label for="mTo" class="email-field-lbl">
           <span>${AR() ? 'إلى' : 'To'}</span>
@@ -8018,7 +8742,19 @@ export function createFtlEngine(root, options = {}) {
       ${fields}<div id="mStatus" role="status"></div>`;
     $('mGo').textContent = P.label(); $('mGo').disabled = false;
     if ($('mCancel')) $('mCancel').textContent = AR() ? 'إلغاء' : 'Cancel';
-    $('mStatus').textContent = P.id === 'eml' ? (isTable ? (AR() ? 'هتتحمّل مسودة .eml فيها المستلم والموضوع والرسالة والجدول المختار داخل الإيميل. افتحها في Outlook، راجعها واضغط إرسال.' : 'An unsent .eml draft will download with the recipient, subject, message and the selected table embedded in the body. Open it in Outlook, review it and send.') : (AR() ? 'هتتحمّل مسودة .eml فيها المؤشرات والرسومات المختارة داخل الإيميل. افتحها في Outlook، راجعها واضغط إرسال.' : 'An unsent .eml draft will download with the KPIs and selected charts embedded in the body. Open it in Outlook, review it and send.')) : '';
+    const copyReplyBtn = $('mCopyReply');
+    if (copyReplyBtn) {
+      copyReplyBtn.classList.remove('copied');
+      copyReplyBtn.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+        <span>${AR() ? 'نسخ للرد في سكونس (Copy)' : 'Copy for Reply'}</span>
+      `;
+      copyReplyBtn.title = AR() ? 'انسخ الجدول للرد في سكونس مفتوح بالآوتلوك' : 'Copy formatted table to reply into an existing Outlook thread';
+    }
+    $('mStatus').textContent = P.id === 'eml' ? (isTable ? (AR() ? 'يمكنك تحميل مسودة (.eml) لفتح إيميل جديد، أو نسخ المحتوى والجدول للرد مباشرة في سكونس مفتوح بالآوتلوك.' : 'Download an unsent .eml draft to open a new email, or copy formatted table to reply directly in an existing Outlook thread.') : (AR() ? 'هتتحمّل مسودة .eml فيها المؤشرات والرسومات المختارة داخل الإيميل. افتحها في Outlook، راجعها واضغط إرسال.' : 'An unsent .eml draft will download with the KPIs and selected charts embedded in the body. Open it in Outlook, review it and send.')) : '';
     if (isTable) wireTripPicker($('mBody'), 'm');
     $('mAllCh')?.addEventListener('change', e => root.querySelectorAll('.mCh').forEach(c => c.checked = e.target.checked));
     $('mTo')?.addEventListener('input', e => {
@@ -8059,31 +8795,60 @@ export function createFtlEngine(root, options = {}) {
   /* the selected rows / columns of the table as e-mail HTML — same merged layout as the screen and the Excel export */
   function tableEmailHTML(dir, opts) {
     const scope = opts.scope || (CURRENT_TAB === 'Delivered' ? 'delivered' : (CURRENT_TAB === 'Inactive' ? 'inactive' : 'active'));
-    const store = (scope === 'delivered' || scope === 'inactive') ? ARCHIVE_STORE[scope]?.[dir] : null;
-    const targetEntry = store ? store.entry : ENTRY[dir];
-    const targetShips = store ? store.ships : SHIPS[dir];
-    const targetRowmeta = store ? store.rowmeta : ROWMETA[dir];
+    const dirs = (dir === 'ALL' || (opts.directions && opts.directions.length > 1))
+      ? (opts.directions || ['Import', 'Export'])
+      : [dir];
 
-    const pick = (opts.columns && opts.columns[dir]) ? COLS[dir].filter(c => opts.columns[dir].includes(c.k)) : COLS[dir].filter(c => c.t !== 'upd');
-    const included = (opts.operations?.[dir] && opts.operations[dir].length) ? new Set(opts.operations[dir]) : null;
-    const allowedRows = (opts.rowIndices && opts.rowIndices[dir] && opts.rowIndices[dir].length) ? new Set(opts.rowIndices[dir]) : null;
-    const ships = Object.values(targetShips).filter(sh => (!included || included.has(sh.ref)) && (!allowedRows || sh.rows.some(r => allowedRows.has(r))));
-    const th = c => { const col = GROUPS[c.g].c, dark = luminance(col) < 0.55; return `<th style="padding:7px 9px;border:1px solid #b7c1cc;background:${col};color:${dark ? '#ffffff' : '#1f2937'};font-size:12px;font-weight:700;white-space:nowrap">${esc(AR() ? (c.ar || c.h) : c.h)}</th>`; };
-    const value = (c, i) => { const r = targetEntry[i]; if (c.t === 'upd') return (targetRowmeta[i]?.updates || []).map(u => `${fmtDay(u.day)} ${u.at} ${u.user}: ${u.text}`).join(' | '); return displayValue(c, String(r[c.k] ?? '')); };
-    let rows = '', n = 0;
-    ships.forEach((sh, si) => {
-      const renderRows = sh.rows.filter(r => !allowedRows || allowedRows.has(r));
-      renderRows.forEach((i, ri) => {
-        n++;
-        const cells = pick.map(c => {
-          const v = value(c, i);
-          return `<td style="padding:6px 9px;border:1px solid #d8e3ea;${ri === 0 ? 'border-top:2px solid #0b4f7a;' : ''}${ri === renderRows.length - 1 ? 'border-bottom:2px solid #0b4f7a;' : ''}background:${si % 2 ? '#f7fafc' : '#ffffff'};font-size:12px;color:#243e50;text-align:center;vertical-align:middle;white-space:nowrap">${esc(v) || '&nbsp;'}</td>`;
-        }).join('');
-        rows += `<tr>${cells}</tr>`;
+    let totalRows = 0, totalShips = 0;
+    const tablesHtml = [];
+
+    dirs.forEach(d => {
+      const store = isArchiveScope(scope) ? ARCHIVE_STORE[scope]?.[d] : null;
+      const targetEntry = store ? store.entry : ENTRY[d];
+      const targetShips = store ? store.ships : SHIPS[d];
+      const targetRowmeta = store ? store.rowmeta : ROWMETA[d];
+
+      const pick = (opts.columns && opts.columns[d]) ? COLS[d].filter(c => opts.columns[d].includes(c.k)) : COLS[d].filter(c => c.t !== 'upd');
+      const included = (opts.operations?.[d] && opts.operations[d].length) ? new Set(opts.operations[d]) : null;
+      const allowedRows = (opts.rowIndices && opts.rowIndices[d] && opts.rowIndices[d].length) ? new Set(opts.rowIndices[d]) : null;
+      const ships = Object.values(targetShips || {}).filter(sh => (!included || included.has(sh.ref)) && (!allowedRows || sh.rows.some(r => allowedRows.has(r))));
+      if (!ships.length) return;
+
+      const th = c => { const col = GROUPS[c.g].c, dark = luminance(col) < 0.55; return `<th style="padding:7px 9px;border:1px solid #b7c1cc;background:${col};color:${dark ? '#ffffff' : '#1f2937'};font-size:12px;font-weight:700;white-space:nowrap">${esc(AR() ? (c.ar || c.h) : c.h)}</th>`; };
+      const value = (c, i) => { const r = targetEntry[i]; if (c.t === 'upd') return (targetRowmeta[i]?.updates || []).map(u => `${fmtDay(u.day)} ${u.at} ${u.user}: ${u.text}`).join(' | '); return displayValue(c, String(r[c.k] ?? '')); };
+      let rows = '', n = 0;
+      ships.forEach((sh, si) => {
+        const renderRows = sh.rows.filter(r => !allowedRows || allowedRows.has(r));
+        const canMerge = renderRows.length > 1 && renderRows.length === sh.rows.length;
+        renderRows.forEach((i, ri) => {
+          n++;
+          const cellParts = [];
+          pick.forEach(c => {
+            const sp = canMerge ? spanOf(sh, c, ri) : { start: ri, len: 1 };
+            if (sp.len > 1 && ri > sp.start) {
+              return;
+            }
+            const rowSpanAttr = sp.len > 1 ? ` rowspan="${sp.len}"` : '';
+            const v = value(c, i);
+            const isTop = sp.start === 0;
+            const isBottom = (sp.start + sp.len) === renderRows.length;
+            const borderStyle = `${isTop ? 'border-top:2px solid #0b4f7a;' : ''}${isBottom ? 'border-bottom:2px solid #0b4f7a;' : ''}`;
+            const bg = si % 2 ? '#f7fafc' : '#ffffff';
+            cellParts.push(`<td${rowSpanAttr} style="padding:6px 9px;border:1px solid #d8e3ea;${borderStyle}background:${bg};font-size:12px;color:#243e50;text-align:center;vertical-align:middle;white-space:nowrap">${esc(v) || '&nbsp;'}</td>`);
+          });
+          rows += `<tr>${cellParts.join('')}</tr>`;
+        });
       });
+      if (n > 0) {
+        totalRows += n;
+        totalShips += ships.length;
+        const dirHeader = dirs.length > 1 ? `<div style="font-weight:700;color:#0b4f7a;margin:12px 0 6px 0;font-size:13px">${dirLabel(d)}</div>` : '';
+        tablesHtml.push(`${dirHeader}<table role="presentation" cellpadding="0" cellspacing="0" dir="${AR() ? 'rtl' : 'ltr'}" style="border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;border:2px solid #0b4f7a;margin-bottom:14px"><thead><tr>${pick.map(th).join('')}</tr></thead><tbody>${rows}</tbody></table>`);
+      }
     });
-    if (!n) throw new Error(t('entry').nothingToSave);
-    return { rows: n, ships: ships.length, html: `<table role="presentation" cellpadding="0" cellspacing="0" dir="${AR() ? 'rtl' : 'ltr'}" style="border-collapse:collapse;font-family:Segoe UI,Arial,sans-serif;border:2px solid #0b4f7a"><thead><tr>${pick.map(th).join('')}</tr></thead><tbody>${rows}</tbody></table>` };
+
+    if (!totalRows) throw new Error(t('entry').nothingToSave);
+    return { rows: totalRows, ships: totalShips, html: tablesHtml.join('') };
   }
   function mailWrap({ intro, content, footer }) {
     const brand = '#0b4f7a', aqua = '#22b8cf';
@@ -8110,9 +8875,10 @@ export function createFtlEngine(root, options = {}) {
       const picked = pickedTripOptions($('mBody'), 'm', d);
       picked.scope = effectiveScope;
       const table = tableEmailHTML(d, picked);
-      message.meta = { rows: table.rows, operations: table.ships, columns: picked.columns[d] };
-      message.text = `${note}\n\n${dirLabel(d)} · ${table.ships} ${AR() ? 'عملية' : 'operations'} · ${table.rows} ${AR() ? 'صف' : 'rows'}\n${selectedTripClipboard(d, new Set(picked.operations[d])).text}`;
-      message.html = mailWrap({ intro: noteHtml, content: `<div style="font-size:12px;color:#66788c;margin-bottom:6px">${esc(dirLabel(d))} · ${table.ships} ${AR() ? 'عملية' : 'operations'} · ${table.rows} ${AR() ? 'صف' : 'rows'}</div>${table.html}`, footer: esc(t('mail').footer) });
+      message.meta = { rows: table.rows, operations: table.ships, columns: picked.columns };
+      const dirTitle = d === 'ALL' ? (AR() ? 'كل الشحنات' : 'All Shipments') : dirLabel(d);
+      message.text = `${note}\n\n${dirTitle} · ${table.ships} ${AR() ? 'عملية' : 'operations'} · ${table.rows} ${AR() ? 'صف' : 'rows'}`;
+      message.html = mailWrap({ intro: noteHtml, content: `<div style="font-size:12px;color:#66788c;margin-bottom:6px">${esc(dirTitle)} · ${table.ships} ${AR() ? 'عملية' : 'operations'} · ${table.rows} ${AR() ? 'صف' : 'rows'}</div>${table.html}`, footer: esc(t('mail').footer) });
     } else {
       const ids = [...root.querySelectorAll('.mCh:checked')].map(x => x.value), withKpis = $('mKpis').checked, withIns = $('mInsights').checked;
       const kpiRows = withKpis ? visibleKpis().map(([id, l, sub]) => `<tr><td style="padding:6px 10px;border-bottom:1px solid #e6eef3;color:#4b5b6b;font-size:13px">${esc($(l).textContent)}</td><td style="padding:6px 10px;border-bottom:1px solid #e6eef3;font-weight:700;color:#12263a;font-size:13px;text-align:${AR() ? 'left' : 'right'}">${esc($(id).textContent)}</td><td style="padding:6px 10px;border-bottom:1px solid #e6eef3;color:#8a9aaa;font-size:11px">${esc($(sub).textContent)}</td></tr>`).join('') : '';
@@ -8191,6 +8957,84 @@ export function createFtlEngine(root, options = {}) {
       $('mStatus').textContent = P.done(); MAIL_TO_LAST = $('mTo').value;
     } catch (e) { if (popup && !popup.closed) popup.close(); $('mStatus').textContent = e.message; }
     finally { MAIL_BUSY = false; $('mGo').disabled = false; }
+  }
+  async function copyMailForReply() {
+    try {
+      const d = $('mBody')?.dataset.dir || mailDirection();
+      const effectiveScope = $('mBody')?.dataset.scope || (CURRENT_TAB === 'Delivered' ? 'delivered' : (CURRENT_TAB === 'Inactive' ? 'inactive' : 'active'));
+      let replyHtml = '', plainText = '';
+      const note = ($('mNote')?.value || '').trim();
+      const noteHtml = esc(note).replace(/\n/g, '<br>');
+
+      if (MAIL_KIND === 'table') {
+        const picked = pickedTripOptions($('mBody'), 'm', d);
+        picked.scope = effectiveScope;
+        const table = tableEmailHTML(d, picked);
+        if (!table || !table.rows) {
+          toast(AR() ? 'يرجى اختيار شحنة وعمود واحد على الأقل.' : 'Please select at least one shipment and column.');
+          return;
+        }
+        const dirTitle = d === 'ALL' ? (AR() ? 'كل الشحنات' : 'All Shipments') : dirLabel(d);
+        replyHtml = `
+          <div style="font-family:'Segoe UI',Calibri,-apple-system,Arial,sans-serif;font-size:13px;color:#1e293b;line-height:1.5;">
+            ${noteHtml ? `<div style="font-size:14px;margin-bottom:16px;color:#0f172a;">${noteHtml}</div>` : ''}
+            <div style="font-size:12px;color:#66788c;margin-bottom:8px;">${esc(dirTitle)} · ${table.ships} ${AR() ? 'عملية' : 'operations'} · ${table.rows} ${AR() ? 'صف' : 'rows'}</div>
+            ${table.html}
+          </div>
+        `;
+        plainText = note ? `${note}\n\n[Table content copied]` : '[Table content copied]';
+      } else {
+        const message = await buildMailMessage();
+        replyHtml = message.html;
+        plainText = message.text;
+      }
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const htmlBlob = new Blob([replyHtml], { type: 'text/html' });
+        const textBlob = new Blob([plainText], { type: 'text/plain' });
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': htmlBlob,
+            'text/plain': textBlob,
+          }),
+        ]);
+      } else {
+        const listener = (e) => {
+          e.clipboardData.setData('text/html', replyHtml);
+          e.clipboardData.setData('text/plain', plainText);
+          e.preventDefault();
+        };
+        document.addEventListener('copy', listener);
+        document.execCommand('copy');
+        document.removeEventListener('copy', listener);
+      }
+
+      const copyBtn = $('mCopyReply');
+      if (copyBtn) {
+        const origContent = copyBtn.innerHTML;
+        copyBtn.classList.add('copied');
+        copyBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span>${AR() ? 'تم النسخ!' : 'Copied!'}</span>
+        `;
+        setTimeout(() => {
+          copyBtn.classList.remove('copied');
+          copyBtn.innerHTML = origContent;
+        }, 2500);
+      }
+
+      toast(
+        AR()
+          ? 'تم نسخ الجدول بنجاح! افتح الآوتلوك واضغط Reply ثم الصق (Ctrl + V).'
+          : 'Copied! Open Outlook, click Reply, and paste (Ctrl + V).',
+        'success'
+      );
+    } catch (err) {
+      console.error('Failed to copy for reply:', err);
+      toast(AR() ? 'تعذر نسخ الجدول' : 'Failed to copy to clipboard', 'error');
+    }
   }
   /* PDF stays in memory. Text is painted by the browser to preserve Arabic
      shaping; chart images are included in the PDF, never substituted for it. */
@@ -8284,9 +9128,16 @@ export function createFtlEngine(root, options = {}) {
   function applyStatic() {
     const L = T[LANG];
     $('hTitle').textContent = L.title; $('hSub').textContent = L.sub; $('hKicker').textContent = L.kicker; $('clearBtn').textContent = L.clear; $('entryBtn').textContent = L.entryBtn; $('dashBtn').textContent = L.dashBtn; $('exportBtn').textContent = L.exportBtn; $('uploadBtn').textContent = L.upload; $('entryUpload').textContent = L.upload;
-    $('helpBtn').textContent = L.help; $('langBtn').textContent = L.langBtn; if ($('ebarLang')) $('ebarLang').textContent = L.langBtn; $('panelToggle').textContent = L.fields;
+    $('helpBtn').textContent = L.help; $('langBtn').textContent = L.langBtn;
+    if ($('ebarLangText')) $('ebarLangText').textContent = L.langBtn;
+    else if ($('ebarLang')) $('ebarLang').textContent = L.langBtn;
+    $('panelToggle').textContent = L.fields;
     const E = L.entry;
-    $('eSave').textContent = E.save; $('eMail').textContent = E.mail; $('xMail').textContent = t('mail').title; $('eApply').textContent = E.apply;
+    if ($('eSaveText')) $('eSaveText').textContent = E.save;
+    else if ($('eSave')) $('eSave').textContent = E.save;
+    if ($('eMailText')) $('eMailText').textContent = E.mail;
+    else if ($('eMail')) $('eMail').textContent = E.mail;
+    $('xMail').textContent = t('mail').title; $('eApply').textContent = E.apply;
     if ($('entryView').style.display !== 'none') { TRIP_SEARCH_DIR = null; renderEntry(); }
     ['lClient', 'lTrucker', 'lDest', 'lOper', 'lLine', 'lPort', 'lRisk', 'lBasis', 'lFrom', 'lTo', 'lQuick'].forEach(id => $(id).textContent = L[id]);
     $('lFrom2').textContent = 'POL'; $('lTo2').textContent = 'STATUS'; $('lPort').textContent = 'POD';
@@ -8363,10 +9214,10 @@ export function createFtlEngine(root, options = {}) {
       .ftl-root #entryView .opcount{gap:4px}
       .ftl-root #entryView .opcount>label{font-size:11.5px;font-weight:700;color:var(--steel);margin-bottom:2px}
       .ftl-root #entryView .ophint{font-size:12px;color:var(--steel);margin-bottom:6px}
-      .ftl-root #entryView .ebar{margin-bottom:6px}
-      .ftl-root #entryView .sysbar{margin-bottom:4px}
-      .ftl-root #entryView .triptools{padding:8px 12px;margin-bottom:8px;border-radius:12px;gap:12px}
-      .ftl-root #entryView .trip-page{margin-bottom:4px}
+      .ftl-root #entryView .ebar{margin-bottom:12px}
+      .ftl-root #entryView .sysbar{margin-bottom:0}
+      .ftl-root #entryView .triptools{padding:0;margin-bottom:0;border-radius:0;gap:8px}
+      .ftl-root #entryView .trip-page{margin-bottom:8px}
       .ftl-root #entryView .egrid{max-height:none;min-height:260px}
       .ftl-root .date-popover{position:fixed;z-index:9999;width:252px;padding:8px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:11px;box-shadow:0 12px 32px rgba(6,42,74,.2);font-size:12px;direction:ltr}
       .ftl-root[dir="rtl"] .date-popover{direction:rtl}
@@ -8745,10 +9596,23 @@ export function createFtlEngine(root, options = {}) {
         ENTRY[dir].push(row);
         idxs.push(idx);
       }
-      SHIPS[dir][ref] = { ref, dir, rows: idxs, per: shipments, unmerged: new Set(), at, day, user, status: 'Open', targetTruckCount: trucks, initialShipCount: shipments };
+      const newShipObj = { ref, dir, rows: idxs, per: shipments, unmerged: new Set(), at, day, user, status: 'Open', targetTruckCount: trucks, initialShipCount: shipments };
+      SHIPS[dir] = isServerPagedEntry() ? { [ref]: newShipObj, ...SHIPS[dir] } : { ...SHIPS[dir], [ref]: newShipObj };
       layoutShip(dir, SHIPS[dir][ref], { shp: shipments, trk: trucks });
       TRIP_SEARCH[dir] = [{ k: '__tripNo', v: '', join: 'AND' }]; TRIP_SORT[dir] = { key: '__tripNo', dir: 'asc' };
-      $('op_vol').value = 1; $('opCount').value = 1; markDirty(); renderEntry(); toast(E.opCreated(n, ref, shipments, trucks)); const firstEditable = COLS[dir].find(c => !isLocked(dir, c)); if (firstEditable) setCursor(idxs[0], firstEditable.k, true);
+      ENTRY_QUICK_SEARCH = '';
+      TRIP_PAGE[dir] = 0;
+      if (isServerPagedEntry()) {
+        invalidateEntryCache(dir);
+        ENTRY_PAGING[dir].totalCount = (ENTRY_PAGING[dir].totalCount || 0) + 1;
+        ENTRY_PAGING[dir].totalTrucks = (ENTRY_PAGING[dir].totalTrucks || 0) + trucks;
+      }
+      if (LAST_COUNTS) {
+        if (dir === 'Import') LAST_COUNTS.activeImportCount = (LAST_COUNTS.activeImportCount || 0) + 1;
+        if (dir === 'Export') LAST_COUNTS.activeExportCount = (LAST_COUNTS.activeExportCount || 0) + 1;
+        setCounts(LAST_COUNTS);
+      }
+      $('op_vol').value = 1; $('opCount').value = 1; markDirty(); renderEntry(); __emit('countsChanged'); toast(E.opCreated(n, ref, shipments, trucks)); const firstEditable = COLS[dir].find(c => !isLocked(dir, c)); if (firstEditable) setCursor(idxs[0], firstEditable.k, true);
     };
 
     enrich = function (rows) {
@@ -8899,17 +9763,17 @@ export function createFtlEngine(root, options = {}) {
   }
 
   const handlers = {
-    addUpdate, applyEntry, changeShipmentStatus, clearData, closeM, copyDeliveredTrips, copySelectedTrips,
+    addUpdate, applyEntry, changeShipmentStatus, clearData, closeM, closeMToAlert, copyDeliveredTrips, copySelectedTrips,
     createOperation, devCopy, emailEntry, openDelivered, openExport, openHelp, openMail, openNativeDate,
     openQuality, openTimePicker, openTptUpload, openTripExport, openUpdates, renderDelivered, renderRaw,
-    reopenSelectedShipment, resetFilters, runExport, saveTripExport, sendMail, showDash, showEntry,
+    reopenSelectedShipment, resetFilters, runExport, saveTripExport, sendMail, copyMailForReply, showDash, showEntry,
     stepOpCount, toggleAllDelivered, toggleDeliveredSelection, toggleLang, toggleMerge, toggleOpForm,
     togglePanel, toggleTheme, xCount, xToggleAll,
     toggleStatusMenu, setAndCloseStatus, openStatusHistory,
     openTruckManifest, openShipmentBreakdown, setTruckShipment, addTruckCoLoad, removeTruckCoLoad, updateTruckAllocationPkgs, changeTruckAllocShp,
     addShipmentTruckAllocation, updateShipmentTruckAllocation, removeShipmentTruckAllocation,
     openInactive, renderInactive, toggleAllInactive, toggleInactiveSelection, copyInactiveTrips, delShip,
-    startEditShipment, saveShipmentEdits, cancelEditShipment, restoreDraft,
+    startEditShipment, saveShipmentEdits, cancelEditShipment, restoreDraft, discardDraft,
     takeOverShipment, checkAndEditShipment, copyConflictData,
     startEditFromManifest, saveFromManifest, cancelFromManifest,
     pageInactive: (d) => { INACTIVE_PAGE += d; },
@@ -8977,6 +9841,7 @@ export function createFtlEngine(root, options = {}) {
     setArchiveOperations: (tab, ops, dir, totalCount) => setArchiveOperations(tab, ops, dir, totalCount),
     setTab: (tab) => setTab(tab),
     switchDir: (dir) => switchEntryDir(dir),
+    invalidateLoadedDirs: () => { LOADED_DIRS.clear(); invalidateEntryCache(); },
     removeShipmentLocally: (ref, dir) => removeShipmentLocally(ref, dir),
     clear: () => clearData(),
     toast: (msg, type, options) => toast(msg, type, options),

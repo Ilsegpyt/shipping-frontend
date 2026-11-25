@@ -49,12 +49,12 @@ export const getMarkup = () => `
         <button class="etab on" data-dir="Import"><span class="ico">↓</span><span class="lbl"></span><span class="cnt"></span></button>
         <button class="etab" data-dir="Export"><span class="ico">↑</span><span class="lbl"></span><span class="cnt"></span></button>
         <button type="button" class="etab etab-delivered" id="deliveredOpen" onclick="__FTL__.openDelivered()">
-          <span class="ico">✓</span>
+          <span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg></span>
           <span class="lbl" id="deliveredOpenLbl">Delivered shipments</span>
           <span class="cnt" id="deliveredOpenCnt">0</span>
         </button>
         <button type="button" class="etab etab-inactive" id="inactiveOpen" onclick="__FTL__.openInactive()">
-          <span class="ico">🗑</span>
+          <span class="ico"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="text-rose-600"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg></span>
           <span class="lbl" id="inactiveOpenLbl">Inactive</span>
           <span class="cnt" id="inactiveOpenCnt">0</span>
         </button>
@@ -62,25 +62,51 @@ export const getMarkup = () => `
       </div>
       <div class="espacer"></div>
       <div id="eStatus" class="estatus" style="display:none"></div>
-      <button class="ebtn" onclick="__FTL__.openTripExport()" id="eSave"></button>
-      <button class="ebtn" onclick="__FTL__.emailEntry()" id="eMail"></button>
-      <button class="ebtn" onclick="__FTL__.toggleLang()" id="ebarLang">عربي</button>
-      <button class="ebtn go" id="eApply" onclick="__FTL__.applyEntry()" style="display:none"></button>
+      <div class="ebar-actions">
+        <button class="ebtn" onclick="__FTL__.openTripExport()" id="eSave">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          <span id="eSaveText">Save as Excel</span>
+        </button>
+        <button class="ebtn" onclick="__FTL__.emailEntry()" id="eMail">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          <span id="eMailText">Email it</span>
+        </button>
+        <button class="ebtn" onclick="__FTL__.toggleLang()" id="ebarLang">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span id="ebarLangText">عربي</span>
+        </button>
+        <button class="ebtn go" id="eApply" onclick="__FTL__.applyEntry()" style="display:none"></button>
+      </div>
     </div>
     <div id="entryGridWrap">
-      <div class="sysbar">
-        <span class="chipst muted" id="sysOps"></span>
-        <div class="trip-quick-search-wrap" id="entryQuickSearchWrap">
-          <span class="trip-search-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          </span>
-          <input type="text" id="entryQuickSearch" class="trip-quick-search-input" placeholder="Search by Shipment #, MAWB, HAWB, Client, Transporter, Truck Plate, Driver... (Ctrl + K)" autocomplete="off" />
-          <button type="button" id="entryQuickSearchClear" class="trip-quick-search-clear" title="Clear search" style="display:none">✕</button>
-          <kbd class="trip-quick-search-kbd">Ctrl K</kbd>
+      <div class="ftl-filter-card">
+        <div class="sysbar">
+          <div class="trip-quick-search-wrap" id="entryQuickSearchWrap">
+            <span class="trip-search-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </span>
+            <input type="text" id="entryQuickSearch" class="trip-quick-search-input" placeholder="Search by Shipment #, MAWB, HAWB, Client, Transporter, Truck Plate, Driver... (Ctrl + K)" autocomplete="off" />
+            <button type="button" id="entryQuickSearchClear" class="trip-quick-search-clear" title="Clear search" style="display:none">✕</button>
+            <kbd class="trip-quick-search-kbd">Ctrl K</kbd>
+          </div>
+          <span class="spacer"></span>
+          <span class="chipst muted" id="sysOps"></span>
         </div>
-        <span class="spacer"></span>
+        <div class="triptools">
+          <div class="tripsearch" id="tripSearch"></div>
+          <span id="tripSearchCount" class="tripcount"></span>
+          <div class="tripsort">
+            <label for="tripSortKey" id="tripSortLabel">Sort by</label>
+            <select id="tripSortKey"></select>
+            <select id="tripSortDir" aria-label="Sort direction">
+              <option value="asc">A → Z</option>
+              <option value="desc">Z → A</option>
+            </select>
+          </div>
+          <span class="tripgrow"></span>
+          <button class="ebtn" id="tripCopy" onclick="__FTL__.copySelectedTrips()" disabled></button>
+        </div>
       </div>
-      <div class="triptools"><div class="tripsearch" id="tripSearch"></div><span id="tripSearchCount" class="tripcount"></span><div class="tripsort"><label for="tripSortKey" id="tripSortLabel">Sort by</label><select id="tripSortKey"></select><select id="tripSortDir" aria-label="Sort direction"><option value="asc">A → Z</option><option value="desc">Z → A</option></select></div><span class="tripgrow"></span><button class="ebtn" id="tripCopy" onclick="__FTL__.copySelectedTrips()" disabled></button></div>
       <div class="trip-page" id="tripPage" hidden>
         <span id="tripPageInfo"></span>
         <span class="psize-wrap" style="display:inline-flex;align-items:center;gap:4px;margin:0 6px">
@@ -224,7 +250,10 @@ export const getMarkup = () => `
   <div id="mBody"></div>
   <div class="xfoot">
     <button type="button" class="hbtn xcancel" id="mCancel" onclick="__FTL__.closeM('mModal')">Cancel</button>
-    <button class="hbtn primary xgo" id="mGo" onclick="__FTL__.sendMail()"></button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button type="button" class="hbtn" id="mCopyReply" onclick="__FTL__.copyMailForReply()"></button>
+      <button class="hbtn primary xgo" id="mGo" onclick="__FTL__.sendMail()"></button>
+    </div>
   </div></div></div>
 <div class="modal" id="mToAlertModal" style="z-index:10050"><div class="box" style="max-width:390px;text-align:center;padding:26px 22px;border-radius:20px;background:#fff;box-shadow:0 30px 70px rgba(0,0,0,0.35)">
   <div style="width:48px;height:48px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;border-radius:16px;background:#ffe4e6;color:#e11d48">
@@ -317,6 +346,69 @@ export const getMarkup = () => `
       <button type="button" class="ebtn" id="ftlConflictCopyExcel" onclick="__FTL__.copyConflictData()" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">📊 <span id="ftlConflictCopyExcelTxt">نسخ كجدول إكسل</span></button>
       <button type="button" class="ebtn" onclick="__FTL__.closeM('ftlConflictModal')" style="background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer">إغلاق</button>
       <button type="button" class="ebtn go" id="ftlConflictAction" style="padding:8px 16px;border-radius:8px;font-weight:700;cursor:pointer;display:none"></button>
+    </div>
+  </div>
+</div>
+
+<div class="modal ftl-merge-confirm-modal" id="ftlMergeConfirmModal" style="display:none;z-index:99999">
+  <div class="box ftl-merge-confirm-box" onclick="event.stopPropagation()">
+    <div class="ftl-mc-header">
+      <div class="ftl-mc-icon-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+      </div>
+      <div class="ftl-mc-titles">
+        <h3 id="ftlMergeConfirmTitle" class="ftl-mc-title">دمج العمود للشحنة</h3>
+        <p id="ftlMergeConfirmSub" class="ftl-mc-sub">تنبيه اختلاف القيم بين النقلات</p>
+      </div>
+      <button type="button" class="ftl-mc-close-btn" onclick="__FTL__.closeM('ftlMergeConfirmModal')" aria-label="Close">✕</button>
+    </div>
+    <div class="ftl-mc-body" id="ftlMergeConfirmBody">
+      <p id="ftlMergeConfirmMsg" class="ftl-mc-msg"></p>
+    </div>
+    <div class="ftl-mc-foot">
+      <button type="button" class="ftl-mc-btn ftl-mc-btn-cancel" id="ftlMergeConfirmCancel" onclick="__FTL__.closeM('ftlMergeConfirmModal')">إلغاء</button>
+      <button type="button" class="ftl-mc-btn ftl-mc-btn-confirm" id="ftlMergeConfirmOk">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span id="ftlMergeConfirmOkTxt">نعم، ادمج واستخدم أول قيمة</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal ftl-merge-confirm-modal ftl-discard-confirm-modal" id="ftlDiscardConfirmModal" role="dialog" aria-modal="true" aria-labelledby="ftlDiscardConfirmTitle">
+  <div class="box ftl-merge-confirm-box" onclick="event.stopPropagation()">
+    <div class="ftl-mc-header">
+      <div class="ftl-mc-icon-badge ftl-dc-icon-badge">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="ftl-mc-titles">
+        <h3 id="ftlDiscardConfirmTitle" class="ftl-mc-title">تجاهل التعديلات غير المحفوظة؟</h3>
+        <p id="ftlDiscardConfirmSub" class="ftl-mc-sub">إلغاء تعديل العملية</p>
+      </div>
+      <button type="button" class="ftl-mc-close-btn" onclick="__FTL__.closeM('ftlDiscardConfirmModal')" aria-label="Close">✕</button>
+    </div>
+    <div class="ftl-mc-body">
+      <p id="ftlDiscardConfirmMsg" class="ftl-mc-msg"></p>
+    </div>
+    <div class="ftl-mc-foot">
+      <button type="button" class="ftl-mc-btn ftl-mc-btn-cancel" id="ftlDiscardConfirmCancel">إبقاء التعديلات</button>
+      <button type="button" class="ftl-mc-btn ftl-dc-btn-confirm" id="ftlDiscardConfirmOk">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 7v6h6"/>
+          <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+        </svg>
+        <span id="ftlDiscardConfirmOkTxt">نعم، تجاهل التعديلات</span>
+      </button>
     </div>
   </div>
 </div>

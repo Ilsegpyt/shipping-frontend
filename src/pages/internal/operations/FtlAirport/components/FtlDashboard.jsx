@@ -142,6 +142,7 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       setLanguage: call('setLanguage'),
       setTheme: call('setTheme'),
       switchDir: call('switchDir'),
+      invalidateLoadedDirs: call('invalidateLoadedDirs'),
       setTab: call('setTab'),
       setCounts: call('setCounts'),
       setArchiveOperations: call('setArchiveOperations'),

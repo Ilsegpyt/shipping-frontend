@@ -75,6 +75,7 @@ import OperationsLookups from "../pages/internal/super-admin/OperationsLookups";
 import Transporters from "../pages/internal/transporters/Transporters";
 import TransporterDetails from "../pages/internal/transporters/TransporterDetails";
 import PortDetails from "../pages/internal/transporters/PortDetails";
+import CustomsClearanceWorkspace from "../pages/internal/customsClearance/CustomsClearance";
 
 // Customer pages
 import CustomerDashboard from "../pages/customer/CustomerDashboard";
@@ -290,6 +291,24 @@ export default function AppRoutes() {
             <Route index element={<Transporters />} />
             <Route path=":id" element={<TransporterDetails />} />
             <Route path=":id/ports/:portCoverageId" element={<PortDetails />} />
+          </Route>
+          <Route
+            path="/customs-clearance/dashboard"
+            element={<ProtectedRoute requiredPermission="customsclearance.shipments.view" />}
+          >
+            <Route index element={<CustomsClearanceWorkspace defaultView="dashboard" />} />
+          </Route>
+          <Route
+            path="/customs-clearance/entry"
+            element={<ProtectedRoute requiredPermission="customsclearance.shipments.view" />}
+          >
+            <Route index element={<CustomsClearanceWorkspace defaultView="entry" />} />
+          </Route>
+          <Route
+            path="/customs-clearance"
+            element={<ProtectedRoute requiredPermission="customsclearance.shipments.view" />}
+          >
+            <Route index element={<Navigate to="/customs-clearance/entry" replace />} />
           </Route>
           <Route path="/operations-lookups" element={<OperationsLookups />} />
           <Route path="/content" element={<Content />} />

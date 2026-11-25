@@ -12,9 +12,9 @@ import {
   RotateCcw as ResetIcon,
   Lock,
 } from 'lucide-react';
-import api from '../../../../../services/api';
 import {
   getPagedFtlOperations,
+  getFtlFilterOptions,
   reopenFtlOperation,
 } from '../../../../../services/operationsService';
 import {
@@ -28,6 +28,7 @@ export default function FtlDeliveredArchive({
   counts = {},
   onCountsRefresh,
   onTotalCountChange,
+  onOperationReopened,
   onBackToActive,
   lang = 'en',
   canReopen = true,
@@ -63,21 +64,24 @@ export default function FtlDeliveredArchive({
     dateTo: '',
   });
 
-  // Master lookups
+  // Actual faceted filter lookups from DB
   const [lookups, setLookups] = useState({
     clients: [],
     truckers: [],
     terminals: [],
+    users: [],
   });
+  const [filterOptionsVersion, setFilterOptionsVersion] = useState(0);
 
   // Modals state
   const [viewDetailOp, setViewDetailOp] = useState(null);
   const [historyOp, setHistoryOp] = useState(null);
   const [reopenOp, setReopenOp] = useState(null);
-  const [knownUsers, setKnownUsers] = useState([]);
 
-  // Stale-While-Revalidate in-memory cache
+  // Stale-While-Revalidate in-memory cache + abort/sequence guard
   const cacheRef = useRef({});
+  const abortControllerRef = useRef(null);
+  const fetchSeqRef = useRef(0);
 
   // Sync loaded operations and direction filter to engine for Excel/Email exports
   useEffect(() => {
@@ -93,26 +97,62 @@ export default function FtlDeliveredArchive({
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Load master lookups on mount
+  // Load actual filter options for Delivered scope (cascading with direction)
   useEffect(() => {
-    let isMounted = true;
-    api
-      .get('/api/operations/ftl/master')
-      .then((res) => {
-        if (!isMounted || !res.data) return;
+    const controller = new AbortController();
+    getFtlFilterOptions(
+      {
+        status: 'Delivered',
+        onlyActive: false,
+        isDeleted: false,
+        operationType: filters.direction || undefined,
+      },
+      { signal: controller.signal }
+    )
+      .then((data) => {
+        if (!data) return;
+        const nextClients = data.clients || data.Clients || [];
+        const nextTruckers = data.transporters || data.Transporters || [];
+        const nextTerminals = data.terminals || data.Terminals || [];
+        const nextUsers = data.users || data.Users || [];
+
         setLookups({
-          clients: res.data.client || res.data.clients || [],
-          truckers: res.data.trucker || res.data.truckers || [],
-          terminals: res.data.line || res.data.lines || res.data.terminals || [],
+          clients: nextClients,
+          truckers: nextTruckers,
+          terminals: nextTerminals,
+          users: nextUsers,
+        });
+
+        setFilters((prev) => {
+          const next = { ...prev };
+          let changed = false;
+          if (prev.client && !nextClients.includes(prev.client)) {
+            next.client = '';
+            changed = true;
+          }
+          if (prev.transporter && !nextTruckers.includes(prev.transporter)) {
+            next.transporter = '';
+            changed = true;
+          }
+          if (prev.terminal && !nextTerminals.includes(prev.terminal)) {
+            next.terminal = '';
+            changed = true;
+          }
+          if (prev.createdBy && !nextUsers.includes(prev.createdBy)) {
+            next.createdBy = '';
+            changed = true;
+          }
+          return changed ? next : prev;
         });
       })
-      .catch(() => {
-        // Fallback: will populate from items
+      .catch((err) => {
+        if (err?.name !== 'CanceledError' && err?.name !== 'AbortError') {
+          console.warn('Failed to load delivered filter options:', err);
+        }
       });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+
+    return () => controller.abort();
+  }, [filters.direction, filterOptionsVersion]);
 
   const cacheKey = useMemo(() => {
     return `deliv_p_${page}_ps_${pageSize}_s_${debouncedSearch.trim().toLowerCase()}_f_${JSON.stringify(filters)}`;
@@ -146,41 +186,43 @@ export default function FtlDeliveredArchive({
   };
 
   const fetchPage = async (silent = false) => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+    const seq = ++fetchSeqRef.current;
+
     if (!silent) setIsLoading(true);
 
     try {
-      const res = await getPagedFtlOperations({
-        page,
-        pageSize,
-        operationType: filters.direction || undefined,
-        status: 'Delivered',
-        onlyActive: false,
-        isDeleted: false,
-        search: debouncedSearch.trim() || undefined,
-        client: filters.client || undefined,
-        transporter: filters.transporter || undefined,
-        terminal: filters.terminal || undefined,
-        createdBy: filters.createdBy || undefined,
-        dateType: 'delivered',
-        dateFrom: filters.dateFrom || undefined,
-        dateTo: filters.dateTo || undefined,
-      });
+      const res = await getPagedFtlOperations(
+        {
+          page,
+          pageSize,
+          operationType: filters.direction || undefined,
+          status: 'Delivered',
+          onlyActive: false,
+          isDeleted: false,
+          search: debouncedSearch.trim() || undefined,
+          client: filters.client || undefined,
+          transporter: filters.transporter || undefined,
+          terminal: filters.terminal || undefined,
+          createdBy: filters.createdBy || undefined,
+          dateType: filters.dateType || 'delivered',
+          dateFrom: filters.dateFrom || undefined,
+          dateTo: filters.dateTo || undefined,
+        },
+        { signal: controller.signal }
+      );
+
+      if (seq !== fetchSeqRef.current) return;
 
       if (res) {
         let items = res.items || [];
         let count = res.totalCount || 0;
         let pages = res.totalPages || 1;
         let trucks = res.totalTrucksCount || 0;
-
-        // Accumulate known users for the filter dropdown
-        setKnownUsers((prev) => {
-          const names = new Set(prev);
-          items.forEach((op) => {
-            if (op.deliveredByName) names.add(op.deliveredByName);
-            if (op.createdByName) names.add(op.createdByName);
-          });
-          return Array.from(names);
-        });
 
         setOperations(items);
         setServerTotalCount(count);
@@ -199,9 +241,10 @@ export default function FtlDeliveredArchive({
         };
       }
     } catch (err) {
+      if (err?.name === 'CanceledError' || err?.name === 'AbortError') return;
       console.error('Failed to load delivered FTL operations:', err);
     } finally {
-      if (!silent) setIsLoading(false);
+      if (!silent && seq === fetchSeqRef.current) setIsLoading(false);
     }
   };
 
@@ -217,10 +260,17 @@ export default function FtlDeliveredArchive({
     } else {
       fetchPage(false);
     }
+
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [cacheKey]);
 
   const handleRefresh = () => {
     cacheRef.current = {};
+    setFilterOptionsVersion((v) => v + 1);
     fetchPage(false);
     if (onCountsRefresh) onCountsRefresh();
   };
@@ -229,19 +279,11 @@ export default function FtlDeliveredArchive({
     await reopenFtlOperation(ref, reason);
     setReopenOp(null);
     cacheRef.current = {};
+    setFilterOptionsVersion((v) => v + 1);
+    onOperationReopened?.();
     await fetchPage(false);
     if (onCountsRefresh) onCountsRefresh();
   };
-
-  // Unique list of creators / delivered-by users
-  const uniqueUsers = useMemo(() => {
-    const names = new Set(knownUsers);
-    operations.forEach((op) => {
-      if (op.deliveredByName) names.add(op.deliveredByName);
-      if (op.createdByName) names.add(op.createdByName);
-    });
-    return Array.from(names);
-  }, [operations, knownUsers]);
 
   return (
     <div className="space-y-4 w-full my-2 flex-1 flex flex-col" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
@@ -459,7 +501,7 @@ export default function FtlDeliveredArchive({
             }`}
           >
             <option value="">{lang === 'ar' ? 'المُسلّم: الكل' : 'Delivered By: All'}</option>
-            {uniqueUsers.map((u) => (
+            {lookups.users.map((u) => (
               <option key={u} value={u}>
                 {u}
               </option>
@@ -473,7 +515,10 @@ export default function FtlDeliveredArchive({
             </span>
             <select
               value={filters.dateType}
-              onChange={(e) => setFilters({ ...filters, dateType: e.target.value })}
+              onChange={(e) => {
+                setFilters({ ...filters, dateType: e.target.value });
+                setPage(1);
+              }}
               className="text-xs rounded-lg border border-slate-300 bg-white px-2 py-1 text-slate-700 outline-none focus:border-emerald-500 cursor-pointer max-w-[125px]"
             >
               <option value="delivered">{lang === 'ar' ? 'تاريخ التسليم' : 'Delivered Date'}</option>

@@ -291,6 +291,14 @@
   color: #065f46 !important;
   box-shadow: inset 0 -2.5px 0 #10b981 !important;
 }
+.ftl-root .etab.etab-delivered .ico {
+  background: transparent !important;
+  width: auto !important;
+  height: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
 .ftl-root .etab.etab-delivered .cnt {
   background: #d1fae5 !important;
   color: #065f46 !important;
@@ -319,6 +327,14 @@
   border-color: #f43f5e !important;
   color: #9f1239 !important;
   box-shadow: inset 0 -2.5px 0 #f43f5e !important;
+}
+.ftl-root .etab.etab-inactive .ico {
+  background: transparent !important;
+  width: auto !important;
+  height: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 .ftl-root .etab.etab-inactive .cnt {
   background: #ffe4e6 !important;
@@ -8667,81 +8683,549 @@ body.ftl-modal-open {
   padding: 5px 10px
 }
 
+/* ==========================================================================
+   FTL Airport - Exact FCL Layout & Styling for Header, Search & Filters
+   ========================================================================== */
+
+/* Direction Tabs & Action Strip */
 .ftl-root #entryView .ebar {
-  gap: 5px;
-  margin-bottom: 4px
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
 .ftl-root #entryView .etabs {
-  gap: 4px
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .ftl-root #entryView .etab {
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 9px
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #d8e3ea;
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748c;
+  cursor: pointer;
+  transition: all .15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  text-decoration: none;
+}
+
+.ftl-root #entryView .etab:hover {
+  color: #0f172a;
+  border-color: #22b8cf;
+  background: #ffffff;
+}
+
+.ftl-root #entryView .etab.on {
+  color: #0f172a;
+  border-color: #0284c7;
+  box-shadow: inset 0 -2.5px 0 #0284c7, 0 1px 2px rgba(0, 0, 0, 0.04);
+  background: #ffffff;
 }
 
 .ftl-root #entryView .etab .ico {
-  width: 18px;
-  height: 18px
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: #edf3f6;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.ftl-root #entryView .etab.on .ico {
+  background: rgba(2, 132, 199, 0.15);
+  color: #0284c7;
 }
 
 .ftl-root #entryView .etab .cnt {
-  padding: 1px 6px
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #edf3f6;
+  color: inherit;
+  border-radius: 20px;
+  padding: 2px 8px;
+  margin-inline-start: 4px;
 }
 
-.ftl-root #entryView .ebar .ebtn {
-  padding: 6px 10px;
-  border-radius: 9px
+.ftl-root #entryView .etab.on .cnt {
+  background: rgba(2, 132, 199, 0.15);
+  color: #0284c7;
 }
 
+/* Delivered & Inactive established styling matching FCL */
+.ftl-root #entryView .etab.etab-delivered {
+  background: rgba(236, 253, 245, 0.7) !important;
+  color: #065f46 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.ftl-root #entryView .etab.etab-delivered:hover {
+  background: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+  color: #047857 !important;
+}
+
+.ftl-root #entryView .etab.etab-delivered.on {
+  background: #ffffff !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+  box-shadow: inset 0 -2.5px 0 #10b981, 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.ftl-root #entryView .etab.etab-delivered .ico {
+  background: transparent !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.ftl-root #entryView .etab.etab-delivered .cnt {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+  border: 1px solid #a7f3d0 !important;
+}
+
+.ftl-root #entryView .etab.etab-delivered.on .cnt {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
+}
+
+.ftl-root #entryView .etab.etab-inactive {
+  background: rgba(255, 241, 242, 0.7) !important;
+  color: #be123c !important;
+  border: 1px solid #fecdd3 !important;
+}
+
+.ftl-root #entryView .etab.etab-inactive:hover {
+  background: #fff1f2 !important;
+  border-color: #fda4af !important;
+  color: #9f1239 !important;
+}
+
+.ftl-root #entryView .etab.etab-inactive.on {
+  background: #ffffff !important;
+  border-color: #f43f5e !important;
+  color: #9f1239 !important;
+  box-shadow: inset 0 -2.5px 0 #f43f5e, 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.ftl-root #entryView .etab.etab-inactive .ico {
+  background: transparent !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.ftl-root #entryView .etab.etab-inactive .cnt {
+  background: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border: 1px solid #fecdd3 !important;
+}
+
+.ftl-root #entryView .etab.etab-inactive.on .cnt {
+  background: #f43f5e !important;
+  color: #ffffff !important;
+  border-color: #f43f5e !important;
+}
+
+/* Right Side Actions Strip */
+.ftl-root #entryView .ebar-actions,
 .ftl-root #entryView .estatus {
-  gap: 5px;
-  margin-inline-end: 3px
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.ftl-root #entryView .estatus span {
-  padding: 3px 8px
-}
-
-.ftl-root #entryView .sysbar {
-  gap: 5px;
-  margin-bottom: 4px
-}
-
-.ftl-root #entryView .chipst {
-  padding: 2px 8px
-}
-
-.ftl-root #entryView .triptools {
+.ftl-root #entryView .ebar-actions .ebtn,
+.ftl-root #entryView .estatus .ebtn,
+.ftl-root #entryView .ebar > .ebtn {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  padding: 4px 6px;
-  margin-bottom: 2px;
-  border-radius: 10px
+  background: #ffffff;
+  border: 1px solid #d8e3ea;
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all .15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.ftl-root #entryView .ebar-actions .ebtn:hover,
+.ftl-root #entryView .estatus .ebtn:hover,
+.ftl-root #entryView .ebar > .ebtn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.ftl-root #entryView .ebar-actions .ebtn.go,
+.ftl-root #entryView .estatus .ebtn.go {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #0284c7;
+}
+
+/* Unified Filter Panel Card (Exact FCL Container) */
+.ftl-root #entryView .ftl-filter-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Row 1: Spacious Search Bar with Full Readable Placeholder */
+.ftl-root #entryView .sysbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.ftl-root #entryView .trip-quick-search-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 1;
+  max-width: 720px;
+  min-width: 280px;
+}
+
+.ftl-root #entryView .trip-quick-search-input {
+  width: 100%;
+  height: 38px;
+  padding-inline-start: 38px;
+  padding-inline-end: 72px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.ftl-root #entryView .trip-quick-search-input::placeholder {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 450;
+  opacity: 0.9;
+}
+
+.ftl-root #entryView .trip-quick-search-input:focus {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.ftl-root #entryView .trip-search-icon {
+  position: absolute;
+  inset-inline-start: 12px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+.ftl-root #entryView .trip-quick-search-clear {
+  position: absolute;
+  inset-inline-end: 48px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ftl-root #entryView .trip-quick-search-clear:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.ftl-root #entryView .trip-quick-search-kbd {
+  position: absolute;
+  inset-inline-end: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #94a3b8;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 2px 6px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.ftl-root #entryView .chipst.muted {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+/* Row 2: Unified Filter Toolbar & Controls */
+.ftl-root #entryView .triptools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 0 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: none;
+  border-left: none;
+  border-right: none;
+  margin: 0;
+  background: transparent;
+  border-radius: 0;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ftl-root #entryView .tripsearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .ftl-root #entryView .triprule {
-  padding: 2px 4px;
-  gap: 4px
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 3px 6px;
+  transition: border-color .15s ease-in-out;
 }
 
-.ftl-root #entryView .triprule select,
-.ftl-root #entryView .triprule input {
-  height: 27px
+.ftl-root #entryView .triprule:hover {
+  border-color: #cbd5e1;
+}
+
+.ftl-root #entryView .triprule select.tripkey,
+.ftl-root #entryView .triprule select.tripjoin {
+  height: 32px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ftl-root #entryView .triprule select.tripkey:focus,
+.ftl-root #entryView .triprule select.tripjoin:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.ftl-root #entryView .triptype {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.ftl-root #entryView .tripvalue,
+.ftl-root #entryView .triprule input.tripvalue {
+  height: 32px;
+  min-width: 170px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.15s;
+}
+
+.ftl-root #entryView .tripvalue::placeholder,
+.ftl-root #entryView .triprule input.tripvalue::placeholder {
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.ftl-root #entryView .tripvalue:focus,
+.ftl-root #entryView .triprule input.tripvalue:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.ftl-root #entryView .tripadd {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0369a1;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ftl-root #entryView .tripadd:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  color: #0284c7;
+}
+
+.ftl-root #entryView .tripclear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ftl-root #entryView .tripclear:hover {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #e11d48;
+}
+
+.ftl-root #entryView .tripremove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ftl-root #entryView .tripremove:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.ftl-root #entryView .tripsort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-inline-start: 8px;
+}
+
+.ftl-root #entryView .tripsort label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ftl-root #entryView .tripsort select {
+  height: 32px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 12px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ftl-root #entryView .tripsort select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .ftl-root #entryView .triptools .ebtn {
-  padding: 6px 10px
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.ftl-root #entryView .trip-page {
-  height: 24px
+.ftl-root #entryView .triptools .ebtn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 
-.ftl-root #entryView .trip-page button {
-  height: 24px;
-  min-width: 27px
+.ftl-root #entryView .triptools .ebtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f1f5f9;
 }
 
 .ftl-root #entryView .egrid {
@@ -9516,6 +10000,47 @@ body.ftl-modal-open {
   color: var(--ink, #0f172a) !important;
 }
 
+.ftl-root #mCopyReply {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 9px 18px !important;
+  font-weight: 600 !important;
+  font-size: 12.5px !important;
+  cursor: pointer !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.15s ease !important;
+}
+
+.ftl-root #mCopyReply:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  transform: translateY(-1px) !important;
+}
+
+.ftl-root #mCopyReply.copied {
+  background: #ecfdf5 !important;
+  border-color: #6ee7b7 !important;
+  color: #047857 !important;
+}
+
+.ftl-root[data-theme="dark"] #mCopyReply {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #f1f5f9 !important;
+}
+
+.ftl-root[data-theme="dark"] #mCopyReply:hover {
+  background: #334155 !important;
+  border-color: #64748b !important;
+}
+
 .ftl-root #tripExportGo,
 .ftl-root #mGo {
   background: #0284c7 !important;
@@ -9805,22 +10330,19 @@ body.ftl-modal-open {
 
 .ftl-root .fcl-status-container {
   position: relative !important;
-  display: inline-flex !important;
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 8px !important;
-  padding: 3px 10px !important;
-  border-radius: 12px !important;
-  border: 1px solid #cbd5e1 !important;
-  background: linear-gradient(to bottom, #ffffff, #f0f9ff) !important;
-  box-shadow: 0 1px 2px rgba(6, 42, 74, 0.04) !important;
+  gap: 6px !important;
+  padding: 6px 8px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  background: linear-gradient(to bottom, #ffffff, rgba(240, 249, 255, 0.4)) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
   text-align: center !important;
   margin: 0 auto !important;
-  width: auto !important;
-  min-width: 135px !important;
-  height: 38px !important;
-  min-height: 38px !important;
-  max-height: 38px !important;
+  width: 100% !important;
+  min-height: 46px !important;
   box-sizing: border-box !important;
 }
 
@@ -9829,24 +10351,25 @@ body.ftl-modal-open {
   align-items: center !important;
   justify-content: center !important;
   gap: 6px !important;
-  padding: 4px 12px !important;
-  border-radius: 9px !important;
-  font-size: 13px !important;
-  font-weight: 800 !important;
+  padding: 6px 10px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   border: 1px solid #7dd3fc !important;
   background: #f0f9ff !important;
-  color: #0369a1 !important;
+  color: #075985 !important;
   cursor: pointer !important;
   user-select: none !important;
   transition: all 0.15s ease !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05) !important;
   height: 30px !important;
-  letter-spacing: 0.2px !important;
+  box-sizing: border-box !important;
+  letter-spacing: normal !important;
 }
 
 .ftl-root .fcl-status-pill .fcl-status-text {
-  font-size: 13px !important;
-  font-weight: 800 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   line-height: 1 !important;
 }
 
@@ -9857,22 +10380,23 @@ body.ftl-modal-open {
 
 .ftl-root .fcl-status-pill.delivered {
   background: #ecfdf5 !important;
-  border-color: #86efac !important;
+  border-color: #6ee7b7 !important;
   color: #065f46 !important;
 }
 
 .ftl-root .fcl-status-pill.delivered:hover {
   background: #d1fae5 !important;
-  border-color: #4ade80 !important;
+  border-color: #34d399 !important;
 }
 
 .ftl-root .fcl-status-dot {
   width: 8px !important;
   height: 8px !important;
   border-radius: 50% !important;
-  background: #0284c7 !important;
+  background: #0ea5e9 !important;
   display: inline-block !important;
-  animation: fclPulse 1.8s infinite !important;
+  flex-shrink: 0 !important;
+  animation: fclPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
 }
 
 .ftl-root .fcl-status-pill.delivered .fcl-status-dot {
@@ -9881,76 +10405,143 @@ body.ftl-modal-open {
 }
 
 .ftl-root .fcl-status-arrow {
-  font-size: 10.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #0284c7 !important;
+  transition: transform 150ms ease !important;
   margin-inline-start: 2px !important;
-  opacity: 0.75 !important;
+  flex-shrink: 0 !important;
+}
+
+.ftl-root .fcl-status-pill.delivered .fcl-status-arrow {
+  color: #059669 !important;
+}
+
+.ftl-root .fcl-status-container.menu-open .fcl-status-arrow {
+  transform: rotate(180deg) !important;
 }
 
 .ftl-root .fcl-status-history-btn {
   width: 28px !important;
   height: 28px !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border: 1px solid #cbd5e1 !important;
-  background: #ffffff !important;
-  color: #64748b !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
   cursor: pointer !important;
-  transition: all 0.15s !important;
+  transition: all 0.15s ease !important;
   flex-shrink: 0 !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05) !important;
 }
 
 .ftl-root .fcl-status-history-btn:hover {
   color: #0284c7 !important;
-  border-color: #93c5fd !important;
-  background: #f0f9ff !important;
+  border-color: #e2e8f0 !important;
+  background: #ffffff !important;
 }
 
 @keyframes fclPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+  50% { opacity: 0.5; transform: scale(0.9); }
 }
 
 .ftl-root .fcl-status-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  inset-inline-start: 50%;
-  transform: translateX(-50%);
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.06);
-  padding: 6px;
-  z-index: 100;
-  min-width: 140px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  inset-inline-start: 50% !important;
+  transform: translateX(-50%) !important;
+  background: #ffffff !important;
+  border: 1px solid rgba(226, 232, 240, 0.9) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  padding: 6px !important;
+  z-index: 50 !important;
+  width: 144px !important;
+  min-width: 130px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  box-sizing: border-box !important;
+  animation: fclMenuFadeIn 0.15s ease-out !important;
 }
 
-.ftl-root .fcl-status-menu button {
-  padding: 8px 12px;
-  font-size: 12px;
-  font-weight: 650;
-  text-align: start;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: #f8fafc;
-  color: #334155;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s ease-in-out;
+@keyframes fclMenuFadeIn {
+  from { opacity: 0; transform: translate(-50%, -4px) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
 }
 
-.ftl-root .fcl-status-menu button:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #0f172a;
-  transform: translateY(-1px);
+.ftl-root .fcl-status-menu .fcl-menu-item {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: #334155 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-sizing: border-box !important;
+  text-align: start !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-menu-item:hover {
+  background: #f8fafc !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-menu-item-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* Active State for Open */
+.ftl-root .fcl-status-menu .fcl-menu-item.active.open {
+  background: #f0f9ff !important;
+  color: #0c4a6e !important;
+  font-weight: 700 !important;
+  border-color: #bae6fd !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-menu-item.active.open .fcl-check-icon {
+  color: #0284c7 !important;
+}
+
+/* Active State for Delivered */
+.ftl-root .fcl-status-menu .fcl-menu-item.active.delivered {
+  background: #ecfdf5 !important;
+  color: #064e3b !important;
+  font-weight: 700 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-menu-item.active.delivered .fcl-check-icon {
+  color: #059669 !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-status-dot {
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-status-dot.open {
+  background: #0ea5e9 !important;
+  animation: none !important;
+}
+
+.ftl-root .fcl-status-menu .fcl-status-dot.delivered {
+  background: #10b981 !important;
+  animation: none !important;
 }
 
 /* FCL-style Operation / Entered Card */
@@ -10019,26 +10610,6 @@ body.ftl-modal-open {
   width: 100%;
 }
 
-.ftl-root .fcl-status-history-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 9px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.15s;
-  flex-shrink: 0;
-}
-
-.ftl-root .fcl-status-history-btn:hover {
-  color: #0284c7;
-  border-color: #93c5fd;
-  background: #f0f9ff;
-}
 
 /* =====================================================================
    Operation Status History Slide-over Drawer (Audit Log & Lifecycle Timeline)
@@ -10720,6 +11291,227 @@ body.ftl-modal-open {
     gap: 10px 12px !important;
   }
 }
+
+/* =====================================================================
+   FCL-Style Centered Merge Confirmation Modal
+   ===================================================================== */
+.ftl-root .ftl-merge-confirm-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.45) !important;
+  backdrop-filter: blur(4px) !important;
+  z-index: 10060 !important;
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+}
+
+.ftl-root .ftl-merge-confirm-modal.open {
+  display: flex !important;
+  animation: ftlFadeIn 0.15s ease-out !important;
+}
+
+.ftl-root .ftl-merge-confirm-box {
+  width: 100% !important;
+  max-width: 440px !important;
+  background: #ffffff !important;
+  border-radius: 24px !important;
+  border: 1px solid #f1f5f9 !important;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35) !important;
+  padding: 24px !important;
+  color: #1e293b !important;
+  position: relative !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-merge-confirm-box {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.ftl-root .ftl-mc-header {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 14px !important;
+}
+
+.ftl-root .ftl-mc-icon-badge {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 16px !important;
+  background: #e0f2fe !important;
+  color: #0284c7 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 20px !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12) !important;
+}
+
+.ftl-root .ftl-mc-titles {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.ftl-root .ftl-mc-title {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  line-height: 1.3 !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-mc-title {
+  color: #f8fafc !important;
+}
+
+.ftl-root .ftl-mc-sub {
+  margin: 3px 0 0 !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  color: #64748b !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-mc-sub {
+  color: #94a3b8 !important;
+}
+
+.ftl-root .ftl-mc-close-btn {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  font-size: 15px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+}
+
+.ftl-root .ftl-mc-close-btn:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-mc-close-btn:hover {
+  background: #334155 !important;
+  color: #ffffff !important;
+}
+
+.ftl-root .ftl-mc-body {
+  margin-bottom: 20px !important;
+}
+
+.ftl-root .ftl-mc-msg {
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+  color: #475569 !important;
+  margin: 0 !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-mc-msg {
+  color: #cbd5e1 !important;
+}
+
+.ftl-root .ftl-mc-foot {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+
+.ftl-root .ftl-mc-btn {
+  cursor: pointer !important;
+  border: none !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
+}
+
+.ftl-root .ftl-mc-btn-cancel {
+  padding: 9px 18px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  background: #f1f5f9 !important;
+}
+
+.ftl-root .ftl-mc-btn-cancel:hover {
+  background: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-mc-btn-cancel {
+  background: #334155 !important;
+  color: #cbd5e1 !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-mc-btn-cancel:hover {
+  background: #475569 !important;
+  color: #f8fafc !important;
+}
+
+.ftl-root .ftl-mc-btn-confirm {
+  padding: 9px 20px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  background: #0284c7 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+}
+
+.ftl-root .ftl-mc-btn-confirm:hover {
+  background: #0369a1 !important;
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.4) !important;
+}
+
+.ftl-root .ftl-discard-confirm-modal {
+  z-index: 10070 !important;
+}
+
+.ftl-root .ftl-dc-icon-badge {
+  background: #fff1f2 !important;
+  color: #e11d48 !important;
+  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.14) !important;
+}
+
+.ftl-root[data-theme="dark"] .ftl-dc-icon-badge {
+  background: rgba(225, 29, 72, 0.18) !important;
+  color: #fb7185 !important;
+}
+
+.ftl-root .ftl-dc-btn-confirm {
+  padding: 9px 20px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  background: #e11d48 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  box-shadow: 0 4px 12px rgba(225, 29, 72, 0.3) !important;
+}
+
+.ftl-root .ftl-dc-btn-confirm:hover {
+  background: #be123c !important;
+  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.4) !important;
+}
+
 
 
 

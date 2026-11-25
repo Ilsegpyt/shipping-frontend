@@ -460,7 +460,7 @@ export const getFtlOperationsCounts = async () => {
   }
 };
 
-export const getPagedFtlOperations = async (params = {}) => {
+export const getPagedFtlOperations = async (params = {}, config = {}) => {
   const query = new URLSearchParams();
   if (params.page != null) query.append('page', params.page);
   if (params.pageSize != null) query.append('pageSize', params.pageSize);
@@ -478,9 +478,22 @@ export const getPagedFtlOperations = async (params = {}) => {
   if (params.dateTo) query.append('dateTo', params.dateTo);
   if (params.sortBy) query.append('sortBy', params.sortBy);
   if (params.sortDirection) query.append('sortDirection', params.sortDirection);
+  if (params.rulesJson) query.append('rulesJson', params.rulesJson);
 
   const url = `/api/operations/ftl?${query.toString()}`;
-  const response = await api.get(url);
+  const response = await api.get(url, config);
+  return response.data;
+};
+
+export const getFtlFilterOptions = async (params = {}, config = {}) => {
+  const query = new URLSearchParams();
+  if (params.operationType) query.append('operationType', params.operationType);
+  if (params.status) query.append('status', params.status);
+  if (params.onlyActive != null) query.append('onlyActive', params.onlyActive);
+  if (params.isDeleted != null) query.append('isDeleted', params.isDeleted);
+
+  const url = `/api/operations/ftl/filter-options?${query.toString()}`;
+  const response = await api.get(url, config);
   return response.data;
 };
 
