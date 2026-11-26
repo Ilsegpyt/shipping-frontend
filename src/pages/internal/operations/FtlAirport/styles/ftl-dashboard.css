@@ -4237,6 +4237,22 @@ body.ftl-modal-open {
   color: var(--steel)
 }
 
+.ftl-root #eTable td.ftl-op-clickable,
+.ftl-root #eTable td.ftl-op-clickable .cbox,
+.ftl-root #eTable td.ftl-op-clickable .cv {
+  cursor: pointer;
+}
+
+.ftl-root #eTable td.c.ftl-op-clickable:hover .cbox {
+  border-color: #38bdf8;
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.14);
+}
+
+.ftl-root #eTable td.meta.ftl-op-clickable:hover .fcl-op-card {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 3px 10px rgba(14, 165, 233, 0.16) !important;
+}
+
 .ftl-root #eTable td.c.dimmed .cbox {
   background: repeating-linear-gradient(135deg, var(--mist) 0 6px, color-mix(in srgb, var(--mist) 60%, var(--card)) 6px 12px);
   opacity: .55

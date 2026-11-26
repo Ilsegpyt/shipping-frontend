@@ -9,10 +9,10 @@ import ContainerCell from "./ContainerCell.jsx";
 import { closeShipmentDialog } from "./dialogs/TableDialogs.jsx";
 
 /* ---------- one editable field while its row is in Edit mode (keys never save or cancel: only the Save / Cancel buttons do) ---------- */
-function FieldInput({ k, f, value, onChange }) {
+function FieldInput({ k, f, value, pod, onChange }) {
   const v = value ?? "";
   if (C.dropdownKeys.includes(f.key))
-    return <OptionSelect k={k} fieldKey={f.key} value={String(v)} onChange={onChange} />;
+    return <OptionSelect k={k} fieldKey={f.key} value={String(v)} context={f.key === "terminal" ? { pod } : undefined} onChange={onChange} />;
   if (f.type === "note")
     return <textarea rows={2} maxLength={2000} dir="auto" value={v} onChange={(e) => onChange(e.target.value)} />;
   return (
@@ -200,7 +200,16 @@ export default function ShipmentTable({ scope }) {
                   else if (fieldEditable)
                     inner = (
                       <div className="cell-editor">
-                        <FieldInput k={k} f={f} value={row[f.key]} onChange={(v) => patchDraft({ [f.key]: v })} />
+                        <FieldInput
+                          k={k}
+                          f={f}
+                          value={row[f.key]}
+                          pod={row.pod}
+                          onChange={(v) => {
+                            if (f.key === "pod" && v !== row.pod) patchDraft({ pod: v, terminal: "" });
+                            else patchDraft({ [f.key]: v });
+                          }}
+                        />
                       </div>
                     );
                   else

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../../../../auth/AuthContext";
 import { CUSTOMS_PERMISSIONS, hasPermission } from "../../../../services/customsClearanceService";
 import { useApp } from "../AppState.jsx";
+import ClosedArchiveView from "./ClosedArchiveView.jsx";
 import EntryForm from "./EntryForm.jsx";
 import KindTabs from "./KindTabs.jsx";
 import ShipmentTable from "./ShipmentTable.jsx";
@@ -10,19 +11,28 @@ import { ExcelExportDialog } from "./dialogs/ExportDialog.jsx";
 import MailDialog from "./dialogs/MailDialog.jsx";
 
 export default function EntryView() {
-  const { fmt, tables, lookups, openClosed, openDialog, reload } = useApp();
+  const { fmt, tables, lookups, openDialog, reload } = useApp();
   const { t, fmtN } = fmt;
   const { user } = useAuth();
   const canCreate = hasPermission(user, CUSTOMS_PERMISSIONS.create);
   const [collapsed, setCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState("active"); // "active" | "closed"
   const open = tables.open;
+
+  // The closed archive replaces the form and the open table; it loads its own pages only while shown.
+  if (viewMode === "closed")
+    return (
+      <section id="entryView">
+        <ClosedArchiveView onBack={() => setViewMode("active")} />
+      </section>
+    );
 
   return (
     <section id="entryView">
       {canCreate && <EntryForm collapsed={collapsed} setCollapsed={setCollapsed} />}
       <div className="ebar">
         <KindTabs id="entryTabs" scope="open" />
-        <button className="ebtn" id="closedBtn" onClick={openClosed}>
+        <button className="ebtn" id="closedBtn" onClick={() => setViewMode("closed")}>
           {t("Closed shipments", "الشحنات المغلقة")}
         </button>
         <div className="espacer" />

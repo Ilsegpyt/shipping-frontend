@@ -18,6 +18,12 @@ export const getOperationPorts = async () => {
   return response.data;
 };
 
+export const getOperationPortTerminals = async (portId = null) => {
+  const url = portId ? `/api/operations/port-terminals?portId=${portId}` : '/api/operations/port-terminals';
+  const response = await api.get(url);
+  return response.data;
+};
+
 export const getOperationTransporters = async () => {
   const response = await api.get('/api/operations/transporters');
   return response.data;
@@ -47,7 +53,7 @@ export const createOperationDestination = async (name) => {
 /**
  * Operations Lookups 5-Hour Unified Cache
  */
-const LOOKUPS_CACHE_KEY = 'operations_lookups_cache_v6_clean_ports';
+const LOOKUPS_CACHE_KEY = 'operations_lookups_cache_v7_port_terminals';
 const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 
 let memoryLookupsCache = null;
@@ -75,6 +81,7 @@ export const getCachedLookups = async (forceRefresh = false) => {
       customers,
       shippingLines,
       ports,
+      portTerminals,
       transporters,
       drivers,
       vehicles,
@@ -83,6 +90,7 @@ export const getCachedLookups = async (forceRefresh = false) => {
       getOperationCustomers(),
       getOperationShippingLines(),
       getOperationPorts(),
+      getOperationPortTerminals(),
       getOperationTransporters(),
       getOperationDrivers(),
       getOperationVehicles(),
@@ -93,6 +101,7 @@ export const getCachedLookups = async (forceRefresh = false) => {
       customers: Array.isArray(customers) ? customers : [],
       shippingLines: Array.isArray(shippingLines) ? shippingLines : [],
       ports: Array.isArray(ports) ? ports : [],
+      portTerminals: Array.isArray(portTerminals) ? portTerminals : [],
       transporters: Array.isArray(transporters) ? transporters : [],
       drivers: Array.isArray(drivers) ? drivers : [],
       vehicles: Array.isArray(vehicles) ? vehicles : [],
@@ -341,6 +350,12 @@ export const getPortById = (id) => api.get(`/api/operations/ports/${id}`).then(r
 export const createPort = (data) => { clearLookupsCache(); return api.post('/api/operations/ports', data).then(r => r.data); };
 export const updatePort = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/ports/${id}`, data).then(r => r.data); };
 export const deactivatePort = (id) => { clearLookupsCache(); return api.delete(`/api/operations/ports/${id}`).then(r => r.data); };
+
+export const getPortTerminalsFull = (params = true) => api.get(`/api/operations/port-terminals${buildLookupQuery(params)}`).then(r => r.data);
+export const getPortTerminalById = (id) => api.get(`/api/operations/port-terminals/${id}`).then(r => r.data);
+export const createPortTerminal = (data) => { clearLookupsCache(); return api.post('/api/operations/port-terminals', data).then(r => r.data); };
+export const updatePortTerminal = (id, data) => { clearLookupsCache(); return api.put(`/api/operations/port-terminals/${id}`, data).then(r => r.data); };
+export const deactivatePortTerminal = (id) => { clearLookupsCache(); return api.delete(`/api/operations/port-terminals/${id}`).then(r => r.data); };
 
 export const getDestinationsFull = (params = true) => api.get(`/api/operations/destinations${buildLookupQuery(params)}`).then(r => r.data);
 export const getDestinationById = (id) => api.get(`/api/operations/destinations/${id}`).then(r => r.data);

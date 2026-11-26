@@ -3652,6 +3652,292 @@ export function createFtlEngine(root, options = {}) {
     await setShipmentStatus(ref, newStatus);
   }
 
+  /* ---------- Active Operation Details Drawer (Read-Only Info + Editable Trip Update) ---------- */
+  function buildActiveDetailsPayload(dir, ref, clickedRowIdx, clickedColKey) {
+    const ship = SHIPS[dir]?.[ref];
+    if (!ship || !Array.isArray(ship.rows) || !ship.rows.length) return null;
+    const rows = ENTRY[dir] || [];
+    const metas = ROWMETA[dir] || [];
+    const R = ship.rows.length;
+
+    if (!validSpans(ship.shpSpans, R) || !validSpans(ship.trkSpans, R) || !Array.isArray(ship.trkOf) || ship.trkOf.length !== R) {
+      layoutShip(dir, ship, { shpSpans: ship.shpSpans, trkSpans: ship.trkSpans, trkOf: ship.trkOf });
+    }
+
+    const firstOpRow = rows[ship.rows[0]] || {};
+    const shipments = (ship.shpSpans || [[0, R]]).map(([sStart], sIdx) => {
+      const sRowIdx = ship.rows[sStart];
+      const sRow = rows[sRowIdx] || {};
+      return {
+        shpIdx: sIdx,
+        rowIdx: sRowIdx,
+        shipNo: sRow.shipNo || '',
+        mawb: sRow.mawb || '',
+        hawb: sRow.hawb || '',
+        cert: sRow.cert || '',
+        customs: sRow.customs || '',
+        packages: sRow.packages || '',
+        weight: sRow.weight || '',
+        cbm: sRow.cbm || '',
+        dest: sRow.dest || firstOpRow.dest || '',
+        fullAddress: sRow.fullAddress || firstOpRow.fullAddress || '',
+        client: sRow.client || firstOpRow.client || '',
+        line: sRow.line || firstOpRow.line || '',
+        aod: sRow.aod || firstOpRow.aod || '',
+        pol: sRow.pol || firstOpRow.pol || '',
+        pow: sRow.pow || firstOpRow.pow || '',
+        clrType: sRow.clrType || firstOpRow.clrType || '',
+        invRcv: sRow.invRcv || firstOpRow.invRcv || '',
+        free: sRow.free || firstOpRow.free || '',
+        cut: sRow.cut || firstOpRow.cut || '',
+      };
+    });
+
+    const isSGreater = Array.isArray(ship.shpSpans) && ship.shpSpans.length > truckCount(ship);
+    const truckMap = new Map();
+
+    (ship.trkSpans || [[0, R]]).forEach(([tStart, tLen], tIdx) => {
+      const sliceRowIndices = ship.rows.slice(tStart, tStart + tLen);
+      const headRowIdx = sliceRowIndices[0];
+      const headRow = rows[headRowIdx] || {};
+      const headMeta = metas[headRowIdx] || {};
+      const trkNo = ship.trkOf?.[tStart] ?? (tIdx + 1);
+      const rawTripId = headMeta.id ? String(headMeta.id) : '';
+      const isSavedTripId = Boolean(rawTripId && !rawTripId.startsWith('local-') && !rawTripId.startsWith('temp'));
+      const dedupKey = isSavedTripId
+        ? `id:${rawTripId}`
+        : (headRow._coLoadId ? `co:${headRow._coLoadId}` : `trk:${trkNo}:${tIdx}`);
+
+      // Resolve carried shipments for this truck slot
+      const carriedSet = new Map();
+      const addCarried = (sIdx, pkgs) => {
+        const s = shipments[sIdx];
+        if (!s) return;
+        const label = s.shipNo || s.hawb || s.mawb || `#${sIdx + 1}`;
+        const prev = carriedSet.get(sIdx);
+        const pkgNum = parseInt(normalizeDigits(String(pkgs || '0')), 10) || 0;
+        carriedSet.set(sIdx, {
+          shpIdx: sIdx,
+          label,
+          pkgs: prev ? (prev.pkgs + pkgNum) : pkgNum,
+        });
+      };
+
+      if (Array.isArray(headRow._allocations) && headRow._allocations.length > 0) {
+        headRow._allocations.forEach((a) => {
+          const sIdx = parseInt(a.shpIdx, 10);
+          if (!isNaN(sIdx)) addCarried(sIdx, a.pkgs);
+        });
+      } else if (headRow.assignedShp !== undefined && headRow.assignedShp !== null && headRow.assignedShp !== '') {
+        addCarried(parseInt(headRow.assignedShp, 10), headRow.loadedPackages);
+      } else if (shipments.length === 1) {
+        addCarried(0, headRow.loadedPackages);
+      }
+
+      const existing = truckMap.get(dedupKey);
+      const sliceUpdates = (headMeta.updates || []).map((u) => ({ ...u }));
+
+      if (existing) {
+        sliceRowIndices.forEach((ri) => {
+          if (!existing.rowIndices.includes(ri)) existing.rowIndices.push(ri);
+        });
+        carriedSet.forEach((v, k) => {
+          if (!existing._carriedMap.has(k)) existing._carriedMap.set(k, v);
+        });
+        sliceUpdates.forEach((u) => {
+          const dup = existing.updates.some((ex) => (u.id && ex.id === u.id) || (ex.text === u.text && ex.day === u.day && ex.at === u.at));
+          if (!dup) existing.updates.push(u);
+        });
+      } else {
+        const plate = (headRow.cntr || '').trim();
+        const carriedMap = new Map(carriedSet);
+        truckMap.set(dedupKey, {
+          truckKey: dedupKey,
+          trkNo,
+          tripId: isSavedTripId ? rawTripId : null,
+          isSavedTripId,
+          isUnassigned: !plate && !isSavedTripId,
+          plate,
+          truckType: headRow.truckType || '',
+          trucker: headRow.trucker || '',
+          driver: headRow.driver || '',
+          mob: headRow.mob || '',
+          dest: headRow.dest || '',
+          arrDate: headRow.arrDate || '',
+          arrTime: headRow.arrTime || '',
+          gateIn: headRow.gateIn || '',
+          gateInT: headRow.gateInT || '',
+          gateOut: headRow.gateOut || '',
+          gateOutT: headRow.gateOutT || '',
+          checkout: headRow.checkout || '',
+          loadedPackages: headRow.loadedPackages || '',
+          loadedWeight: headRow.loadedWeight || '',
+          loadedCbm: headRow.loadedCbm || '',
+          rowIndices: [...sliceRowIndices],
+          _carriedMap: carriedMap,
+          updates: sliceUpdates,
+        });
+      }
+    });
+
+    const trucks = Array.from(truckMap.values()).map((t) => {
+      const carriedShipments = Array.from(t._carriedMap.values());
+      const { _carriedMap, ...rest } = t;
+      return { ...rest, carriedShipments };
+    });
+
+    const TRUCK_CLICK_KEYS = new Set([
+      'cntr', 'car', 'driver', 'mob', 'gateOut', 'gateOutT',
+      'checkout', 'arrDate', 'arrTime', 'loadedPackages', 'loadStatus',
+    ]);
+    const clickedCol = (clickedColKey && clickedColKey !== '__meta__')
+      ? (COLS[dir] || []).find((c) => c.k === clickedColKey)
+      : null;
+    const isTruckCell = Boolean(
+      clickedCol &&
+        (TRUCK_CLICK_KEYS.has(clickedCol.k) ||
+          (clickedCol.k === 'trucker' && ship.unmerged?.has('trucker')))
+    );
+
+    let initialSelectedTruckKey = null;
+    if (trucks.length === 1) {
+      initialSelectedTruckKey = trucks[0].truckKey;
+    } else if (trucks.length > 1 && isTruckCell) {
+      const matched = trucks.find((t) => t.rowIndices.includes(clickedRowIdx));
+      if (matched) initialSelectedTruckKey = matched.truckKey;
+    }
+
+    // Identify which shipment was clicked (if any) instead of always forcing shipment #1
+    const clickedRelIdx = ship.rows.indexOf(clickedRowIdx);
+    let clickedShipmentIdx = null;
+    if (shipments.length === 1) {
+      clickedShipmentIdx = 0;
+    } else if (clickedRelIdx >= 0 && clickedCol && !isTruckCell && colLevel(clickedCol) !== 'op') {
+      const spIdx = (ship.shpSpans || []).findIndex(
+        ([sStart, sLen]) => clickedRelIdx >= sStart && clickedRelIdx < sStart + sLen
+      );
+      if (spIdx >= 0) clickedShipmentIdx = spIdx;
+    }
+
+    const firstRowIdx = ship.rows[0];
+    const focusRowIdx = (clickedShipmentIdx !== null && shipments[clickedShipmentIdx])
+      ? shipments[clickedShipmentIdx].rowIdx
+      : firstRowIdx;
+    const focusRow = rows[focusRowIdx] || rows[firstRowIdx] || {};
+    const firstRow = rows[firstRowIdx] || {};
+    const firstMeta = metas[firstRowIdx] || {};
+
+    return {
+      ref,
+      id: ship.id || ref,
+      dir,
+      status: ship.status || 'Open',
+      client: focusRow.client || firstRow.client || firstMeta.client || '',
+      line: focusRow.line || firstRow.line || '',
+      aod: focusRow.aod || firstRow.aod || '',
+      pol: focusRow.pol || firstRow.pol || '',
+      pow: focusRow.pow || firstRow.pow || '',
+      dest: focusRow.dest || firstRow.dest || '',
+      fullAddress: focusRow.fullAddress || firstRow.fullAddress || '',
+      clrType: focusRow.clrType || firstRow.clrType || '',
+      cert: focusRow.cert || firstRow.cert || '',
+      customs: focusRow.customs || firstRow.customs || '',
+      mawb: focusRow.mawb || firstRow.mawb || '',
+      hawb: focusRow.hawb || firstRow.hawb || '',
+      invRcv: focusRow.invRcv || firstRow.invRcv || '',
+      free: focusRow.free || firstRow.free || '',
+      cut: focusRow.cut || firstRow.cut || '',
+      createdByName: firstMeta.user || ship.user || OP_USER || '',
+      day: firstMeta.day || ship.day || '',
+      at: firstMeta.at || ship.time || '',
+      createdAtUtc: (firstMeta.day && firstMeta.at) ? `${firstMeta.day}T${firstMeta.at}` : (ship.day && ship.time ? `${ship.day}T${ship.time}` : null),
+      firstRowIdx,
+      clickedShipmentIdx,
+      shipments,
+      trucks,
+      initialSelectedTruckKey,
+      statusHistoryPayload: {
+        ref,
+        id: ship.id || ref,
+        shipNo: firstRow.shipNo || firstMeta.shipNo || ref,
+        client: firstRow.client || firstMeta.client || '—',
+        status: ship.status || 'Open',
+        day: firstMeta.day || ship.day,
+        at: firstMeta.at || ship.time,
+        createdByName: firstMeta.user || ship.user || OP_USER,
+        createdAtUtc: (firstMeta.day && firstMeta.at) ? `${firstMeta.day}T${firstMeta.at}` : (ship.day && ship.time ? `${ship.day}T${ship.time}` : null),
+        deliveredAtUtc: ship.deliveredAt,
+        deliveredByName: ship.deliveredBy,
+        trips: [{ fields: { ...firstRow } }],
+      },
+    };
+  }
+
+  function openActiveDetailsDrawer(dir, ref, clickedRowIdx, clickedColKey) {
+    if (EDITING && !commitEdit()) return;
+    const payload = buildActiveDetailsPayload(dir, ref, clickedRowIdx, clickedColKey);
+    if (!payload) return;
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('ftl:open-op-details', { detail: payload }));
+    }
+  }
+
+  function appendTripUpdateFromDrawer(dir, ref, rowIndices = [], updateObj = {}) {
+    const targetDir = dir || EDIR;
+    const ship = SHIPS[targetDir]?.[ref];
+    const metas = ROWMETA[targetDir];
+    const rows = ENTRY[targetDir];
+    if (!metas || !rows) return;
+
+    const targetSet = new Set(Array.isArray(rowIndices) ? rowIndices : []);
+    if (ship && Array.isArray(ship.rows) && targetSet.size > 0) {
+      // Include any sibling rows sharing the same tripId or truck ordinal
+      const matchedTripIds = new Set();
+      const matchedTrkOrds = new Set();
+      targetSet.forEach((ri) => {
+        if (metas[ri]?.id) matchedTripIds.add(String(metas[ri].id));
+        const pos = ship.rows.indexOf(ri);
+        if (pos >= 0 && ship.trkOf?.[pos]) matchedTrkOrds.add(ship.trkOf[pos]);
+      });
+      ship.rows.forEach((ri, pos) => {
+        if (metas[ri]?.id && matchedTripIds.has(String(metas[ri].id))) targetSet.add(ri);
+        if (ship.trkOf?.[pos] && matchedTrkOrds.has(ship.trkOf[pos])) targetSet.add(ri);
+      });
+    }
+
+    const day = updateObj.day || today();
+    const at = updateObj.at || nowHM();
+    const user = updateObj.by || updateObj.user || OP_USER;
+    const text = updateObj.text || updateObj.note || '';
+    const entryObj = {
+      id: updateObj.id || '',
+      day,
+      at,
+      user,
+      by: user,
+      text,
+      note: text,
+    };
+    const stamp = `${fmtDay(day)} ${at}`;
+
+    targetSet.forEach((rIdx) => {
+      if (!metas[rIdx]) return;
+      if (!Array.isArray(metas[rIdx].updates)) metas[rIdx].updates = [];
+      const alreadyExists = entryObj.id && metas[rIdx].updates.some((u) => u.id === entryObj.id);
+      if (!alreadyExists) {
+        metas[rIdx].updates.push({ ...entryObj });
+      }
+      if (rows[rIdx]) {
+        rows[rIdx].updates = text;
+        rows[rIdx].updDate = stamp;
+      }
+    });
+
+    if (EDIR === targetDir) {
+      renderEntry();
+    }
+  }
+
   /* ---------- Operation Status History Drawer (Audit Log & Lifecycle Timeline) ---------- */
   async function openStatusHistory(ref, rowIdx) {
     if (EDITING && !commitEdit()) return;
@@ -5385,6 +5671,8 @@ export function createFtlEngine(root, options = {}) {
       const ship = rowShip(dir, i); const first = ship ? ship.rows[0] === i : true; const last = ship ? ship.rows[ship.rows.length - 1] === i : true;
       const span = ship ? ship.rows.length : 1;
       const ri = ship ? ship.rows.indexOf(i) : 0;
+      const isShipEditing = !!(ship?.ref && ACTIVE_EDIT_SHIPS.has(ship.ref));
+      const isShipDelivered = (ship?.status || 'Open') === 'Delivered';
       if (ship && (!validSpans(ship.shpSpans, ship.rows.length) || !validSpans(ship.trkSpans, ship.rows.length))) layoutShip(dir, ship, { shpSpans: ship.shpSpans, trkSpans: ship.trkSpans });
       const truckStart = !!ship && ri > 0 && ship.trkSpans.some(([a]) => a === ri);
       const rTrkNo = ship?.trkOf?.[ri];
@@ -5649,8 +5937,9 @@ export function createFtlEngine(root, options = {}) {
         const mergeBtn = (ship && span > 1 && canToggleMerge(dir, c))
           ? `<button class="mg" title="${merged ? E.unmergeTip : E.mergeTip}" onclick="event.stopPropagation();__FTL__.toggleMerge('${ship.ref}','${c.k}')">${merged ? '⧉' : '⊞'}</button>` : '';
         const sepHandle = '';
+        const isClickableActiveCell = Boolean(ship && !isShipEditing && !isShipDelivered && c.t !== 'upd' && c.k !== 'status');
         const cellTipAttr = cellTip ? `title="${esc(cellTip)}"` : '';
-        tr += `<td ${merged ? `rowspan="${sp.len}"` : ''} class="c${cur ? ' cur' : ''}${locked ? ' locked' : ''}${dimmed ? ' dimmed' : ''}${merged ? ' merged' : ''}" data-r="${i}" data-k="${c.k}" data-truck-plate="${esc(rTrkKey)}" tabindex="${locked || dimmed ? -1 : 0}" style="--gc:${GROUPS[c.g].c};--w:${c.w}px" ${cellTipAttr}>
+        tr += `<td ${merged ? `rowspan="${sp.len}"` : ''} class="c${cur ? ' cur' : ''}${locked ? ' locked' : ''}${dimmed ? ' dimmed' : ''}${merged ? ' merged' : ''}${isClickableActiveCell ? ' ftl-op-clickable' : ''}" data-r="${i}" data-k="${c.k}" data-truck-plate="${esc(rTrkKey)}" tabindex="${locked || dimmed ? -1 : 0}" style="--gc:${GROUPS[c.g].c};--w:${c.w}px" ${cellTipAttr}>
                  ${sepHandle}<span class="cbox" ${cellTipAttr}>${inner}${mergeBtn}</span></td>`;
       });
       if (first) {
@@ -5771,7 +6060,8 @@ export function createFtlEngine(root, options = {}) {
           </div>
         `;
 
-        tr += `${actionsTd}<td class="meta" rowspan="${span}" style="width:170px;vertical-align:middle;padding:4px"><span class="cbox" style="flex-direction:column;align-items:stretch;padding:0;min-width:160px;height:auto;border:none;background:transparent;box-shadow:none">${opCard}</span></td><td class="select-last" rowspan="${span}"><button type="button" class="ship-select" data-ref="${esc(ship.ref)}" aria-pressed="${TRIP_SELECTED[dir].has(ship.ref)}" aria-label="${AR() ? 'تحديد الشحنة ' : 'Select shipment '}${esc(ship.ref)}">${TRIP_SELECTED[dir].has(ship.ref) ? '✓' : '□'}</button></td>`;
+        const isMetaClickable = Boolean(!isEditingThis && !isDeliveredStatus);
+        tr += `${actionsTd}<td class="meta${isMetaClickable ? ' ftl-op-clickable' : ''}" rowspan="${span}" style="width:170px;vertical-align:middle;padding:4px" ${isMetaClickable ? `title="${esc(AR() ? 'انقر لعرض تفاصيل العملية وإضافة تحديث' : 'Click to view operation details & add update')}"` : ''}><span class="cbox" style="flex-direction:column;align-items:stretch;padding:0;min-width:160px;height:auto;border:none;background:transparent;box-shadow:none">${opCard}</span></td><td class="select-last" rowspan="${span}"><button type="button" class="ship-select" data-ref="${esc(ship.ref)}" aria-pressed="${TRIP_SELECTED[dir].has(ship.ref)}" aria-label="${AR() ? 'تحديد الشحنة ' : 'Select shipment '}${esc(ship.ref)}">${TRIP_SELECTED[dir].has(ship.ref) ? '✓' : '□'}</button></td>`;
       }
       tr += '</tr>'; html.push(tr);
       if (last) {
@@ -6768,13 +7058,42 @@ export function createFtlEngine(root, options = {}) {
     if (e.target.closest('.updbtn')) TIP.style.display = 'none';
   });
   $('eBody').addEventListener('click', e => {
-    if (e.target.closest('.mg') || e.target.closest('.updbtn') || e.target.closest('.ed') || e.target.closest('.status-select')) return;
+    if (
+      e.target.closest('.mg') ||
+      e.target.closest('.updbtn') ||
+      e.target.closest('.ed') ||
+      e.target.closest('.status-select') ||
+      e.target.closest('.fcl-status-container') ||
+      e.target.closest('.truck-manifest-icon-btn') ||
+      e.target.closest('.shipment-breakdown-icon-btn') ||
+      e.target.closest('.ship-select') ||
+      e.target.closest('.actions-td')
+    ) return;
+
+    const metaTd = e.target.closest('td.meta');
+    if (metaTd) {
+      const trEl = metaTd.closest('tr[data-r]');
+      const rIdx = trEl ? +trEl.dataset.r : NaN;
+      const ship = !isNaN(rIdx) ? rowShip(EDIR, rIdx) : null;
+      if (ship && ship.status !== 'Delivered' && !ACTIVE_EDIT_SHIPS.has(ship.ref)) {
+        const sel = window.getSelection ? String(window.getSelection() || '') : '';
+        if (!sel.trim()) openActiveDetailsDrawer(EDIR, ship.ref, rIdx, '__meta__');
+      }
+      return;
+    }
+
     const td = e.target.closest('td.c'); if (!td) return;
+    const r = +td.dataset.r;
+    const ship = !isNaN(r) ? rowShip(EDIR, r) : null;
+    const isEditing = Boolean(ship?.ref && ACTIVE_EDIT_SHIPS.has(ship.ref));
+    if (ship && ship.status !== 'Delivered' && !isEditing && td.dataset.k !== 'status' && td.dataset.k !== 'updates') {
+      const sel = window.getSelection ? String(window.getSelection() || '') : '';
+      if (!sel.trim()) openActiveDetailsDrawer(EDIR, ship.ref, r, td.dataset.k);
+      return;
+    }
+
     if (td.classList.contains('dimmed')) { toast(td.dataset.k === 'cert' ? (AR() ? 'التخليص بوليصة (BOSLA) — خانة رقم الشهادة مش مستخدمة' : 'BOSLA clearance — Certificate Number is not used') : (AR() ? 'التخليص شهادة (CERT) — منطقة الجمارك محددة تلقائياً بـ Cairo Airport Customs وغير قابلة للتعديل' : 'CERT clearance — Customs Area is fixed to Cairo Airport Customs and locked')); return; }
     if (td.classList.contains('locked')) {
-      const r = +td.dataset.r;
-      const ship = !isNaN(r) ? rowShip(EDIR, r) : null;
-      const isEditing = ship?.ref && ACTIVE_EDIT_SHIPS.has(ship.ref);
       if (!isEditing) {
         toast(t('entry').editFirstToast || (AR() ? 'اضغط على زر "تعديل" أولاً لبدء تعديل بيانات هذه العملية' : 'Please click "Edit" first to modify this operation'));
       } else {
@@ -9843,6 +10162,7 @@ export function createFtlEngine(root, options = {}) {
     switchDir: (dir) => switchEntryDir(dir),
     invalidateLoadedDirs: () => { LOADED_DIRS.clear(); invalidateEntryCache(); },
     removeShipmentLocally: (ref, dir) => removeShipmentLocally(ref, dir),
+    appendTripUpdate: (dir, ref, rowIndices, updateObj) => appendTripUpdateFromDrawer(dir, ref, rowIndices, updateObj),
     clear: () => clearData(),
     toast: (msg, type, options) => toast(msg, type, options),
     dismissToast: () => dismissToast(),

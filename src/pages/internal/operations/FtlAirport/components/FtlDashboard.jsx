@@ -165,6 +165,7 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       toast: call('toast'),
       dismissToast: call('dismissToast'),
       removeShipmentLocally: call('removeShipmentLocally'),
+      appendTripUpdate: call('appendTripUpdate'),
       isLive: call('isLive'),
       isDirty: call('isDirty'),
       get apiSpec() { return engineRef.current?.apiSpec; },

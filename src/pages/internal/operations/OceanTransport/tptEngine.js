@@ -328,6 +328,7 @@ export const mapHeadersToKeys = (headers = []) => {
     else if (clean.includes('POL')) colMap.pol = idx;
     else if (clean.includes('POD')) colMap.pod = idx;
     else if (clean.includes('POW')) colMap.pow = idx;
+    else if (clean.includes('TERMINAL')) colMap.terminal = idx;
     else if (clean.includes('FREETIME') || clean.includes('FREE')) colMap.free = idx;
     else if (clean.includes('CUTOFF') || clean.includes('CUT')) colMap.cut = idx;
     else if (clean.includes('OFFLOAD') && clean.includes('DATE')) colMap.reqDate = idx;
@@ -764,6 +765,7 @@ export const parseExcelFile = async (file) => {
                 pod: getVal('pod'),
                 pol: getVal('pol'),
                 pow: getVal('pow'),
+                terminal: getVal('terminal'),
                 free: getDateVal('free'),
                 cut: getDateVal('cut'),
                 reqDate: getDateVal('reqDate'),

@@ -20,6 +20,7 @@ export const COLS = {
     { k: 'line', h: 'Shipping Line', ar: 'الخط الملاحي', t: 'list', g: 'g2', op: true, w: 200, src: 'line', uniq: true },
     { k: 'dest', h: 'Destination', ar: 'مكان التعتيق', t: 'list', g: 'g2', w: 180, src: 'dest', uniq: true, canUnmerge: true },
     { k: 'pod', h: 'POD', ar: 'ميناء الوصول', t: 'list', g: 'g2', op: true, w: 165, src: 'pod', uniq: true },
+    { k: 'terminal', h: 'Terminal', ar: 'المحطة', t: 'list', g: 'g2', op: true, opt: true, w: 195, src: 'terminal', uniq: true },
     { k: 'free', h: 'Free time till', ar: 'فترة السماح للشحنة', t: 'date', g: 'g2', op: true, w: 165, uniq: true },
     { k: 'reqDate', h: 'Req Offload Date', ar: 'تاريخ التعتيق المطلوب', t: 'date', g: 'g3', op: true, w: 165, uniq: true },
     { k: 'reqTime', h: 'Req Offload Time', ar: 'وقت التعتيق المطلوب', t: 'time', g: 'g3', op: true, w: 145, uniq: true },
@@ -54,6 +55,7 @@ export const COLS = {
     { k: 'line', h: 'Shipping Line', ar: 'الخط الملاحي', t: 'list', g: 'g2', op: true, w: 200, src: 'line', uniq: true },
     { k: 'dest', h: 'Destination', ar: 'مكان التحميل', t: 'list', g: 'g2', w: 180, src: 'dest', uniq: true, canUnmerge: true },
     { k: 'pol', h: 'POL', ar: 'ميناء الشحن', t: 'list', g: 'g2', op: true, w: 165, src: 'pol', uniq: true },
+    { k: 'terminal', h: 'Terminal', ar: 'المحطة', t: 'list', g: 'g2', op: true, opt: true, w: 195, src: 'terminal', uniq: true },
     { k: 'pod', h: 'POD', ar: 'ميناء الوصول', t: 'list', g: 'g2', w: 165, src: 'pod', uniq: true },
     { k: 'pow', h: 'POW', ar: 'ميناء العبور', t: 'list', g: 'g2', op: true, opt: true, w: 150, src: 'pow', uniq: true },
     { k: 'cut', h: 'Cut Off', ar: 'آخر ميعاد التسليم', t: 'date', g: 'g3', w: 165, uniq: true },
@@ -88,6 +90,7 @@ export const COLS = {
     { k: 'line', h: 'Shipping Line', ar: 'الخط الملاحي', t: 'list', g: 'g2', op: true, w: 200, src: 'line', uniq: true },
     { k: 'dest', h: 'Destination', ar: 'مكان التعتيق / التحميل', t: 'list', g: 'g2', op: true, w: 180, src: 'dest', uniq: true, canUnmerge: true },
     { k: 'pod', h: 'POD / Port', ar: 'الميناء', t: 'list', g: 'g2', op: true, w: 165, src: 'pod', uniq: true },
+    { k: 'terminal', h: 'Terminal', ar: 'المحطة', t: 'list', g: 'g2', op: true, opt: true, w: 195, src: 'terminal', uniq: true },
     { k: 'reqDate', h: 'Req Date', ar: 'التاريخ المطلوب', t: 'date', g: 'g3', op: true, w: 165, uniq: false },
     { k: 'arrDate', h: 'Actual Arrive Date', ar: 'تاريخ الوصول الفعلي', t: 'date', g: 'g3', w: 165, uniq: false },
     { k: 'arrTime', h: 'Actual Arrive Time', ar: 'وقت الوصول الفعلي', t: 'time', g: 'g3', w: 145, uniq: false },
@@ -153,6 +156,7 @@ export const MASTER_DEFAULTS = {
   pod: [],
   pol: [],
   pow: [],
+  terminal: [],
   dest: [],
   trucker: [],
   size: CONTAINER_TYPES.map((c) => c.value),
@@ -170,25 +174,22 @@ export const FCL_RULES = [
 ];
 
 // Priority Egyptian Ports pinned at the top of port dropdowns in exact requested order:
-// 1. Sokhna (EGAIS, EGSOK, EGSKN)
+// 1. Ain Sukhna (EGAIS)
 // 2. Al Adabiyah (EGADA)
 // 3. Alexandria (EGALY)
 // 4. Dekheila (EGEDK)
 // 5. Abu Kir (EGAKI, EGAMO)
 // 6. Port Said East (EGPSE)
-// 7. Port Said (EGPSD, EGPSW)
+// 7. Port Said West (EGPSW)
 // 8. Damietta (EGDAM)
 export const PRIORITY_PORT_CODES = [
   'EGAIS', // Ain Sukhna
-  'EGSOK', // Sokhna Port
-  'EGSKN', // Sumed Ain Sukhna
   'EGADA', // Al Adabiyah
   'EGALY', // Alexandria
   'EGEDK', // Dekheila
   'EGAKI', // Abu Kir
   'EGAMO', // Abukir (Mersa El Amonia)
   'EGPSE', // Port Said East (Esat Tafreaa)
-  'EGPSD', // Port Said
   'EGPSW', // Port Said West
   'EGDAM', // Damietta
 ];

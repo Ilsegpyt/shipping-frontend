@@ -164,6 +164,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     customers: [],
     shippingLines: [],
     ports: [],
+    portTerminals: [],
     transporters: [],
     drivers: [],
     vehicles: [],
@@ -534,6 +535,19 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       if (match) powId = toGuidOrNull(match.id);
     }
 
+    let terminalId = toGuidOrNull(opData.terminalId);
+    if (!terminalId && opData.terminal && lookups.portTerminals?.length > 0 && portId) {
+      const target = String(opData.terminal || '').trim().toLowerCase();
+      const match = lookups.portTerminals.find(
+        (t) =>
+          t.portId === portId &&
+          ((t.name || '')?.trim().toLowerCase() === target ||
+            (t.code || '')?.trim().toLowerCase() === target ||
+            (t.arabicName || '')?.trim().toLowerCase() === target)
+      );
+      if (match) terminalId = toGuidOrNull(match.id);
+    }
+
     // 2. Validate Required Fields & Rules
     if (!clientId) {
       showToast(
@@ -654,6 +668,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       powId: isImport ? null : (powId || null),
       cutOffDate: isImport ? null : formatDateOnly(opData.freeOrCut),
       exportDestination: isImport ? null : (opData.dest ? opData.dest.trim() : null),
+      terminalId: terminalId || null,
     };
 
     try {
@@ -956,6 +971,19 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
 
       const refCode = (isImp ? first.bl : first.booking) || first.shipNo;
 
+      let draftTerminalId = toGuidOrNull(first.terminalId);
+      if (!draftTerminalId && first.terminal && lookups.portTerminals?.length > 0 && portId) {
+        const targetTerm = String(first.terminal || '').trim().toLowerCase();
+        const tMatch = lookups.portTerminals.find(
+          (t) =>
+            t.portId === portId &&
+            ((t.name || '').trim().toLowerCase() === targetTerm ||
+              (t.code || '').trim().toLowerCase() === targetTerm ||
+              (t.arabicName || '').trim().toLowerCase() === targetTerm)
+        );
+        if (tMatch) draftTerminalId = tMatch.id;
+      }
+
       if (clientId && shippingLineId && portId && refCode) {
         try {
           const createPayload = {
@@ -974,6 +1002,7 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
             polId: isImp ? null : portId,
             exportDestination: isImp ? null : (first.dest?.trim() || null),
             cutOffDate: isImp ? null : (first.cut || null),
+            terminalId: draftTerminalId || null,
           };
 
           const newOpId = await createOperation(createPayload);
@@ -1075,6 +1104,20 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       : dir === 'Import' || (first.bl !== undefined && !first.booking);
 
     if (isImport) {
+      let resolvedImportTerminalId = toGuidOrNull(first.terminalId);
+      if (!resolvedImportTerminalId && first.terminal && lookups.portTerminals?.length > 0) {
+        const targetPortId = toGuidOrNull(first.podId);
+        const targetTerm = String(first.terminal || '').trim().toLowerCase();
+        const tMatch = lookups.portTerminals.find(
+          (t) =>
+            (!targetPortId || t.portId === targetPortId) &&
+            ((t.name || '').trim().toLowerCase() === targetTerm ||
+              (t.code || '').trim().toLowerCase() === targetTerm ||
+              (t.arabicName || '').trim().toLowerCase() === targetTerm)
+        );
+        if (tMatch) resolvedImportTerminalId = tMatch.id;
+      }
+
       const payload = {
         shipmentNumber: first.shipNo?.trim() || null,
         certificateNumber: first.cert?.trim() || null,
@@ -1083,8 +1126,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           : null,
         requiredOffloadingDate: first.reqDate ? first.reqDate.slice(0, 10) : null,
         requiredOffloadingTime: safeTimeOnly(first.reqTime),
-        requiredOffloadingDate: first.reqDate ? first.reqDate.slice(0, 10) : null,
-        requiredOffloadingTime: first.reqTime ? (first.reqTime.length === 5 ? `${first.reqTime}:00` : first.reqTime.slice(0, 8)) : null,
+        terminalId: resolvedImportTerminalId,
+        clearTerminal: !first.terminal && !resolvedImportTerminalId,
         containers: updatedRows.map((r) => {
           const cntrId = toGuidOrNull(r._containerId);
           if (!cntrId) {
@@ -1225,6 +1268,19 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         if (pMatch) resolvedPolId = pMatch.id;
       }
 
+      let resolvedExportTerminalId = toGuidOrNull(first.terminalId);
+      if (!resolvedExportTerminalId && first.terminal && lookups.portTerminals?.length > 0) {
+        const targetTerm = String(first.terminal || '').trim().toLowerCase();
+        const tMatch = lookups.portTerminals.find(
+          (t) =>
+            (!resolvedPolId || t.portId === resolvedPolId) &&
+            ((t.name || '').trim().toLowerCase() === targetTerm ||
+              (t.code || '').trim().toLowerCase() === targetTerm ||
+              (t.arabicName || '').trim().toLowerCase() === targetTerm)
+        );
+        if (tMatch) resolvedExportTerminalId = tMatch.id;
+      }
+
       const payload = {
         shipmentNumber: first.shipNo?.trim() || null,
         certificateNumber: clr === 'CERT' ? (first.cert?.trim() || null) : null,
@@ -1234,6 +1290,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
         powId: resolvedPowId,
         clearPOD: !first.pod && !resolvedPodId,
         clearPOW: !first.pow && !resolvedPowId,
+        terminalId: resolvedExportTerminalId,
+        clearTerminal: !first.terminal && !resolvedExportTerminalId,
         invoicesReceivedDate: first.invRcv
           ? (first.invRcv.includes('T') ? first.invRcv : `${first.invRcv.slice(0, 10)}T00:00:00Z`)
           : null,

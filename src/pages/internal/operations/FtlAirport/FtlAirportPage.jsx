@@ -3,6 +3,7 @@ import FtlDashboard from './components/FtlDashboard';
 import FtlDashboardView from './components/FtlDashboardView';
 import FtlDeliveredArchive from './components/FtlDeliveredArchive';
 import FtlInactiveArchive from './components/FtlInactiveArchive';
+import FtlActiveDetailsDrawer from './components/FtlActiveDetailsDrawer';
 import { FtlConfirmDeleteModal, FtlStatusHistoryModal } from './components/FtlArchiveShared';
 import { createLiveApi } from './api/liveApi';
 import { getFtlOperationsCounts } from '../../../../services/operationsService';
@@ -28,16 +29,26 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
   const [language, setLanguage] = useState('en');
   const [theme, setTheme] = useState('light');
   const [activeHistoryOp, setActiveHistoryOp] = useState(null);
+  const [activeDetailsOp, setActiveDetailsOp] = useState(null);
 
-  // Listen to unified history events triggered from Active Grid (ftlEngine)
+  // Listen to unified history & active details events triggered from Active Grid (ftlEngine)
   useEffect(() => {
     const handleOpenHistory = (e) => {
       if (e.detail) {
         setActiveHistoryOp(e.detail);
       }
     };
+    const handleOpenDetails = (e) => {
+      if (e.detail) {
+        setActiveDetailsOp({ ...e.detail, openedAt: Date.now() });
+      }
+    };
     window.addEventListener('ftl:open-status-history', handleOpenHistory);
-    return () => window.removeEventListener('ftl:open-status-history', handleOpenHistory);
+    window.addEventListener('ftl:open-op-details', handleOpenDetails);
+    return () => {
+      window.removeEventListener('ftl:open-status-history', handleOpenHistory);
+      window.removeEventListener('ftl:open-op-details', handleOpenDetails);
+    };
   }, []);
 
   const isSuperAdmin = Boolean(
@@ -303,6 +314,21 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
         error={deleteError}
         lang={language}
         currentUserName={user?.name || user?.userName || user?.email?.split('@')[0] || 'User'}
+      />
+
+      {/* Active Operation Read-Only Details + Editable Trip Update Slide-over Drawer */}
+      <FtlActiveDetailsDrawer
+        key={activeDetailsOp ? `${activeDetailsOp.ref}_${activeDetailsOp.openedAt || ''}` : 'closed'}
+        op={activeDetailsOp}
+        onClose={() => setActiveDetailsOp(null)}
+        onOpenStatusHistory={(historyOp) => setActiveHistoryOp(historyOp)}
+        onAddTripUpdate={(ref, tripId, note) => api.addTruckUpdate(ref, tripId, note)}
+        onTripUpdateAdded={(dir, ref, rowIndices, updateObj) => {
+          dashboardRef.current?.appendTripUpdate?.(dir, ref, rowIndices, updateObj);
+        }}
+        isStatusHistoryOpen={Boolean(activeHistoryOp)}
+        lang={language}
+        currentUserName={user?.fullName || user?.displayName || user?.name || user?.userName || user?.email?.split('@')[0] || 'User'}
       />
 
       {/* Active Grid Status History Slide-over Drawer (Matching FCL 1:1) */}

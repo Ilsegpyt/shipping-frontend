@@ -2,10 +2,10 @@ import { dropdownOptions } from "../lib/format.js";
 import { useApp } from "../AppState.jsx";
 
 /** Dropdown for client / POD / POL / shipping line / terminal / stage / clearance / container type. Platform values only. */
-export default function OptionSelect({ id, className, k, fieldKey, value, required, disabled, onChange, onKeyDown, autoFocus }) {
+export default function OptionSelect({ id, className, k, fieldKey, value, required, disabled, onChange, onKeyDown, autoFocus, context }) {
   const { fmt, lookups } = useApp();
   const { t } = fmt;
-  const options = dropdownOptions(fieldKey, k, lookups, fmt, value);
+  const options = dropdownOptions(fieldKey, k, lookups, fmt, value, context);
 
   return (
     <select

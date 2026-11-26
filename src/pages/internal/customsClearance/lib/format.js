@@ -143,13 +143,27 @@ export function makeFmt(lang, lookups = {}) {
 /* ---------- dropdown options ---------- */
 // Options come from GET /api/customs-clearance/lookups. Each option is { value, label }:
 // clients save their GUID; ports, shipping lines and terminals save their name (the API stores text).
-export function dropdownOptions(key, k, lookups, fmt, current = "") {
+export function dropdownOptions(key, k, lookups, fmt, current = "", context = {}) {
   const names = (list) => (list || []).map((x) => ({ value: x.name, label: x.name }));
   let options;
   if (key === "clientId") options = (lookups.clients || []).map((c) => ({ value: String(c.id), label: c.name }));
   else if (key === "pod" || key === "pol") options = (lookups.ports || []).map((p) => ({ value: p.name, label: p.code ? p.name + " (" + p.code + ")" : p.name }));
   else if (key === "shippingLine") options = names(lookups.shippingLines);
-  else if (key === "terminal") options = names(lookups.terminals);
+  else if (key === "terminal") {
+    const podVal = String(context?.pod || "").trim().toLowerCase();
+    const allTerminals = lookups.terminals || [];
+    const matched = podVal
+      ? allTerminals.filter((t) => {
+          const pn = String(t.portName || "").trim().toLowerCase();
+          const pc = String(t.portCode || "").trim().toLowerCase();
+          return pn === podVal || pc === podVal || (pc && podVal === `${pn} (${pc})`);
+        })
+      : allTerminals;
+    options = matched.map((x) => ({
+      value: x.name,
+      label: x.code ? `${x.name} (${x.code})` : x.name,
+    }));
+  }
   else if (key === "containerType")
     options = (lookups.containerTypes?.length ? lookups.containerTypes : C.containerOptions).map((v) => ({ value: v, label: fmt.optionLabel(v) }));
   else if (key === "currentStage") options = C.stageOptions.map((v) => ({ value: v, label: v }));

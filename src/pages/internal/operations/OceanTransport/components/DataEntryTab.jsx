@@ -671,6 +671,25 @@ export default function DataEntryTab({
     });
   }, [lookups.ports]);
 
+  const portTerminalOptions = useMemo(() => {
+    return (lookups.portTerminals || []).map((t) => ({
+      value: t.id,
+      label: t.code ? `${t.name} (${t.code})` : t.name,
+      sublabel: t.code,
+      searchStr: `${t.name || ''} ${t.code || ''} ${t.arabicName || ''}`.trim(),
+      portId: t.portId,
+      item: t,
+    }));
+  }, [lookups.portTerminals]);
+
+  const getTerminalsForPort = useCallback(
+    (portId) => {
+      if (!portId) return [];
+      return portTerminalOptions.filter((t) => t.portId === portId);
+    },
+    [portTerminalOptions]
+  );
+
   const destinationOptions = useMemo(() => {
     return (lookups.destinations || []).map((d) => {
       const name = typeof d === 'string' ? d : d.name;
@@ -789,7 +808,7 @@ export default function DataEntryTab({
     if (currentRows.length !== snapshotRows.length) return true;
 
     const editableKeys = [
-      'shipNo', 'vol', 'cert', 'client', 'bl', 'booking', 'line', 'dest', 'pod', 'pol', 'pow',
+      'shipNo', 'vol', 'cert', 'client', 'bl', 'booking', 'line', 'dest', 'pod', 'pol', 'pow', 'terminal', 'terminalId',
       'free', 'reqDate', 'reqTime', 'arrDate', 'arrTime', 'gateOut', 'gateOutT',
       'size', 'cntr', 'trucker', 'car', 'driver', 'mob', 'checkout', 'invRcv',
       'missDoc', 'missRcv', 'status', 'clrType', 'customs', 'cut'
@@ -1999,7 +2018,10 @@ export default function DataEntryTab({
   const [activeDetailDrawer, setActiveDetailDrawer] = useState(null);
   const [drawerUpdateText, setDrawerUpdateText] = useState('');
   const [isSubmittingDrawerUpdate, setIsSubmittingDrawerUpdate] = useState(false);
+  const [drawerFocusTarget, setDrawerFocusTarget] = useState(null);
   const drawerUpdateInputRef = useRef(null);
+  const drawerUpdatesSectionRef = useRef(null);
+  const drawerCntrBtnRefs = useRef([]);
 
   const openUpdatesModal = (row, shipRef) => {
     setActiveUpdateRow({ row, shipRef });
@@ -2031,24 +2053,43 @@ export default function DataEntryTab({
   const closeActiveDetailDrawer = useCallback(() => {
     setActiveDetailDrawer(null);
     setDrawerUpdateText('');
+    setDrawerFocusTarget(null);
   }, []);
 
-  // Auto-focus the update input immediately whenever the drawer opens with a selected container or container selection changes
+  // Auto-scroll and apply clear visual + keyboard focus on open or container selection
   useEffect(() => {
-    if (!activeDetailDrawer?.selectedRowId) return;
-    const focusInput = () => {
-      const el = drawerUpdateInputRef.current;
-      if (el && !el.disabled) {
-        el.focus();
+    if (!activeDetailDrawer) return;
+    let clearTimerId = null;
+    const scrollAndFocus = () => {
+      if (activeDetailDrawer.selectedRowId) {
+        const inp = drawerUpdateInputRef.current;
+        if (inp && !inp.disabled) {
+          inp.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          inp.focus({ preventScroll: true });
+          setDrawerFocusTarget('input');
+        }
+      } else if ((activeDetailDrawer.rowsSnapshot?.length || 0) > 1) {
+        const sec = drawerUpdatesSectionRef.current;
+        if (sec) {
+          sec.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        const firstBtn = drawerCntrBtnRefs.current[0];
+        if (firstBtn) {
+          firstBtn.focus({ preventScroll: true });
+        }
+        setDrawerFocusTarget('selector');
       }
+      if (clearTimerId) clearTimeout(clearTimerId);
+      clearTimerId = setTimeout(() => setDrawerFocusTarget(null), 1400);
     };
-    const rafId = requestAnimationFrame(focusInput);
-    const timerId = setTimeout(focusInput, 60);
+    const rafId = requestAnimationFrame(() => setTimeout(scrollAndFocus, 20));
+    const timerId = setTimeout(scrollAndFocus, 160);
     return () => {
       cancelAnimationFrame(rafId);
       clearTimeout(timerId);
+      if (clearTimerId) clearTimeout(clearTimerId);
     };
-  }, [activeDetailDrawer?.shipRef, activeDetailDrawer?.selectedRowId]);
+  }, [activeDetailDrawer?.shipRef, activeDetailDrawer?.selectedRowId, activeDetailDrawer?.rowsSnapshot?.length]);
 
   const persistContainerUpdate = async ({ targetRow, allRows, dir, text }) => {
     const containerId = targetRow._containerId;
@@ -2724,6 +2765,8 @@ export default function DataEntryTab({
     dest: '',
     port: '',
     portId: '',
+    terminal: '',
+    terminalId: '',
     freeOrCut: '',
     reqDate: '',
     reqTime: '',
@@ -2867,6 +2910,8 @@ export default function DataEntryTab({
           dest: '',
           port: '',
           portId: '',
+          terminal: '',
+          terminalId: '',
           freeOrCut: '',
           reqDate: '',
           reqTime: '',
@@ -3036,6 +3081,8 @@ export default function DataEntryTab({
             r.pod,
             r.pol,
             r.pow,
+            r.terminal,
+            r.terminalCode,
             r.trucker,
             r.status,
             r._ref,
@@ -3703,10 +3750,38 @@ export default function DataEntryTab({
                       placeholder={lang === 'ar' ? '-- اختر الميناء --' : '-- Select Port (POL) --'}
                       onChange={(val, item) => {
                         const pObj = item || portOptions.find((p) => p.value === val)?.item;
+                        const nextPortId = pObj ? pObj.id : val;
                         setNewOp({
                           ...newOp,
-                          portId: pObj ? pObj.id : val,
+                          portId: nextPortId,
                           port: pObj ? pObj.name : val,
+                          terminalId: nextPortId === newOp.portId ? newOp.terminalId : '',
+                          terminal: nextPortId === newOp.portId ? newOp.terminal : '',
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 5b. Terminal (g2 optional) */}
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
+                    <label>{lang === 'ar' ? 'المحطة (Terminal)' : 'Terminal'} <i>{lang === 'ar' ? 'اختياري' : 'Text (optional)'}</i></label>
+                    <SearchableSelect
+                      value={newOp.terminalId || newOp.terminal}
+                      options={getTerminalsForPort(newOp.portId)}
+                      disabled={!newOp.portId}
+                      placeholder={
+                        !newOp.portId
+                          ? (lang === 'ar' ? '-- اختر POL أولاً --' : '-- Select POL first --')
+                          : getTerminalsForPort(newOp.portId).length === 0
+                            ? (lang === 'ar' ? 'لا توجد محطات لهذا الميناء' : 'No terminals for port')
+                            : (lang === 'ar' ? '-- اختر المحطة --' : '-- Select Terminal --')
+                      }
+                      onChange={(val, item) => {
+                        const tObj = item || portTerminalOptions.find((t) => t.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          terminalId: tObj ? tObj.id : val,
+                          terminal: tObj ? tObj.name : val,
                         });
                       }}
                     />
@@ -3813,10 +3888,38 @@ export default function DataEntryTab({
                       placeholder={lang === 'ar' ? '-- اختر الميناء --' : '-- Select Port (POD) --'}
                       onChange={(val, item) => {
                         const pObj = item || portOptions.find((p) => p.value === val)?.item;
+                        const nextPortId = pObj ? pObj.id : val;
                         setNewOp({
                           ...newOp,
-                          portId: pObj ? pObj.id : val,
+                          portId: nextPortId,
                           port: pObj ? pObj.name : val,
+                          terminalId: nextPortId === newOp.portId ? newOp.terminalId : '',
+                          terminal: nextPortId === newOp.portId ? newOp.terminal : '',
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* 5b. Terminal (g2 optional) */}
+                  <div className={`opf g2 ${lang === 'ar' ? 'opf-ar' : ''}`}>
+                    <label>{lang === 'ar' ? 'المحطة (Terminal)' : 'Terminal'} <i>{lang === 'ar' ? 'اختياري' : 'Text (optional)'}</i></label>
+                    <SearchableSelect
+                      value={newOp.terminalId || newOp.terminal}
+                      options={getTerminalsForPort(newOp.portId)}
+                      disabled={!newOp.portId}
+                      placeholder={
+                        !newOp.portId
+                          ? (lang === 'ar' ? '-- اختر POD أولاً --' : '-- Select POD first --')
+                          : getTerminalsForPort(newOp.portId).length === 0
+                            ? (lang === 'ar' ? 'لا توجد محطات لهذا الميناء' : 'No terminals for port')
+                            : (lang === 'ar' ? '-- اختر المحطة --' : '-- Select Terminal --')
+                      }
+                      onChange={(val, item) => {
+                        const tObj = item || portTerminalOptions.find((t) => t.value === val)?.item;
+                        setNewOp({
+                          ...newOp,
+                          terminalId: tObj ? tObj.id : val,
+                          terminal: tObj ? tObj.name : val,
                         });
                       }}
                     />
@@ -5792,6 +5895,81 @@ export default function DataEntryTab({
                               );
                             }
 
+                            // 3b. Column: Terminal (Editable dropdown list filtered by POD in Import / POL in Export)
+                            if (c.k === 'terminal' && (currentDir === 'Import' || currentDir === 'Export')) {
+                              const rowPortId = currentDir === 'Import' ? r.podId : r.polId;
+                              const rowTerminalOptions = getTerminalsForPort(rowPortId);
+                              const termMatch = (lookups.portTerminals || []).find(
+                                (t) =>
+                                  (r.terminalId && t.id === r.terminalId) ||
+                                  ((!rowPortId || t.portId === rowPortId) &&
+                                    ((t.name || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
+                                      (t.code || '').toLowerCase().trim() === String(val || '').toLowerCase().trim() ||
+                                      t.id === val))
+                              );
+                              const selectedTermVal = termMatch
+                                ? (termMatch.code ? `${termMatch.name} (${termMatch.code})` : termMatch.name)
+                                : (val || '');
+
+                              return (
+                                <td
+                                  key={c.k}
+                                  rowSpan={isMergedCol ? rowSpan : 1}
+                                  style={{
+                                    width: `${c.w}px`,
+                                    minWidth: `${c.w}px`,
+                                    verticalAlign: 'middle',
+                                    padding: '4px 0',
+                                  }}
+                                >
+                                  <div
+                                    onClick={handleCellDrawerClick}
+                                    title={cellTitle}
+                                    className={`cbox grp-${c.g} ${isActiveClickable ? 'cursor-pointer hover:border-sky-400 hover:bg-sky-50/30 transition-all' : ''}`}
+                                    style={{
+                                      width: '100%',
+                                      minWidth: `${c.w - 12}px`,
+                                      height: '34px',
+                                      minHeight: '34px',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                    }}
+                                  >
+                                    <div className={`w-full ${isActiveClickable ? 'pointer-events-none' : ''}`}>
+                                      <SearchableSelect
+                                        compact={true}
+                                        value={selectedTermVal}
+                                        disabled={isDisabled || (!rowPortId && rowTerminalOptions.length === 0)}
+                                        allowCustom={true}
+                                        title={cellTitle}
+                                        placeholder={lang === 'ar' ? '-- اختر المحطة --' : 'Select Terminal'}
+                                        options={rowTerminalOptions}
+                                        onChange={(nextTerm, opt) => {
+                                          const tObj = opt?.raw || opt?.item || (lookups.portTerminals || []).find(
+                                            (t) =>
+                                              (!rowPortId || t.portId === rowPortId) &&
+                                              ((t.name || '').toLowerCase().trim() === String(nextTerm || '').toLowerCase().trim() ||
+                                                (t.code || '').toLowerCase().trim() === String(nextTerm || '').toLowerCase().trim() ||
+                                                t.id === nextTerm)
+                                          );
+                                          const finalName = tObj ? tObj.name : (nextTerm || '');
+                                          const finalId = tObj ? tObj.id : null;
+                                          if (isMergedCol) {
+                                            handleMergedColChange(shipRows, 'terminal', finalName);
+                                            handleMergedColChange(shipRows, 'terminalId', finalId);
+                                          } else {
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'terminal', finalName);
+                                            onUpdateCell && onUpdateCell(currentDir, r._rowId, 'terminalId', finalId);
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                </td>
+                              );
+                            }
+
                             // 4. Column: POD (Editable dropdown list)
                             if (c.k === 'pod' && currentDir === 'Export') {
                               const podMatch = (lookups.ports || []).find(
@@ -7405,6 +7583,9 @@ export default function DataEntryTab({
         const portName = isImport
           ? (op.importDetails?.podName || op.importDetails?.podCode || '—')
           : (op.exportDetails?.polName || op.exportDetails?.polCode || '—');
+        const terminalName = isImport
+          ? (op.importDetails?.terminalName ? (op.importDetails?.terminalCode ? `${op.importDetails.terminalName} (${op.importDetails.terminalCode})` : op.importDetails.terminalName) : '—')
+          : (op.exportDetails?.terminalName ? (op.exportDetails?.terminalCode ? `${op.exportDetails.terminalName} (${op.exportDetails.terminalCode})` : op.exportDetails.terminalName) : '—');
         const powName = !isImport ? (op.exportDetails?.powName || '—') : null;
         const clearanceType = !isImport ? (op.exportDetails?.clearanceType || '—') : null;
         const customs = !isImport ? (op.exportDetails?.customs || '—') : null;
@@ -7530,6 +7711,15 @@ export default function DataEntryTab({
                       </span>
                       <span className="text-xs font-bold text-slate-800 truncate block">
                         {portName}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'المحطة (Terminal)' : 'Terminal'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={terminalName}>
+                        {terminalName}
                       </span>
                     </div>
 
@@ -7758,6 +7948,9 @@ export default function DataEntryTab({
         const portName = isImport
           ? (op.importDetails?.podName || op.importDetails?.podCode || '—')
           : (op.exportDetails?.polName || op.exportDetails?.polCode || '—');
+        const terminalName = isImport
+          ? (op.importDetails?.terminalName ? (op.importDetails?.terminalCode ? `${op.importDetails.terminalName} (${op.importDetails.terminalCode})` : op.importDetails.terminalName) : '—')
+          : (op.exportDetails?.terminalName ? (op.exportDetails?.terminalCode ? `${op.exportDetails.terminalName} (${op.exportDetails.terminalCode})` : op.exportDetails.terminalName) : '—');
         const powName = !isImport ? (op.exportDetails?.powName || '—') : null;
         const clearanceType = !isImport ? (op.exportDetails?.clearanceType || '—') : null;
         const customs = !isImport ? (op.exportDetails?.customs || '—') : null;
@@ -7883,6 +8076,15 @@ export default function DataEntryTab({
                       </span>
                       <span className="text-xs font-bold text-slate-800 truncate block">
                         {portName}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'المحطة (Terminal)' : 'Terminal'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={terminalName}>
+                        {terminalName}
                       </span>
                     </div>
 
@@ -8133,6 +8335,7 @@ export default function DataEntryTab({
         const isImport = drawerDir === 'Import' || firstRow.operationType === 'Import';
         const refNum = isImport ? firstRow.bl : (firstRow.booking || firstRow.bl);
         const portName = isImport ? (firstRow.pod || '—') : (firstRow.pol || '—');
+        const terminalName = firstRow.terminal ? (firstRow.terminalCode ? `${firstRow.terminal} (${firstRow.terminalCode})` : firstRow.terminal) : '—';
         const podExportName = !isImport ? (firstRow.pod || '—') : null;
         const powName = !isImport ? (firstRow.pow || '—') : null;
         const clearanceType = !isImport ? (firstRow.clrType || '—') : null;
@@ -8307,6 +8510,15 @@ export default function DataEntryTab({
                       </span>
                     </div>
 
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
+                      <span className="text-[10px] text-slate-400 block font-medium">
+                        {lang === 'ar' ? 'المحطة (Terminal)' : 'Terminal'}
+                      </span>
+                      <span className="text-xs font-bold text-slate-800 truncate block" title={terminalName}>
+                        {terminalName}
+                      </span>
+                    </div>
+
                     {!isImport && (
                       <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/70">
                         <span className="text-[10px] text-slate-400 block font-medium">
@@ -8475,7 +8687,16 @@ export default function DataEntryTab({
                 </div>
 
                 {/* 3. Editable Latest Update + Container Updates Log */}
-                <div className="rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50/50 to-white p-4 shadow-xs space-y-3.5">
+                <div
+                  ref={drawerUpdatesSectionRef}
+                  className={`rounded-2xl border bg-gradient-to-b from-sky-50/50 to-white p-4 space-y-3.5 transition-all duration-300 ${
+                    drawerFocusTarget === 'input'
+                      ? 'border-sky-400 ring-4 ring-sky-200/80 shadow-md'
+                      : drawerFocusTarget === 'selector'
+                        ? 'border-amber-400 ring-4 ring-amber-200/80 shadow-md'
+                        : 'border-sky-200 shadow-xs'
+                  }`}
+                >
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                       <span className="w-1.5 h-3.5 bg-cyan-600 rounded-full"></span>
@@ -8495,8 +8716,18 @@ export default function DataEntryTab({
 
                   {/* Container Selector Pills when shipment has multiple containers (Method B: require explicit single-container choice) */}
                   {shipRows.length > 1 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-slate-600">
+                    <div
+                      className={`space-y-2 rounded-xl transition-all duration-300 ${
+                        !selectedRow
+                          ? `p-3 border ${
+                              drawerFocusTarget === 'selector'
+                                ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-300'
+                                : 'bg-amber-50/50 border-amber-200'
+                            }`
+                          : ''
+                      }`}
+                    >
+                      <div className="text-[11px] font-bold text-slate-700">
                         {selectedRow
                           ? (lang === 'ar' ? 'الحاوية المحددة للتحديث:' : 'Selected container for update:')
                           : (lang === 'ar' ? 'اختر حاوية واحدة أولاً لكتابة التحديث:' : 'Select one container first to write an update:')}
@@ -8508,9 +8739,21 @@ export default function DataEntryTab({
                           return (
                             <button
                               key={cRow._rowId || idx}
+                              ref={(el) => {
+                                drawerCntrBtnRefs.current[idx] = el;
+                              }}
                               type="button"
                               onClick={() => selectDrawerContainer(cRow._rowId)}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-1.5 ${
+                              onKeyDown={(e) => {
+                                const isRtl = lang === 'ar';
+                                if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+                                  e.preventDefault();
+                                  const step = (e.key === 'ArrowRight') ? (isRtl ? -1 : 1) : (isRtl ? 1 : -1);
+                                  const nextIdx = (idx + step + shipRows.length) % shipRows.length;
+                                  drawerCntrBtnRefs.current[nextIdx]?.focus();
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition cursor-pointer flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1 ${
                                 isSelectedCntr
                                   ? 'bg-[#0f4c81] text-white border-[#0f4c81] shadow-xs'
                                   : 'bg-white text-slate-700 border-slate-300 hover:border-sky-400 hover:bg-sky-50'
@@ -8561,7 +8804,9 @@ export default function DataEntryTab({
                             handleDrawerAddUpdate();
                           }
                         }}
-                        className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                        className={`flex-1 rounded-xl border bg-white px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-4 focus:ring-sky-200/80 placeholder:text-slate-400 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all ${
+                          drawerFocusTarget === 'input' ? 'border-sky-500 ring-4 ring-sky-200/80' : 'border-slate-300'
+                        }`}
                       />
                       <button
                         type="button"

@@ -188,6 +188,7 @@ export default function ExportExcelModal({
             r.cert,
             r.line,
             r.dest,
+            r.terminal,
             r.trucker,
             r.driver,
             r.car,

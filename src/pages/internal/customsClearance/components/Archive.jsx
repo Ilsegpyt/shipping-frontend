@@ -40,7 +40,8 @@ export function UpdatesModal() {
   const { t, fmtN, stamp } = fmt;
   const { user } = useAuth();
   const { scope, id } = updatesCtx;
-  const row = tables[scope].items.find((x) => x.id === id);
+  // The closed archive view loads its own pages, so it passes the row along.
+  const row = updatesCtx.row || tables[scope].items.find((x) => x.id === id);
   const readOnly = !row || row.status === "Closed" || !hasPermission(user, CUSTOMS_PERMISSIONS.edit);
 
   const [text, setText] = useState("");

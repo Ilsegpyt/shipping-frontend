@@ -22,7 +22,13 @@ export default function EntryForm({ collapsed, setCollapsed }) {
   const [busy, setBusy] = useState(false);
   const draft = drafts[kind] || {};
   const schema = C.schemas[kind];
-  const setValue = (key, v) => setDrafts((d) => ({ ...d, [kind]: { ...(d[kind] || {}), [key]: v } }));
+  const setValue = (key, v) =>
+    setDrafts((d) => {
+      const cur = d[kind] || {};
+      const next = { ...cur, [key]: v };
+      if (key === "pod" && cur.pod !== v) next.terminal = "";
+      return { ...d, [kind]: next };
+    });
   const inputValue = (key, f) => draft[key] ?? (f.type === "number" ? NUMBER_DEFAULT : "");
 
   const reset = () => {
@@ -83,7 +89,7 @@ export default function EntryForm({ collapsed, setCollapsed }) {
                   <span className="req">*</span>
                 </label>
                 {C.dropdownKeys.includes(key) ? (
-                  <OptionSelect id={"f-" + key} className={cls} k={kind} fieldKey={key} value={v} required onChange={(nv) => setValue(key, nv)} />
+                  <OptionSelect id={"f-" + key} className={cls} k={kind} fieldKey={key} value={v} context={{ pod: draft.pod }} required onChange={(nv) => setValue(key, nv)} />
                 ) : (
                   <input
                     id={"f-" + key}

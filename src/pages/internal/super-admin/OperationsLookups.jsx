@@ -29,7 +29,7 @@ const TABS = [
   { key: 'lines', label: 'Shipping Lines', icon: Ship, hasSubtype: false, description: 'Common shipping lines for FCL & FTL operations.' },
   { key: 'destinations', label: 'Destinations', icon: MapPin, hasSubtype: false, description: 'Common destinations and delivery areas.' },
   { key: 'ports', label: 'Ports & Airports', icon: Anchor, hasSubtype: true, fclLabel: 'Sea Ports (FCL)', ftlLabel: 'Airports (FTL)' },
-  { key: 'terminals', label: 'Air Terminals', icon: Building2, hasSubtype: false, description: 'Cargo terminals & facilities for FTL operations (e.g. CACC, Cairo Cargo Village).' },
+  { key: 'terminals', label: 'Terminals', icon: Building2, hasSubtype: true, fclLabel: 'Sea Port Terminals (FCL)', ftlLabel: 'Air Terminals (FTL)' },
   { key: 'drivers', label: 'Drivers', icon: User, hasSubtype: true, fclLabel: 'FCL Drivers', ftlLabel: 'FTL Drivers' },
   { key: 'transporters', label: 'Transporters', icon: Truck, hasSubtype: true, fclLabel: 'FCL Transporters', ftlLabel: 'FTL Transporters' },
   { key: 'vehicles', label: 'Vehicles', icon: Car, hasSubtype: true, fclLabel: 'FCL Vehicles', ftlLabel: 'FTL Vehicles' }
@@ -62,6 +62,7 @@ export default function OperationsLookups() {
 
   // Lookup dependencies
   const [ftlTransportersList, setFtlTransportersList] = useState([]);
+  const [fclPortsList, setFclPortsList] = useState([]);
 
   // Modals
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -74,6 +75,8 @@ export default function OperationsLookups() {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
+    arabicName: '',
+    portId: '',
     abbreviation: '',
     driverNumber: '',
     mobileNumber: '',
@@ -123,7 +126,9 @@ export default function OperationsLookups() {
       } else if (tab === 'destinations') {
         result = await opsService.getDestinationsFull(params);
       } else if (tab === 'terminals') {
-        result = await opsService.getFtlTerminalsFull(params);
+        result = currentSubType === 'ftl'
+          ? await opsService.getFtlTerminalsFull(params)
+          : await opsService.getPortTerminalsFull(params);
       } else if (tab === 'ports') {
         result = currentSubType === 'ftl'
           ? await opsService.getFtlAirportsFull(params)
@@ -209,14 +214,29 @@ export default function OperationsLookups() {
     }
   };
 
+  const loadFclPorts = async () => {
+    try {
+      const res = await opsService.getPortsFull({ includeInactive: false, page: 1, pageSize: 500 });
+      const items = Array.isArray(res?.items) ? res.items : Array.isArray(res) ? res : [];
+      setFclPortsList(items);
+    } catch {
+      setFclPortsList([]);
+    }
+  };
+
   // Open Add
   const handleOpenAdd = () => {
     if (activeTab === 'vehicles' && subType === 'ftl') {
       loadFtlTransporters();
     }
+    if (activeTab === 'terminals' && subType === 'fcl') {
+      loadFclPorts();
+    }
     setFormData({
       name: '',
       code: '',
+      arabicName: '',
+      portId: '',
       abbreviation: '',
       driverNumber: '',
       mobileNumber: '',
@@ -235,10 +255,15 @@ export default function OperationsLookups() {
     if (activeTab === 'vehicles' && subType === 'ftl') {
       loadFtlTransporters();
     }
+    if (activeTab === 'terminals' && subType === 'fcl') {
+      loadFclPorts();
+    }
     setSelectedItem(item);
     setFormData({
       name: item.name || '',
       code: item.code || '',
+      arabicName: item.arabicName || '',
+      portId: item.portId || '',
       abbreviation: item.abbreviation || '',
       driverNumber: item.driverNumber || '',
       mobileNumber: item.mobileNumber || '',
@@ -274,7 +299,16 @@ export default function OperationsLookups() {
       } else if (activeTab === 'destinations') {
         await opsService.createDestinationItem({ name: formData.name });
       } else if (activeTab === 'terminals') {
-        await opsService.createFtlTerminal({ name: formData.name });
+        if (subType === 'ftl') {
+          await opsService.createFtlTerminal({ name: formData.name });
+        } else {
+          await opsService.createPortTerminal({
+            portId: formData.portId,
+            name: formData.name,
+            code: formData.code || null,
+            arabicName: formData.arabicName || null
+          });
+        }
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') {
           await opsService.createFtlDriver({
@@ -348,10 +382,20 @@ export default function OperationsLookups() {
           isActive: formData.isActive
         });
       } else if (activeTab === 'terminals') {
-        await opsService.updateFtlTerminal(selectedItem.id, {
-          name: formData.name,
-          isActive: formData.isActive
-        });
+        if (subType === 'ftl') {
+          await opsService.updateFtlTerminal(selectedItem.id, {
+            name: formData.name,
+            isActive: formData.isActive
+          });
+        } else {
+          await opsService.updatePortTerminal(selectedItem.id, {
+            portId: formData.portId,
+            name: formData.name,
+            code: formData.code || null,
+            arabicName: formData.arabicName || null,
+            isActive: formData.isActive
+          });
+        }
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') {
           await opsService.updateFtlDriver(selectedItem.id, {
@@ -426,7 +470,8 @@ export default function OperationsLookups() {
       } else if (activeTab === 'destinations') {
         await opsService.deactivateDestination(selectedItem.id);
       } else if (activeTab === 'terminals') {
-        await opsService.deactivateFtlTerminal(selectedItem.id);
+        if (subType === 'ftl') await opsService.deactivateFtlTerminal(selectedItem.id);
+        else await opsService.deactivatePortTerminal(selectedItem.id);
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') await opsService.deactivateFtlDriver(selectedItem.id);
         else await opsService.deactivateDriver(selectedItem.id);
@@ -466,7 +511,17 @@ export default function OperationsLookups() {
       } else if (activeTab === 'destinations') {
         await opsService.updateDestination(item.id, { name: item.name, isActive: true });
       } else if (activeTab === 'terminals') {
-        await opsService.updateFtlTerminal(item.id, { name: item.name, isActive: true });
+        if (subType === 'ftl') {
+          await opsService.updateFtlTerminal(item.id, { name: item.name, isActive: true });
+        } else {
+          await opsService.updatePortTerminal(item.id, {
+            portId: item.portId,
+            name: item.name,
+            code: item.code || null,
+            arabicName: item.arabicName || null,
+            isActive: true
+          });
+        }
       } else if (activeTab === 'drivers') {
         if (subType === 'ftl') {
           await opsService.updateFtlDriver(item.id, {
@@ -734,7 +789,18 @@ export default function OperationsLookups() {
                   )
                 )}
                 {activeTab === 'destinations' && <th className="px-6 py-3.5">Destination Name</th>}
-                {activeTab === 'terminals' && <th className="px-6 py-3.5">Terminal Name</th>}
+                {activeTab === 'terminals' && (
+                  subType === 'ftl' ? (
+                    <th className="px-6 py-3.5">Terminal Name</th>
+                  ) : (
+                    <>
+                      <th className="px-6 py-3.5">Sea Port</th>
+                      <th className="px-6 py-3.5">Terminal Name</th>
+                      <th className="px-6 py-3.5">Code</th>
+                      <th className="px-6 py-3.5">Arabic Name</th>
+                    </>
+                  )
+                )}
                 {activeTab === 'drivers' && (
                   subType === 'ftl' ? (
                     <>
@@ -803,7 +869,21 @@ export default function OperationsLookups() {
                       <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
                     )}
                     {activeTab === 'terminals' && (
-                      <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
+                      subType === 'ftl' ? (
+                        <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
+                      ) : (
+                        <>
+                          <td className="px-6 py-3.5 text-slate-700">
+                            <span className="font-medium text-slate-900">{item.portName || '-'}</span>
+                            {item.portCode ? (
+                              <span className="ml-1.5 font-mono text-xs text-blue-700 font-bold">({item.portCode})</span>
+                            ) : null}
+                          </td>
+                          <td className="px-6 py-3.5 font-medium text-slate-900">{item.name}</td>
+                          <td className="px-6 py-3.5 font-mono text-xs text-blue-700 font-bold">{item.code || '-'}</td>
+                          <td className="px-6 py-3.5 text-slate-600" dir="rtl">{item.arabicName || '-'}</td>
+                        </>
+                      )
                     )}
                     {activeTab === 'drivers' && (
                       subType === 'ftl' ? (
@@ -1073,17 +1153,70 @@ export default function OperationsLookups() {
               )}
 
               {activeTab === 'terminals' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. CACC Terminal, Cairo Cargo Village, EgyptAir Cargo Terminal"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+                subType === 'ftl' ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. CACC Terminal, Cairo Cargo Village, EgyptAir Cargo Terminal"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Sea Port *</label>
+                      <select
+                        required
+                        value={formData.portId}
+                        onChange={(e) => setFormData({ ...formData, portId: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none bg-white"
+                      >
+                        <option value="">-- Select Sea Port --</option>
+                        {fclPortsList.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{p.code ? ` (${p.code})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Trans Misr Terminal, DP World Sokhna"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Code</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. TMT, DPW, SCCT"
+                        value={formData.code}
+                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Arabic Name (optional)</label>
+                      <input
+                        type="text"
+                        dir="rtl"
+                        placeholder="مثال: محطة تحيا مصر متعددة الأغراض"
+                        value={formData.arabicName}
+                        onChange={(e) => setFormData({ ...formData, arabicName: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  </>
+                )
               )}
 
               {activeTab === 'drivers' && (
@@ -1355,16 +1488,66 @@ export default function OperationsLookups() {
               )}
 
               {activeTab === 'terminals' && (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  />
-                </div>
+                subType === 'ftl' ? (
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Sea Port *</label>
+                      <select
+                        required
+                        value={formData.portId}
+                        onChange={(e) => setFormData({ ...formData, portId: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none bg-white"
+                      >
+                        <option value="">-- Select Sea Port --</option>
+                        {fclPortsList.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{p.code ? ` (${p.code})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Terminal Code</label>
+                      <input
+                        type="text"
+                        value={formData.code}
+                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none uppercase"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Arabic Name (optional)</label>
+                      <input
+                        type="text"
+                        dir="rtl"
+                        value={formData.arabicName}
+                        onChange={(e) => setFormData({ ...formData, arabicName: e.target.value })}
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+                  </>
+                )
               )}
 
               {activeTab === 'drivers' && (
