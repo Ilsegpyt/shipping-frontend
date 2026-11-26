@@ -4,7 +4,7 @@ import { ArrowUpRight } from 'lucide-react';
 import SharedCmsPageHero from '../../../components/common/SharedCmsPageHero';
 import newsHeroImage from '../../../assets/website/news/06deaf3c-354a-4853-a3d6-9a2e79884141.jpg';
 
-import contentService from '../../../services/contentService';
+import contentService from '../../../services/publicContentService';
 import { cleanImageUrl, cleanHtmlImages } from '../../../utils/mediaUrl';
 
 const API_BASE_URL =
@@ -69,6 +69,8 @@ async function getAllContent() {
     async function collect(items) {
         for (const item of items) {
             allContent.push(item);
+
+            if (!['Category', 'Page'].includes(getContentTypeName(item.type))) continue;
 
             try {
                 const childrenResponse = await contentService.getChildren(item.id);

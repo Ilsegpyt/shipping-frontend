@@ -1,85 +1,87 @@
-import { Navigate, Route, Routes } from "react-router-dom";
-import WebsiteLayout from "../layouts/WebsiteLayout";
+import { lazy, Suspense } from "react";
+import { Link, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "../auth/ProtectedRoute";
+import LoadingScreen from "../components/common/LoadingScreen";
+import Login from "../pages/auth/Login";
 
-import InternalLayout from "../layouts/InternalLayout";
-import CustomerLayout from "../layouts/CustomerLayout";
-import SubAccountLayout from "../layouts/SubAccountLayout";
+const WebsiteLayout = lazy(() => import("../layouts/WebsiteLayout"));
+const InternalLayout = lazy(() => import("../layouts/InternalLayout"));
+const CustomerLayout = lazy(() => import("../layouts/CustomerLayout"));
+const SubAccountLayout = lazy(() => import("../layouts/SubAccountLayout"));
 
 // Public pages
-import Home from "../pages/public/Home";
-import CmsPublicPage from "../pages/public/CmsPublicPage";
-import Philosophy from "../pages/public/About ILS/Philosophy";
-import PurposeAndStrategy from "../pages/public/About ILS/PurposeAndStrategy";
-import Values from "../pages/public/About ILS/Values";
+const Home = lazy(() => import("../pages/public/Home"));
+const CmsPublicPage = lazy(() => import("../pages/public/CmsPublicPage"));
+const Philosophy = lazy(() => import("../pages/public/About ILS/Philosophy"));
+const PurposeAndStrategy = lazy(() => import("../pages/public/About ILS/PurposeAndStrategy"));
+const Values = lazy(() => import("../pages/public/About ILS/Values"));
 // Certificates page retained for future reactivation.
 // import Certificates from "../pages/public/About ILS/certificates";
-import News from "../pages/public/news/News";
-import Incoterms from "../pages/public/resources/Incoterms";
-import CbmCalculator from "../pages/public/resources/CbmCalculator";
-import ContainerTypes from "../pages/public/resources/ContainerTypes";
-import CustomsDutiesCalculator from "../pages/public/resources/CustomsDutiesCalculator";
-import DangerousGoodsLabels from "../pages/public/resources/DangerousGoodsLabels";
-import NafezaPlatform from "../pages/public/resources/NafezaPlatform";
+const News = lazy(() => import("../pages/public/news/News"));
+const Incoterms = lazy(() => import("../pages/public/resources/Incoterms"));
+const CbmCalculator = lazy(() => import("../pages/public/resources/CbmCalculator"));
+const ContainerTypes = lazy(() => import("../pages/public/resources/ContainerTypes"));
+const CustomsDutiesCalculator = lazy(() => import("../pages/public/resources/CustomsDutiesCalculator"));
+const DangerousGoodsLabels = lazy(() => import("../pages/public/resources/DangerousGoodsLabels"));
+const NafezaPlatform = lazy(() => import("../pages/public/resources/NafezaPlatform"));
 
-import AgentOpportunity from "../pages/public/Join ILS/AgentOpportunity";
-import Recruitment from "../pages/public/Join ILS/Recruitment";
+const AgentOpportunity = lazy(() => import("../pages/public/Join ILS/AgentOpportunity"));
+const Recruitment = lazy(() => import("../pages/public/Join ILS/Recruitment"));
 
-import ILSBranches from "../pages/public/Contact ILS/ILSBranches";
-import GetAQuote from "../pages/public/Contact ILS/GetAQuote";
+const ILSBranches = lazy(() => import("../pages/public/Contact ILS/ILSBranches"));
+const GetAQuote = lazy(() => import("../pages/public/Contact ILS/GetAQuote"));
 
-import NewsDetails from "../pages/public/news/NewsDetails";
+const NewsDetails = lazy(() => import("../pages/public/news/NewsDetails"));
 
 // Industry pages
-import HealthcareLogistics from "../pages/public/industries/HealthcareLogistics";
-import AutomotiveLogistics from "../pages/public/industries/AutomotiveLogistics";
-import Energy from "../pages/public/industries/Energy";
-import RetailLogistics from "../pages/public/industries/RetailLogistics";
-import IndustrialLogistics from "../pages/public/industries/IndustrialLogistics";
-import Technology from "../pages/public/industries/Technology";
+const HealthcareLogistics = lazy(() => import("../pages/public/industries/HealthcareLogistics"));
+const AutomotiveLogistics = lazy(() => import("../pages/public/industries/AutomotiveLogistics"));
+const Energy = lazy(() => import("../pages/public/industries/Energy"));
+const RetailLogistics = lazy(() => import("../pages/public/industries/RetailLogistics"));
+const IndustrialLogistics = lazy(() => import("../pages/public/industries/IndustrialLogistics"));
+const Technology = lazy(() => import("../pages/public/industries/Technology"));
 
 // Solutions
-import Solutions from "../pages/public/solutions/Solutions";
-import AirFreight from "../pages/public/solutions/AirFreight";
-import SeaFreight from "../pages/public/solutions/SeaFreight";
-import RoadTransportation from "../pages/public/solutions/RoadTransportation";
-import CustomsClearance from "../pages/public/solutions/CustomsClearance";
-import ProjectTransport from "../pages/public/solutions/ProjectTransport";
-import WarehousingDistribution from "../pages/public/solutions/WarehousingDistribution";
-import Consolidations from "../pages/public/solutions/Consolidations";
-import CargoInsurance from "../pages/public/solutions/CargoInsurance";
+const Solutions = lazy(() => import("../pages/public/solutions/Solutions"));
+const AirFreight = lazy(() => import("../pages/public/solutions/AirFreight"));
+const SeaFreight = lazy(() => import("../pages/public/solutions/SeaFreight"));
+const RoadTransportation = lazy(() => import("../pages/public/solutions/RoadTransportation"));
+const CustomsClearance = lazy(() => import("../pages/public/solutions/CustomsClearance"));
+const ProjectTransport = lazy(() => import("../pages/public/solutions/ProjectTransport"));
+const WarehousingDistribution = lazy(() => import("../pages/public/solutions/WarehousingDistribution"));
+const Consolidations = lazy(() => import("../pages/public/solutions/Consolidations"));
+const CargoInsurance = lazy(() => import("../pages/public/solutions/CargoInsurance"));
 
 // Auth pages
-import Login from "../pages/auth/Login";
-import ForgotPassword from "../pages/auth/ForgotPassword";
-import ActivateAccount from "../pages/auth/ActivateAccount";
-import ResetPassword from "../pages/auth/ResetPassword";
+const ForgotPassword = lazy(() => import("../pages/auth/ForgotPassword"));
+const ActivateAccount = lazy(() => import("../pages/auth/ActivateAccount"));
+const ResetPassword = lazy(() => import("../pages/auth/ResetPassword"));
 
 // Internal pages
-import Dashboard from "../pages/internal/shared/Dashboard";
-import OceanTransportDashboard from "../pages/internal/operations/OceanTransport/OceanTransportDashboard";
-import FtlAirportPage from "../pages/internal/operations/FtlAirport/FtlAirportPage";
-import Profile from "../pages/internal/shared/Profile";
-import Users from "../pages/internal/super-admin/Users";
-import Roles from "../pages/internal/super-admin/Roles";
-import AccountManagerAssignments from "../pages/internal/super-admin/AccountManagerAssignments";
-import Customers from "../pages/internal/shared/Customers";
-import Content from "../pages/internal/super-admin/Content";
-import Locations from "../pages/internal/super-admin/Locations";
-import AgentOpportunities from "../pages/internal/super-admin/AgentOpportunities";
-import Quotations from "../pages/internal/super-admin/Quotations";
-import RecruitmentRequests from "../pages/internal/super-admin/RecruitmentRequests";
-import ContactInquiries from "../pages/internal/super-admin/ContactInquiries";
-import OperationsLookups from "../pages/internal/super-admin/OperationsLookups";
+const Dashboard = lazy(() => import("../pages/internal/shared/Dashboard"));
+const OceanTransportDashboard = lazy(() => import("../pages/internal/operations/OceanTransport/OceanTransportDashboard"));
+const FtlAirportPage = lazy(() => import("../pages/internal/operations/FtlAirport/FtlAirportPage"));
+const Profile = lazy(() => import("../pages/internal/shared/Profile"));
+const Users = lazy(() => import("../pages/internal/super-admin/Users"));
+const Roles = lazy(() => import("../pages/internal/super-admin/Roles"));
+const AccountManagerAssignments = lazy(() => import("../pages/internal/super-admin/AccountManagerAssignments"));
+const Customers = lazy(() => import("../pages/internal/shared/Customers"));
+const Content = lazy(() => import("../pages/internal/super-admin/Content"));
+const Locations = lazy(() => import("../pages/internal/super-admin/Locations"));
+const AgentOpportunities = lazy(() => import("../pages/internal/super-admin/AgentOpportunities"));
+const Quotations = lazy(() => import("../pages/internal/super-admin/Quotations"));
+const RecruitmentRequests = lazy(() => import("../pages/internal/super-admin/RecruitmentRequests"));
+const ContactInquiries = lazy(() => import("../pages/internal/super-admin/ContactInquiries"));
+const OperationsLookups = lazy(() => import("../pages/internal/super-admin/OperationsLookups"));
 
 // Customer pages
-import CustomerDashboard from "../pages/customer/CustomerDashboard";
-import CustomerTeamAccess from "../pages/customer/CustomerTeamAccess";
-import CustomerProfile from "../pages/customer/CustomerProfile";
+const CustomerDashboard = lazy(() => import("../pages/customer/CustomerDashboard"));
+const CustomerTeamAccess = lazy(() => import("../pages/customer/CustomerTeamAccess"));
+const CustomerProfile = lazy(() => import("../pages/customer/CustomerProfile"));
 
 // Sub Account pages
-import SubAccountDashboard from "../pages/sub-account/SubAccountDashboard";
-import SubAccountProfile from "../pages/sub-account/SubAccountProfile";
+const SubAccountDashboard = lazy(() => import("../pages/sub-account/SubAccountDashboard"));
+const SubAccountProfile = lazy(() => import("../pages/sub-account/SubAccountProfile"));
 
 function PortalGuard({ allowedTokenType, children }) {
   const token = localStorage.getItem("accessToken");
@@ -126,8 +128,19 @@ function PortalGuard({ allowedTokenType, children }) {
   }
 }
 
+function PublicNotFound() {
+  return (
+    <main className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-6 text-center">
+      <h1 className="text-2xl font-semibold text-brand-primary">Page not found</h1>
+      <p className="text-brand-text">The requested page does not exist.</p>
+      <Link to="/" className="text-brand-primary underline">Back to Home</Link>
+    </main>
+  );
+}
+
 export default function AppRoutes() {
   return (
+    <Suspense fallback={<LoadingScreen />}>
     <Routes>
       {/* Public Routes */}
       <Route element={<WebsiteLayout />}>
@@ -195,6 +208,7 @@ export default function AppRoutes() {
         />
         <Route path="/solutions/consolidations" element={<Consolidations />} />
         <Route path="/solutions/cargo-insurance" element={<CargoInsurance />} />
+        <Route path="*" element={<PublicNotFound />} />
       </Route>
 
       {/* Auth Routes */}
@@ -333,8 +347,7 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
+    </Suspense>
   );
 }

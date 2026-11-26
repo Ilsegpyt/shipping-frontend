@@ -19,8 +19,38 @@ export const normalizePath = (value) => {
 };
 export function resolveStaticLinkUrl(title, existingUrl = "") {
   const heading = normalizeTitle(title);
-  const path = normalizePath(existingUrl);
+  const destination = getSafeCmsLink(existingUrl);
+  const path = destination?.to ? normalizePath(destination.to) : "";
   const page = HERO_PAGES.find(item => item.titles.includes(heading))
     || HERO_PAGES.find(item => item.paths.includes(path));
   return page?.paths[0] || "";
+}
+
+// CMS links may target a root-relative route or an absolute HTTP(S) URL.
+export function getSafeCmsLink(value) {
+  const url = String(value || "").trim();
+  if (
+  !url ||
+  url.includes("\\") ||
+  [...url].some((char) => char.charCodeAt(0) <= 32) ||
+  url.startsWith("//")
+) {
+  return null;
+}
+  if (!url.startsWith("/") && !/^https?:\/\//i.test(url)) return null;
+  try {
+    const parsed = new URL(url, window.location.origin);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) return null;
+    if (parsed.origin === window.location.origin) {
+      return { to: `${parsed.pathname}${parsed.search}${parsed.hash}` };
+    }
+    return { href: parsed.href };
+  } catch {
+    return null;
+  }
+}
+
+export function resolveCmsLinkDestination(item) {
+  const automaticUrl = resolveStaticLinkUrl(item?.title, item?.linkUrl);
+  return getSafeCmsLink(automaticUrl || item?.linkUrl);
 }

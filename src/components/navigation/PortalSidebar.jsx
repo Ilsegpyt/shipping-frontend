@@ -58,7 +58,8 @@ export default function PortalSidebar({ title, navigationSections, user, initial
                     return (
                         <div key={section.section}>
                             <p className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider ils-portal-nav-label">
-                                {section.section}
+                                {/* {section.section} */}
+                                Main 
                             </p>
 
                             <div className="space-y-1">

@@ -1,5 +1,5 @@
 import { LayoutDashboard } from 'lucide-react';
-import dashboardHero from '../../assets/branding/dashboard-hero.png';
+import dashboardHero from '../../assets/branding/dashboard-hero.webp';
 import './dashboard-home.css';
 
 export default function DashboardHero({ user, workspace, description, role }) {

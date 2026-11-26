@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import ilsLogo from "../../assets/branding/ILS_Egypt_navy_transparent.jpg";
-import contentService from "../../services/contentService";
+import ilsLogo from "../../assets/branding/ILS_Egypt_navy_transparent.webp";
+import contentService from "../../services/publicContentService";
 import { cmsPagePath } from "../../utils/cmsPageRoutes";
+import { resolveCmsLinkDestination } from "../../utils/staticLinkPages";
 
 // Temporarily hide Certificates from public navigation, including CMS-generated links.
 // Set to true to restore navigation when the page is re-enabled.
@@ -106,18 +107,6 @@ const getContentTypeName = (type) =>
     ? type
     : ({ 1: "Category", 2: "Page", 3: "Post", 4: "Link" }[type] || "");
 
-// Only allow website-relative paths and HTTP(S) destinations.
-function getSafeCmsLink(value) {
-  const url = String(value || "").trim();
-  if (!url || /[\\\u0000-\u0020]/.test(url)) return null;
-  if (url.startsWith("/") && !url.startsWith("//")) return { to: url };
-  try {
-    const parsed = new URL(url);
-    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) return null;
-    return { href: parsed.href };
-  } catch { return null; }
-}
-
 const normalizeNavTitle = (value = "") =>
   value.trim().toLowerCase().replace(/^ils\s+/, "").replace(/&/g, "and").replace(/\s+/g, " ");
 
@@ -177,7 +166,7 @@ async function getDynamicPageLinks(rootCategory) {
           ? `${categoryTrail.join(" / ")} / `
           : "";
         if (type === "Link") {
-          const destination = getSafeCmsLink(child.linkUrl);
+          const destination = resolveCmsLinkDestination(child);
           if (destination) links.push({ label: `${prefix}${child.title}`, ...destination });
           continue;
         }
@@ -302,8 +291,9 @@ export default function WebsiteNavbar() {
 
         const nextGroups = navGroups.map((group) => ({ ...group, links: [...group.links] }));
 
-        for (const root of categoryRoots) {
-          const links = await getDynamicPageLinks(root);
+        const categoryLinks = await Promise.all(categoryRoots.map(getDynamicPageLinks));
+        for (const [index, root] of categoryRoots.entries()) {
+          const links = categoryLinks[index];
 
           const groupLabel = getNavGroupLabel(root.title || "");
           let group = nextGroups.find(
@@ -404,7 +394,7 @@ export default function WebsiteNavbar() {
             to={portalPath}
             className="hidden shrink-0 rounded-none bg-brand-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-primary-hover lg:inline-flex"
           >
-            Portal
+            My ILS
           </Link>
 
           {/* Mobile controls */}
@@ -413,7 +403,7 @@ export default function WebsiteNavbar() {
               to={portalPath}
               className="rounded-none bg-brand-primary px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-primary-hover sm:px-4 sm:text-sm"
             >
-              Portal
+              My ILS
             </Link>
 
             <button

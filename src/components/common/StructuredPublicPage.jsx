@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import contentService from "../../services/contentService";
+import contentService from "../../services/publicContentService";
 import { StructuredAboutRenderer } from "./StructuredAboutContent";
 
 const getTypeName = (type) =>
@@ -52,13 +52,14 @@ export default function StructuredPublicPage({
           throw new Error(`${pageTitle} page was not found under ${parentCategoryTitle} in CMS.`);
         }
 
-        const fullResponse = await contentService.getById(summary.id);
-        if (!fullResponse?.data) {
+        // Children already returns the full ContentDto.
+        const fullResponse = summary;
+        if (!fullResponse) {
           throw new Error(`${pageTitle} page details could not be loaded from CMS.`);
         }
 
         if (active) {
-          setPage(fullResponse.data);
+          setPage(fullResponse);
           setParentTitle(parent.title || parentCategoryTitle);
         }
       } catch (e) {

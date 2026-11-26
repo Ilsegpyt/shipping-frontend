@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
-import { collectCmsPages } from "../../utils/cmsPageRoutes";
-import contentService from "../../services/contentService";
+import { collectCmsPages, resolveCmsRecordLink } from "../../utils/cmsPageRoutes";
+import contentService from "../../services/publicContentService";
 import { StructuredAboutRenderer } from "../../components/common/StructuredAboutContent";
 
 const getTypeName = (type) =>
@@ -40,14 +40,27 @@ export default function CmsPublicPage() {
         setLoading(true);
         setPage(null);
         setError("");
-        const allPages = await collectCmsPages(contentService);
+        const allPages = await collectCmsPages(contentService, true);
         const requestedPath = decodeURI(location.pathname).replace(/\/$/, "").toLowerCase();
         const matched = contentId
           ? allPages.find((item) => String(item.id) === String(contentId))
           : allPages.find((item) => item.publicPath.toLowerCase() === requestedPath);
         if (!matched) throw new Error("This CMS page could not be found.");
-        const response = await contentService.getById(matched.id);
-        const content = response?.data;
+        const content = matched; // collectCmsPages retains the complete ContentDto.
+
+        if (getTypeName(content.type) === "Link") {
+          if (isHiddenCertificatesPage(content)) {
+            if (active) navigate("/", { replace: true });
+            return;
+          }
+          const destination = resolveCmsRecordLink(content, allPages);
+          if (!destination) throw new Error("This CMS link has an invalid or circular destination.");
+          if (active) {
+            if (destination.href) window.location.replace(destination.href);
+            else navigate(destination.to, { replace: true });
+          }
+          return;
+        }
 
         if (!content || getTypeName(content.type) !== "Page") {
           throw new Error("This CMS page could not be found.");

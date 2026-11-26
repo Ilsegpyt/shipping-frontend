@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
+import LoadingScreen from "./LoadingScreen";
 import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import ilsLogo from '../../assets/branding/ils-logo-horizontal.png';
@@ -189,7 +190,7 @@ export default function PortalLayout({
                 <main
                     className={`min-w-0 p-4 sm:p-6 lg:p-8 ${mainClassName}`}
                 >
-                    <Outlet />
+                    <Suspense fallback={<LoadingScreen compact />}><Outlet /></Suspense>
                 </main>
             </div>
         </div>

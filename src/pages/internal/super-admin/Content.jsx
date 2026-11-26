@@ -1,4 +1,4 @@
-import { resolveStaticLinkUrl } from "../../../utils/staticLinkPages";
+import { resolveStaticLinkUrl, getSafeCmsLink } from "../../../utils/staticLinkPages";
 import ApiFieldError from "../../../components/common/ApiFieldError";
 import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
 import { Plus, ChevronDown, ChevronRight, Ellipsis } from "lucide-react";
@@ -783,6 +783,11 @@ export default function Content() {
 
     }
 
+    if (form.type === "Link" && !getSafeCmsLink(linkUrl)) {
+      setSaveError("Enter a valid website path (e.g. /resources/cbm-calculator) or an HTTP(S) URL.");
+      return;
+    }
+
     /*
       V1/V2 save-mode selection (disabled):
     const pageContentOrder =
@@ -1412,11 +1417,11 @@ export default function Content() {
                 </label>
 
                 <input
-                  type="url"
+                  type="text"
                   name="linkUrl"
                   value={form.linkUrl}
                   onChange={handleFormChange}
-                  placeholder="https\\://example.com"
+                  placeholder="/resources/example or https://example.com"
                   className="w-full rounded-lg border border-brand-border px-3 py-2.5 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
                 />
 <ApiFieldError errors={saveFields} field={"linkUrl"} />

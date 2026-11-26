@@ -1,6 +1,6 @@
 
 import { useEffect, useState } from "react";
-import contentService from "../../../services/contentService";
+import contentService from "../../../services/publicContentService";
 
 import { StructuredAboutRenderer } from "../../../components/common/StructuredAboutContent";
 
@@ -86,14 +86,15 @@ export default function StructuredAboutPage({
           );
         }
 
-        const fullResponse = await contentService.getById(summary.id);
+        // Children already returns the full ContentDto.
+        const fullResponse = summary;
 
-        if (!fullResponse?.data) {
+        if (!fullResponse) {
           throw new Error(`Could not load "${pageTitle}" from CMS.`);
         }
 
         if (active) {
-          setPage(fullResponse.data);
+          setPage(fullResponse);
           setParentTitle(category.title || parentCategoryTitle);
         }
       } catch (err) {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import contentService from "../services/contentService";
+import contentService from "../services/publicContentService";
 import { cleanImageUrl } from "../utils/mediaUrl";
 
 const normalize = (value) => String(value || "").trim().toLowerCase();
@@ -20,10 +20,10 @@ export default function useSolutionHeroImages() {
         const childrenResponse = await contentService.getChildren(category.id);
         const children = Array.isArray(childrenResponse.data) ? childrenResponse.data : [];
         const pages = children.filter((item) => typeName(item.type) === "Page" && item.id);
-        const entries = await Promise.all(pages.map(async (page) => {
-          const details = page.featuredImage ? page : (await contentService.getById(page.id)).data;
-          return [normalize(page.title), cleanImageUrl(details?.featuredImage || "", import.meta.env.VITE_API_BASE_URL || "")];
-        }));
+        const entries = pages.map((page) => [
+          normalize(page.title),
+          cleanImageUrl(page.featuredImage || "", import.meta.env.VITE_API_BASE_URL || ""),
+        ]);
         if (active) setImages(Object.fromEntries(entries));
       } catch (error) {
         console.error("Failed to load solution images:", error);

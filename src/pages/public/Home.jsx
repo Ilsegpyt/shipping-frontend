@@ -4,7 +4,7 @@ import { extractApiFieldErrors, extractApiErrorMessage } from '../../utils/error
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-import contentService from "../../services/contentService";
+import contentService from "../../services/publicContentService";
 import useSolutionHeroImages from "../../hooks/useSolutionHeroImages";
 import contactInquiriesService from "../../services/contactInquiriesService";
 import { cleanImageUrl } from "../../utils/mediaUrl";
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import heroVideo from "../../assets/website/hero/ilsvideo.mp4";
+import heroPoster from "../../assets/website/hero/ilsvideo-poster.webp";
 
 import seaFreight from "../../assets/website/solutions/seafreight.webp";
 
@@ -155,7 +156,7 @@ const getExcerpt = (body, maxLength = 180) => {
   return `${text.slice(0, maxLength).trim()}...`;
 };
 
-// Share the CMS request between Home news and Solutions, including remounts.
+// Share the CMS request while Home news and Solutions are loading.
 let allContentPromise = null;
 
 async function getAllContent() {
@@ -173,6 +174,9 @@ async function getAllContent() {
         visited.add(item.id);
         allContent.push(item);
 
+        // The backend allows children under Category and Page only.
+        if (!["Category", "Page"].includes(getContentTypeName(item.type))) return;
+
         try {
           const childrenResponse = await contentService.getChildren(item.id);
           const children = Array.isArray(childrenResponse.data)
@@ -187,9 +191,8 @@ async function getAllContent() {
 
     await collect(roots);
     return allContent;
-  })().catch((error) => {
+  })().finally(() => {
     allContentPromise = null;
-    throw error;
   });
 
   return allContentPromise;
@@ -458,6 +461,7 @@ function Home() {
         <video
           className="absolute inset-0 h-full w-full object-cover object-center"
           src={heroVideo}
+          poster={heroPoster}
           autoPlay
           muted
           loop

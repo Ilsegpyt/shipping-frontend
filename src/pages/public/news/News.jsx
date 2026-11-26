@@ -6,7 +6,7 @@ import { ArrowUpRight } from "lucide-react";
 import SharedCmsPageHero from "../../../components/common/SharedCmsPageHero";
 import newsHeroImage from "../../../assets/website/news/06deaf3c-354a-4853-a3d6-9a2e79884141.jpg";
 
-import contentService from "../../../services/contentService";
+import contentService from "../../../services/publicContentService";
 import { cleanImageUrl } from "../../../utils/mediaUrl";
 
 const API_BASE_URL =
@@ -83,16 +83,14 @@ const formatDate = (date) => {
     .replace(/ /g, "-");
 };
 
-let cachedPosts = null;
-
 export default function News() {
   const [searchParams] = useSearchParams();
 
   const selectedCategory = searchParams.get("category")?.trim() || "";
 
-  const [allPosts, setAllPosts] = useState(cachedPosts || []);
+  const [allPosts, setAllPosts] = useState([]);
 
-  const [loading, setLoading] = useState(!cachedPosts);
+  const [loading, setLoading] = useState(true);
 
   const [error, setError] = useState("");
 
@@ -104,16 +102,8 @@ export default function News() {
     let isMounted = true;
 
     const loadNews = async () => {
-      if (cachedPosts) {
-        setAllPosts(cachedPosts);
-        setLoading(false);
-        return;
-      }
-
       try {
-        if (!cachedPosts) {
-          setLoading(true);
-        }
+        setLoading(true);
 
         setError("");
 
@@ -143,6 +133,8 @@ export default function News() {
               visited.add(item.id);
 
               allContent.push(item);
+
+              if (!["Category", "Page"].includes(getContentTypeName(item.type))) return;
 
               try {
                 const childrenResponse = await contentService.getChildren(
@@ -203,7 +195,6 @@ export default function News() {
             to: `/news/${item.id}`,
           }));
 
-        cachedPosts = posts;
 
         if (isMounted) {
           setAllPosts(posts);
@@ -211,7 +202,7 @@ export default function News() {
       } catch (err) {
         console.error("Failed to load news:", err);
 
-        if (isMounted && !cachedPosts) {
+        if (isMounted) {
           setError(err?.message || "Failed to load news.");
         }
       } finally {

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, getMe } from '../../auth/authService';
 import { useAuth } from '../../auth/AuthContext';
+import dashboardHero from '../../assets/branding/dashboard-hero.webp';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -63,10 +64,9 @@ export default function Login() {
     return (
         <div
             className="relative flex min-h-screen items-center justify-center bg-slate-950 bg-cover bg-center"
-            style={{
-                backgroundImage: `url(${new URL('../../assets/branding/dashboard-hero.png', import.meta.url).href})`,
-            }}
         >
+            <img src={dashboardHero} alt="" aria-hidden="true" loading="eager" fetchPriority="high"
+                className="absolute inset-0 h-full w-full object-cover object-center" />
             <div className="absolute inset-0 bg-slate-950/65" />
 
             <div className="relative z-10 w-full max-w-md rounded-xl border border-white/20 bg-white p-8 shadow-2xl">
