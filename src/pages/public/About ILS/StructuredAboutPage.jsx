@@ -1,3 +1,4 @@
+import LoadingScreen from "../../../components/common/LoadingScreen";
 
 import { useEffect, useState } from "react";
 import contentService from "../../../services/publicContentService";
@@ -113,7 +114,7 @@ export default function StructuredAboutPage({
   return (
     <>
       {loading ? (
-        <main className="min-h-screen bg-brand-surface" />
+        <LoadingScreen compact label="Loading page..." />
       ) : error ? (
         <main className="flex min-h-[60vh] items-center justify-center px-6">
           <p className="text-center text-red-600">{error}</p>

@@ -1,3 +1,5 @@
+import { preload } from "react-dom";
+import { LoadingSpinner } from "../../components/common/LoadingScreen";
 import { sanitizePhoneInput } from "../../utils/phoneInput.js";
 import ApiFieldError from "../../components/common/ApiFieldError";
 import { extractApiFieldErrors, extractApiErrorMessage } from '../../utils/errorUtils.js';
@@ -199,6 +201,9 @@ async function getAllContent() {
 }
 
 function Home() {
+  preload(heroPoster, { as: "image", fetchPriority: "high" });
+  const [heroMediaReady, setHeroMediaReady] = useState(false);
+  const [newsLoading, setNewsLoading] = useState(true);
   const solutionImage = useSolutionHeroImages();
   const { hash } = useLocation();
   const [newsItems, setNewsItems] = useState([]);
@@ -306,6 +311,8 @@ function Home() {
         if (isMounted) {
           setNewsItems([]);
         }
+      } finally {
+        if (isMounted) setNewsLoading(false);
       }
     };
 
@@ -462,11 +469,22 @@ function Home() {
           className="absolute inset-0 h-full w-full object-cover object-center"
           src={heroVideo}
           poster={heroPoster}
+          preload="auto"
+          ref={(node) => { if (node && node.readyState >= 2) setHeroMediaReady(true); }}
+          onLoadedData={() => setHeroMediaReady(true)}
+          onCanPlay={() => setHeroMediaReady(true)}
+          onError={() => setHeroMediaReady(true)}
           autoPlay
           muted
           loop
           playsInline
         />
+
+        {!heroMediaReady && (
+          <div className="pointer-events-none absolute bottom-6 right-6 z-20 bg-brand-primary/80 p-3">
+            <LoadingSpinner small inverse showLabel={false} label="Loading hero video..." />
+          </div>
+        )}
 
         {/* Light gradient keeps the headline readable while showing the video. */}
         <div className="pointer-events-none absolute inset-0 " />
@@ -778,6 +796,11 @@ function Home() {
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-5 sm:mt-10 sm:grid-cols-2 sm:gap-6 lg:mt-14 lg:grid-cols-3">
+            {newsLoading && (
+              <div className="col-span-full flex justify-center py-10">
+                <LoadingSpinner label="Loading news..." />
+              </div>
+            )}
             {newsItems.map((news) => (
               <Link
                 key={news.id}

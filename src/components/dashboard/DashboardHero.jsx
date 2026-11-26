@@ -1,8 +1,10 @@
+import { preload } from "react-dom";
 import { LayoutDashboard } from 'lucide-react';
 import dashboardHero from '../../assets/branding/dashboard-hero.webp';
 import './dashboard-home.css';
 
 export default function DashboardHero({ user, workspace, description, role }) {
+    preload(dashboardHero, { as: "image", fetchPriority: "high" });
     const roleName = user?.roleName || role;
 
     return (

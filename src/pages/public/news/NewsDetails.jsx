@@ -1,3 +1,4 @@
+import LoadingScreen from "../../../components/common/LoadingScreen";
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowUpRight } from 'lucide-react';
@@ -166,9 +167,7 @@ export default function NewsDetails() {
     }, [slug]);
 
     if (loading) {
-        return <main className="min-h-screen bg-brand-surface">
-            <SharedCmsPageHero label="Media Room" title="Loading news article..." image={newsHeroImage} />
-        </main>;
+        return <LoadingScreen compact label="Loading news article..." />;
     }
 
     if (error || !content) {

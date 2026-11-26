@@ -1,3 +1,4 @@
+import LoadingScreen from "../../../components/common/LoadingScreen";
 import { useEffect, useMemo, useState } from "react";
 
 import { Link, useSearchParams } from "react-router-dom";
@@ -238,9 +239,7 @@ export default function News() {
       <section className="bg-brand-surface py-20 sm:py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           {loading && (
-            <div className="py-16 text-center text-sm text-brand-muted">
-              Loading news...
-            </div>
+            <LoadingScreen compact label="Loading news..." />
           )}
 
           {!loading && error && (

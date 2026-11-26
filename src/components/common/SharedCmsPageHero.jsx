@@ -1,3 +1,4 @@
+import PriorityHeroImage from "./PriorityHeroImage";
 import useCmsStaticHeroImage from "../../hooks/useCmsStaticHeroImage";
 import { Link, useLocation } from "react-router-dom";
 import { cleanImageUrl } from "../../utils/mediaUrl";
@@ -23,8 +24,8 @@ export default function SharedCmsPageHero({ label, title, children, image }) {
 
   return (
     <header className="ils-cms-hero relative isolate min-h-[240px] overflow-hidden bg-brand-bg sm:min-h-[280px] lg:min-h-[300px]">
-      <div aria-hidden="true" className="absolute inset-y-0 right-0 w-full sm:w-[60%] lg:w-[55%]">
-        {!heroLoading && <img src={resolvedImage} alt="" loading="eager" fetchPriority="high" className="h-full w-full object-cover object-center" />}
+      <div className="absolute inset-y-0 right-0 w-full sm:w-[60%] lg:w-[55%]">
+        <PriorityHeroImage src={resolvedImage} pending={heroLoading} className="h-full w-full object-cover object-center" />
       </div>
       <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-brand-bg/25 via-brand-bg/15 to-brand-bg/5" />
       {/* On mobile the image fills the hero, so darken it for inverse (white) text. */}

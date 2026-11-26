@@ -1,3 +1,4 @@
+import LoadingScreen from "./LoadingScreen";
 import { useEffect, useState } from "react";
 import contentService from "../../services/publicContentService";
 import { StructuredAboutRenderer } from "./StructuredAboutContent";
@@ -74,7 +75,7 @@ export default function StructuredPublicPage({
   }, [pageTitle, parentCategoryTitle]);
 
   return loading ? (
-    <main className="min-h-screen bg-slate-50" />
+    <LoadingScreen compact label="Loading page..." />
   ) : error ? (
     <main className="flex min-h-[60vh] items-center justify-center px-6">
       <p className="text-red-600">{error}</p>

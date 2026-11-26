@@ -1,3 +1,4 @@
+import LoadingScreen from "../../components/common/LoadingScreen";
 import { useEffect, useState } from "react";
 import { Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { collectCmsPages, resolveCmsRecordLink } from "../../utils/cmsPageRoutes";
@@ -90,7 +91,7 @@ export default function CmsPublicPage() {
     return () => { active = false; };
   }, [contentId, location.pathname, navigate]);
 
-  if (loading) return <main className="min-h-[60vh] bg-brand-surface" />;
+  if (loading) return <LoadingScreen compact label="Loading page..." />;
 
   if (error || !page) {
     return (

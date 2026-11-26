@@ -1,3 +1,4 @@
+import { LoadingSpinner } from "../../components/common/LoadingScreen";
 import { extractApiErrorMessage } from '../../utils/errorUtils.js';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -126,7 +127,12 @@ export default function Login() {
                         disabled={loading}
                         className="w-full rounded-lg bg-blue-600 py-2.5 font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
                     >
-                        {loading ? 'Signing in...' : 'Sign in'}
+                        {loading ? (
+                            <span className="flex items-center justify-center gap-2">
+                                <LoadingSpinner small inverse showLabel={false} label="Signing in" />
+                                Signing in...
+                            </span>
+                        ) : 'Sign in'}
                     </button>
 
                     <button
