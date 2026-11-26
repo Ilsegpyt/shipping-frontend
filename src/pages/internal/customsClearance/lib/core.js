@@ -21,6 +21,7 @@
         common.shipmentNumber,
         common.clientId,
         common.certificateNumber,
+        f("track", "Track", "المسار", "text", 0),
         f("customsDeclarations", "Customs declarations", "عروض الشهادة", "text", 0),
         f("acidNumber", "ACID #", "ACID#", "text", 0),
         common.clearanceType,
@@ -91,6 +92,7 @@
       { key: "shipmentNumber", en: "Shipment#", ar: "رقم العمليه" },
       { key: "clientId", en: "Cleint", ar: "إسم العميل" },
       { key: "certificateNumber", en: "CERT#", ar: "الشهادة " },
+      { key: "track", en: "Track", ar: "المسار" },
       { key: "customsDeclarations", en: "Customs Declarations", ar: "عروض الشهادة" },
       { key: "acidNumber", en: "ACID#", ar: "ACID#" },
       { key: "clearanceType", en: "clearance Type", ar: "نوع البيان" },
@@ -169,7 +171,11 @@
     Domestic: ["shipmentNumber", "commercialInvoiceNumber", "certificateNumber"],
     OceanExport: ["shipmentNumber", "certificateNumber", "bookingNumber", "commercialInvoiceNumber"],
   };
-  const dropdownKeys = ["clientId", "clearanceType", "containerType", "pod", "pol", "shippingLine", "terminal", "currentStage"];
+  const dropdownKeys = ["clientId", "clearanceType", "containerType", "pod", "pol", "shippingLine", "terminal", "currentStage", "track"];
+  // Ocean Import customs track (API values). Inspection date exists only for Red and GreenImports.
+  const trackOptions = ["Blue", "Yellow", "Green", "Red", "GreenImports"];
+  const inspectionTracks = ["Red", "GreenImports"];
+  const allowsInspection = (track) => inspectionTracks.includes(clean(track));
   const containerOptions = [
     "DryStandard20",
     "DryStandard40",
@@ -197,8 +203,7 @@
     "Awaiting for Form 4",
     "Awaiting for Insurance Policy",
     "Awaiting for Freight Invoice",
-    "Certificate has been Opened & Customs Pricing has been completed",
-    "The inspection date has been scheduled.",
+    "Certificate has been Opened & The inspection date has been scheduled.",
     "Inspection has been completed, and we are waiting for the inspection report to be Approved",
     "Under Customs Pricing Procedures",
     "Customs Pricing has been completed, and customs duties are pending approval.",
@@ -215,6 +220,7 @@
     return clean(v);
   }
   function inactive(kind, key, row) {
+    if (kind === "OceanImport" && key === "inspectionDate") return !allowsInspection(value(row, "track"));
     return kind === "OceanExport" && key === "customsArea" && clearanceType(row.clearanceType) !== "Bosla";
   }
   function activeKeys(kind, row) {
@@ -248,7 +254,7 @@
   const updateKeys = {
     OceanImport: [
       "hbl", "customsDeclarations", "numberOfContainers", "containerType", "containers", "shippingLine", "commodity", "pod", "terminal",
-      "etaDate", "ataDate", "freeTime", "dateOfFreeTimeEnd", "doDate", "missingDocs", "inspectionDate", "currentStage",
+      "etaDate", "ataDate", "freeTime", "dateOfFreeTimeEnd", "doDate", "missingDocs", "track", "inspectionDate", "currentStage",
     ],
     OceanExport: ["customsArea", "containerType", "containers", "cutoff", "loadingDate", "certificateDate", "dateOfCoo", "dateOfReceivingForm13"],
     Domestic: ["missingDocs", "dateOfReceivingMissingDocs"],
@@ -278,8 +284,41 @@
       if (clean(row[key]) && Number(row[key]) < 1) errors.push({ key, code: "positive", message: "Quantity must be at least 1" });
     if (kind !== "Domestic" && isSplit(row) && containerParts(row).length !== Number(row.numberOfContainers))
       errors.push({ key: "containerType", code: "containers", message: "One type is needed for every container" });
+    if (kind === "OceanImport") errors.push(...arrivalIssues(row, errors));
     return errors.map((e) => ({ ...e, code: e.code || (/exists/.test(e.message) ? "duplicate" : /required/.test(e.message) ? "required" : "invalid") }));
   }
+  // Same rules as UpdateCustomsShipmentCommandValidator (Alerts 2 and 3). Dates are "YYYY-MM-DD".
+  const addDays = (date, n) => new Date(Date.parse(date + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+  function arrivalIssues(row, prior = []) {
+    const bad = (key) => prior.some((e) => e.key === key);
+    if (["ataDate", "freeTime", "dateOfFreeTimeEnd", "doDate"].some(bad)) return [];
+    const out = [];
+    const ata = clean(row.ataDate);
+    const end = clean(row.dateOfFreeTimeEnd);
+    const doDate = clean(row.doDate);
+    const free = clean(row.freeTime) === "" ? null : Number(row.freeTime);
+    if (end) {
+      if (!ata) out.push({ key: "dateOfFreeTimeEnd", code: "needsAta" });
+      else if (free == null || free < 1) out.push({ key: "dateOfFreeTimeEnd", code: "needsFreeTime" });
+      else {
+        const expected = addDays(ata, free - 1);
+        if (end !== expected) out.push({ key: "dateOfFreeTimeEnd", code: "freeTimeEnd", expected, ata, free });
+      }
+    }
+    if (doDate) {
+      if (!ata) out.push({ key: "doDate", code: "needsAta" });
+      else if (doDate < ata) out.push({ key: "doDate", code: "beforeAta", ata });
+    }
+    return out.map((e) => ({ message: e.code, ...e }));
+  }
+
+  // Alerts 1 and 4: a row's alert levels as sent by the API (null when the row has none).
+  function alertsOf(row) {
+    const a = row?.alerts;
+    return { eta: a?.eta || null, freeTime: a?.freeTime || null };
+  }
+  const alertFilters = ["EtaSoon", "EtaOverdue", "FreeTimeSoon", "FreeTimeExpired"];
+
   const blank = () => ({ OceanImport: [], Domestic: [], OceanExport: [] });
   const clean = (v) => (v == null ? "" : String(v).trim());
   const norm = (v) =>
@@ -346,6 +385,8 @@
     dropdownKeys,
     containerOptions,
     stageOptions,
+    trackOptions,
+    allowsInspection,
     inactive,
     locked,
     containerParts,
@@ -357,6 +398,9 @@
     activeKeys,
     clearanceType,
     issues,
+    arrivalIssues,
+    alertsOf,
+    alertFilters,
     blank,
     clean,
     norm,

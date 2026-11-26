@@ -376,11 +376,11 @@
   z-index: auto;
 }
 
-/* Elevate FTL root when any modal is open so it renders above sticky app headers/sidebars */
+/* Elevate FTL root when any modal is open so it renders above sticky app headers/sidebars and slide-over drawers */
 .ftl-root.ftl-has-modal,
 .ftl-root:has(.modal.open) {
   position: relative !important;
-  z-index: 1000 !important;
+  z-index: 10000 !important;
 }
 
 body.ftl-modal-open {

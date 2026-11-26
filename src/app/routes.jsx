@@ -305,6 +305,12 @@ export default function AppRoutes() {
             <Route index element={<CustomsClearanceWorkspace defaultView="entry" />} />
           </Route>
           <Route
+            path="/customs-clearance/finance"
+            element={<ProtectedRoute requiredPermission="customsclearance.shipments.view" />}
+          >
+            <Route index element={<CustomsClearanceWorkspace defaultView="finance" />} />
+          </Route>
+          <Route
             path="/customs-clearance"
             element={<ProtectedRoute requiredPermission="customsclearance.shipments.view" />}
           >

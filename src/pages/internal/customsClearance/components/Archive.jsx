@@ -11,8 +11,9 @@ import MailDialog from "./dialogs/MailDialog.jsx";
 
 /** Read-only archive with its own search, copy, export and email. */
 export function ClosedModal() {
-  const { fmt, setClosedOpen, openDialog } = useApp();
+  const { fmt, setClosedOpen, openDialog, closedKind, tables, selections, filters } = useApp();
   const { t } = fmt;
+  const closedSelectedIds = [...(selections.closed || [])];
   return (
     <Modal id="closedModal" titleId="closedTitle" boxClass="box archive-box" title={t("Closed shipments", "الشحنات المغلقة")} onClose={() => setClosedOpen(false)}>
       <p id="closedNote" className="modal-note">
@@ -24,8 +25,40 @@ export function ClosedModal() {
       <div className="ebar">
         <KindTabs id="closedTabs" scope="closed" />
         <span className="espacer" />
-        <button className="ebtn" onClick={() => openDialog(<ExcelExportDialog scope="closed" />)}>{t("Export Excel", "تصدير Excel")}</button>
-        <button className="ebtn" onClick={() => openDialog(<MailDialog scope="closed" />)}>{t("Email", "إيميل")}</button>
+        <button
+          className="ebtn"
+          onClick={() =>
+            openDialog(
+              <ExcelExportDialog
+                scope="closed"
+                reportType={closedKind}
+                status="Closed"
+                initialRows={tables.closed.items}
+                preSelectedIds={closedSelectedIds}
+                search={filters.closed.q}
+              />,
+            )
+          }
+        >
+          {t("Save as Excel", "حفظ كـ Excel")}
+        </button>
+        <button
+          className="ebtn"
+          onClick={() =>
+            openDialog(
+              <MailDialog
+                scope="closed"
+                reportType={closedKind}
+                status="Closed"
+                initialRows={tables.closed.items}
+                preSelectedIds={closedSelectedIds}
+                search={filters.closed.q}
+              />,
+            )
+          }
+        >
+          {t("Email", "إيميل")}
+        </button>
       </div>
       <TableTools scope="closed" />
       <TablePager scope="closed" />

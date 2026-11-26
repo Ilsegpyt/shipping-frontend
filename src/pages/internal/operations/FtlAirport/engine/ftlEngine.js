@@ -51,6 +51,17 @@ export function createFtlEngine(root, options = {}) {
   const ILS = options.host || {};
   const __extra = {};
   let LAST_COUNTS = options.counts ? { ...options.counts } : null;
+  const EXPORT_POLICY = {
+    canExportExcel: options.canExportExcel !== false,
+    maxExcelOperations: Number.isFinite(options.maxExcelOperations) && options.maxExcelOperations > 0 ? options.maxExcelOperations : null,
+  };
+  const applyExportButtonVisibility = () => {
+    const show = EXPORT_POLICY.canExportExcel !== false;
+    ['eSave', 'deliveredExport', 'inactiveExport'].forEach(id => {
+      const btn = $(id);
+      if (btn) btn.style.display = show ? '' : 'none';
+    });
+  };
   const LOADED_DIRS = new Set();
   const printHost = document.createElement('div');
   printHost.className = 'ftl-root ftl-print-host';
@@ -4262,6 +4273,7 @@ export function createFtlEngine(root, options = {}) {
     $('deliveredCopy').disabled = !selectedRefs.size;
     $('deliveredExport').textContent = E.save; $('deliveredMail').textContent = E.mail;
     $('deliveredExport').disabled = !ships.length; $('deliveredMail').disabled = !ships.length;
+    applyExportButtonVisibility();
     const W = t('workflow'), actions = $('deliveredActions'), selected = $('reopenShipment').value;
     actions.hidden = !REOPEN_GRANTED || !LIVE || !ships.length;
     $('reopenLabel').textContent = W.selectShipment; $('reopenAction').textContent = W.reopen;
@@ -4335,6 +4347,7 @@ export function createFtlEngine(root, options = {}) {
       $('inactiveExport').textContent = E.save;
       $('inactiveExport').disabled = !ships.length;
     }
+    applyExportButtonVisibility();
     if ($('inactiveMail')) {
       $('inactiveMail').textContent = E.mail;
       $('inactiveMail').disabled = !ships.length;
@@ -7282,7 +7295,8 @@ export function createFtlEngine(root, options = {}) {
     saveBlob(blob, name); SAVED_AT = new Date(); DIRTY = false; renderSysBar(); toast(t('entry').saved);
     return { blob, name };
   }
-  function tripPickerHTML(dir, prefix, defaults, scope = 'active') {
+  function tripPickerHTML(dir, prefix, defaults, scope = 'active', maxOps = null) {
+    const hasLimit = Number.isFinite(maxOps) && maxOps > 0;
     const isAll = dir === 'ALL';
     const cols = isAll
       ? [...COLS.Import.filter(c => c.t !== 'upd'), ...COLS.Export.filter(c => c.t !== 'upd' && !COLS.Import.some(ic => ic.k === c.k))]
@@ -7312,7 +7326,27 @@ export function createFtlEngine(root, options = {}) {
         getRowForShip = (sh, ri) => ENTRY[dir]?.[ri] || {};
       }
     }
-    const chosen = Array.isArray(defaults) ? new Set(defaults) : null;
+    let chosen = Array.isArray(defaults) ? new Set(defaults) : null;
+    if (hasLimit) {
+      if (chosen) {
+        chosen = new Set([...chosen].slice(0, maxOps));
+      } else {
+        chosen = new Set(ships.slice(0, maxOps).map(sh => sh.ref));
+      }
+    }
+    const initialCheckedCount = chosen ? ships.filter(sh => chosen.has(sh.ref)).length : ships.length;
+    const allOpsChecked = hasLimit
+      ? (ships.length > 0 && initialCheckedCount >= Math.min(maxOps, ships.length))
+      : !chosen;
+    const selectAllLabel = hasLimit
+      ? (AR() ? `تحديد (حد أقصى ${maxOps})` : `Select (max ${maxOps})`)
+      : (AR() ? 'اختيار الكل' : 'Select all');
+    const limitNoticeHTML = hasLimit
+      ? `<div class="${prefix}LimitNotice" style="margin:8px 0 6px;padding:7px 11px;border-radius:8px;background:#fffbeb;border:1px solid #fde68a;color:#92400e;font-size:11.5px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>${AR() ? `⚠️ متاح لك تصدير حد أقصى ${maxOps} عمليات فقط وفقاً لصلاحيات رتبتك.` : `⚠️ You are permitted to export a maximum of ${maxOps} operations based on your role.`}</span>
+          <span class="${prefix}LimitCount" style="font-weight:700;background:#fef3c7;color:#78350f;padding:2px 7px;border-radius:5px;border:1px solid #fcd34d;white-space:nowrap">${initialCheckedCount} / ${maxOps}</span>
+        </div>`
+      : '';
     const clientList = [...new Set(ships.map(sh => cellVal(getRowForShip(sh, sh.rows[0]), 'client')).filter(Boolean))].sort((a, b) => a.localeCompare(b));
     return `<div class="xsec xsec-cols">
       <div class="xsec-head">
@@ -7328,7 +7362,7 @@ export function createFtlEngine(root, options = {}) {
       </div>
       <div class="pick-filters-wrap">
         <div class="pickhead pick-search-row">
-          <label class="pick-select-all"><input type="checkbox" class="${prefix}AllOps" ${chosen ? '' : 'checked'}> <span>${AR() ? 'اختيار الكل' : 'Select all'}</span></label>
+          <label class="pick-select-all"><input type="checkbox" class="${prefix}AllOps" ${allOpsChecked ? 'checked' : ''}> <span>${selectAllLabel}</span></label>
           <div class="pick-search-box">
             <span class="pick-search-icon">🔍</span>
             <input type="search" class="${prefix}OpSearch" placeholder="${AR() ? 'ابحث عن شحنة أو عميل أو رقم شهادة...' : 'Find an operation, client, MAWB, certificate...'}">
@@ -7350,6 +7384,7 @@ export function createFtlEngine(root, options = {}) {
           </div>
         </div>
       </div>
+      ${limitNoticeHTML}
       <div class="picklist">${ships.length ? ships.map((sh, i) => {
       const r = getRowForShip(sh, sh.rows[0]) || {}; const cl = cellVal(r, 'client');
       const mawbVal = cellVal(r, 'mawb') || (sh.dir === 'Import' ? cellVal(r, 'bl') : cellVal(r, 'booking'));
@@ -7429,10 +7464,33 @@ export function createFtlEngine(root, options = {}) {
       : `Your shipment ${totalPkgs ? `(${totalPkgs} pkgs) ` : ''}is loaded on ${truckList.length} trucks: ${breakdown}.`;
   }
 
-  function wireTripPicker(root, prefix) {
+  function wireTripPicker(root, prefix, maxOps = null) {
+    const hasLimit = Number.isFinite(maxOps) && maxOps > 0;
     root.querySelector(`.${prefix}AllCols`).onchange = e => root.querySelectorAll(`.${prefix}Col`).forEach(c => c.checked = e.target.checked);
     /* "Select all" and the search / created-date filters work together: hidden operations are never (un)selected by Select all */
     const visibleOps = () => [...root.querySelectorAll(`.${prefix}Op`)].filter(c => c.closest('.op-pick-group')?.style.display !== 'none');
+    const countSelectedOps = () => [...root.querySelectorAll(`.${prefix}Op`)].filter(c => c.checked).length;
+    const notifyLimit = () => toast(
+      AR()
+        ? `عفواً، الحد الأقصى المسموح بتصديره لرتبتك هو ${maxOps} عمليات فقط.`
+        : `Maximum allowed export for your role is ${maxOps} operations.`,
+      'warning'
+    );
+    const syncAllOpsState = () => {
+      const vis = visibleOps();
+      const selectedCount = countSelectedOps();
+      const limitCountEl = root.querySelector(`.${prefix}LimitCount`);
+      if (limitCountEl && hasLimit) {
+        limitCountEl.textContent = `${selectedCount} / ${maxOps}`;
+      }
+      const allOpsEl = root.querySelector(`.${prefix}AllOps`);
+      if (!allOpsEl) return;
+      if (hasLimit) {
+        allOpsEl.checked = vis.length > 0 && selectedCount >= Math.min(maxOps, vis.length) && selectedCount > 0;
+      } else {
+        allOpsEl.checked = vis.length > 0 && vis.every(c => c.checked);
+      }
+    };
 
     const updateMailNote = () => {
       if (prefix !== 'm') return;
@@ -7458,6 +7516,7 @@ export function createFtlEngine(root, options = {}) {
       const cf = root.querySelector(`.${prefix}CFrom`)?.value || '';
       const ct = root.querySelector(`.${prefix}CTo`)?.value || '';
       const clFilter = (root.querySelector(`.${prefix}ClientFilter`)?.value || '').toLocaleLowerCase();
+      const matchedVisible = [];
       root.querySelectorAll(`.${prefix}Op`).forEach(c => {
         const group = c.closest('.op-pick-group');
         const d = group?.dataset.created || '', opCl = (group?.dataset.client || '').toLocaleLowerCase();
@@ -7468,23 +7527,53 @@ export function createFtlEngine(root, options = {}) {
         if (group) group.style.display = show ? '' : 'none';
         if (!show) {
           c.checked = false;
+          c.indeterminate = false;
           root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = false; });
-        }
-        else if (clFilter) {
-          c.checked = true;
-          root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = true; });
+        } else {
+          matchedVisible.push(c);
         }
       });
-      const vis = visibleOps();
-      root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(c => c.checked);
-
+      if (clFilter) {
+        let selectedCount = countSelectedOps();
+        matchedVisible.forEach(c => {
+          if (!hasLimit || c.checked || selectedCount < maxOps) {
+            if (!c.checked) selectedCount++;
+            c.checked = true;
+            c.indeterminate = false;
+            root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = true; });
+          }
+        });
+      }
+      syncAllOpsState();
       updateMailNote();
     };
     root.querySelector(`.${prefix}AllOps`).onchange = e => {
-      visibleOps().forEach(c => {
-        c.checked = e.target.checked;
-        root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
-      });
+      const vis = visibleOps();
+      if (hasLimit) {
+        if (!e.target.checked) {
+          vis.forEach(c => {
+            c.checked = false;
+            c.indeterminate = false;
+            root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = false; });
+          });
+        } else {
+          let selectedCount = 0;
+          vis.forEach(c => {
+            const shouldCheck = selectedCount < maxOps;
+            if (shouldCheck) selectedCount++;
+            c.checked = shouldCheck;
+            c.indeterminate = false;
+            root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = shouldCheck; });
+          });
+        }
+      } else {
+        vis.forEach(c => {
+          c.checked = e.target.checked;
+          c.indeterminate = false;
+          root.querySelectorAll(`.${prefix}SubRow[data-ref="${c.dataset.ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
+        });
+      }
+      syncAllOpsState();
       updateMailNote();
     };
     root.querySelector(`.${prefix}OpSearch`).oninput = applyPick;
@@ -7492,15 +7581,27 @@ export function createFtlEngine(root, options = {}) {
     root.querySelector(`.${prefix}ClientFilter`)?.addEventListener('change', applyPick);
     root.querySelectorAll(`.${prefix}Col`).forEach(c => c.onchange = () => root.querySelector(`.${prefix}AllCols`).checked = [...root.querySelectorAll(`.${prefix}Col`)].every(x => x.checked));
     root.querySelectorAll(`.${prefix}Op`).forEach(c => c.onchange = (e) => {
+      if (hasLimit && e.target.checked && countSelectedOps() > maxOps) {
+        e.target.checked = false;
+        notifyLimit();
+        syncAllOpsState();
+        return;
+      }
       const ref = e.target.dataset.ref || e.target.value;
+      e.target.indeterminate = false;
       root.querySelectorAll(`.${prefix}SubRow[data-ref="${ref}"]`).forEach(sub => { sub.checked = e.target.checked; });
-      const vis = visibleOps();
-      root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked);
+      syncAllOpsState();
       updateMailNote();
     });
     root.querySelectorAll(`.${prefix}SubRow`).forEach(sub => sub.onchange = (e) => {
       const ref = e.target.dataset.ref;
       const parentOp = root.querySelector(`.${prefix}Op[data-ref="${ref}"]`);
+      if (hasLimit && e.target.checked && parentOp && !parentOp.checked && countSelectedOps() >= maxOps) {
+        e.target.checked = false;
+        notifyLimit();
+        syncAllOpsState();
+        return;
+      }
       if (parentOp) {
         const allSubs = [...root.querySelectorAll(`.${prefix}SubRow[data-ref="${ref}"]`)];
         const anyChecked = allSubs.some(x => x.checked);
@@ -7508,8 +7609,7 @@ export function createFtlEngine(root, options = {}) {
         parentOp.checked = anyChecked;
         parentOp.indeterminate = anyChecked && !allChecked;
       }
-      const vis = visibleOps();
-      root.querySelector(`.${prefix}AllOps`).checked = vis.length > 0 && vis.every(x => x.checked);
+      syncAllOpsState();
       updateMailNote();
     });
   }
@@ -7635,6 +7735,11 @@ export function createFtlEngine(root, options = {}) {
   }
   async function openTripExport(scope, forceDir) {
     if (EDITING && !commitEdit()) return;
+    if (EXPORT_POLICY.canExportExcel === false) {
+      toast(AR() ? 'ليس لديك صلاحية لتصدير ملف Excel.' : 'You do not have permission to export Excel.', 'warning');
+      return;
+    }
+    const maxOps = EXPORT_POLICY.maxExcelOperations;
     const isDelivered = scope === 'delivered' || CURRENT_TAB === 'Delivered' || Boolean($('deliveredOpen')?.classList.contains('on'));
     const isInactive = scope === 'inactive' || CURRENT_TAB === 'Inactive' || Boolean($('inactiveOpen')?.classList.contains('on'));
     let effectiveScope = isDelivered ? 'delivered' : (isInactive ? 'inactive' : 'active');
@@ -7653,6 +7758,20 @@ export function createFtlEngine(root, options = {}) {
         dir = activeTabEl?.dataset.dir || (CURRENT_TAB === 'Export' || CURRENT_TAB === 'Import' ? CURRENT_TAB : (EDIR || 'Import'));
       }
     }
+    if (
+      maxOps &&
+      effectiveScope === 'active' &&
+      dir !== 'ALL' &&
+      (TRIP_SELECTED[dir]?.size || 0) > maxOps
+    ) {
+      toast(
+        AR()
+          ? `الحد الأقصى المسموح بتصديره لرتبتك هو ${maxOps} عمليات فقط. يرجى تحديد ${maxOps} عمليات كحد أقصى.`
+          : `Maximum allowed export for your role is ${maxOps} operations. Please select at most ${maxOps}.`,
+        'warning'
+      );
+      return;
+    }
     if (effectiveScope === 'active' && isServerPagedEntry()) {
       try {
         effectiveScope = await prepareActiveExportStore(dir);
@@ -7666,16 +7785,27 @@ export function createFtlEngine(root, options = {}) {
     const dirTitle = dir === 'ALL' ? (AR() ? 'كل الشحنات' : 'All Shipments') : dirLabel(dir);
     modalBody.dataset.dir = dir;
     modalBody.dataset.scope = effectiveScope;
-    modalBody.innerHTML = `<div class="mkind">${dirTitle}${subKind} · Excel</div>${tripPickerHTML(dir, 'te', tripExportDefaults(dir, effectiveScope), effectiveScope)}`;
+    modalBody.innerHTML = `<div class="mkind">${dirTitle}${subKind} · Excel</div>${tripPickerHTML(dir, 'te', tripExportDefaults(dir, effectiveScope), effectiveScope, maxOps)}`;
     $('tripExportGo').textContent = AR() ? 'تحميل Excel' : 'Download Excel';
     if ($('tripExportCancel')) $('tripExportCancel').textContent = AR() ? 'إلغاء' : 'Cancel';
-    wireTripPicker(modalBody, 'te');
+    wireTripPicker(modalBody, 'te', maxOps);
     modalBody.scrollTop = 0;
     $('tripExportModal').classList.add('open');
   }
   async function saveTripExport() {
     try {
       const modalBody = $('tripExportBody'), opts = pickedTripOptions(modalBody, 'te', modalBody.dataset.dir);
+      const maxOps = EXPORT_POLICY.maxExcelOperations;
+      const selectedOpsCount = (opts.operations?.Import?.length || 0) + (opts.operations?.Export?.length || 0);
+      if (maxOps && selectedOpsCount > maxOps) {
+        toast(
+          AR()
+            ? `عفواً، الحد الأقصى المسموح بتصديره لرتبتك هو ${maxOps} عمليات فقط.`
+            : `Maximum allowed export for your role is ${maxOps} operations.`,
+          'warning'
+        );
+        return;
+      }
       opts.scope = modalBody.dataset.scope || 'active';
       $('tripExportGo').disabled = true; await downloadEntry(opts); closeM('tripExportModal');
     } catch (e) { toast(e.message); } finally { $('tripExportGo').disabled = false; }
@@ -9454,6 +9584,7 @@ export function createFtlEngine(root, options = {}) {
     const E = L.entry;
     if ($('eSaveText')) $('eSaveText').textContent = E.save;
     else if ($('eSave')) $('eSave').textContent = E.save;
+    applyExportButtonVisibility();
     if ($('eMailText')) $('eMailText').textContent = E.mail;
     else if ($('eMail')) $('eMail').textContent = E.mail;
     $('xMail').textContent = t('mail').title; $('eApply').textContent = E.apply;
@@ -10158,11 +10289,44 @@ export function createFtlEngine(root, options = {}) {
     openHelp: () => openHelp(),
     openDeveloperPanel: () => openDev(),
     setArchiveOperations: (tab, ops, dir, totalCount) => setArchiveOperations(tab, ops, dir, totalCount),
+    setExportPolicy(policy = {}) {
+      if (destroyed) return;
+      EXPORT_POLICY.canExportExcel = policy.canExportExcel !== false;
+      EXPORT_POLICY.maxExcelOperations = Number.isFinite(policy.maxExcelOperations) && policy.maxExcelOperations > 0 ? policy.maxExcelOperations : null;
+      applyExportButtonVisibility();
+    },
     setTab: (tab) => setTab(tab),
     switchDir: (dir) => switchEntryDir(dir),
     invalidateLoadedDirs: () => { LOADED_DIRS.clear(); invalidateEntryCache(); },
     removeShipmentLocally: (ref, dir) => removeShipmentLocally(ref, dir),
     appendTripUpdate: (dir, ref, rowIndices, updateObj) => appendTripUpdateFromDrawer(dir, ref, rowIndices, updateObj),
+    copyOperation(dir, ref) {
+      if (destroyed || !ref) return false;
+      const targetDir = dir || EDIR;
+      return writeTripClipboard(selectedTripClipboard(targetDir, new Set([ref]), 'active'));
+    },
+    async exportOperationExcel(dir, ref) {
+      if (destroyed || !ref) return;
+      const targetDir = dir || EDIR;
+      const prev = new Set(TRIP_SELECTED[targetDir] || []);
+      TRIP_SELECTED[targetDir] = new Set([ref]);
+      try {
+        await openTripExport('active', targetDir);
+      } finally {
+        TRIP_SELECTED[targetDir] = prev;
+      }
+    },
+    async emailOperation(dir, ref) {
+      if (destroyed || !ref) return;
+      const targetDir = dir || EDIR;
+      const prev = new Set(TRIP_SELECTED[targetDir] || []);
+      TRIP_SELECTED[targetDir] = new Set([ref]);
+      try {
+        await openMail('table', 'active', targetDir);
+      } finally {
+        TRIP_SELECTED[targetDir] = prev;
+      }
+    },
     clear: () => clearData(),
     toast: (msg, type, options) => toast(msg, type, options),
     dismissToast: () => dismissToast(),

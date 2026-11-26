@@ -22,11 +22,16 @@ export const CONTAINER_TYPES = [
 
 const customsClearanceService = {
     // Server-side paging & search. status: 'Open' (table) | 'Closed' (archive).
-    getAll: async ({ reportType, status = 'Open', pageNumber = 1, pageSize = 20, search = '' } = {}) => {
+    // alert: EtaSoon | EtaOverdue | FreeTimeSoon | FreeTimeExpired | Any (Open Ocean Import only).
+    getAll: async ({ reportType, status = 'Open', pageNumber = 1, pageSize = 20, search = '', alert = '' } = {}) => {
         const params = { reportType, status, pageNumber, pageSize };
 
         if (search && search.trim()) {
             params.search = search.trim();
+        }
+
+        if (alert) {
+            params.alert = alert;
         }
 
         const response = await api.get('/api/customs-clearance/shipments', { params });
@@ -70,6 +75,79 @@ const customsClearanceService = {
         const response = await api.get('/api/customs-clearance/lookups');
         return response.data;
     },
+
+    // Soft delete: moves the shipment to the read-only Inactive archive (no reactivate).
+    deactivate: async (id) => {
+        const response = await api.delete(`/api/customs-clearance/shipments/${id}`);
+        return response.data;
+    },
+
+    // Inactive archive page (server-side paging, newest deactivated first). reportType '' = all reports.
+    // dateType: 'Inactive' | 'Created'; dateFrom / dateTo: 'YYYY-MM-DD' (Cairo days, inclusive).
+    getInactive: async ({ reportType = '', pageNumber = 1, pageSize = 20, search = '', inactiveBy = '', dateType = 'Inactive', dateFrom = '', dateTo = '', signal } = {}) => {
+        const params = { isDeleted: true, pageNumber, pageSize, dateType };
+        if (reportType) params.reportType = reportType;
+        if (search && search.trim()) params.search = search.trim();
+        if (inactiveBy) params.inactiveBy = inactiveBy;
+        if (dateFrom) params.dateFrom = dateFrom;
+        if (dateTo) params.dateTo = dateTo;
+
+        const response = await api.get('/api/customs-clearance/shipments', { params, signal });
+        return response.data;
+    },
+
+    // Distinct "Inactive by" names for the archive filter.
+    getInactiveBy: async (reportType = '', { signal } = {}) => {
+        const response = await api.get('/api/customs-clearance/shipments/inactive-by', {
+            params: reportType ? { reportType } : {},
+            signal,
+        });
+        return response.data;
+    },
+
+    // { open, closed, inactive } x { oceanImport, oceanExport, domestic, total }: one grouped count, no rows.
+    getCounts: async () => {
+        const response = await api.get('/api/customs-clearance/counts');
+        return response.data;
+    },
+
+    // Customs Finance (Open Ocean Import, Cairo dates). tab: Forecast | Request | Approved | Excluded.
+    // Answer: { items, totalCount, pageNumber, pageSize, today, totals: { egp, eur, usd } }; amounts are null for now.
+    getFinance: async ({ tab = 'Forecast', pageNumber = 1, pageSize = 20, search = '', signal } = {}) => {
+        const params = { tab, pageNumber, pageSize };
+        if (search && search.trim()) params.search = search.trim();
+        const response = await api.get('/api/customs-clearance/finance', { params, signal });
+        return response.data;
+    },
+
+    // { today, forecast, request, approved, excluded }
+    getFinanceCounts: async ({ signal } = {}) => {
+        const response = await api.get('/api/customs-clearance/finance/counts', { signal });
+        return response.data;
+    },
+
+    approveFinance: async (id, note = '') => {
+        await api.post(`/api/customs-clearance/finance/${id}/approve`, { note: note.trim() || null });
+    },
+
+    // mode: 'Defer' (deferredUntilDate 'YYYY-MM-DD', after today) | 'OnHold'
+    excludeFinance: async (id, { mode, deferredUntilDate = null, note = '' }) => {
+        await api.post(`/api/customs-clearance/finance/${id}/exclude`, {
+            mode,
+            deferredUntilDate: mode === 'Defer' ? deferredUntilDate : null,
+            note: note.trim() || null,
+        });
+    },
+
+    restoreFinance: async (id) => {
+        await api.post(`/api/customs-clearance/finance/${id}/restore`);
+    },
+
+    // { today, etaSoon, etaOverdue, freeTimeSoon, freeTimeExpired, total } over all Open Ocean Import shipments.
+    getAlertsSummary: async () => {
+        const response = await api.get('/api/customs-clearance/alerts/summary');
+        return response.data;
+    },
 };
 
 export const CUSTOMS_PERMISSIONS = {
@@ -77,6 +155,7 @@ export const CUSTOMS_PERMISSIONS = {
     create: 'customsclearance.shipments.create',
     edit: 'customsclearance.shipments.edit',
     close: 'customsclearance.shipments.close',
+    delete: 'customsclearance.shipments.delete',
 };
 
 // Same rule as transportersService.hasPermission.

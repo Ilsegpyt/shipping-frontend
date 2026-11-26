@@ -9,6 +9,10 @@ import {
   Package,
   AlertTriangle,
   RefreshCw,
+  Copy,
+  Check,
+  Mail,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { fmtUpdateDateTime } from './FtlArchiveShared';
 
@@ -23,6 +27,10 @@ export default function FtlActiveDetailsDrawer({
   onOpenStatusHistory,
   onAddTripUpdate,
   onTripUpdateAdded,
+  canExportExcel = false,
+  onCopyOp,
+  onEmailOp,
+  onExportExcelOp,
   isStatusHistoryOpen = false,
   lang = 'en',
   currentUserName = 'User',
@@ -33,6 +41,10 @@ export default function FtlActiveDetailsDrawer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [scrollFocusTarget, setScrollFocusTarget] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [isEmailing, setIsEmailing] = useState(false);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const copyTimerRef = useRef(null);
   const inputRef = useRef(null);
   const updatesSectionRef = useRef(null);
   const truckBtnRefs = useRef([]);
@@ -85,17 +97,55 @@ export default function FtlActiveDetailsDrawer({
     };
   }, [op, selectedTruckKey, selectedTruck, trucks.length, canWriteUpdate]);
 
-  // Close drawer on Escape (unless Status History drawer is open on top)
+  // Close drawer on Escape (unless Status History drawer or an export/email modal is open on top)
   useEffect(() => {
     if (!op) return;
     const handleEsc = (e) => {
-      if (e.key === 'Escape' && !isStatusHistoryOpen) {
+      if (e.key === 'Escape' && !isStatusHistoryOpen && !document.querySelector('.ftl-root .modal.open')) {
         onClose?.();
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
   }, [op, isStatusHistoryOpen, onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const handleCopyClick = async () => {
+    if (!op || !onCopyOp) return;
+    try {
+      await onCopyOp(op);
+      setCopied(true);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2200);
+    } catch (err) {
+      console.error('[FTL Drawer] Copy failed:', err);
+    }
+  };
+
+  const handleEmailClick = async () => {
+    if (!op || !onEmailOp || isEmailing) return;
+    setIsEmailing(true);
+    try {
+      await onEmailOp(op);
+    } finally {
+      setIsEmailing(false);
+    }
+  };
+
+  const handleExportExcelClick = async () => {
+    if (!op || !onExportExcelOp || isExportingExcel) return;
+    setIsExportingExcel(true);
+    try {
+      await onExportExcelOp(op);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
 
   const handleSelectTruck = useCallback((truckKey) => {
     setSelectedTruckKey(truckKey);
@@ -255,17 +305,70 @@ export default function FtlActiveDetailsDrawer({
               <strong className="text-slate-700">{createdDisplay}</strong>
             </div>
           </div>
-          {onOpenStatusHistory && op.statusHistoryPayload && (
-            <button
-              type="button"
-              onClick={() => onOpenStatusHistory(op.statusHistoryPayload)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
-              title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
-            >
-              <History size={12} className="text-sky-600" />
-              <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
-            </button>
-          )}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {onCopyOp && (
+              <button
+                type="button"
+                onClick={handleCopyClick}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95 ${
+                  copied
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+                title={lang === 'ar' ? 'نسخ بيانات العملية بالهيدرز (جاهزة لـ Excel / Outlook)' : 'Copy operation rows with headers'}
+              >
+                {copied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} className="text-slate-500" />}
+                <span>{copied ? (lang === 'ar' ? 'تم النسخ' : 'Copied') : (lang === 'ar' ? 'نسخ' : 'Copy')}</span>
+              </button>
+            )}
+            {onEmailOp && (
+              <button
+                type="button"
+                onClick={handleEmailClick}
+                disabled={isEmailing}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition active:scale-95 ${
+                  isEmailing ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                }`}
+                title={lang === 'ar' ? 'إرسال العملية بالإيميل' : 'Email this operation'}
+              >
+                {isEmailing ? (
+                  <RefreshCw size={12} className="text-sky-600 animate-spin" />
+                ) : (
+                  <Mail size={12} className="text-sky-600" />
+                )}
+                <span>{isEmailing ? (lang === 'ar' ? 'جاري التحميل...' : 'Loading...') : (lang === 'ar' ? 'إيميل' : 'Email it')}</span>
+              </button>
+            )}
+            {canExportExcel && onExportExcelOp && (
+              <button
+                type="button"
+                onClick={handleExportExcelClick}
+                disabled={isExportingExcel}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-2xs transition active:scale-95 ${
+                  isExportingExcel ? 'opacity-60 cursor-wait' : 'cursor-pointer'
+                }`}
+                title={lang === 'ar' ? 'حفظ العملية كملف Excel' : 'Save this operation as Excel'}
+              >
+                {isExportingExcel ? (
+                  <RefreshCw size={12} className="text-emerald-600 animate-spin" />
+                ) : (
+                  <FileSpreadsheet size={12} className="text-emerald-600" />
+                )}
+                <span>{isExportingExcel ? (lang === 'ar' ? 'جاري التحميل...' : 'Loading...') : (lang === 'ar' ? 'إكسيل' : 'Save as Excel')}</span>
+              </button>
+            )}
+            {onOpenStatusHistory && op.statusHistoryPayload && (
+              <button
+                type="button"
+                onClick={() => onOpenStatusHistory(op.statusHistoryPayload)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
+              >
+                <History size={12} className="text-sky-600" />
+                <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Body */}

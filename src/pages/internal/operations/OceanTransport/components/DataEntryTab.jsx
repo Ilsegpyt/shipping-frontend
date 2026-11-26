@@ -31,6 +31,8 @@ import {
   ArrowRight,
   ArrowRightLeft,
   Eye,
+  Copy,
+  Check,
 } from 'lucide-react';
 import FclTab from './FclTab';
 import SearchableSelect from '../../../../../components/common/SearchableSelect';
@@ -364,6 +366,7 @@ export default function DataEntryTab({
   onRefreshDelivered,
   showToast,
   lang = 'en',
+  isExternalModalOpen = false,
   fclMatches = [],
   fclApprovedList = [],
   onApproveMatch,
@@ -395,6 +398,7 @@ export default function DataEntryTab({
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const [inactivePageSize, setInactivePageSize] = useState(20);
 
   // Server-Side Pagination & Search state
   const [serverPageRows, setServerPageRows] = useState([]);
@@ -460,7 +464,7 @@ export default function DataEntryTab({
     const clean = {};
     Object.keys(f || {}).forEach((k) => {
       if (dir === 'Import' && (k === 'clearanceType' || k === 'customs')) return;
-      if (dir !== 'Delivered' && k === 'direction') return;
+      if (dir !== 'Delivered' && dir !== 'Deleted' && k === 'direction') return;
       const v = f[k];
       if (v !== '' && v !== null && v !== undefined) {
         clean[k] = v;
@@ -498,14 +502,14 @@ export default function DataEntryTab({
       }
       try {
         const cleanSearch = targetSearch?.trim() || '';
-        const currentTabSize = (targetDir === 'Delivered' || targetDir === 'Deleted') ? 20 : pageSize;
+        const currentTabSize = targetDir === 'Deleted' ? inactivePageSize : (targetDir === 'Delivered' ? 20 : pageSize);
         const isDelivered = targetDir === 'Delivered';
         const isDeleted = targetDir === 'Deleted';
 
         const res = await getPagedOperations({
           page: targetPage,
           pageSize: currentTabSize,
-          operationType: isDelivered ? (targetFilters.direction || undefined) : (isDeleted ? undefined : targetDir),
+          operationType: (isDelivered || isDeleted) ? (targetFilters.direction || undefined) : targetDir,
           status: isDelivered ? 'Delivered' : (isDeleted ? undefined : (targetFilters.status || undefined)),
           onlyActive: (isDelivered || isDeleted) ? false : true,
           isDeleted: isDeleted,
@@ -558,7 +562,8 @@ export default function DataEntryTab({
           );
 
           // Save to fast in-memory cache using stable serialized key
-          const cacheKey = `${targetDir}_${targetPage}_${cleanSearch}_${serializeFilters(targetFilters, targetDir)}`;
+          const sizePart = targetDir === 'Deleted' ? `_ps${inactivePageSize}` : '';
+          const cacheKey = `${targetDir}_${targetPage}${sizePart}_${cleanSearch}_${serializeFilters(targetFilters, targetDir)}`;
           tabPagesCacheRef.current[cacheKey] = {
             rows: mappedRows,
             operations: res.items,
@@ -577,7 +582,7 @@ export default function DataEntryTab({
         }
       }
     },
-    [pageSize, serializeFilters]
+    [pageSize, inactivePageSize, serializeFilters]
   );
 
   // Server-side fetch: Instant 0ms execution on Tab switch & Pagination with Stale-While-Revalidate
@@ -585,7 +590,8 @@ export default function DataEntryTab({
     if (!isServerSide) return;
 
     const cleanSearch = debouncedSearchTerm?.trim() || '';
-    const cacheKey = `${currentDir}_${page}_${cleanSearch}_${serializeFilters(filters, currentDir)}`;
+    const sizePart = currentDir === 'Deleted' ? `_ps${inactivePageSize}` : '';
+    const cacheKey = `${currentDir}_${page}${sizePart}_${cleanSearch}_${serializeFilters(filters, currentDir)}`;
     const cached = tabPagesCacheRef.current[cacheKey];
 
     if (cached) {
@@ -1443,12 +1449,11 @@ export default function DataEntryTab({
     }
   };
 
-  const handleCopyConflictData = async () => {
+  const copyShipmentRowsToClipboard = async (shipRows, shipRef, dir = currentDir) => {
     try {
-      const { shipRows, shipRef } = conflictModal;
-      if (!shipRows || shipRows.length === 0) return;
+      if (!shipRows || shipRows.length === 0) return false;
 
-      const activeCols = (COLS[currentDir] || COLS.Import || []).filter(
+      const activeCols = (COLS[dir] || COLS.Import || []).filter(
         (c) => !['actions', 'sel', 'opEntered'].includes(c.k)
       );
 
@@ -1486,11 +1491,6 @@ export default function DataEntryTab({
         return String(val).replace(/[\r\n\t]+/g, ' ').trim();
       };
 
-      // Determine merge eligibility for each column in Excel:
-      // A column is merged in Excel IF:
-      // 1. Shipment has more than 1 container (shipRows.length > 1)
-      // 2. Column is merged (for canUnmerge: only if user explicitly merged it; otherwise c.uniq === true)
-      // 3. AND all rows have identical values (if values differ across rows, keep separate rows so no data is lost!)
       const colMergeInfo = activeCols.map((col) => {
         const distinctVals = new Set(shipRows.map((r) => getCellVal(r, col)));
         const hasMultipleDifferentValues = distinctVals.size > 1;
@@ -1522,7 +1522,6 @@ export default function DataEntryTab({
         return str.replace(/\r?\n/g, '<br style="mso-data-placement:same-cell;"/>');
       };
 
-      // Plain-text TSV fallback
       const tsvContent = [
         headers.map(escapeTsvCell).join('\t'),
         ...shipRows.map((row) =>
@@ -1530,7 +1529,6 @@ export default function DataEntryTab({
         ),
       ].join('\r\n');
 
-      // Excel HTML Table with true rowspan merging and professional Excel styling
       const htmlHeaderRow = `<tr>${activeCols.map((c) => {
         const title = lang === 'ar' ? (c.ar || c.h) : c.h;
         const sub = lang === 'ar' ? c.h : (c.ar || '');
@@ -1543,7 +1541,7 @@ export default function DataEntryTab({
           .map((info) => {
             const { col, shouldMerge } = info;
             if (shouldMerge) {
-              if (!isFirstRow) return null; // Span from row 0!
+              if (!isFirstRow) return null;
               const val = info.val;
               return `<td rowspan="${shipRows.length}" style="vertical-align:middle;text-align:center;border:1px solid #cbd5e1;padding:8px;font-family:Calibri,Segoe UI,sans-serif;font-size:10pt;mso-number-format:'\\@';">${escapeHtmlCell(val)}</td>`;
             }
@@ -1581,13 +1579,20 @@ export default function DataEntryTab({
       notify(
         lang === 'ar'
           ? 'تم نسخ البيانات كجدول إكسل مع دمج الخلايا بدقة! افتح شيت إكسل واضغط (Ctrl + V).'
-          : 'Edits copied as Excel table with merged cells! Open Excel and press (Ctrl + V).',
+          : 'Data copied as Excel table with merged cells! Open Excel and press (Ctrl + V).',
         'success'
       );
+      return true;
     } catch (e) {
       console.error('Clipboard copy error:', e);
       notify(lang === 'ar' ? 'تعذر النسخ إلى الحافظة' : 'Could not copy to clipboard', 'warning');
+      return false;
     }
+  };
+
+  const handleCopyConflictData = async () => {
+    const { shipRows, shipRef } = conflictModal;
+    await copyShipmentRowsToClipboard(shipRows, shipRef, currentDir);
   };
 
   const handleDiscardConflictAndRefresh = () => {
@@ -2019,9 +2024,17 @@ export default function DataEntryTab({
   const [drawerUpdateText, setDrawerUpdateText] = useState('');
   const [isSubmittingDrawerUpdate, setIsSubmittingDrawerUpdate] = useState(false);
   const [drawerFocusTarget, setDrawerFocusTarget] = useState(null);
+  const [drawerCopied, setDrawerCopied] = useState(false);
+  const drawerCopyTimerRef = useRef(null);
   const drawerUpdateInputRef = useRef(null);
   const drawerUpdatesSectionRef = useRef(null);
   const drawerCntrBtnRefs = useRef([]);
+
+  useEffect(() => {
+    return () => {
+      if (drawerCopyTimerRef.current) clearTimeout(drawerCopyTimerRef.current);
+    };
+  }, []);
 
   const openUpdatesModal = (row, shipRef) => {
     setActiveUpdateRow({ row, shipRef });
@@ -2042,6 +2055,7 @@ export default function DataEntryTab({
           : null;
 
     setDrawerUpdateText('');
+    setDrawerCopied(false);
     setActiveDetailDrawer({
       shipRef,
       dir: currentDir,
@@ -2054,6 +2068,7 @@ export default function DataEntryTab({
     setActiveDetailDrawer(null);
     setDrawerUpdateText('');
     setDrawerFocusTarget(null);
+    setDrawerCopied(false);
   }, []);
 
   // Auto-scroll and apply clear visual + keyboard focus on open or container selection
@@ -2256,17 +2271,17 @@ export default function DataEntryTab({
   const [statusHistoryList, setStatusHistoryList] = useState([]);
   const [isLoadingStatusHistory, setIsLoadingStatusHistory] = useState(false);
 
-  // Close active details drawer on Escape (unless Status History modal is open on top)
+  // Close active details drawer on Escape (unless Status History or Email/Excel modal is open on top)
   useEffect(() => {
     if (!activeDetailDrawer) return;
     const handleEsc = (e) => {
-      if (e.key === 'Escape' && !statusHistoryOpen) {
+      if (e.key === 'Escape' && !statusHistoryOpen && !isExternalModalOpen) {
         closeActiveDetailDrawer();
       }
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [activeDetailDrawer, statusHistoryOpen, closeActiveDetailDrawer]);
+  }, [activeDetailDrawer, statusHistoryOpen, isExternalModalOpen, closeActiveDetailDrawer]);
 
   const openStatusHistoryModal = async (shipRef, shipRows) => {
     if (!shipRows || shipRows.length === 0) return;
@@ -2413,13 +2428,29 @@ export default function DataEntryTab({
     setPage(1);
     if (currentDir !== tabKey) {
       setSearchTerm('');
-      if (tabKey !== 'Delivered') {
-        setFilters((prev) => ({ ...prev, direction: '' }));
+      const nextDirection = (tabKey !== 'Delivered' && tabKey !== 'Deleted') ? '' : filters.direction;
+      const nextDateType = tabKey === 'Deleted'
+        ? (filters.dateType === 'created' ? 'inactive' : filters.dateType)
+        : (filters.dateType === 'inactive' ? 'created' : filters.dateType);
+
+      if (nextDirection !== filters.direction || nextDateType !== filters.dateType) {
+        setFilters((prev) => ({
+          ...prev,
+          direction: nextDirection,
+          dateType: nextDateType,
+        }));
       }
+
       if (['Import', 'Export', 'Delivered', 'Deleted'].includes(tabKey)) {
         // Instant pre-population from in-memory cache if available (0ms switch!)
-        const targetFilters = tabKey === 'Import' ? { ...filters, clearanceType: '', customs: '' } : filters;
-        const targetCacheKey = `${tabKey}_1__${serializeFilters(targetFilters, tabKey)}`;
+        const targetFilters = {
+          ...filters,
+          direction: nextDirection,
+          dateType: nextDateType,
+          ...(tabKey === 'Import' ? { clearanceType: '', customs: '' } : {}),
+        };
+        const sizePart = tabKey === 'Deleted' ? `_ps${inactivePageSize}` : '';
+        const targetCacheKey = `${tabKey}_1${sizePart}__${serializeFilters(targetFilters, tabKey)}`;
         const cached = tabPagesCacheRef.current[targetCacheKey];
         if (cached) {
           setServerPageRows(cached.rows);
@@ -2432,7 +2463,7 @@ export default function DataEntryTab({
           // Clean state: immediately display expected count from counts prop instead of old tab's counts!
           setServerPageRows([]);
           setServerPageOperations([]);
-          const currentTabSize = (tabKey === 'Delivered' || tabKey === 'Deleted') ? 20 : pageSize;
+          const currentTabSize = tabKey === 'Deleted' ? inactivePageSize : (tabKey === 'Delivered' ? 20 : pageSize);
           let expectedCount = 0;
           if (tabKey === 'Import') expectedCount = counts?.activeImportCount ?? 0;
           else if (tabKey === 'Export') expectedCount = counts?.activeExportCount ?? 0;
@@ -3006,6 +3037,34 @@ export default function DataEntryTab({
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [entry, serverPageRows, serverPageOperations, deliveredRows, deliveredOperations, lookups?.users, filters.createdBy]);
 
+  // Extract unique Inactive By authors for the Inactive tab filter
+  const uniqueInactiveAuthors = useMemo(() => {
+    const set = new Set();
+    const addName = (val) => {
+      if (val && typeof val === 'string') {
+        const trimmed = val.trim();
+        if (trimmed && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+          set.add(trimmed);
+        }
+      }
+    };
+
+    (serverPageOperations || []).forEach((op) =>
+      addName(op.deletedByName || op.DeletedByName || op.createdByName || op.CreatedByName)
+    );
+    (deletedOperations || []).forEach((op) =>
+      addName(op.deletedByName || op.DeletedByName || op.createdByName || op.CreatedByName)
+    );
+    if (Array.isArray(lookups?.users)) {
+      lookups.users.forEach((u) => addName(u.fullName || u.name || u.userName));
+    }
+    if (filters.createdBy) {
+      addName(filters.createdBy);
+    }
+
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [serverPageOperations, deletedOperations, lookups?.users, filters.createdBy]);
+
   const uniqueCustoms = useMemo(() => {
     const set = new Set();
     (entry?.Export || []).forEach((r) => {
@@ -3029,7 +3088,7 @@ export default function DataEntryTab({
     if (filters.createdBy) count++;
     if (currentDir === 'Export' && filters.customs) count++;
     if (filters.status) count++;
-    if (currentDir === 'Delivered' && filters.direction) count++;
+    if ((currentDir === 'Delivered' || currentDir === 'Deleted') && filters.direction) count++;
     if (filters.dateFrom || filters.dateTo) count++;
     return count;
   }, [filters, currentDir]);
@@ -3050,7 +3109,7 @@ export default function DataEntryTab({
       customs: '',
       status: '',
       direction: '',
-      dateType: 'created',
+      dateType: currentDir === 'Deleted' ? 'inactive' : 'created',
       dateFrom: '',
       dateTo: '',
     });
@@ -4201,8 +4260,8 @@ export default function DataEntryTab({
                 </div>
               </div>
 
-              {/* Quick Direction Toggle (All / Import / Export) for Delivered tab */}
-              {currentDir === 'Delivered' && (
+              {/* Quick Direction Toggle (All / Import / Export) for Delivered and Inactive tabs */}
+              {(currentDir === 'Delivered' || currentDir === 'Deleted') && (
                 <div
                   className="inline-flex items-center p-1 bg-slate-100 rounded-xl border border-slate-200/80 shadow-2xs shrink-0"
                   role="group"
@@ -4419,7 +4478,7 @@ export default function DataEntryTab({
                 <option value="no">{lang === 'ar' ? 'مكتملة (Clean)' : 'Clean'}</option>
               </select>
 
-              {/* Created By Filter (المُدخل - Dropdown) */}
+              {/* Created By / Inactive By Filter */}
               <select
                 value={filters.createdBy}
                 onChange={(e) => {
@@ -4427,13 +4486,23 @@ export default function DataEntryTab({
                   setPage(1);
                 }}
                 className={`text-xs rounded-xl border px-2.5 py-1.5 outline-none cursor-pointer shrink-0 min-w-[135px] max-w-[165px] font-medium transition ${filters.createdBy
-                  ? 'border-sky-500 bg-sky-50 text-sky-900 font-bold shadow-2xs'
+                  ? (currentDir === 'Deleted'
+                    ? 'border-rose-500 bg-rose-50 text-rose-900 font-bold shadow-2xs'
+                    : 'border-sky-500 bg-sky-50 text-sky-900 font-bold shadow-2xs')
                   : 'border-slate-300 bg-white text-slate-700 focus:border-sky-500'
                   }`}
-                title={lang === 'ar' ? 'فلترة حسب المُدخل' : 'Filter by Created By'}
+                title={
+                  currentDir === 'Deleted'
+                    ? (lang === 'ar' ? 'فلترة حسب من أوقف العملية' : 'Filter by Inactive By')
+                    : (lang === 'ar' ? 'فلترة حسب المُدخل' : 'Filter by Created By')
+                }
               >
-                <option value="">{lang === 'ar' ? 'المُدخل: الكل' : 'Created By: All'}</option>
-                {uniqueCreators.map((name) => (
+                <option value="">
+                  {currentDir === 'Deleted'
+                    ? (lang === 'ar' ? 'تم الإيقاف بواسطة: الكل' : 'Inactive By: All')
+                    : (lang === 'ar' ? 'المُدخل: الكل' : 'Created By: All')}
+                </option>
+                {(currentDir === 'Deleted' ? uniqueInactiveAuthors : uniqueCreators).map((name) => (
                   <option key={name} value={name}>
                     {name}
                   </option>
@@ -4447,9 +4516,12 @@ export default function DataEntryTab({
                 </span>
                 <select
                   value={filters.dateType}
-                  onChange={(e) => setFilters({ ...filters, dateType: e.target.value })}
+                  onChange={(e) => { setFilters({ ...filters, dateType: e.target.value }); setPage(1); }}
                   className="text-xs rounded-lg border border-slate-300 bg-white px-2 py-1 text-slate-700 outline-none focus:border-sky-500 cursor-pointer max-w-[125px]"
                 >
+                  {currentDir === 'Deleted' && (
+                    <option value="inactive">{lang === 'ar' ? 'تاريخ الإيقاف' : 'Inactive Date'}</option>
+                  )}
                   <option value="created">{lang === 'ar' ? 'تاريخ الإنشاء' : 'Created Date'}</option>
                   <option value="reqDate">{lang === 'ar' ? 'تاريخ التحميل/التعتيق' : 'Req Date'}</option>
                   <option value="arrDate">{lang === 'ar' ? 'الوصول الفعلي' : 'Actual Arrival'}</option>
@@ -4488,36 +4560,38 @@ export default function DataEntryTab({
             </div>
           </div>
 
-          {/* 4. Operations & Trips Counter + Pagination Info */}
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500 px-1 pt-0.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-semibold text-slate-700">
-                {lang === 'ar'
-                  ? `عدد العمليات: ${totalShipments}  ·  عدد الرحلات: ${totalTrips}`
-                  : `${totalShipments} Operations  ·  ${totalTrips} Trips`}
-              </span>
-            </div>
+          {/* 4. Operations & Trips Counter + Pagination Info (Active / Delivered grid summary; Inactive has its own footer pagination) */}
+          {currentDir !== 'Deleted' && (
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-500 px-1 pt-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-semibold text-slate-700">
+                  {lang === 'ar'
+                    ? `عدد العمليات: ${totalShipments}  ·  عدد الرحلات: ${totalTrips}`
+                    : `${totalShipments} Operations  ·  ${totalTrips} Trips`}
+                </span>
+              </div>
 
-            <div className="flex items-center gap-2">
-              <span>Shipments {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalShipments)} of {totalShipments} · Page {page}/{totalPages}</span>
-              <button
-                type="button"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
-              >
-                ‹
-              </button>
-              <button
-                type="button"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
-              >
-                ›
-              </button>
+              <div className="flex items-center gap-2">
+                <span>Shipments {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalShipments)} of {totalShipments} · Page {page}/{totalPages}</span>
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="rounded border border-slate-200 bg-white px-2 py-0.5 disabled:opacity-40 cursor-pointer"
+                >
+                  ›
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </>
       )}
 
@@ -4558,7 +4632,7 @@ export default function DataEntryTab({
                     {lang === 'ar' ? 'سجل العمليات والشحنات غير النشطة' : 'Inactive Operations Archive'}
                   </h3>
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
-                    {searchTerm
+                    {(debouncedSearchTerm || activeFiltersCount > 0)
                       ? (lang === 'ar'
                         ? `${serverTotalCount} من أصل ${counts?.inactiveCount ?? serverTotalCount} شحنة غير نشطة`
                         : `${serverTotalCount} of ${counts?.inactiveCount ?? serverTotalCount} inactive`)
@@ -4581,12 +4655,12 @@ export default function DataEntryTab({
                 onClick={() => {
                   clearTabPagesCache();
                   fetchServerPage(page, debouncedSearchTerm, filters, 'Deleted');
-                  if (onRefreshDeleted) onRefreshDeleted(true);
+                  if (onRefreshDeleted) onRefreshDeleted();
                 }}
-                disabled={isPageLoading || isLoadingDeleted}
+                disabled={isPageLoading}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition cursor-pointer disabled:opacity-50"
               >
-                <RefreshCw size={13} className={isPageLoading || isLoadingDeleted ? 'animate-spin text-rose-600' : 'text-slate-500'} />
+                <RefreshCw size={13} className={isPageLoading ? 'animate-spin text-rose-600' : 'text-slate-500'} />
                 <span>{lang === 'ar' ? 'تحديث' : 'Refresh'}</span>
               </button>
               <button
@@ -4594,26 +4668,26 @@ export default function DataEntryTab({
                 onClick={() => handleTabClick('Import')}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition cursor-pointer shadow-xs"
               >
-                <ChevronLeft size={14} />
+                <ChevronLeft size={14} className={lang === 'ar' ? 'rotate-180' : ''} />
                 <span>{lang === 'ar' ? 'العودة للشحنات النشطة' : 'Back to Active Shipments'}</span>
               </button>
             </div>
           </div>
 
-          {/* Active Search Filter Banner for Inactive */}
-          {searchTerm && (
+          {/* Active Search / Filters Banner for Inactive */}
+          {(debouncedSearchTerm || activeFiltersCount > 0) && (
             <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-2xs">
               <div className="flex items-center gap-2">
                 <Search size={14} className="text-amber-600 shrink-0" />
                 <span>
                   {lang === 'ar'
-                    ? `تصفية البحث نشطة: "${searchTerm}" (إجمالي النتائج: ${serverTotalCount} شحنة غير نشطة)`
-                    : `Search filter active: "${searchTerm}" (${serverTotalCount} total inactive)`}
+                    ? `تصفية البحث نشطة: "${debouncedSearchTerm || 'فلاتر مخصصة'}" (إجمالي النتائج: ${serverTotalCount} شحنة غير نشطة)`
+                    : `Search filter active: "${debouncedSearchTerm || 'Active Filters'}" (${serverTotalCount} total inactive)`}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => { setSearchTerm(''); setPage(1); }}
+                onClick={handleResetFilters}
                 className="px-3 py-1 rounded-xl bg-amber-200/90 hover:bg-amber-300 text-amber-950 font-bold transition cursor-pointer flex items-center gap-1 shrink-0"
               >
                 <X size={12} />
@@ -4674,10 +4748,24 @@ export default function DataEntryTab({
                 {lang === 'ar' ? 'لا توجد شحنات غير نشطة مطابقة' : 'No Matching Inactive Shipments'}
               </h4>
               <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                {lang === 'ar'
-                  ? 'لم يتم العثور على أي شحنات غير نشطة تطابق معايير البحث أو الفلتر المحددة.'
-                  : 'No inactive operations matched your search or filter criteria.'}
+                {(debouncedSearchTerm || activeFiltersCount > 0)
+                  ? (lang === 'ar'
+                    ? 'لم يتم العثور على أي شحنات غير نشطة تطابق معايير البحث أو الفلتر المحددة.'
+                    : 'No inactive operations matched your search or filter criteria.')
+                  : (lang === 'ar'
+                    ? 'لم يتم العثور على أي شحنات غير نشطة مسجلة في الأرشيف.'
+                    : 'No inactive operations found in the archive.')}
               </p>
+              {(debouncedSearchTerm || activeFiltersCount > 0) && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+                >
+                  <X size={12} />
+                  <span>{lang === 'ar' ? 'إلغاء البحث وعرض كل الشحنات غير النشطة' : 'Clear search & show all'}</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -4708,7 +4796,7 @@ export default function DataEntryTab({
                       return (
                         <tr key={op.id || idx} className="hover:bg-rose-50/20 transition-colors">
                           <td className="py-3 px-3 font-semibold text-slate-800">
-                            {op.shipmentNumber || `#${(page - 1) * 20 + idx + 1}`}
+                            {op.shipmentNumber || `#${(page - 1) * inactivePageSize + idx + 1}`}
                           </td>
                           <td className="py-3 px-3">
                             <span
@@ -4787,28 +4875,75 @@ export default function DataEntryTab({
               </div>
 
               {/* Inactive Pagination Controls */}
-              {serverTotalPages > 1 && (
-                <div className="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs">
-                  <span className="text-slate-500">
-                    {lang === 'ar'
-                      ? `الصفحة ${page} من ${serverTotalPages} (${serverTotalCount} شحنة غير نشطة)`
-                      : `Page ${page} of ${serverTotalPages} (${serverTotalCount} inactive)`}
-                  </span>
+              {activeDeletedOperations.length > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-white rounded-xl border border-slate-200 text-xs shadow-2xs">
+                  <div className="flex items-center gap-3 text-slate-500 font-medium">
+                    <span>
+                      {lang === 'ar'
+                        ? `الصفحة ${page} من ${serverTotalPages} (${serverTotalCount} شحنة غير نشطة · ${serverTotalContainers} حاوية)`
+                        : `Page ${page} of ${serverTotalPages} (${serverTotalCount} inactive · ${serverTotalContainers} cntrs)`}
+                    </span>
+                    <div className="flex items-center gap-1.5 border-s border-slate-200 ps-3">
+                      <span className="text-slate-400">{lang === 'ar' ? 'لكل صفحة:' : 'Per page:'}</span>
+                      <select
+                        value={inactivePageSize}
+                        onChange={(e) => {
+                          setInactivePageSize(Number(e.target.value));
+                          setPage(1);
+                        }}
+                        className="bg-slate-50 border border-slate-200 rounded-md px-1.5 py-0.5 text-slate-700 font-semibold cursor-pointer focus:outline-none focus:border-rose-500"
+                      >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                      </select>
+                    </div>
+                  </div>
+
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       disabled={page <= 1}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium"
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium text-slate-700 transition"
                     >
                       {lang === 'ar' ? 'السابق' : 'Previous'}
                     </button>
-                    <span className="px-2 py-1 font-bold text-slate-800">{page}</span>
+
+                    {Array.from({ length: Math.min(5, serverTotalPages) }, (_, i) => {
+                      let pNum;
+                      if (serverTotalPages <= 5) {
+                        pNum = i + 1;
+                      } else if (page <= 3) {
+                        pNum = i + 1;
+                      } else if (page >= serverTotalPages - 2) {
+                        pNum = serverTotalPages - 4 + i;
+                      } else {
+                        pNum = page - 2 + i;
+                      }
+                      const isActive = pNum === page;
+                      return (
+                        <button
+                          key={pNum}
+                          type="button"
+                          onClick={() => setPage(pNum)}
+                          className={`min-w-7 h-7 px-2 rounded-lg font-bold text-xs transition cursor-pointer ${
+                            isActive
+                              ? 'bg-rose-600 text-white shadow-2xs'
+                              : 'border border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          {pNum}
+                        </button>
+                      );
+                    })}
+
                     <button
                       type="button"
                       disabled={page >= serverTotalPages}
                       onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
-                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium"
+                      className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 cursor-pointer disabled:cursor-not-allowed font-medium text-slate-700 transition"
                     >
                       {lang === 'ar' ? 'التالي' : 'Next'}
                     </button>
@@ -8445,15 +8580,59 @@ export default function DataEntryTab({
                     <strong className="text-slate-700">{fmtEnteredDate(firstRow._createdAtUtc) || '—'}</strong>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openStatusHistoryModal(activeDetailDrawer.shipRef, shipRows)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
-                  title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
-                >
-                  <History size={12} className="text-sky-600" />
-                  <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
-                </button>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await copyShipmentRowsToClipboard(shipRows, activeDetailDrawer.shipRef, drawerDir);
+                      if (ok) {
+                        setDrawerCopied(true);
+                        if (drawerCopyTimerRef.current) clearTimeout(drawerCopyTimerRef.current);
+                        drawerCopyTimerRef.current = setTimeout(() => setDrawerCopied(false), 2200);
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl border text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95 ${
+                      drawerCopied
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                    title={lang === 'ar' ? 'نسخ بيانات العملية بالهيدرز (جاهزة لـ Excel / Outlook)' : 'Copy operation rows with headers'}
+                  >
+                    {drawerCopied ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} className="text-slate-500" />}
+                    <span>{drawerCopied ? (lang === 'ar' ? 'تم النسخ' : 'Copied') : (lang === 'ar' ? 'نسخ' : 'Copy')}</span>
+                  </button>
+                  {onEmailIt && (
+                    <button
+                      type="button"
+                      onClick={() => onEmailIt([activeDetailDrawer.shipRef], shipRows)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                      title={lang === 'ar' ? 'إرسال العملية بالإيميل' : 'Email this operation'}
+                    >
+                      <Mail size={12} className="text-sky-600" />
+                      <span>{lang === 'ar' ? 'إيميل' : 'Email it'}</span>
+                    </button>
+                  )}
+                  {canExportExcel && onExportExcel && (
+                    <button
+                      type="button"
+                      onClick={() => onExportExcel([activeDetailDrawer.shipRef], shipRows)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                      title={lang === 'ar' ? 'حفظ العملية كملف Excel' : 'Save this operation as Excel'}
+                    >
+                      <FileSpreadsheet size={12} className="text-emerald-600" />
+                      <span>{lang === 'ar' ? 'إكسيل' : 'Save as Excel'}</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openStatusHistoryModal(activeDetailDrawer.shipRef, shipRows)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white hover:bg-sky-50 text-sky-700 border border-sky-200 text-xs font-semibold shadow-2xs transition cursor-pointer active:scale-95"
+                    title={lang === 'ar' ? 'عرض سجل وتاريخ الحالات الزمني' : 'View Status History'}
+                  >
+                    <History size={12} className="text-sky-600" />
+                    <span>{lang === 'ar' ? 'سجل الحالات' : 'Status History'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Body */}

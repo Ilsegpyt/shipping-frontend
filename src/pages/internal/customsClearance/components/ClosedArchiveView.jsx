@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, Eye, History, Lock, Plus, RefreshCw, Search, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Eye, FileSpreadsheet, History, Lock, Mail, Plus, RefreshCw, Search, X } from "lucide-react";
 import customsClearanceService from "../../../../services/customsClearanceService";
 import C from "../lib/core.js";
 import { PAGE_SIZES } from "../lib/format.js";
 import { apiError, useApp } from "../AppState.jsx";
+import { ExcelExportDialog } from "./dialogs/ExportDialog.jsx";
+import MailDialog from "./dialogs/MailDialog.jsx";
 
 // Same report order as the spec; the API lists one report type at a time (no "All").
 const REPORTS = ["OceanImport", "Domestic", "OceanExport"];
@@ -55,7 +57,7 @@ const docNumber = (r) =>
 
 /** Closed shipments archive (FCL delivered-archive layout). Loads only while it is shown. */
 export default function ClosedArchiveView({ onBack }) {
-  const { fmt, lang, kind } = useApp();
+  const { fmt, lang, kind, openDialog } = useApp();
   const { t, fmtN, name, clientName, optionLabel } = fmt;
   const ar = lang === "ar";
 
@@ -67,6 +69,7 @@ export default function ClosedArchiveView({ onBack }) {
   const [reloadKey, setReloadKey] = useState(0);
   // The page answer is tagged with the request it belongs to; loading = no answer yet for the current request.
   const [answer, setAnswer] = useState({ key: "", items: [], totalCount: 0, error: "" });
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
   const [detail, setDetail] = useState(null);
   const [historyRow, setHistoryRow] = useState(null);
   const seq = useRef(0);
@@ -95,6 +98,8 @@ export default function ClosedArchiveView({ onBack }) {
   }, [reportType, page, pageSize, query, requestKey]);
   // While a new page loads, the previous rows stay visible (dimmed) instead of flashing empty.
   const data = { ...answer, loading: answer.key !== requestKey };
+  const pageIds = new Set(data.items.map((r) => r.id));
+  const activeSelectedIds = new Set([...selectedIds].filter((id) => pageIds.has(id)));
 
   const pages = Math.max(1, Math.ceil(data.totalCount / pageSize));
   const from = data.totalCount ? (page - 1) * pageSize + 1 : 0;
@@ -124,7 +129,45 @@ export default function ClosedArchiveView({ onBack }) {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() =>
+              openDialog(
+                <ExcelExportDialog
+                  scope="closed"
+                  reportType={reportType}
+                  status="Closed"
+                  initialRows={data.items}
+                  preSelectedIds={[...activeSelectedIds]}
+                  search={query}
+                />,
+              )
+            }
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 text-xs font-semibold shadow-2xs transition cursor-pointer"
+          >
+            <FileSpreadsheet size={13} className="text-emerald-600" />
+            <span>{t("Save as Excel", "حفظ كـ Excel")}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              openDialog(
+                <MailDialog
+                  scope="closed"
+                  reportType={reportType}
+                  status="Closed"
+                  initialRows={data.items}
+                  preSelectedIds={[...activeSelectedIds]}
+                  search={query}
+                />,
+              )
+            }
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-sky-200 bg-sky-50 text-sky-800 hover:bg-sky-100 text-xs font-semibold shadow-2xs transition cursor-pointer"
+          >
+            <Mail size={13} className="text-sky-600" />
+            <span>{t("Email", "إيميل")}</span>
+          </button>
           <button
             type="button"
             onClick={() => setReloadKey((k) => k + 1)}
@@ -251,6 +294,22 @@ export default function ClosedArchiveView({ onBack }) {
           <table className="w-full text-start border-collapse text-xs whitespace-nowrap">
             <thead>
               <tr className="bg-slate-50/90 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+                <th className="py-3 px-3 text-center w-10">
+                  <input
+                    type="checkbox"
+                    aria-label={t("Select this page", "تحديد الصفحة")}
+                    checked={data.items.length > 0 && data.items.every((r) => activeSelectedIds.has(r.id))}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setSelectedIds((prev) => {
+                        const next = new Set([...prev].filter((id) => pageIds.has(id)));
+                        data.items.forEach((r) => (on ? next.add(r.id) : next.delete(r.id)));
+                        return next;
+                      });
+                    }}
+                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer"
+                  />
+                </th>
                 <th className="py-3 px-3 text-start"># / {t("Shipment No", "رقم الشحنة")}</th>
                 <th className="py-3 px-3 text-start">{t("Type", "النوع")}</th>
                 <th className="py-3 px-3 text-start">{t("BL / Booking / Cert", "البوليصة / الحجز / الشهادة")}</th>
@@ -265,7 +324,7 @@ export default function ClosedArchiveView({ onBack }) {
               {data.loading && !data.items.length
                 ? Array.from({ length: 6 }, (_, i) => (
                     <tr key={"skel" + i}>
-                      {Array.from({ length: 8 }, (_, j) => (
+                      {Array.from({ length: 9 }, (_, j) => (
                         <td key={j} className="py-3 px-3">
                           <div className="h-4 w-20 bg-slate-200/70 rounded-md animate-pulse" />
                         </td>
@@ -275,8 +334,25 @@ export default function ClosedArchiveView({ onBack }) {
                 : data.items.map((r, i) => {
                     const info = containerInfo(r);
                     const line = C.value(r, "shippingLine");
+                    const isChecked = activeSelectedIds.has(r.id);
                     return (
-                      <tr key={r.id} className={"hover:bg-emerald-50/20 transition-colors" + (data.loading ? " opacity-60" : "")}>
+                      <tr key={r.id} className={"hover:bg-emerald-50/20 transition-colors" + (isChecked ? " bg-sky-50/50" : "") + (data.loading ? " opacity-60" : "")}>
+                        <td className="py-3 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            aria-label={t("Select shipment ", "تحديد الشحنة ") + (r.shipmentNumber || r.id)}
+                            onChange={(e) => {
+                              const on = e.target.checked;
+                              setSelectedIds((prev) => {
+                                const next = new Set([...prev].filter((id) => pageIds.has(id)));
+                                on ? next.add(r.id) : next.delete(r.id);
+                                return next;
+                              });
+                            }}
+                            className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer"
+                          />
+                        </td>
                         <td className="py-3 px-3">
                           <div className="flex flex-col">
                             <span className="font-bold text-slate-900">{r.shipmentNumber || "—"}</span>
@@ -387,7 +463,7 @@ const SHOWN = new Set([
 ]);
 
 function ClosedDetailsDrawer({ row: r, onClose, onHistory, blocked }) {
-  const { fmt, lang, getUpdates } = useApp();
+  const { fmt, lang, getUpdates, openDialog, dialog } = useApp();
   const { t, fmtN, name, clientName, optionLabel, label, display, stamp } = fmt;
   const ar = lang === "ar";
   const k = r.reportType;
@@ -404,13 +480,13 @@ function ClosedDetailsDrawer({ row: r, onClose, onHistory, blocked }) {
     };
   }, [r.id, getUpdates]);
 
-  // Escape closes the drawer, unless the status history drawer is open above it (that one closes first).
+  // Escape closes the drawer, unless a dialog or status history drawer is open above it.
   useEffect(() => {
-    if (blocked) return;
+    if (blocked || dialog) return;
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, blocked]);
+  }, [onClose, blocked, dialog]);
 
   const v = (key) => C.value(r, key);
   const port =
@@ -468,14 +544,52 @@ function ClosedDetailsDrawer({ row: r, onClose, onHistory, blocked }) {
               <strong className="text-slate-800 font-bold">{closedStamp(r.closedAtUtc, ar)}</strong>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onHistory}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition cursor-pointer"
-          >
-            <History size={12} className="text-sky-600" />
-            <span>{t("Status History", "سجل الحالات")}</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() =>
+                openDialog(
+                  <MailDialog
+                    scope="closed"
+                    reportType={k}
+                    status="Closed"
+                    initialRows={[r]}
+                    preSelectedIds={[r.id]}
+                  />,
+                )
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-sky-200 text-sky-700 hover:bg-sky-50 text-xs font-semibold shadow-2xs transition cursor-pointer"
+            >
+              <Mail size={12} className="text-sky-600" />
+              <span>{t("Email", "إيميل")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                openDialog(
+                  <ExcelExportDialog
+                    scope="closed"
+                    reportType={k}
+                    status="Closed"
+                    initialRows={[r]}
+                    preSelectedIds={[r.id]}
+                  />,
+                )
+              }
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 text-xs font-semibold shadow-2xs transition cursor-pointer"
+            >
+              <FileSpreadsheet size={12} className="text-emerald-600" />
+              <span>{t("Save as Excel", "حفظ كـ Excel")}</span>
+            </button>
+            <button
+              type="button"
+              onClick={onHistory}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-2xs transition cursor-pointer"
+            >
+              <History size={12} className="text-sky-600" />
+              <span>{t("Status History", "سجل الحالات")}</span>
+            </button>
+          </div>
         </div>
 
         {/* Body */}

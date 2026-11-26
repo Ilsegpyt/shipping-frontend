@@ -42,6 +42,8 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
     theme = 'light',
     currentTab,
     counts,
+    canExportExcel = true,
+    maxExcelOperations = null,
     className,
     style,
     children,
@@ -74,6 +76,8 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
         language: latest.current.language,
         theme: latest.current.theme,
         counts: latest.current.counts,
+        canExportExcel: latest.current.canExportExcel !== false,
+        maxExcelOperations: latest.current.maxExcelOperations ?? null,
         initialWorkspace: latest.current.initialWorkspace,
         onEvent(type, detail) {
           const p = latest.current;
@@ -128,6 +132,12 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       engineRef.current?.setCounts?.(counts);
     }
   }, [counts]);
+  useEffect(() => {
+    engineRef.current?.setExportPolicy?.({
+      canExportExcel: canExportExcel !== false,
+      maxExcelOperations: maxExcelOperations ?? null,
+    });
+  }, [canExportExcel, maxExcelOperations]);
 
   useImperativeHandle(ref, () => {
     const call = (name) => (...args) => {
@@ -145,6 +155,7 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       invalidateLoadedDirs: call('invalidateLoadedDirs'),
       setTab: call('setTab'),
       setCounts: call('setCounts'),
+      setExportPolicy: call('setExportPolicy'),
       setArchiveOperations: call('setArchiveOperations'),
       getLanguage: call('getLanguage'),
       getTheme: call('getTheme'),
@@ -166,6 +177,9 @@ const FtlDashboard = forwardRef(function FtlDashboard(props, ref) {
       dismissToast: call('dismissToast'),
       removeShipmentLocally: call('removeShipmentLocally'),
       appendTripUpdate: call('appendTripUpdate'),
+      copyOperation: call('copyOperation'),
+      exportOperationExcel: call('exportOperationExcel'),
+      emailOperation: call('emailOperation'),
       isLive: call('isLive'),
       isDirty: call('isDirty'),
       get apiSpec() { return engineRef.current?.apiSpec; },

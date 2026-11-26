@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { AppProvider, useApp } from "./AppState.jsx";
 import EntryView from "./components/EntryView.jsx";
 import Dashboard from "./components/Dashboard.jsx";
+import FinanceView from "./components/FinanceView.jsx";
 import { ClosedModal, UpdatesModal } from "./components/Archive.jsx";
 import { copySelected } from "./components/actions.jsx";
 import "./customs-clearance.css";
@@ -39,7 +40,7 @@ function Shell() {
   return (
     <div ref={setRootEl} className="ccl-root" lang={lang} dir={lang === "ar" ? "rtl" : "ltr"} data-theme={theme}>
       <div className="wrap">
-        <main>{view === "dashboard" ? <Dashboard /> : <EntryView />}</main>
+        <main>{view === "dashboard" ? <Dashboard /> : view === "finance" ? <FinanceView /> : <EntryView />}</main>
       </div>
       {closedOpen && <ClosedModal />}
       {dialog}

@@ -63,8 +63,14 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
     user?.role === 'FTL Operation Executive'
   );
 
+  const isFtlSupervisor = Boolean(
+    user?.roleName === 'Supervisor FTL Operation' ||
+    user?.role === 'Supervisor FTL Operation'
+  );
+
   const canReopen = Boolean(
     isSuperAdmin ||
+    isFtlSupervisor ||
     isFtlExec ||
     user?.roleName === 'Supervisor Maritime Transportation' ||
     user?.roleName === 'Ocean Operations Manager' ||
@@ -74,6 +80,7 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
 
   const canDelete = Boolean(
     isSuperAdmin ||
+    isFtlSupervisor ||
     isFtlExec ||
     user?.permissions?.includes('operations.ftl.delete') ||
     user?.permissions?.includes('operations.delete')
@@ -81,12 +88,28 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
 
   const canDeliver = Boolean(
     isSuperAdmin ||
+    isFtlSupervisor ||
     isFtlExec ||
     user?.roleName === 'Supervisor Maritime Transportation' ||
     user?.roleName === 'Ocean Operations Manager' ||
     user?.permissions?.includes('operations.ftl.deliver') ||
     user?.permissions?.includes('operations.deliver')
   );
+
+  const canExportExcel = Boolean(
+    isSuperAdmin ||
+    isFtlSupervisor ||
+    user?.permissions?.includes('reports.download') ||
+    isFtlExec
+  );
+
+  const isRestrictedFtlExecutive = Boolean(
+    !isSuperAdmin &&
+    !isFtlSupervisor &&
+    !user?.permissions?.includes('reports.download') &&
+    isFtlExec
+  );
+  const maxExcelOperations = isRestrictedFtlExecutive ? 3 : null;
 
   const api = useMemo(() => {
     const displayName =
@@ -260,6 +283,8 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
           theme={theme}
           currentTab={currentTab}
           counts={counts}
+          canExportExcel={canExportExcel}
+          maxExcelOperations={maxExcelOperations}
           onCountsRefresh={fetchCounts}
           onReady={handleReady}
           onLanguageChange={handleLanguageChange}
@@ -326,6 +351,10 @@ export default function FtlAirportPage({ defaultView = 'dashboard' }) {
         onTripUpdateAdded={(dir, ref, rowIndices, updateObj) => {
           dashboardRef.current?.appendTripUpdate?.(dir, ref, rowIndices, updateObj);
         }}
+        canExportExcel={canExportExcel}
+        onCopyOp={(detailOp) => dashboardRef.current?.copyOperation?.(detailOp.dir, detailOp.ref)}
+        onEmailOp={(detailOp) => dashboardRef.current?.emailOperation?.(detailOp.dir, detailOp.ref)}
+        onExportExcelOp={(detailOp) => dashboardRef.current?.exportOperationExcel?.(detailOp.dir, detailOp.ref)}
         isStatusHistoryOpen={Boolean(activeHistoryOp)}
         lang={language}
         currentUserName={user?.fullName || user?.displayName || user?.name || user?.userName || user?.email?.split('@')[0] || 'User'}

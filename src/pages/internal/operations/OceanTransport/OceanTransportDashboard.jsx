@@ -43,7 +43,6 @@ import {
   deliverOperation,
   reopenOperation,
   deleteOperation,
-  getDeletedOperations,
   getDeliveredOperations,
   getOperationsCounts,
   getCachedLookups,
@@ -176,11 +175,6 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
   const [isLoadingDelivered, setIsLoadingDelivered] = useState(false);
   const [hasLoadedDelivered, setHasLoadedDelivered] = useState(false);
 
-  // Deleted Operations State (Lazy loaded on clicking Inactive tab)
-  const [deletedOperations, setDeletedOperations] = useState([]);
-  const [isLoadingDeleted, setIsLoadingDeleted] = useState(false);
-  const [hasLoadedDeleted, setHasLoadedDeleted] = useState(false);
-
   // FCL State (Lazy loaded on clicking FCL tab)
   const [hasLoadedFcl, setHasLoadedFcl] = useState(false);
   const [isLoadingFcl, setIsLoadingFcl] = useState(false);
@@ -197,21 +191,6 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       console.error('Failed to load delivered operations:', err);
     } finally {
       if (!silent) setIsLoadingDelivered(false);
-    }
-  };
-
-  const loadDeletedOperations = async (silent = false) => {
-    if (!silent) setIsLoadingDeleted(true);
-    try {
-      const data = await getDeletedOperations();
-      if (Array.isArray(data)) {
-        setDeletedOperations(data);
-        setHasLoadedDeleted(true);
-      }
-    } catch (err) {
-      console.error('Failed to load deleted operations:', err);
-    } finally {
-      if (!silent) setIsLoadingDeleted(false);
     }
   };
 
@@ -392,8 +371,6 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     setEntryDir(newDir);
     if (newDir === 'Delivered' && !hasLoadedDelivered) {
       loadDeliveredOperations();
-    } else if (newDir === 'Deleted' && !hasLoadedDeleted) {
-      loadDeletedOperations();
     } else if (newDir === 'FCL' && !hasLoadedFcl) {
       loadFclData();
     }
@@ -878,15 +855,6 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
     }
   };
 
-  useEffect(() => {
-    if (entryDir === 'Deleted') {
-      // If we don't have any deleted operations loaded yet, load with full loader.
-      // If we already have them in memory, refresh quietly in background without hiding data.
-      const hasExisting = deletedOperations.length > 0;
-      loadDeletedOperations(!hasExisting ? false : true);
-    }
-  }, [entryDir]);
-
   const handleDeleteOperation = async (opId) => {
     // Optimistic removal from active entry state
     setEntry((prev) => {
@@ -904,10 +872,9 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
       if (!prev) return prev;
       return {
         ...prev,
-        importCount: entryDir === 'Import' ? Math.max(0, (prev.importCount || 0) - 1) : prev.importCount,
-        exportCount: entryDir === 'Export' ? Math.max(0, (prev.exportCount || 0) - 1) : prev.exportCount,
-        activeTotalCount: Math.max(0, (prev.activeTotalCount || 0) - 1),
-        deletedCount: (prev.deletedCount || 0) + 1,
+        activeImportCount: entryDir === 'Import' ? Math.max(0, (prev.activeImportCount || 0) - 1) : prev.activeImportCount,
+        activeExportCount: entryDir === 'Export' ? Math.max(0, (prev.activeExportCount || 0) - 1) : prev.activeExportCount,
+        inactiveCount: (prev.inactiveCount || 0) + 1,
       };
     });
 
@@ -919,9 +886,8 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           : 'Operation moved to Inactive archive successfully',
         'success'
       );
-      // Fast refresh in background
+      // Fast counts refresh in background
       refreshActiveOperations();
-      if (hasLoadedDeleted) loadDeletedOperations(true);
       return true;
     } catch (err) {
       console.error('Failed to delete operation:', err);
@@ -1998,11 +1964,10 @@ export default function OceanTransportDashboard({ defaultView = 'dashboard' }) {
           onSaveAllToDatabase={handleSaveAllDraftsToDatabase}
           unsavedDraftsCount={unsavedDrafts.length}
           onDeleteOperation={handleDeleteOperation}
-          deletedOperations={deletedOperations}
-          isLoadingDeleted={isLoadingDeleted}
-          onRefreshDeleted={loadDeletedOperations}
+          onRefreshDeleted={refreshActiveOperations}
           showToast={showToast}
           lang={lang}
+          isExternalModalOpen={emailModalOpen || exportExcelModalOpen}
           fclMatches={fclMatches}
           fclApprovedList={fclApprovedList}
           onApproveMatch={handleApproveMatch}

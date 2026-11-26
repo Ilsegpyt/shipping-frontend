@@ -42,6 +42,15 @@ const OPTION_LABELS = {
   ترانزيت: ["Transit", "ترانزيت"],
 };
 
+// Ocean Import customs track (API value -> [English, Arabic]).
+const TRACK_LABELS = {
+  Blue: ["Blue track", "مسار أزرق"],
+  Yellow: ["Yellow track", "مسار أصفر"],
+  Green: ["Green track", "مسار أخضر"],
+  Red: ["Red track", "مسار أحمر"],
+  GreenImports: ["Green imports track", "مسار أخضر واردات"],
+};
+
 /** Builds every language-dependent helper once per language (and lookup load). */
 export function makeFmt(lang, lookups = {}) {
   const ar = lang === "ar";
@@ -59,6 +68,7 @@ export function makeFmt(lang, lookups = {}) {
     return v;
   };
   const optionLabel = (v) => (OPTION_LABELS[v] ? t(...OPTION_LABELS[v]) : v);
+  const trackLabel = (v) => (TRACK_LABELS[v] ? t(...TRACK_LABELS[v]) : v);
   // Rows store the client GUID; the table, copy, email and Excel show the client name.
   const clientNames = new Map((lookups.clients || []).map((c) => [String(c.id).toLowerCase(), c.name]));
   const clientName = (id) => clientNames.get(String(id ?? "").toLowerCase()) || (id ? t("Unknown client", "عميل غير معروف") : "");
@@ -67,6 +77,7 @@ export function makeFmt(lang, lookups = {}) {
     if (v === "" || v == null) return "—";
     if (f.key === "clientId") return clientName(v);
     if (f.key === "clearanceType") return clearanceName(v);
+    if (f.key === "track") return trackLabel(String(v));
     if (["pod", "pol", "terminal", "currentStage", "containerType"].includes(f.key)) return optionLabel(String(v));
     if (f.key === "status") return statusName(v);
     if (["date", "datetime"].includes(f.type)) {
@@ -133,11 +144,19 @@ export function makeFmt(lang, lookups = {}) {
       case "containers": return t("Enter one type for each container.", "أدخل مقاسًا لكل حاوية.");
       case "positive": return l + t(" must be a whole number of at least 1.", " لازم يكون عدد صحيح لا يقل عن 1.");
       case "guid": return t("Choose a valid client.", "اختار عميل صحيح.");
+      case "needsAta": return t("Enter the ATA date before ", "أدخل تاريخ وصول المركب (ATA) قبل ") + l + t(".", ".");
+      case "needsFreeTime": return t("Free time must be at least 1 day before entering ", "مدة السماح لازم تكون يوم واحد على الأقل قبل إدخال ") + l + ".";
+      case "freeTimeEnd":
+        return t(
+          `Date of free time end must be ${e.expected} (ATA ${e.ata} + ${e.free} free days).`,
+          `تاريخ انتهاء السماح لازم يكون ${e.expected} (ATA ${e.ata} + ${e.free} يوم سماح).`,
+        );
+      case "beforeAta": return t(`D/O date cannot be before the ATA date (${e.ata}).`, `تاريخ دفع التفريغ ماينفعش يكون قبل تاريخ وصول المركب (${e.ata}).`);
       default: return l + t(" has an invalid value or date.", " فيه قيمة أو تاريخ غير صحيح.");
     }
   }
 
-  return { lang, ar, t, label, name, fmtN, statusName, clearanceName, clientName, optionLabel, display, typeLabel, stamp, opName, message };
+  return { lang, ar, t, label, name, fmtN, statusName, clearanceName, clientName, optionLabel, trackLabel, display, typeLabel, stamp, opName, message };
 }
 
 /* ---------- dropdown options ---------- */
@@ -167,6 +186,7 @@ export function dropdownOptions(key, k, lookups, fmt, current = "", context = {}
   else if (key === "containerType")
     options = (lookups.containerTypes?.length ? lookups.containerTypes : C.containerOptions).map((v) => ({ value: v, label: fmt.optionLabel(v) }));
   else if (key === "currentStage") options = C.stageOptions.map((v) => ({ value: v, label: v }));
+  else if (key === "track") options = C.trackOptions.map((v) => ({ value: v, label: fmt.trackLabel(v) }));
   else if (key === "clearanceType")
     options = (k === "OceanExport" ? ["Certificate", "Bosla"] : ["Import", "Transit"]).map((v) => ({ value: v, label: fmt.clearanceName(v) }));
   else options = [];

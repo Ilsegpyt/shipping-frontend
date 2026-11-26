@@ -16,6 +16,7 @@ import {
     Truck,
     Container,
     Handshake,
+    Banknote,
 } from "lucide-react";
 
 export const getInternalNavigation = (user) => [
@@ -100,6 +101,12 @@ export const getInternalNavigation = (user) => [
                         path: "/customs-clearance/entry",
                         permission: "customsclearance.shipments.view",
                         icon: FileSpreadsheet,
+                    },
+                    {
+                        label: "Customs Finance",
+                        path: "/customs-clearance/finance",
+                        permission: "customsclearance.shipments.view",
+                        icon: Banknote,
                     },
                 ],
             },

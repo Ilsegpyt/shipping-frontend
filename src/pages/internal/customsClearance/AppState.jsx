@@ -6,6 +6,8 @@ const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
 const STATUS = { open: "Open", closed: "Closed" };
+// Open Ocean Import pages come from the API ordered by ETA; the page sort follows that by default.
+const openFilter = (k) => (k === "OceanImport" ? { ...makeFilter(), sort: "etaDate", dir: "asc" } : makeFilter());
 const emptyTable = () => ({ items: [], totalCount: 0, loading: false, error: "" });
 const emptyLookups = () => ({ clients: [], ports: [], shippingLines: [], terminals: [], containerTypes: [], clearanceTypes: [], loaded: false, error: "" });
 
@@ -37,7 +39,7 @@ export function AppProvider({ children, initialView = "entry" }) {
   const [tables, setTables] = useState({ open: emptyTable(), closed: emptyTable() });
   const [reloadKey, setReloadKey] = useState({ open: 0, closed: 0 });
   const [drafts, setDrafts] = useState({});
-  const [filters, setFilters] = useState({ open: makeFilter(), closed: makeFilter() });
+  const [filters, setFilters] = useState({ open: openFilter("OceanImport"), closed: makeFilter() });
   const [selections, setSelections] = useState({ open: new Set(), closed: new Set() });
   const [dashFilter, setDashFilter] = useState(emptyDashFilter);
   const [closedOpen, setClosedOpen] = useState(false);
@@ -46,6 +48,9 @@ export function AppProvider({ children, initialView = "entry" }) {
   const [toastState, setToastState] = useState({ msg: "", error: false, on: false });
 
   const [lookups, setLookups] = useState(emptyLookups);
+  // Alerts 1 & 4 (Open Ocean Import): server-side filter of the open table + counts over all open shipments.
+  const [alertFilter, setAlertFilterState] = useState(""); // "" | EtaSoon | EtaOverdue | FreeTimeSoon | FreeTimeExpired | Any
+  const [alertsSummary, setAlertsSummary] = useState(null);
 
   const data = useMemo(
     () => ({
@@ -91,6 +96,7 @@ export function AppProvider({ children, initialView = "entry" }) {
         pageNumber: f.page + 1,
         pageSize: f.size,
         search: f.q,
+        alert: f.alert,
       });
       if (seq !== requestSeq.current[scope]) return; // a newer request already answered
       setTables((t) => ({ ...t, [scope]: { items: page.items || [], totalCount: page.totalCount || 0, loading: false, error: "" } }));
@@ -104,9 +110,35 @@ export function AppProvider({ children, initialView = "entry" }) {
   const { q: openQ, page: openPage, size: openSize } = filters.open;
   useEffect(() => {
     // Short delay so typing in the search box sends one request, not one per key.
-    const timer = setTimeout(() => loadTable("open", kind, { q: openQ, page: openPage, size: openSize }), openQ ? 300 : 0);
+    const alert = kind === "OceanImport" ? alertFilter : "";
+    const timer = setTimeout(() => loadTable("open", kind, { q: openQ, page: openPage, size: openSize, alert }), openQ ? 300 : 0);
     return () => clearTimeout(timer);
-  }, [loadTable, kind, openQ, openPage, openSize, reloadKey.open]);
+  }, [loadTable, kind, openQ, openPage, openSize, alertFilter, reloadKey.open]);
+
+  // Alert counts: on load, after every open-table change, when the tab regains focus, and every 5 minutes
+  // (so "today" in Cairo moves on if the page stays open past midnight).
+  const loadAlertsSummary = useCallback(async () => {
+    try {
+      setAlertsSummary(await customsClearanceService.getAlertsSummary());
+    } catch {
+      setAlertsSummary(null);
+    }
+  }, []);
+  useEffect(() => {
+    loadAlertsSummary();
+  }, [loadAlertsSummary, reloadKey.open]);
+  useEffect(() => {
+    // Focus refreshes only the counts; the 5-minute tick also reloads the open table so row highlights follow.
+    const onFocus = () => loadAlertsSummary();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") setReloadKey((r) => ({ ...r, open: r.open + 1 }));
+    }, 5 * 60 * 1000);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [loadAlertsSummary]);
 
   const { q: closedQ, page: closedPage, size: closedSize } = filters.closed;
   useEffect(() => {
@@ -114,6 +146,23 @@ export function AppProvider({ children, initialView = "entry" }) {
     const timer = setTimeout(() => loadTable("closed", closedKind, { q: closedQ, page: closedPage, size: closedSize }), closedQ ? 300 : 0);
     return () => clearTimeout(timer);
   }, [loadTable, closedOpen, closedKind, closedQ, closedPage, closedSize, reloadKey.closed]);
+
+  // Tab badges: one grouped count query (no rows), refreshed whenever the open or closed table reloads.
+  // Inactive rows themselves are only fetched by the Inactive archive view, page by page.
+  const [counts, setCounts] = useState(null); // { open, closed, inactive } x { oceanImport, oceanExport, domestic, total }
+  const [countsKey, setCountsKey] = useState(0);
+  const [inactiveVersion, setInactiveVersion] = useState(0); // bumps when a shipment is deactivated (archive cache key)
+  const refreshCounts = useCallback(() => setCountsKey((k) => k + 1), []);
+  useEffect(() => {
+    let alive = true;
+    customsClearanceService
+      .getCounts()
+      .then((c) => alive && setCounts(c))
+      .catch(() => alive && setCounts(null));
+    return () => {
+      alive = false;
+    };
+  }, [reloadKey.open, reloadKey.closed, inactiveVersion, countsKey]);
 
   const reload = useCallback((scope) => setReloadKey((r) => ({ ...r, [scope]: r[scope] + 1 })), []);
 
@@ -157,6 +206,38 @@ export function AppProvider({ children, initialView = "entry" }) {
     [run, reload],
   );
 
+  // Soft delete. The row leaves the open table at once and the badges move by one; the page then reloads to refill.
+  const deactivateShipment = useCallback(
+    async (row) => {
+      const result = await run(() => customsClearanceService.deactivate(row.id), "Could not move the shipment to Inactive.");
+      if (!result.ok) return result;
+      const scope = row.status === "Closed" ? "closed" : "open";
+      setTables((t) => ({
+        ...t,
+        [scope]: {
+          ...t[scope],
+          items: t[scope].items.filter((x) => x.id !== row.id),
+          totalCount: Math.max(0, (t[scope].totalCount || 0) - 1),
+        },
+      }));
+      const reportKey = { OceanImport: "oceanImport", OceanExport: "oceanExport", Domestic: "domestic" }[row.reportType];
+      setCounts((c) => {
+        if (!c || !reportKey) return c;
+        const move = (bucket, d) => ({ ...bucket, [reportKey]: Math.max(0, (bucket[reportKey] || 0) + d), total: Math.max(0, (bucket.total || 0) + d) });
+        return { ...c, [scope]: move(c[scope], -1), inactive: move(c.inactive, 1) };
+      });
+      setSelections((s) => {
+        const n = new Set(s[scope]);
+        n.delete(row.id);
+        return { ...s, [scope]: n };
+      });
+      setInactiveVersion((v) => v + 1);
+      reload(scope);
+      return result;
+    },
+    [run, reload],
+  );
+
   const getUpdates = useCallback((id) => run(() => customsClearanceService.getUpdates(id), "Could not load the updates."), [run]);
 
   const addUpdate = useCallback(
@@ -172,8 +253,9 @@ export function AppProvider({ children, initialView = "entry" }) {
   const scopeKind = (scope) => (scope === "closed" ? closedKind : kind);
   const setFilter = (scope, patch) =>
     setFilters((f) => ({ ...f, [scope]: { ...f[scope], ...(typeof patch === "function" ? patch(f[scope]) : patch) } }));
-  const resetFilter = (scope) => {
-    setFilters((f) => ({ ...f, [scope]: makeFilter() }));
+  // Reset brings the open table back to its default sort (ETA ascending for Ocean Import).
+  const resetFilter = (scope, k = kind) => {
+    setFilters((f) => ({ ...f, [scope]: scope === "open" ? openFilter(k) : makeFilter() }));
     clearSelection(scope);
   };
   const setSelection = (scope, set) => setSelections((s) => ({ ...s, [scope]: set }));
@@ -186,8 +268,15 @@ export function AppProvider({ children, initialView = "entry" }) {
       return;
     }
     setKind(k);
-    resetFilter("open");
+    resetFilter("open", k);
+    setAlertFilterState("");
     setDashFilter(emptyDashFilter());
+  };
+  // Choosing an alert chip filters the open table from its first page; choosing it again clears it.
+  const setAlertFilter = (value) => {
+    setAlertFilterState((cur) => (cur === value ? "" : value));
+    setFilter("open", { page: 0 });
+    clearSelection("open");
   };
   const openClosed = () => {
     setClosedKind(kind);
@@ -202,6 +291,8 @@ export function AppProvider({ children, initialView = "entry" }) {
 
   const value = {
     lang, setLang, theme, setTheme, rootEl, setRootEl, view, setView, kind, closedKind, scopeKind, switchKind,
+    alertFilter, setAlertFilter, alertsSummary,
+    counts, refreshCounts, inactiveVersion, deactivateShipment,
     lookups, data, tables, reload, createShipment, updateShipment, closeShipment, getUpdates, addUpdate,
     drafts, setDrafts,
     filters, setFilter, resetFilter, selections, setSelection, clearSelection,

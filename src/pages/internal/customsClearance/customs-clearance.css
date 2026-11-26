@@ -1075,7 +1075,8 @@
 .ccl-root #eTable td[data-field=count] .cbox{min-height:39px}.ccl-root .closed-badge{color:var(--steel)}
 
 /* ===== Actions column (FCL pattern: Edit → Save / Cancel) ===== */
-.ccl-root #eTable .actions-cell .cbox,.ccl-root .shipmentTable .actions-cell .cbox{width:120px;min-width:120px;display:flex;flex-direction:column;gap:5px;align-items:stretch;justify-content:center;padding:6px}
+.ccl-root #eTable .actions-cell .cbox,.ccl-root .shipmentTable .actions-cell .cbox{width:120px;min-width:120px;display:flex;flex-direction:row;gap:5px;align-items:center;justify-content:center;padding:6px}
+.ccl-root .act-btn.edit,.ccl-root .act-btn.save{flex:1}
 .ccl-root .act-btn{border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit;font-size:11.5px;font-weight:600;padding:5px 8px;cursor:pointer}
 .ccl-root .act-btn:hover:not(:disabled){border-color:var(--brand-2)}
 .ccl-root .act-btn:disabled{opacity:.45;cursor:not-allowed}
@@ -1102,3 +1103,55 @@
 .ccl-root .ccl-tw.ccl-tw,.ccl-root .ccl-tw.ccl-tw *{all:revert-layer}
 @keyframes ccl-drawer-in{from{transform:translateX(100%)}to{transform:none}}
 @keyframes ccl-drawer-in-rtl{from{transform:translateX(-100%)}to{transform:none}}
+
+/* ---------- Alerts 1 & 4 (Open Ocean Import): alerts bar + table highlights ---------- */
+.ccl-root .ccl-alerts{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0;padding:8px 10px;border:1px solid var(--line,#d9e2ea);border-radius:10px;background:var(--card)}
+.ccl-root .ccl-alerts-title{display:inline-flex;align-items:center;gap:6px;font-weight:700}
+.ccl-root .ccl-alerts-total{min-width:22px;padding:1px 7px;border-radius:999px;background:var(--bad);color:#fff;font-size:12px;text-align:center}
+.ccl-root .ccl-alert-chip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border-radius:999px;border:1px solid var(--tone);background:color-mix(in srgb,var(--tone) 10%,transparent);color:inherit;cursor:pointer;font:inherit;font-size:13px}
+.ccl-root .ccl-alert-chip b{color:var(--tone)}
+.ccl-root .ccl-alert-chip.tone-warn{--tone:var(--warn)}
+.ccl-root .ccl-alert-chip.tone-bad{--tone:var(--bad)}
+.ccl-root .ccl-alert-chip.zero{opacity:.6}
+.ccl-root .ccl-alert-chip.active{background:var(--tone);color:#fff;opacity:1}
+.ccl-root .ccl-alert-chip.active b{color:#fff}
+.ccl-root .ccl-alert-chip:focus-visible,.ccl-root .ccl-alert-clear:focus-visible{outline:2px solid var(--tone,var(--sea));outline-offset:2px}
+.ccl-root .ccl-alert-clear{border:0;background:none;color:var(--sea);cursor:pointer;font:inherit;font-size:13px;text-decoration:underline}
+.ccl-root .ccl-alerts-today{margin-inline-start:auto}
+.ccl-root #eTable tr.alert-warn > td:first-child{box-shadow:inset 3px 0 0 var(--warn)}
+.ccl-root #eTable tr.alert-bad > td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+.ccl-root[dir="rtl"] #eTable tr.alert-warn > td:first-child{box-shadow:inset -3px 0 0 var(--warn)}
+.ccl-root[dir="rtl"] #eTable tr.alert-bad > td:first-child{box-shadow:inset -3px 0 0 var(--bad)}
+.ccl-root #eTable .cbox.cell-alert{font-weight:700}
+.ccl-root #eTable .cbox.eta-soon,.ccl-root #eTable .cbox.eta-today,.ccl-root #eTable .cbox.ft-soon,.ccl-root #eTable .cbox.ft-today{border-color:var(--warn);background:color-mix(in srgb,var(--warn) 16%,var(--card))}
+.ccl-root #eTable .cbox.eta-overdue,.ccl-root #eTable .cbox.ft-expired{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,var(--card));color:var(--bad)}
+
+/* ---------- Alerts: cell badges, sticky Alert 2/3 errors, briefing dialog ---------- */
+.ccl-root .ccl-alert-badge{display:inline-block;margin-inline-start:6px;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;line-height:1.5;white-space:nowrap;vertical-align:middle;color:#fff;background:var(--tone)}
+.ccl-root .ccl-alert-badge.tone-warn{--tone:var(--warn);color:#3d2a05}
+.ccl-root .ccl-alert-badge.tone-bad{--tone:var(--bad)}
+.ccl-root #eTable .cbox.cell-alert{display:flex;align-items:center;gap:2px}
+.ccl-root #eTable .cbox.field-error{border:2px solid var(--bad) !important;background:color-mix(in srgb,var(--bad) 10%,var(--card))}
+.ccl-root #eTable .cbox.field-error input{border-color:var(--bad);outline-color:var(--bad)}
+.ccl-root #eTable tr.row-errors td{padding:0 6px 6px;background:var(--card)}
+.ccl-root .ccl-row-errors{position:sticky;inset-inline-start:0;max-width:min(900px,90vw);padding:8px 12px;border:1px solid var(--bad);border-inline-start:4px solid var(--bad);border-radius:8px;background:color-mix(in srgb,var(--bad) 8%,var(--card));color:var(--bad);font-size:13px}
+.ccl-root .ccl-row-errors ul{margin:4px 0 0;padding-inline-start:18px}
+.ccl-root #eTable tr.row-focus > td{background:color-mix(in srgb,var(--sea) 14%,var(--card))}
+.ccl-root .ccl-briefing-sum{margin:0 0 10px;font-weight:600}
+.ccl-root .ccl-briefing-scroll{max-height:60vh;overflow:auto}
+.ccl-root table.ccl-briefing{width:100%;border-collapse:collapse;font-size:13px}
+.ccl-root table.ccl-briefing th,.ccl-root table.ccl-briefing td{padding:6px 8px;border-bottom:1px solid var(--line,#d9e2ea);text-align:start;white-space:nowrap}
+.ccl-root table.ccl-briefing th{position:sticky;top:0;background:var(--card);font-weight:700}
+.ccl-root .ccl-briefing-date{font-variant-numeric:tabular-nums}
+
+/* ---------- Inactive (soft delete): tab button + row action (Rose) ---------- */
+.ccl-root .ebtn.ccl-inactive-btn{display:inline-flex;align-items:center;gap:6px;border-color:#fecdd3;color:#be123c;background:#fff1f2}
+.ccl-root .ebtn.ccl-inactive-btn:hover{background:#ffe4e6;border-color:#fda4af}
+.ccl-root .ccl-inactive-count{min-width:20px;padding:0 7px;border-radius:999px;background:#e11d48;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.ccl-root .act-btn.deactivate{display:inline-flex;align-items:center;justify-content:center;padding-inline:7px;color:#be123c;border-color:#fecdd3;background:#fff1f2}
+.ccl-root .act-btn.deactivate:hover:not(:disabled){background:#ffe4e6;border-color:#fb7185}
+.ccl-root .act-btn.deactivate:disabled{opacity:.45;cursor:not-allowed}
+
+/* Open table: read-only data cells open the FCL-style details drawer */
+.ccl-root #eTable .cbox.cbox-details{cursor:pointer}
+.ccl-root #eTable .cbox.cbox-details:hover{border-color:#38bdf8!important;box-shadow:0 0 0 2px rgba(56,189,248,.22)!important;background:color-mix(in srgb,#0ea5e9 8%,var(--card))!important}

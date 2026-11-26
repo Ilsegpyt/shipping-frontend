@@ -375,6 +375,8 @@ export default function Roles() {
         'operations specialist': 'مسؤول عمليات تشغيل بحري',
         'supervisor maritime transportation': 'مشرف نقل بحري سوبرفايزر عمليات',
         'executive maritime transportation': 'مسؤول تنفيذي نقل بحري اخصائي عمليات',
+        'supervisor ftl operation': 'مشرف عمليات النقل البري FTL سوبرفايزر عمليات',
+        'ftl operation executive': 'مسؤول تنفيذي عمليات النقل البري FTL اخصائي عمليات',
         'customs broker': 'مخلص جمركي تخليص جمارك',
         'account manager': 'مدير حسابات عملاء اكاونت مانجر',
         'sales': 'مبيعات سيلز',
