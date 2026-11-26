@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import LoadingScreen from "../components/common/LoadingScreen";
 import WebsiteNavbar from "../components/website/WebsiteNavbar";
 import WebsiteFooter from "../components/website/WebsiteFooter";
+import BackToTop from "../components/website/BackToTop";
 
 export default function WebsiteLayout() {
   return (
@@ -10,6 +11,7 @@ export default function WebsiteLayout() {
       <WebsiteNavbar />
       <Suspense fallback={<LoadingScreen compact />}><Outlet /></Suspense>
       <WebsiteFooter />
+      <BackToTop />
     </div>
   );
 }
