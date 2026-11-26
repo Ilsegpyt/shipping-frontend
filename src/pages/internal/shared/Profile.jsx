@@ -1,9 +1,9 @@
+import { ProfileSummary, PasswordField } from "../../../components/dashboard/DashboardProfileUI";
 import { sanitizePhoneInput } from "../../../utils/phoneInput.js";
 import ApiFieldError from '../../../components/common/ApiFieldError';
 import { useState, useEffect } from 'react';
 import { UserRound, ShieldCheck } from 'lucide-react';
 import { DashboardPage, DashboardPageHeader, DashboardButton } from '../../../components/dashboard/DashboardUI';
-import './profile-dashboard.css';
 import { useAuth } from '../../../auth/AuthContext';
 import { updateProfile, updateEmail } from '../../../auth/authService';
 import api from '../../../services/api';
@@ -209,65 +209,10 @@ export default function Profile() {
         }
     };
 
-    const EyeIcon = ({ visible }) => {
-        if (visible) {
-            return (
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    className="h-5 w-5"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.98 8.5C2.99 9.82 2.5 11 2.5 11s3.5 6 9.5 6c1.13 0 2.16-.2 3.08-.52M9.88 5.24C10.55 5.08 11.25 5 12 5c6 0 9.5 6 9.5 6s-.86 1.48-2.44 2.93M14.12 14.12a3 3 0 01-4.24-4.24"
-                    />
-                    <path
-                        strokeLinecap="round"
-                        d="M3 3l18 18"
-                    />
-                </svg>
-            );
-        }
-
-        return (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
-                />
-
-                <circle
-                    cx="12"
-                    cy="12"
-                    r="3"
-                />
-            </svg>
-        );
-    };
-
     return (
         <DashboardPage className="ils-profile">
             <DashboardPageHeader title="Profile" description="View and manage your account information." />
-            <div className="ils-profile-summary">
-                <span className="ils-profile-avatar"><UserRound size={30} aria-hidden="true" /></span>
-                <div className="min-w-0 break-words">
-                    <h2>{user?.name || 'User'}</h2>
-                    <p>{user?.email || '—'}</p>
-                </div>
-                {user?.roleName && <span className="ils-profile-role">{user.roleName}</span>}
-            </div>
+            <ProfileSummary name={user?.name} email={user?.email} role={user?.roleName} />
             {/* Personal Information */}
             <div className="ils-profile-panel">
                 <div className="flex flex-wrap gap-4 items-start justify-between border-b border-brand-border pb-5">
@@ -293,7 +238,7 @@ export default function Profile() {
                 </div>
 
                 {error && (
-                    <div className="mt-5 flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
+                    <div className="mt-5 flex items-center justify-between border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{error}</span>
                         <button
                             type="button"
@@ -307,7 +252,7 @@ export default function Profile() {
                 )}
 
                 {success && (
-                    <div className="mt-5 rounded-none border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
+                    <div className="mt-5 border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                         {success}
                     </div>
                 )}
@@ -323,7 +268,7 @@ export default function Profile() {
                                 type="text"
                                 value={name}
                                 onChange={(event) => { setName(event.target.value); setProfileFieldErrors(previous => ({ ...previous, name: undefined })); }}
-                                className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
+                                className="mt-2 ils-dashboard-field"
                              autoComplete="name" /><ApiFieldError errors={profileFieldErrors} field="name" /></>
                         ) : isAccountManager ? (
                             <input
@@ -331,7 +276,7 @@ export default function Profile() {
                                 value={user?.name || ''}
                                 readOnly
                                 disabled
-                                className="mt-2 w-full cursor-not-allowed rounded-none border border-brand-border bg-brand-surface-tint px-3 py-2 text-sm text-brand-muted"
+                                className="mt-2 ils-dashboard-field"
                             />
                         ) : (
                             <p className="mt-1 text-sm font-medium text-brand-text">
@@ -350,7 +295,7 @@ export default function Profile() {
                                 type="email"
                                 value={email}
                                 onChange={(event) => { setEmail(event.target.value); setProfileFieldErrors(previous => ({ ...previous, email: undefined })); }}
-                                className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
+                                className="mt-2 ils-dashboard-field"
                              autoComplete="email" /><ApiFieldError errors={profileFieldErrors} field="email" /></>
                         ) : isAccountManager ? (
                             <input
@@ -358,7 +303,7 @@ export default function Profile() {
                                 value={user?.email || ''}
                                 readOnly
                                 disabled
-                                className="mt-2 w-full cursor-not-allowed rounded-none border border-brand-border bg-brand-surface-tint px-3 py-2 text-sm text-brand-muted"
+                                className="mt-2 ils-dashboard-field"
                             />
                         ) : (
                             <p className="mt-1 text-sm font-medium text-brand-text">
@@ -378,7 +323,7 @@ export default function Profile() {
                                 type="tel"
                                 value={phone}
                                 onChange={(event) => { setPhone(event.target.value); setProfileFieldErrors(previous => ({ ...previous, phone: undefined })); }}
-                                className="mt-2 w-full rounded-none border border-brand-border px-3 py-2 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
+                                className="mt-2 ils-dashboard-field"
                              autoComplete="tel" /><ApiFieldError errors={profileFieldErrors} field="phone" /></>
                         ) : isAccountManager ? (
                             <input
@@ -386,7 +331,7 @@ export default function Profile() {
                                 value={user?.phone || ''}
                                 readOnly
                                 disabled
-                                className="mt-2 w-full cursor-not-allowed rounded-none border border-brand-border bg-brand-surface-tint px-3 py-2 text-sm text-brand-muted"
+                                className="mt-2 ils-dashboard-field"
                             />
                         ) : (
                             <p className="mt-1 text-sm font-medium text-brand-text">
@@ -466,7 +411,7 @@ export default function Profile() {
                 </div>
 
                 {passwordError && (
-                    <div className="mt-5 flex items-center justify-between rounded-none border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
+                    <div className="mt-5 flex items-center justify-between border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         <span>{passwordError}</span>
                         <button
                             type="button"
@@ -480,150 +425,26 @@ export default function Profile() {
                 )}
 
                 {passwordSuccess && (
-                    <div className="mt-5 rounded-none border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
+                    <div className="mt-5 border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                         {passwordSuccess}
                     </div>
                 )}
 
                 <div className="mt-6 w-full border border-brand-border bg-brand-surface-tint p-4 sm:p-6">
                     <form onSubmit={handleChangePassword}>
-                        {/* Current Password */}
-                        <div>
-                            <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                Current Password
-                            </label>
-
-                            <div className="relative mt-2">
-                                <input
-                                    type={
-                                        showCurrentPassword
-                                            ? 'text'
-                                            : 'password'
-                                    }
-                                    value={currentPassword}
-                                    onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
-                                    className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                                    autoComplete="current-password"
-                                    placeholder="Enter your current password"
-                                    disabled={changingPassword}
-                                    required
-                                />
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowCurrentPassword(
-                                            !showCurrentPassword
-                                        )
-                                    }
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-primary"
-                                    aria-label={
-                                        showCurrentPassword
-                                            ? 'Hide password'
-                                            : 'Show password'
-                                    }
-                                >
-                                    <EyeIcon
-                                        visible={showCurrentPassword}
-                                    />
-                                </button>
-                            </div>
-<ApiFieldError errors={passwordFieldErrors} field="currentPassword" />
-                        </div>
-
-                        {/* New Password + Confirm Password */}
+                        <PasswordField id="current-password" label="Current Password" value={currentPassword}
+    onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
+    visible={showCurrentPassword} onToggle={() => setShowCurrentPassword(!showCurrentPassword)}
+    placeholder="Enter your current password" disabled={changingPassword} errors={passwordFieldErrors} field="currentPassword" />
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                            <div>
-                                <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                    New Password
-                                </label>
-
-                                <div className="relative mt-2">
-                                    <input
-                                        type={
-                                            showNewPassword
-                                                ? 'text'
-                                                : 'password'
-                                        }
-                                        value={newPassword}
-                                        onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
-                                        className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                                        autoComplete="new-password"
-                                    placeholder="Enter your new password"
-                                        minLength={8}
-                                        disabled={changingPassword}
-                                        required
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowNewPassword(
-                                                !showNewPassword
-                                            )
-                                        }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-primary"
-                                        aria-label={
-                                            showNewPassword
-                                                ? 'Hide password'
-                                                : 'Show password'
-                                        }
-                                    >
-                                        <EyeIcon
-                                            visible={showNewPassword}
-                                        />
-                                    </button>
-                                </div>
-<ApiFieldError errors={passwordFieldErrors} field="newPassword" />
-
-                                <p className="mt-1.5 text-xs text-brand-muted">
-                                    Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-brand-text bg-brand-border px-1 py-0.5 rounded-none font-semibold">Pass@1234</span>).
-                                </p>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium uppercase tracking-wide text-brand-muted">
-                                    Confirm New Password
-                                </label>
-
-                                <div className="relative mt-2">
-                                    <input
-                                        type={
-                                            showConfirmPassword
-                                                ? 'text'
-                                                : 'password'
-                                        }
-                                        value={confirmPassword}
-                                        onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
-                                        className="w-full rounded-none border border-brand-border bg-brand-surface px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-brand-accent focus:ring-2 focus:ring-brand-surface-blue"
-                                        autoComplete="new-password"
-                                    placeholder="Confirm your new password"
-                                        minLength={6}
-                                        disabled={changingPassword}
-                                        required
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowConfirmPassword(
-                                                !showConfirmPassword
-                                            )
-                                        }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-muted transition hover:text-brand-primary"
-                                        aria-label={
-                                            showConfirmPassword
-                                                ? 'Hide password'
-                                                : 'Show password'
-                                        }
-                                    >
-                                        <EyeIcon
-                                            visible={showConfirmPassword}
-                                        />
-                                    </button>
-                                </div>
-<ApiFieldError errors={passwordFieldErrors} field="confirmPassword" />
-                            </div>
+                            <div><PasswordField id="new-password" label="New Password" value={newPassword}
+    onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
+    visible={showNewPassword} onToggle={() => setShowNewPassword(!showNewPassword)}
+    placeholder="Enter your new password" disabled={changingPassword} errors={passwordFieldErrors} field="newPassword" minLength={8} /><p className="mt-1.5 text-xs text-brand-muted">Must be at least 8 characters with uppercase, lowercase, number, and special character (e.g. <span className="font-mono text-brand-text bg-brand-border px-1 py-0.5 font-semibold">Pass@1234</span>).</p></div>
+                            <PasswordField id="confirm-password" label="Confirm New Password" value={confirmPassword}
+    onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
+    visible={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+    placeholder="Confirm your new password" disabled={changingPassword} errors={passwordFieldErrors} field="confirmPassword" minLength={6} />
                         </div>
 
                         {/* Action */}

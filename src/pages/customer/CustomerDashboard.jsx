@@ -1,19 +1,22 @@
+import { customerTeamAccessLink, customerProfileLink } from '../../components/navigation/portalNavigation';
 import { useAuth } from '../../auth/AuthContext';
+import PortalDashboard from '../../components/dashboard/PortalDashboard';
+
+const links = [customerTeamAccessLink, customerProfileLink];
 
 export default function CustomerDashboard() {
-    const { user } = useAuth();
+    const { user, impersonation } = useAuth();
+    const dashboardLinks = impersonation
+        ? [customerTeamAccessLink, { ...customerProfileLink, label: 'Customer Profile', description: 'View and manage customer information.' }]
+        : links;
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                    Welcome back, {user?.name || 'User'}
-                </h1>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    Welcome to your dashboard.
-                </p>
-            </div>
-        </div>
+        <PortalDashboard
+            user={user}
+            role="Customer"
+            description="Your customer workspace at a glance."
+            welcomeDescription="Manage your account from one place."
+            links={dashboardLinks}
+        />
     );
 }

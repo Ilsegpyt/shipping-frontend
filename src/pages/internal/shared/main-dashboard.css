@@ -1,4 +1,11 @@
-.ils-main-dashboard .ils-main-hero {
+/* Compatibility entry point; dashboard presentation is shared across all portals. */
+@import "../../../components/dashboard/dashboard-home.css";
+
+
+
+
+
+/* .ils-main-dashboard .ils-main-hero {
   position: relative;
   isolation: isolate;
   display: flex;
@@ -31,4 +38,5 @@
 .ils-main-stat-heading h3 { font-size: 14px; font-weight: 600; color: var(--color-text-muted); }
 .ils-main-stat-icon { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; background: var(--color-surface-blue); color: var(--color-primary); }
 .ils-main-stat-value { margin-top: 16px; font-size: 36px; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.ils-main-stat-note { margin-top: 8px; font-size: 13px; color: var(--color-text-muted); }
+.ils-main-stat-note { margin-top: 8px; font-size: 13px; color: var(--color-text-muted); } */
+

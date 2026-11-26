@@ -1,66 +1,87 @@
-/* Internal management portal only: shared ILS tokens, no impact on other portals. */
-.ils-internal-portal {
-  --ils-sidebar-bg: color-mix(in srgb, var(--color-primary) 78%, black);
+/* Shared portal chrome. All colors derive from the global index.css palette. */
+.ils-portal {
+  --ils-sidebar-bg: color-mix(in srgb, var(--color-primary) 78%, var(--color-text));
   --ils-sidebar-hover: color-mix(in srgb, var(--color-primary) 86%, var(--color-accent));
   --ils-sidebar-active: var(--color-accent);
   --ils-sidebar-fg: var(--color-text-inverse);
   --ils-sidebar-muted: var(--color-secondary-l);
-  --ils-scroll-track: transparent;
+  --ils-sidebar-border: color-mix(in srgb, var(--ils-sidebar-fg) 20%, transparent);
+  --ils-sidebar-selected: color-mix(in srgb, var(--ils-sidebar-active) 18%, var(--ils-sidebar-bg));
   --ils-scroll-thumb: color-mix(in srgb, var(--color-primary) 48%, var(--color-surface));
   --ils-scroll-hover: var(--color-accent);
 }
-.ils-internal-portal > aside,
-.ils-internal-portal #mobile-portal-sidebar { background: var(--ils-sidebar-bg); border-color: color-mix(in srgb, var(--color-text-inverse) 20%, transparent); }
-.ils-internal-portal > aside > div:first-child,
-.ils-internal-portal #mobile-portal-sidebar > div:first-child { border-color: color-mix(in srgb, var(--color-text-inverse) 20%, transparent); }
-.ils-internal-portal .ils-internal-nav { color: var(--ils-sidebar-fg); }
-.ils-internal-portal .ils-internal-nav p { color: var(--ils-sidebar-muted); }
-.ils-internal-portal .ils-internal-nav a,
-.ils-internal-portal .ils-internal-nav button { border-radius: 0; }
-.ils-internal-portal .ils-internal-nav a:not([aria-current="page"]),
-.ils-internal-portal .ils-internal-nav button { color: var(--ils-sidebar-muted); }
-.ils-internal-portal .ils-internal-nav a:hover,
-.ils-internal-portal .ils-internal-nav button:hover { background: var(--ils-sidebar-hover); color: var(--ils-sidebar-fg); }
-.ils-internal-portal .ils-internal-nav a[aria-current="page"] { background: color-mix(in srgb, var(--ils-sidebar-active) 18%, var(--ils-sidebar-bg)); color: var(--ils-sidebar-fg); border-left: 3px solid var(--ils-sidebar-active); }
-.ils-internal-portal .ils-internal-nav a[aria-current="page"] svg { color: var(--ils-sidebar-active); }
-.ils-internal-portal .ils-internal-nav .border-sky-500\/30 { border-color: var(--ils-sidebar-active); }
-.ils-internal-portal .ils-internal-nav .bg-gradient-to-t { background-image: linear-gradient(to top, var(--ils-sidebar-bg), transparent); }
-.ils-internal-portal .ils-branded-scrollbar,
-.ils-internal-portal .overflow-y-auto,
-.ils-internal-portal .overflow-auto,
-.ils-internal-portal .ils-dashboard-modal-body,
-.ils-internal-portal .ils-dashboard-modal-panel {
+.ils-portal-sidebar { background: var(--ils-sidebar-bg); border-color: var(--ils-sidebar-border); color: var(--ils-sidebar-fg); }
+.ils-portal-shadow { box-shadow: 0 12px 28px color-mix(in srgb, var(--color-text) 18%, transparent); }
+.ils-portal-header-shadow { box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 8%, transparent); }
+.ils-portal-sidebar-brand { border-color: var(--ils-sidebar-border); }
+.ils-portal-sidebar-control { color: var(--ils-sidebar-muted); }
+.ils-portal-sidebar-control:hover { background: var(--ils-sidebar-hover); color: var(--ils-sidebar-fg); }
+.ils-portal-header-control { color: var(--color-text); }
+.ils-portal-header-control:hover { background: var(--color-surface-tint); color: var(--color-primary); }
+.ils-portal :is(.ils-portal-sidebar-control, .ils-portal-header-control, .ils-portal-nav-item):focus-visible { outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.ils-portal-backdrop { background: color-mix(in srgb, var(--color-text) 60%, transparent); }
+.ils-internal-nav { color: var(--ils-sidebar-fg); }
+.ils-portal-nav-label { color: var(--ils-sidebar-muted); }
+.ils-portal-nav-item {
+  display: flex; align-items: center; gap: .75rem; padding: .625rem 1rem;
+  font-size: .875rem; font-weight: 500; line-height: 1.25rem;
+  color: var(--ils-sidebar-muted); text-decoration: none;
+  transition: background-color .15s, color .15s;
+}
+.ils-portal-nav-group { width: 100%; justify-content: space-between; cursor: pointer; }
+.ils-portal-nav-subitem { gap: .625rem; padding: .5rem .75rem; font-size: .75rem; line-height: 1rem; }
+.ils-portal-nav-subgroup { border-color: var(--ils-sidebar-active); }
+.ils-portal-nav-item:not([aria-disabled="true"]):hover { background: var(--ils-sidebar-hover); color: var(--ils-sidebar-fg); }
+.ils-portal-nav-item:is([aria-current="page"], .ils-portal-nav-active) { background: var(--ils-sidebar-selected); color: var(--ils-sidebar-fg); box-shadow: inset 3px 0 var(--ils-sidebar-active); }
+.ils-portal-nav-item[aria-current="page"] svg, .ils-portal-nav-active .ils-portal-nav-icon { color: var(--ils-sidebar-active); }
+.ils-portal-nav-disabled { justify-content: space-between; opacity: .65; cursor: not-allowed; user-select: none; }
+.ils-portal-nav-badge { color: var(--ils-sidebar-muted); background: var(--ils-sidebar-selected); border-color: var(--ils-sidebar-border); }
+
+.ils-portal .ils-branded-scrollbar,
+.ils-portal .overflow-y-auto,
+.ils-portal .overflow-auto,
+.ils-portal .ils-dashboard-modal-body,
+.ils-portal .ils-dashboard-modal-panel {
   scrollbar-width: thin;
   scrollbar-color: var(--ils-scroll-thumb) transparent;
 }
-.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar,
-.ils-internal-portal .overflow-y-auto::-webkit-scrollbar,
-.ils-internal-portal .overflow-auto::-webkit-scrollbar,
-.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar,
-.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar { width: 9px; height: 9px; }
-.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-track,
-.ils-internal-portal .overflow-y-auto::-webkit-scrollbar-track,
-.ils-internal-portal .overflow-auto::-webkit-scrollbar-track,
-.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar-track,
-.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar-track { background: transparent; }
-.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb,
-.ils-internal-portal .overflow-y-auto::-webkit-scrollbar-thumb,
-.ils-internal-portal .overflow-auto::-webkit-scrollbar-thumb,
-.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar-thumb,
-.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar-thumb { background: var(--ils-scroll-thumb); border: 3px solid transparent; background-clip: padding-box; border-radius: 999px; min-height: 32px; }
-.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb:hover,
-.ils-internal-portal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
-.ils-internal-portal .overflow-auto::-webkit-scrollbar-thumb:hover,
-.ils-internal-portal .ils-dashboard-modal-body::-webkit-scrollbar-thumb:hover,
-.ils-internal-portal .ils-dashboard-modal-panel::-webkit-scrollbar-thumb:hover { background: var(--ils-scroll-hover); }
+.ils-portal .ils-branded-scrollbar::-webkit-scrollbar,
+.ils-portal .overflow-y-auto::-webkit-scrollbar,
+.ils-portal .overflow-auto::-webkit-scrollbar,
+.ils-portal .ils-dashboard-modal-body::-webkit-scrollbar,
+.ils-portal .ils-dashboard-modal-panel::-webkit-scrollbar { width: 9px; height: 9px; }
+.ils-portal .ils-branded-scrollbar::-webkit-scrollbar-track,
+.ils-portal .overflow-y-auto::-webkit-scrollbar-track,
+.ils-portal .overflow-auto::-webkit-scrollbar-track,
+.ils-portal .ils-dashboard-modal-body::-webkit-scrollbar-track,
+.ils-portal .ils-dashboard-modal-panel::-webkit-scrollbar-track { background: transparent; }
+.ils-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb,
+.ils-portal .overflow-y-auto::-webkit-scrollbar-thumb,
+.ils-portal .overflow-auto::-webkit-scrollbar-thumb,
+.ils-portal .ils-dashboard-modal-body::-webkit-scrollbar-thumb,
+.ils-portal .ils-dashboard-modal-panel::-webkit-scrollbar-thumb { background: var(--ils-scroll-thumb); border: 3px solid transparent; background-clip: padding-box;  min-height: 32px; }
+.ils-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb:hover,
+.ils-portal .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.ils-portal .overflow-auto::-webkit-scrollbar-thumb:hover,
+.ils-portal .ils-dashboard-modal-body::-webkit-scrollbar-thumb:hover,
+.ils-portal .ils-dashboard-modal-panel::-webkit-scrollbar-thumb:hover { background: var(--ils-scroll-hover); }
 
 /* Sidebar-specific floating thumb: understated until hovered. */
-.ils-internal-portal .ils-branded-scrollbar {
+.ils-portal .ils-branded-scrollbar {
   --ils-scroll-thumb: color-mix(in srgb, var(--color-text-inverse) 28%, transparent);
   --ils-scroll-hover: var(--color-accent);
   scrollbar-color: var(--ils-scroll-thumb) transparent;
 }
-.ils-internal-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb:hover {
+.ils-portal .ils-branded-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--ils-scroll-hover);
   background-clip: padding-box;
 }
+
+/* Impersonation is a state of the shared portal, not a separate theme. */
+.ils-impersonation-notice {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: .75rem; padding: .75rem clamp(1rem, 3vw, 2rem);
+  border-bottom: 1px solid var(--color-warning-border); border-left: 3px solid var(--color-warning);
+  background: var(--color-warning-soft); color: var(--color-warning);
+}
+.ils-impersonation-notice-copy { display: flex; align-items: flex-start; gap: .625rem; min-width: 0; overflow-wrap: anywhere; }

@@ -1,3 +1,5 @@
+import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from '../../components/dashboard/DashboardUI';
+import '../../components/dashboard/dashboard-home.css';
 import ApiFieldError from '../../components/common/ApiFieldError';
 import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/errorUtils.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -10,9 +12,7 @@ import {
     X,
     CheckCircle2,
     Trash2,
-    Pencil,
     UserPlus,
-    UserMinus,
     ShieldCheck,
 } from 'lucide-react';
 
@@ -120,7 +120,8 @@ export default function CustomerTeamAccess() {
         const handleClickOutside = (event) => {
             if (
                 menuRef.current &&
-                !menuRef.current.contains(event.target)
+                !menuRef.current.contains(event.target) &&
+                !event.target.closest?.('[data-team-action-menu]')
             ) {
                 setOpenMenuId(null);
             }
@@ -253,14 +254,6 @@ export default function CustomerTeamAccess() {
             .slice(0, 2)
             .map((part) => part.charAt(0).toUpperCase())
             .join('');
-    };
-
-    const getStatusStyles = (member) => {
-        if (isMemberActive(member)) {
-            return 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20';
-        }
-
-        return 'bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-500/10';
     };
 
     const handleSelectAll = (event) => {
@@ -882,178 +875,113 @@ export default function CustomerTeamAccess() {
     };
 
     return (
-        <section className="space-y-8">
-            {/* Header */}
-            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                <div>
-                    <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-500">
-                        <Users className="h-4 w-4" />
-                        <span>Workspace Management</span>
+        <DashboardPage>
+            <DashboardPageHeader title="Team Access" description="Manage the users who can access your company account."
+                actions={<DashboardButton variant="primary" icon={UserPlus} onClick={openCreateModal}>Add Member</DashboardButton>} />
+
+            <div className="ils-main-overview">
+                {[
+                    { label: 'Total Members', value: totalMembers, Icon: Users },
+                    { label: 'Active Members', value: activeMembers, Icon: UserCheck },
+                    { label: 'Inactive Members', value: inactiveMembers, Icon: UserX },
+                ].map(({ label, value, Icon }) => (
+                    <div className="ils-main-stat" key={label}>
+                        <div className="ils-main-stat-heading">
+                            <h3>{label}</h3>
+                            <span className="ils-main-stat-icon"><Icon size={20} aria-hidden="true" /></span>
+                        </div>
+                        <p className="ils-main-stat-value">{loading ? '-' : value}</p>
                     </div>
-
-                    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-                        Team Access
-                    </h1>
-
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
-                        Manage the users who can access your company account.
-                    </p>
-                </div>
-
-                <button
-                    type="button"
-                    onClick={openCreateModal}
-                    className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-900"
-                >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Add Member
-                </button>
-            </div>
-
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">
-                                Total Members
-                            </p>
-
-                            <p className="mt-3 text-3xl font-semibold text-gray-900">
-                                {loading ? '-' : totalMembers}
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl bg-slate-100 p-3 text-slate-600">
-                            <Users className="h-5 w-5" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">
-                                Active Members
-                            </p>
-
-                            <p className="mt-3 text-3xl font-semibold text-gray-900">
-                                {loading ? '-' : activeMembers}
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600">
-                            <UserCheck className="h-5 w-5" />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">
-                                Inactive Members
-                            </p>
-
-                            <p className="mt-3 text-3xl font-semibold text-gray-900">
-                                {loading ? '-' : inactiveMembers}
-                            </p>
-                        </div>
-
-                        <div className="rounded-xl bg-gray-100 p-3 text-gray-500">
-                            <UserX className="h-5 w-5" />
-                        </div>
-                    </div>
-                </div>
+                ))}
             </div>
 
             {/* Members Table */}
-            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-                <div className="flex flex-col justify-between gap-4 border-b border-gray-200 px-6 py-5 lg:flex-row lg:items-center">
+            <DashboardTableSurface>
+                <div className="flex flex-col justify-between gap-4 border-b border-brand-border px-6 py-5 lg:flex-row lg:items-center">
                     <div>
-                        <h2 className="text-base font-semibold text-gray-900">
+                        <h2 className="text-base font-semibold text-brand-text">
                             Team Members
                         </h2>
 
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-brand-muted">
                             View and manage the accounts connected to your
                             company.
                         </p>
                     </div>
 
                     {hasSelectedMembers && (
-                        <button
+                        <DashboardButton
                             type="button"
                             onClick={openBulkDeleteModal}
-                            className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-red-700"
+                            variant="danger"
                         >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Delete Selected ({selectedIds.length})
-                        </button>
+                        </DashboardButton>
                     )}
                 </div>
 
                 <div className="px-6 py-6">
                     {loading ? (
                         <div className="flex items-center justify-center py-16">
-                            <Loader2 className="h-7 w-7 animate-spin text-gray-700" />
+                            <Loader2 className="h-7 w-7 animate-spin text-brand-text" />
                         </div>
                     ) : error ? (
-                        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        <div className="border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                             {error}
                         </div>
                     ) : subAccounts.length === 0 ? (
                         <div className="py-16 text-center">
-                            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+                            <div className="mx-auto flex h-14 w-14 items-center justify-center bg-brand-surface-muted text-brand-muted">
                                 <Users className="h-7 w-7" />
                             </div>
 
-                            <h3 className="mt-4 text-base font-semibold text-gray-900">
+                            <h3 className="mt-4 text-base font-semibold text-brand-text">
                                 No team members yet
                             </h3>
 
-                            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500">
+                            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-brand-muted">
                                 Add your first team member to give them access
                                 to your company account.
                             </p>
 
-                            <button
+                            <DashboardButton
                                 type="button"
                                 onClick={openCreateModal}
-                                className="mt-5 inline-flex items-center justify-center rounded-lg bg-gray-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
+                                variant="primary" className="mt-5"
                             >
                                 <UserPlus className="mr-2 h-4 w-4" />
                                 Add Your First Member
-                            </button>
+                            </DashboardButton>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-left">
                                 <thead>
-                                    <tr className="border-b border-gray-200">
+                                    <tr className="border-b border-brand-border">
                                         <th className="w-12 px-4 py-3">
                                             <input
                                                 type="checkbox"
                                                 checked={allSelected}
                                                 onChange={handleSelectAll}
-                                                className="h-4 w-4 rounded border-gray-300 text-gray-800 focus:ring-gray-500"
+                                                className="h-4 w-4 ils-dashboard-checkbox"
                                                 aria-label="Select all members"
                                             />
                                         </th>
 
-                                        <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                             Member
                                         </th>
 
-                                        <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                             Email
                                         </th>
 
-                                        <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        <th className="whitespace-nowrap px-4 py-3 text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                             Status
                                         </th>
 
-                                        <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        <th className="whitespace-nowrap px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-brand-muted">
                                             Actions
                                         </th>
                                     </tr>
@@ -1071,7 +999,7 @@ export default function CustomerTeamAccess() {
                                         return (
                                             <tr
                                                 key={memberId ?? memberEmail}
-                                                className="border-b border-gray-100 transition last:border-0 hover:bg-gray-50/70"
+                                                className={`border-b border-brand-border ${selectedIds.includes(memberId) ? 'ils-dashboard-row-selected' : ''}`}
                                             >
                                                 <td className="px-4 py-4">
                                                     <input
@@ -1084,43 +1012,37 @@ export default function CustomerTeamAccess() {
                                                                 memberId
                                                             )
                                                         }
-                                                        className="h-4 w-4 rounded border-gray-300 text-gray-800 focus:ring-gray-500"
+                                                        className="h-4 w-4 ils-dashboard-checkbox"
                                                         aria-label={`Select ${memberName}`}
                                                     />
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-4 py-4">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-semibold text-slate-700">
+                                                        <div className="flex h-10 w-10 items-center justify-center bg-brand-surface-muted text-sm font-semibold text-brand-text">
                                                             {getInitials(
                                                                 memberName
                                                             )}
                                                         </div>
 
                                                         <div>
-                                                            <p className="font-medium text-gray-900">
+                                                            <p className="font-medium text-brand-text">
                                                                 {memberName}
                                                             </p>
 
-                                                            <p className="mt-0.5 text-xs text-gray-400">
+                                                            <p className="mt-0.5 text-xs text-brand-muted">
                                                                 Team member
                                                             </p>
                                                         </div>
                                                     </div>
                                                 </td>
 
-                                                <td className="whitespace-nowrap px-4 py-4 text-sm text-gray-600">
+                                                <td className="whitespace-nowrap px-4 py-4 text-sm text-brand-muted">
                                                     {memberEmail}
                                                 </td>
 
                                                 <td className="whitespace-nowrap px-4 py-4">
-                                                    <span
-                                                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${getStatusStyles(
-                                                            member
-                                                        )}`}
-                                                    >
-                                                        {memberStatus}
-                                                    </span>
+                                                    <DashboardStatusBadge tone={isMemberActive(member) ? 'positive' : 'neutral'}>{memberStatus}</DashboardStatusBadge>
                                                 </td>
 
                                                 <td className="relative whitespace-nowrap px-4 py-4 text-right">
@@ -1143,7 +1065,7 @@ export default function CustomerTeamAccess() {
                                                                         : memberId
                                                                 )
                                                             }
-                                                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                                                            id={`team-actions-${memberId ?? memberEmail}`} className="ils-dashboard-action-trigger" aria-expanded={openMenuId === memberId}
                                                             aria-label={`Actions for ${memberName}`}
                                                         >
                                                             <MoreHorizontal className="h-5 w-5" />
@@ -1151,68 +1073,17 @@ export default function CustomerTeamAccess() {
 
                                                         {openMenuId ===
                                                             memberId && (
-                                                                <div className="absolute right-0 top-11 z-30 w-44 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-left shadow-xl">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            openToggleModal(
-                                                                                member
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
-                                                                    >
-                                                                        {isMemberActive(
-                                                                            member
-                                                                        ) ? (
-                                                                            <UserMinus className="h-4 w-4 text-amber-600" />
-                                                                        ) : (
-                                                                            <UserPlus className="h-4 w-4 text-emerald-600" />
-                                                                        )}
-
-                                                                        {isMemberActive(
-                                                                            member
-                                                                        )
-                                                                            ? 'Deactivate'
-                                                                            : 'Activate'}
-                                                                    </button>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => openScopeManagement(member)}
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
-                                                                    >
-                                                                        <ShieldCheck className="h-4 w-4 text-indigo-600" />
-                                                                        Manage Scopes
-                                                                    </button>
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            openEditModal(
-                                                                                member
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-gray-700 transition hover:bg-gray-50"
-                                                                    >
-                                                                        <Pencil className="h-4 w-4 text-gray-500" />
-                                                                        Edit
-                                                                    </button>
-
-                                                                    <div className="my-1 border-t border-gray-100" />
-
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            openDeleteModal(
-                                                                                member
-                                                                            )
-                                                                        }
-                                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-red-600 transition hover:bg-red-50"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                        Delete
-                                                                    </button>
-                                                                </div>
+                                                                <DashboardActionMenu anchorId={`team-actions-${memberId ?? memberEmail}`}>
+                                                                    <div data-team-action-menu>
+                                                                        <DashboardActionItem action={isMemberActive(member) ? 'deactivate' : 'activate'} onClick={() => openToggleModal(member)} />
+                                                                        <button type="button" role="menuitem" className="ils-dashboard-action-item ils-dashboard-action-item--neutral" onClick={() => openScopeManagement(member)}>
+                                                                            <ShieldCheck className="h-4 w-4" aria-hidden="true" /> <span>Manage Scopes</span>
+                                                                        </button>
+                                                                        <DashboardActionItem action="edit" onClick={() => openEditModal(member)} />
+                                                                        <div className="ils-dashboard-action-separator" />
+                                                                        <DashboardActionItem action="delete" onClick={() => openDeleteModal(member)} />
+                                                                    </div>
+                                                                </DashboardActionMenu>
                                                             )}
                                                     </div>
                                                 </td>
@@ -1224,16 +1095,16 @@ export default function CustomerTeamAccess() {
                         </div>
                     )}
                 </div>
-            </div>
+            </DashboardTableSurface>
 
             {/* Scope Management Modal - existing scopes, add, and remove are independent */}
             {memberForScopes && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-gray-900/50 px-4 py-6">
-                    <div className="my-auto w-full max-w-2xl rounded-2xl bg-white shadow-2xl">
-                        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel ils-dashboard-modal-panel--permissions">
+                        <div className="ils-dashboard-modal-header flex items-start justify-between gap-3">
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-900">Manage Scopes</h2>
-                                <p className="mt-1 text-sm text-gray-500">
+                                <h2 className="text-xl font-semibold text-brand-text">Manage Scopes</h2>
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Manage access for {getMemberName(memberForScopes)}.
                                 </p>
                             </div>
@@ -1241,7 +1112,7 @@ export default function CustomerTeamAccess() {
                                 type="button"
                                 onClick={closeScopeManagement}
                                 disabled={scopeManagementLoading}
-                                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                                className="ils-dashboard-action-trigger disabled:opacity-50"
                                 aria-label="Close scope management"
                             >
                                 <X className="h-5 w-5" />
@@ -1249,35 +1120,35 @@ export default function CustomerTeamAccess() {
                         </div>
 
                         <div className="space-y-5 px-6 py-6">
-                            <div className="rounded-xl border border-gray-200 p-4">
-                                <h3 className="text-sm font-semibold text-gray-900">Access mode</h3>
-                                <p className="mt-1 text-xs text-gray-500">
+                            <div className="border border-brand-border p-4">
+                                <h3 className="text-sm font-semibold text-brand-text">Access mode</h3>
+                                <p className="mt-1 text-xs text-brand-muted">
                                     Choose an access mode, make any scope changes, then press Save. Nothing is applied until you save.
                                 </p>
                                 <div className="mt-4 flex flex-wrap gap-3">
-                                    <button
+                                    <DashboardButton
                                         type="button"
                                         onClick={handleSetMemberFullScope}
                                         disabled={scopeManagementLoading}
-                                        className={`rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 ${scopeManagementMode === 'full' ? 'bg-slate-900 text-white' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                        variant={scopeManagementMode === 'full' ? 'primary' : 'secondary'}
                                     >
                                         {scopeManagementLoading ? 'Saving...' : 'Set Full Scope'}
-                                    </button>
-                                    <button
+                                    </DashboardButton>
+                                    <DashboardButton
                                         type="button"
                                         onClick={handleSetMemberCustomScope}
                                         disabled={scopeManagementLoading}
-                                        className={`rounded-lg px-4 py-2.5 text-sm font-medium disabled:opacity-50 ${scopeManagementMode === 'custom' ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+                                        variant={scopeManagementMode === 'custom' ? 'primary' : 'secondary'}
                                     >
                                         {scopeManagementLoading ? 'Saving...' : 'Set Custom Scope'}
-                                    </button>
+                                    </DashboardButton>
                                 </div>
                             </div>
 
-                            <div className="space-y-3 rounded-xl border border-gray-200 p-4">
+                            <div className="space-y-3 border border-brand-border p-4">
                                 <div>
-                                    <h3 className="text-sm font-semibold text-gray-900">Current scopes</h3>
-                                    <p className="mt-1 text-xs text-gray-500">
+                                    <h3 className="text-sm font-semibold text-brand-text">Current scopes</h3>
+                                    <p className="mt-1 text-xs text-brand-muted">
                                         These are the scopes returned by the API for this member.
                                     </p>
                                 </div>
@@ -1297,7 +1168,7 @@ export default function CustomerTeamAccess() {
                                     }));
                                     const rows = [...existingRows, ...addedRows];
                                     return rows.length === 0 ? (
-                                        <div className="rounded-lg bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+                                        <div className="bg-brand-surface-tint px-4 py-6 text-center text-sm text-brand-muted">
                                             No custom scopes are currently configured.
                                         </div>
                                     ) : (
@@ -1313,12 +1184,12 @@ export default function CustomerTeamAccess() {
                                                 return (
                                                     <div
                                                         key={`${getScopeKey(structuredScope || {}) || String(description)}-${index}`}
-                                                        className="flex flex-col gap-3 rounded-lg border border-gray-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                                        className="flex flex-col gap-3 border border-brand-border px-3 py-3 sm:flex-row sm:items-center sm:justify-between"
                                                     >
-                                                        <span className={`text-sm ${pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                                                        <span className={`text-sm ${pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) ? 'text-brand-muted line-through' : 'text-brand-text'}`}>
                                                             {String(description)}
-                                                            {pending && <span className="ml-2 text-xs font-medium text-indigo-600">(unsaved)</span>}
-                                                            {pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) && <span className="ml-2 text-xs font-medium text-red-600">(will be removed)</span>}
+                                                            {pending && <span className="ml-2 text-xs font-medium text-brand-primary">(unsaved)</span>}
+                                                            {pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) && <span className="ml-2 text-xs font-medium text-brand-danger">(will be removed)</span>}
                                                         </span>
                                                         <button
                                                             type="button"
@@ -1333,7 +1204,7 @@ export default function CustomerTeamAccess() {
                                                             }}
                                                             disabled={scopeManagementLoading || !canRemove}
                                                             title={!canRemove ? 'The API must return Category, Service, and Type to remove this scope safely.' : 'Remove this scope'}
-                                                            className="inline-flex shrink-0 items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                                            className="ils-dashboard-permission-remove"
                                                         >
                                                             <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                                                             {pendingScopeRemovals.includes(getScopeKey(structuredScope || {})) ? 'Undo Remove' : pending ? 'Remove' : 'Remove'}
@@ -1349,23 +1220,23 @@ export default function CustomerTeamAccess() {
                             </div>
 
                             {showScopeAddForm && (
-                                <form onSubmit={handleAddMemberScope} className="space-y-4 rounded-xl border border-indigo-100 bg-indigo-50/30 p-4">
+                                <form onSubmit={handleAddMemberScope} className="space-y-4 border border-brand-accent bg-brand-surface-blue p-4">
                                     <div>
-                                        <h3 className="text-sm font-semibold text-gray-900">Add scope</h3>
-                                        <p className="mt-1 text-xs text-gray-500">
+                                        <h3 className="text-sm font-semibold text-brand-text">Add scope</h3>
+                                        <p className="mt-1 text-xs text-brand-muted">
                                             Choose a new scope. This form is separate from the current scopes list.
                                         </p>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                                         <div>
-                                            <label htmlFor="manage-scope-category" className="mb-2 block text-xs font-medium text-gray-600">Category</label>
+                                            <label htmlFor="manage-scope-category" className="mb-2 block text-xs font-medium text-brand-muted">Category</label>
                                             <select
                                                 id="manage-scope-category"
                                                 value={scopeManagementForm.category}
                                                 onChange={handleScopeManagementCategoryChange}
                                                 disabled={scopeManagementLoading}
-                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm"
+                                                className="ils-dashboard-field"
                                             >
                                                 <option value="">Select category</option>
                                                 {scopeCategories.map((item) => (
@@ -1374,13 +1245,13 @@ export default function CustomerTeamAccess() {
                                             </select>
                                         </div>
                                         <div>
-                                            <label htmlFor="manage-scope-service" className="mb-2 block text-xs font-medium text-gray-600">Service</label>
+                                            <label htmlFor="manage-scope-service" className="mb-2 block text-xs font-medium text-brand-muted">Service</label>
                                             <select
                                                 id="manage-scope-service"
                                                 value={scopeManagementForm.service}
                                                 onChange={(event) => setScopeManagementForm((previous) => ({ ...previous, service: event.target.value }))}
                                                 disabled={scopeManagementLoading || !scopeManagementForm.category || scopeManagementForm.category === '4'}
-                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm disabled:bg-gray-100"
+                                                className="ils-dashboard-field"
                                             >
                                                 <option value="">Select service</option>
                                                 {(scopeManagementForm.category === '1' || scopeManagementForm.category === '2') && <option value="1">Freight</option>}
@@ -1389,13 +1260,13 @@ export default function CustomerTeamAccess() {
                                             </select>
                                         </div>
                                         <div>
-                                            <label htmlFor="manage-scope-type" className="mb-2 block text-xs font-medium text-gray-600">Shipment type</label>
+                                            <label htmlFor="manage-scope-type" className="mb-2 block text-xs font-medium text-brand-muted">Shipment type</label>
                                             <select
                                                 id="manage-scope-type"
                                                 value={scopeManagementForm.type}
                                                 onChange={(event) => setScopeManagementForm((previous) => ({ ...previous, type: event.target.value }))}
                                                 disabled={scopeManagementLoading || !scopeManagementForm.category || scopeManagementForm.category === '4'}
-                                                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm disabled:bg-gray-100"
+                                                className="ils-dashboard-field"
                                             >
                                                 <option value="">Select shipment type</option>
                                                 {shipmentTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -1403,28 +1274,28 @@ export default function CustomerTeamAccess() {
                                             </select>
                                         </div>
                                     </div>
-                                    <button
+                                    <DashboardButton
                                         type="submit"
                                         disabled={scopeManagementLoading}
-                                        className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                                        variant="primary"
                                     >
                                         {scopeManagementLoading ? 'Saving...' : 'Add Scope'}
-                                    </button>
+                                    </DashboardButton>
                                 </form>
                             )}
 
                             {scopeManagementError && (
-                                <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                                <div role="alert" className="border border-brand-danger-border bg-brand-danger-soft p-3 text-sm text-brand-danger">
                                     {scopeManagementError}
                                 </div>
                             )}
                             {scopeManagementSuccess && (
-                                <div role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+                                <div role="status" className="border border-brand-success-border bg-brand-success-soft p-3 text-sm text-brand-success">
                                     {scopeManagementSuccess}
                                 </div>
                             )}
-                            <div className="flex justify-end gap-3">
-                                <button
+                            <div className="flex flex-wrap justify-end gap-3">
+                                <DashboardButton
                                     type="button"
                                     onClick={handleSaveScopeManagement}
                                     disabled={
@@ -1435,23 +1306,18 @@ export default function CustomerTeamAccess() {
                                             pendingScopeRemovals.length === 0
                                         )
                                     }
-                                    className={`rounded-lg px-4 py-2.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${scopeManagementMode === 'custom' &&
-                                            pendingScopeAdds.length === 0 &&
-                                            pendingScopeRemovals.length === 0
-                                            ? 'cursor-not-allowed bg-indigo-300 text-white'
-                                            : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                                        }`}
+                                    variant="primary"
                                 >
                                     {scopeManagementLoading ? 'Saving...' : 'Save'}
-                                </button>
-                                <button
+                                </DashboardButton>
+                                <DashboardButton
                                     type="button"
                                     onClick={closeScopeManagement}
                                     disabled={scopeManagementLoading}
-                                    className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                                    variant="secondary"
                                 >
                                     Close
-                                </button>
+                                </DashboardButton>
                             </div>
                         </div>
                     </div>
@@ -1460,24 +1326,24 @@ export default function CustomerTeamAccess() {
 
             {/* Delete Confirmation Modal */}
             {memberToDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 px-4 py-6">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="border-b border-gray-200 px-6 py-5">
-                            <h2 className="text-xl font-semibold text-gray-900">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm">
+                        <div className="ils-dashboard-modal-header">
+                            <h2 className="text-xl font-semibold text-brand-text">
                                 Delete Team Member
                             </h2>
 
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-brand-muted">
                                 This action cannot be undone.
                             </p>
                         </div>
 
                         <div className="px-6 py-6">
-                            <p className="text-sm leading-6 text-gray-600">
+                            <p className="text-sm leading-6 text-brand-muted">
                                 {memberToDelete.isBulk ? (
                                     <>
                                         Are you sure you want to delete{' '}
-                                        <span className="font-semibold text-gray-900">
+                                        <span className="font-semibold text-brand-text">
                                             {memberToDelete.members.length}{' '}
                                             selected members
                                         </span>
@@ -1486,7 +1352,7 @@ export default function CustomerTeamAccess() {
                                 ) : (
                                     <>
                                         Are you sure you want to delete{' '}
-                                        <span className="font-semibold text-gray-900">
+                                        <span className="font-semibold text-brand-text">
                                             {getMemberName(memberToDelete)}
                                         </span>
                                         ?
@@ -1495,26 +1361,26 @@ export default function CustomerTeamAccess() {
                             </p>
 
                             {deleteError && (
-                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                <div className="mt-4 border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                                     {deleteError}
                                 </div>
                             )}
 
-                            <div className="mt-6 flex justify-end gap-3">
-                                <button
+                            <div className="mt-6 flex flex-wrap justify-end gap-3">
+                                <DashboardButton
                                     type="button"
                                     onClick={closeDeleteModal}
                                     disabled={deleting}
-                                    className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                    variant="secondary"
                                 >
                                     Cancel
-                                </button>
+                                </DashboardButton>
 
-                                <button
+                                <DashboardButton
                                     type="button"
                                     onClick={handleDeleteMember}
                                     disabled={deleting}
-                                    className="inline-flex items-center justify-center rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    variant="danger"
                                 >
                                     {deleting && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1523,7 +1389,7 @@ export default function CustomerTeamAccess() {
                                     {deleting
                                         ? 'Deleting...'
                                         : 'Delete Member'}
-                                </button>
+                                </DashboardButton>
                             </div>
                         </div>
                     </div>
@@ -1532,53 +1398,53 @@ export default function CustomerTeamAccess() {
 
             {/* Activate / Deactivate Modal */}
             {memberToToggle && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 px-4 py-6">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="border-b border-gray-200 px-6 py-5">
-                            <h2 className="text-xl font-semibold text-gray-900">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel ils-dashboard-modal-panel--confirm">
+                        <div className="ils-dashboard-modal-header">
+                            <h2 className="text-xl font-semibold text-brand-text">
                                 {isMemberActive(memberToToggle)
                                     ? 'Deactivate Team Member'
                                     : 'Activate Team Member'}
                             </h2>
 
-                            <p className="mt-1 text-sm text-gray-500">
+                            <p className="mt-1 text-sm text-brand-muted">
                                 You can change this status later.
                             </p>
                         </div>
 
                         <div className="px-6 py-6">
-                            <p className="text-sm leading-6 text-gray-600">
+                            <p className="text-sm leading-6 text-brand-muted">
                                 Are you sure you want to{' '}
                                 {isMemberActive(memberToToggle)
                                     ? 'deactivate'
                                     : 'activate'}{' '}
-                                <span className="font-semibold text-gray-900">
+                                <span className="font-semibold text-brand-text">
                                     {getMemberName(memberToToggle)}
                                 </span>
                                 ?
                             </p>
 
                             {toggleError && (
-                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                <div className="mt-4 border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                                     {toggleError}
                                 </div>
                             )}
 
-                            <div className="mt-6 flex justify-end gap-3">
-                                <button
+                            <div className="mt-6 flex flex-wrap justify-end gap-3">
+                                <DashboardButton
                                     type="button"
                                     onClick={closeToggleModal}
                                     disabled={toggling}
-                                    className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                    variant="secondary"
                                 >
                                     Cancel
-                                </button>
+                                </DashboardButton>
 
-                                <button
+                                <DashboardButton
                                     type="button"
                                     onClick={handleToggleMember}
                                     disabled={toggling}
-                                    className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
+                                    variant="primary"
                                 >
                                     {toggling && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1589,7 +1455,7 @@ export default function CustomerTeamAccess() {
                                         : isMemberActive(memberToToggle)
                                             ? 'Deactivate'
                                             : 'Activate'}
-                                </button>
+                                </DashboardButton>
                             </div>
                         </div>
                     </div>
@@ -1598,15 +1464,15 @@ export default function CustomerTeamAccess() {
 
             {/* Edit Member Modal */}
             {memberToEdit && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 px-4 py-6">
-                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-                        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel ils-dashboard-modal-panel--form">
+                        <div className="ils-dashboard-modal-header flex items-start justify-between gap-3">
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-900">
+                                <h2 className="text-xl font-semibold text-brand-text">
                                     Edit Team Member
                                 </h2>
 
-                                <p className="mt-1 text-sm text-gray-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Update the member profile information.
                                 </p>
                             </div>
@@ -1615,7 +1481,7 @@ export default function CustomerTeamAccess() {
                                 type="button"
                                 onClick={closeEditModal}
                                 disabled={editing}
-                                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                                className="ils-dashboard-action-trigger"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -1626,7 +1492,7 @@ export default function CustomerTeamAccess() {
                             className="space-y-5 px-6 py-6"
                         >
                             {editError && (
-                                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                <div className="border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                                     {editError}
                                 </div>
                             )}
@@ -1634,7 +1500,7 @@ export default function CustomerTeamAccess() {
                             <div>
                                 <label
                                     htmlFor="edit-name"
-                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Full Name
                                 </label>
@@ -1646,7 +1512,7 @@ export default function CustomerTeamAccess() {
                                     value={editForm.name}
                                     onChange={handleEditFormChange}
                                     disabled={editing}
-                                    className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                    className="ils-dashboard-field"
                                  autoComplete="name" />
 <ApiFieldError errors={editFieldErrors} field="name" />
                             </div>
@@ -1654,7 +1520,7 @@ export default function CustomerTeamAccess() {
                             <div>
                                 <label
                                     htmlFor="edit-email"
-                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                    className="mb-2 block text-sm font-medium text-brand-text"
                                 >
                                     Email Address
                                 </label>
@@ -1666,32 +1532,32 @@ export default function CustomerTeamAccess() {
                                     value={editForm.email}
                                     onChange={handleEditFormChange}
                                     disabled={editing}
-                                    className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                    className="ils-dashboard-field"
                                  autoComplete="email" />
 <ApiFieldError errors={editFieldErrors} field="email" />
                             </div>
 
-                            <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
-                                <button
+                            <div className="ils-dashboard-modal-footer">
+                                <DashboardButton
                                     type="button"
                                     onClick={closeEditModal}
                                     disabled={editing}
-                                    className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                    variant="secondary"
                                 >
                                     Cancel
-                                </button>
+                                </DashboardButton>
 
-                                <button
+                                <DashboardButton
                                     type="submit"
                                     disabled={editing}
-                                    className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
+                                    variant="primary"
                                 >
                                     {editing && (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     )}
 
                                     {editing ? 'Saving...' : 'Save Changes'}
-                                </button>
+                                </DashboardButton>
                             </div>
                         </form>
                     </div>
@@ -1700,15 +1566,15 @@ export default function CustomerTeamAccess() {
 
             {/* Create Member Modal */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 px-4 py-6">
-                    <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-                        <div className="flex items-start justify-between border-b border-gray-200 px-6 py-5">
+                <div className="ils-dashboard-modal-overlay">
+                    <div className="ils-dashboard-modal-panel ils-dashboard-modal-panel--permissions">
+                        <div className="ils-dashboard-modal-header flex items-start justify-between gap-3">
                             <div>
-                                <h2 className="text-xl font-semibold text-gray-900">
+                                <h2 className="text-xl font-semibold text-brand-text">
                                     Add Team Member
                                 </h2>
 
-                                <p className="mt-1 text-sm text-gray-500">
+                                <p className="mt-1 text-sm text-brand-muted">
                                     Create a new account for your company.
                                 </p>
                             </div>
@@ -1717,7 +1583,7 @@ export default function CustomerTeamAccess() {
                                 type="button"
                                 onClick={closeCreateModal}
                                 disabled={creating}
-                                className="rounded-lg p-2 text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                                className="ils-dashboard-action-trigger"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -1725,25 +1591,25 @@ export default function CustomerTeamAccess() {
 
                         {createSuccess ? (
                             <div className="px-6 py-8">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center bg-brand-success-soft text-brand-success">
                                     <CheckCircle2 className="h-8 w-8" />
                                 </div>
 
-                                <h3 className="mt-4 text-center text-lg font-semibold text-gray-900">
+                                <h3 className="mt-4 text-center text-lg font-semibold text-brand-text">
                                     Member Created Successfully
                                 </h3>
 
-                                <p className="mt-2 text-center text-sm text-gray-500">
+                                <p className="mt-2 text-center text-sm text-brand-muted">
                                     The account has been created successfully.
                                 </p>
 
-                                <button
+                                <DashboardButton
                                     type="button"
                                     onClick={closeCreateModal}
-                                    className="mt-6 w-full rounded-lg bg-gray-800 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
+                                    variant="primary" className="mt-6 w-full"
                                 >
                                     Done
-                                </button>
+                                </DashboardButton>
                             </div>
                         ) : (
                             <form
@@ -1751,7 +1617,7 @@ export default function CustomerTeamAccess() {
                                 className="space-y-6 px-6 py-6"
                             >
                                 {createError && (
-                                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                    <div className="border border-brand-danger-border bg-brand-danger-soft p-4 text-sm text-brand-danger">
                                         {createError}
                                     </div>
                                 )}
@@ -1759,7 +1625,7 @@ export default function CustomerTeamAccess() {
                                 <div>
                                     <label
                                         htmlFor="create-name"
-                                        className="mb-2 block text-sm font-medium text-gray-700"
+                                        className="mb-2 block text-sm font-medium text-brand-text"
                                     >
                                         Full Name
                                     </label>
@@ -1772,7 +1638,7 @@ export default function CustomerTeamAccess() {
                                         onChange={handleFormChange}
                                         disabled={creating}
                                         placeholder="Enter full name"
-                                        className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                        className="ils-dashboard-field"
                                      autoComplete="name" />
 <ApiFieldError errors={createFieldErrors} field="name" />
                                 </div>
@@ -1780,7 +1646,7 @@ export default function CustomerTeamAccess() {
                                 <div>
                                     <label
                                         htmlFor="create-email"
-                                        className="mb-2 block text-sm font-medium text-gray-700"
+                                        className="mb-2 block text-sm font-medium text-brand-text"
                                     >
                                         Email Address
                                     </label>
@@ -1793,13 +1659,13 @@ export default function CustomerTeamAccess() {
                                         onChange={handleFormChange}
                                         disabled={creating}
                                         placeholder="member@company.com"
-                                        className="w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                        className="ils-dashboard-field"
                                      autoComplete="email" />
 <ApiFieldError errors={createFieldErrors} field="email" />
                                 </div>
 
                                 <div>
-                                    <label className="mb-3 block text-sm font-medium text-gray-700">
+                                    <label className="mb-3 block text-sm font-medium text-brand-text">
                                         Access Type
                                     </label>
 
@@ -1810,16 +1676,16 @@ export default function CustomerTeamAccess() {
                                                 handleAccessTypeChange(true)
                                             }
                                             disabled={creating}
-                                            className={`rounded-xl border p-4 text-left transition ${form.grantFullScope
-                                                ? 'border-gray-800 bg-gray-50 ring-1 ring-gray-800'
-                                                : 'border-gray-200 hover:border-gray-400'
+                                            className={`border p-4 text-left transition ${form.grantFullScope
+                                                ? 'border-brand-accent bg-brand-surface-tint ring-1 ring-brand-accent'
+                                                : 'border-brand-border hover:border-brand-accent'
                                                 }`}
                                         >
-                                            <p className="text-sm font-semibold text-gray-900">
+                                            <p className="text-sm font-semibold text-brand-text">
                                                 Full Access
                                             </p>
 
-                                            <p className="mt-1 text-xs text-gray-500">
+                                            <p className="mt-1 text-xs text-brand-muted">
                                                 Access to all available scopes.
                                             </p>
                                         </button>
@@ -1830,16 +1696,16 @@ export default function CustomerTeamAccess() {
                                                 handleAccessTypeChange(false)
                                             }
                                             disabled={creating}
-                                            className={`rounded-xl border p-4 text-left transition ${!form.grantFullScope
-                                                ? 'border-gray-800 bg-gray-50 ring-1 ring-gray-800'
-                                                : 'border-gray-200 hover:border-gray-400'
+                                            className={`border p-4 text-left transition ${!form.grantFullScope
+                                                ? 'border-brand-accent bg-brand-surface-tint ring-1 ring-brand-accent'
+                                                : 'border-brand-border hover:border-brand-accent'
                                                 }`}
                                         >
-                                            <p className="text-sm font-semibold text-gray-900">
+                                            <p className="text-sm font-semibold text-brand-text">
                                                 Custom Access
                                             </p>
 
-                                            <p className="mt-1 text-xs text-gray-500">
+                                            <p className="mt-1 text-xs text-brand-muted">
                                                 Select specific access scopes.
                                             </p>
                                         </button>
@@ -1847,13 +1713,13 @@ export default function CustomerTeamAccess() {
                                 </div>
 
                                 {!form.grantFullScope && (
-                                    <div className="space-y-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                                    <div className="space-y-4 border border-brand-border bg-brand-surface-tint p-4">
                                         <div>
-                                            <h3 className="text-sm font-semibold text-gray-900">
+                                            <h3 className="text-sm font-semibold text-brand-text">
                                                 Custom Scopes
                                             </h3>
 
-                                            <p className="mt-1 text-xs text-gray-500">
+                                            <p className="mt-1 text-xs text-brand-muted">
                                                 Add the services this member can
                                                 access.
                                             </p>
@@ -1863,7 +1729,7 @@ export default function CustomerTeamAccess() {
                                             <div>
                                                 <label
                                                     htmlFor="scope-category"
-                                                    className="mb-2 block text-xs font-medium text-gray-600"
+                                                    className="mb-2 block text-xs font-medium text-brand-muted"
                                                 >
                                                     Category
                                                 </label>
@@ -1875,7 +1741,7 @@ export default function CustomerTeamAccess() {
                                                         handleCategoryChange
                                                     }
                                                     disabled={creating}
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200"
+                                                    className="ils-dashboard-field"
                                                 >
                                                     <option value="">
                                                         Select category
@@ -1903,7 +1769,7 @@ export default function CustomerTeamAccess() {
                                             <div>
                                                 <label
                                                     htmlFor="scope-service"
-                                                    className="mb-2 block text-xs font-medium text-gray-600"
+                                                    className="mb-2 block text-xs font-medium text-brand-muted"
                                                 >
                                                     Service
                                                 </label>
@@ -1927,7 +1793,7 @@ export default function CustomerTeamAccess() {
                                                         scopeForm.category ===
                                                         '4'
                                                     }
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:bg-gray-100"
+                                                    className="ils-dashboard-field"
                                                 >
                                                     <option value="">
                                                         Select service
@@ -1973,7 +1839,7 @@ export default function CustomerTeamAccess() {
                                             <div>
                                                 <label
                                                     htmlFor="scope-type"
-                                                    className="mb-2 block text-xs font-medium text-gray-600"
+                                                    className="mb-2 block text-xs font-medium text-brand-muted"
                                                 >
                                                     Shipment Type
                                                 </label>
@@ -1996,7 +1862,7 @@ export default function CustomerTeamAccess() {
                                                         scopeForm.category ===
                                                         '4'
                                                     }
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:bg-gray-100"
+                                                    className="ils-dashboard-field"
                                                 >
                                                     <option value="">
                                                         Select shipment type
@@ -2025,34 +1891,34 @@ export default function CustomerTeamAccess() {
                                             </div>
                                         </div>
 
-                                        <button
+                                        <DashboardButton
                                             type="button"
                                             onClick={addScope}
                                             disabled={creating}
-                                            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                                            variant="secondary"
                                         >
                                             + Add Scope
-                                        </button>
+                                        </DashboardButton>
 
                                         {scopes.length > 0 && (
                                             <div className="space-y-2">
-                                                <p className="text-xs font-medium text-gray-500">
+                                                <p className="text-xs font-medium text-brand-muted">
                                                     Added Scopes
                                                 </p>
 
                                                 {scopes.map((scope, index) => (
                                                     <div
                                                         key={`${scope.category}-${scope.service}-${scope.type}-${index}`}
-                                                        className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2.5"
+                                                        className="flex items-center justify-between gap-3 border border-brand-border bg-brand-surface px-3 py-2.5"
                                                     >
-                                                        <div className="text-xs text-gray-700">
+                                                        <div className="text-xs text-brand-text">
                                                             <span className="font-medium">
                                                                 {getCategoryLabel(
                                                                     scope.category
                                                                 )}
                                                             </span>
 
-                                                            <span className="mx-2 text-gray-300">
+                                                            <span className="mx-2 text-brand-muted">
                                                                 /
                                                             </span>
 
@@ -2062,7 +1928,7 @@ export default function CustomerTeamAccess() {
                                                                 )}
                                                             </span>
 
-                                                            <span className="mx-2 text-gray-300">
+                                                            <span className="mx-2 text-brand-muted">
                                                                 /
                                                             </span>
 
@@ -2081,7 +1947,7 @@ export default function CustomerTeamAccess() {
                                                                 )
                                                             }
                                                             disabled={creating}
-                                                            className="text-xs font-medium text-red-600 hover:text-red-700"
+                                                            className="ils-dashboard-permission-remove"
                                                         >
                                                             Remove
                                                         </button>
@@ -2092,20 +1958,20 @@ export default function CustomerTeamAccess() {
                                     </div>
                                 )}
 
-                                <div className="flex justify-end gap-3 border-t border-gray-200 pt-5">
-                                    <button
+                                <div className="ils-dashboard-modal-footer">
+                                    <DashboardButton
                                         type="button"
                                         onClick={closeCreateModal}
                                         disabled={creating}
-                                        className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                        variant="secondary"
                                     >
                                         Cancel
-                                    </button>
+                                    </DashboardButton>
 
-                                    <button
+                                    <DashboardButton
                                         type="submit"
                                         disabled={creating}
-                                        className="inline-flex items-center justify-center rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-900"
+                                        variant="primary"
                                     >
                                         {creating && (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -2114,13 +1980,13 @@ export default function CustomerTeamAccess() {
                                         {creating
                                             ? 'Creating...'
                                             : 'Create Member'}
-                                    </button>
+                                    </DashboardButton>
                                 </div>
                             </form>
                         )}
                     </div>
                 </div>
             )}
-        </section>
+        </DashboardPage>
     );
 }

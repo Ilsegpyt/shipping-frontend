@@ -1,4 +1,3 @@
-import "../components/dashboard/internal-portal-theme.css";
 import PortalLayout from "../components/common/PortalLayout";
 import InternalSidebar from "../components/navigation/InternalSidebar";
 

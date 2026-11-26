@@ -1,19 +1,19 @@
+import { subaccountProfileLink } from '../../components/navigation/portalNavigation';
 import { useAuth } from '../../auth/AuthContext';
+import PortalDashboard from '../../components/dashboard/PortalDashboard';
+
+const links = [subaccountProfileLink];
 
 export default function SubAccountDashboard() {
     const { user } = useAuth();
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                    Welcome back, {user?.name || 'User'}
-                </h1>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    Welcome to your account dashboard.
-                </p>
-            </div>
-        </div>
+        <PortalDashboard
+            user={user}
+            role="Subaccount"
+            description="Your account workspace at a glance."
+            welcomeDescription="Manage your account and available services."
+            links={links}
+        />
     );
 }

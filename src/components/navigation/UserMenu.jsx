@@ -3,19 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, LogOut, User } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 
-export default function UserMenu() {
+export default function UserMenu({ profilePath: portalProfilePath }) {
     const { user, logout } = useAuth();
     const [open, setOpen] = useState(false);
     const navigate = useNavigate();
 
     const handleProfileClick = () => {
         setOpen(false);
-        const profilePath =
+        const profilePath = portalProfilePath ?? (
             user?.tokenType === 'customer'
                 ? '/customer/profile'
                 : user?.tokenType === 'subaccount'
                     ? '/subaccount/profile'
-                    : '/profile';
+                    : '/profile');
 
         navigate(profilePath);
     };

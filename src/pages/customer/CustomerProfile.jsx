@@ -1,3 +1,5 @@
+import { DashboardPage, DashboardPageHeader, DashboardButton } from "../../components/dashboard/DashboardUI";
+import { ProfileSummary, PasswordField } from "../../components/dashboard/DashboardProfileUI";
 import { sanitizePhoneInput } from "../../utils/phoneInput.js";
 import ApiFieldError from '../../components/common/ApiFieldError';
 import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/errorUtils.js';
@@ -5,10 +7,10 @@ import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/error
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../services/api';
-import { Pencil, X, Save } from 'lucide-react';
+import { Pencil, X, Save, UserRound, ShieldCheck } from 'lucide-react';
 
 export default function CustomerProfile() {
-    const { user } = useAuth();
+    const { user, impersonation } = useAuth();
 
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(user?.name ?? '');
@@ -132,74 +134,20 @@ export default function CustomerProfile() {
         }
     };
 
-    const EyeIcon = ({ visible }) => {
-        if (visible) {
-            return (
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    className="h-5 w-5"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3.98 8.5C2.99 9.82 2.5 11 2.5 11s3.5 6 9.5 6c1.13 0 2.16-.2 3.08-.52M9.88 5.24C10.55 5.08 11.25 5 12 5c6 0 9.5 6 9.5 6s-.86 1.48-2.44 2.93M14.12 14.12a3 3 0 01-4.24-4.24"
-                    />
-                    <path
-                        strokeLinecap="round"
-                        d="M3 3l18 18"
-                    />
-                </svg>
-            );
-        }
-
-        return (
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                className="h-5 w-5"
-            >
-                <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6z"
-                />
-
-                <circle
-                    cx="12"
-                    cy="12"
-                    r="3"
-                />
-            </svg>
-        );
-    };
-
-
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-2xl font-semibold text-gray-900">
-                    My Profile
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">
-                    View and manage your account information.
-                </p>
-            </div>
+        <DashboardPage className="ils-profile">
+            <DashboardPageHeader
+                title={impersonation ? "Customer Profile" : "My Profile"}
+                description={impersonation ? "View and manage customer account information." : "View and manage your account information."}
+            />
+            <ProfileSummary name={user?.name} email={user?.email} role="Customer" />
 
-            <div className="w-full max-w-4xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-4 border-b border-gray-100 pb-4">
-                    <h2 className="text-base font-semibold text-gray-900">
-                        Personal Information
-                    </h2>
+            <div className="ils-profile-panel">
+                <div className="flex flex-wrap items-start justify-between gap-4 border-b border-brand-border pb-5">
+                    <h2 className="ils-profile-section-title"><UserRound size={20} aria-hidden="true" /> Personal Information</h2>
 
                     {!isEditing && (
-                        <button
+                        <DashboardButton
                             type="button"
                             onClick={() => {
                                 setMessage('');
@@ -207,19 +155,19 @@ export default function CustomerProfile() {
                                 setProfileFieldErrors({});
                                 setIsEditing(true);
                             }}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            variant="secondary"
                         >
                             <Pencil size={16} />
                             Edit Profile
-                        </button>
+                        </DashboardButton>
                     )}
                 </div>
 
-                <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
                     <div>
                         <label
                             htmlFor="profile-name"
-                            className="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            className="text-xs font-medium uppercase tracking-wide text-brand-muted"
                         >
                             Name
                         </label>
@@ -229,7 +177,7 @@ export default function CustomerProfile() {
                             value={name}
                             onChange={(event) => { setName(event.target.value); setProfileFieldErrors(previous => ({ ...previous, ownername: undefined })); }}
                             disabled={!isEditing || isSaving}
-                            className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:text-gray-700"
+                            className="mt-2 ils-dashboard-field"
                          autoComplete="name" />
 <ApiFieldError errors={profileFieldErrors} field="ownerName" />
                     </div>
@@ -237,7 +185,7 @@ export default function CustomerProfile() {
                     <div>
                         <label
                             htmlFor="profile-email"
-                            className="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            className="text-xs font-medium uppercase tracking-wide text-brand-muted"
                         >
                             Email
                         </label>
@@ -246,9 +194,9 @@ export default function CustomerProfile() {
                             type="email"
                             value={user?.email ?? ''}
                             readOnly
-                            className="mt-2 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500"
+                            className="mt-2 ils-dashboard-field"
                         />
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-brand-muted">
                             Email cannot be changed here.
                         </p>
                     </div>
@@ -256,7 +204,7 @@ export default function CustomerProfile() {
                     <div>
                         <label
                             htmlFor="profile-phone"
-                            className="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            className="text-xs font-medium uppercase tracking-wide text-brand-muted"
                         >
                             Phone
                         </label>
@@ -267,7 +215,7 @@ export default function CustomerProfile() {
                             value={phone}
                             onChange={(event) => { setPhone(event.target.value); setProfileFieldErrors(previous => ({ ...previous, ownerphone: undefined })); }}
                             disabled={!isEditing || isSaving}
-                            className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:text-gray-700"
+                            className="mt-2 ils-dashboard-field"
                          autoComplete="tel" />
 <ApiFieldError errors={profileFieldErrors} field="ownerPhone" />
                     </div>
@@ -275,7 +223,7 @@ export default function CustomerProfile() {
                     <div>
                         <label
                             htmlFor="profile-company"
-                            className="text-xs font-medium uppercase tracking-wide text-gray-500"
+                            className="text-xs font-medium uppercase tracking-wide text-brand-muted"
                         >
                             Company
                         </label>
@@ -284,15 +232,15 @@ export default function CustomerProfile() {
                             type="text"
                             value={user?.companyName ?? ''}
                             readOnly
-                            className="mt-2 w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-500"
+                            className="mt-2 ils-dashboard-field"
                         />
                     </div>
 
                     <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">
                             Account Type
                         </p>
-                        <p className="mt-2 text-sm font-medium capitalize text-gray-900">
+                        <p className="mt-2 text-sm font-medium capitalize text-brand-text">
                             {user?.tokenType || '-'}
                         </p>
                     </div>
@@ -301,7 +249,7 @@ export default function CustomerProfile() {
                 {error && (
                     <p
                         role="alert"
-                        className="mt-5 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+                        className="mt-5 bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger"
                     >
                         {error}
                     </p>
@@ -310,210 +258,91 @@ export default function CustomerProfile() {
                 {message && (
                     <p
                         role="status"
-                        className="mt-5 rounded-lg bg-green-50 px-4 py-3 text-sm text-green-700"
+                        className="mt-5 bg-brand-success-soft px-4 py-3 text-sm text-brand-success"
                     >
                         {message}
                     </p>
                 )}
 
                 {isEditing && (
-                    <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-100 pt-5">
-                        <button
+                    <div className="mt-6 flex flex-wrap justify-end gap-3 border-t border-brand-border pt-5">
+                        <DashboardButton
                             type="button"
                             onClick={handleCancel}
                             disabled={isSaving}
-                            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                            variant="secondary"
                         >
                             <X size={16} />
                             Cancel
-                        </button>
+                        </DashboardButton>
 
-                        <button
+                        <DashboardButton
                             type="button"
                             onClick={handleSave}
                             disabled={isSaving}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            variant="primary"
                         >
                             <Save size={16} />
                             {isSaving ? 'Saving...' : 'Save Changes'}
-                        </button>
+                        </DashboardButton>
                     </div>
                 )}
             </div>
 
             {/* Change Password */}
-            <div className="w-full max-w-5xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="border-b border-gray-100 pb-5">
-                    <h3 className="text-base font-semibold text-gray-900">
-                        Change Password
-                    </h3>
+            <div className="ils-profile-panel">
+                <div className="border-b border-brand-border pb-5">
+                    <h3 className="ils-profile-section-title"><ShieldCheck size={20} aria-hidden="true" /> Change Password</h3>
 
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="mt-1 text-sm text-brand-muted">
                         Update your account password.
                     </p>
                 </div>
 
                 {passwordError && (
-                    <div className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div className="mt-5 border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         {passwordError}
                     </div>
                 )}
 
                 {passwordSuccess && (
-                    <div className="mt-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <div className="mt-5 border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                         {passwordSuccess}
                     </div>
                 )}
 
-                <div className="mx-auto mt-6 w-full max-w-3xl rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <div className="mt-6 w-full border border-brand-border bg-brand-surface-tint p-4 sm:p-6">
                     <form onSubmit={handleChangePassword}>
-                        {/* Current Password */}
-                        <div>
-                            <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                Current Password
-                            </label>
-
-                            <div className="relative mt-2">
-                                <input
-                                    type={
-                                        showCurrentPassword
-                                            ? 'text'
-                                            : 'password'
-                                    }
-                                    value={currentPassword}
-                                    onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
-                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                                    placeholder="Enter your current password"
-                                    disabled={changingPassword}
-                                    required
-                                 autoComplete="current-password" />
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowCurrentPassword(
-                                            !showCurrentPassword
-                                        )
-                                    }
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
-                                    aria-label={
-                                        showCurrentPassword
-                                            ? 'Hide password'
-                                            : 'Show password'
-                                    }
-                                >
-                                    <EyeIcon
-                                        visible={showCurrentPassword}
-                                    />
-                                </button>
-                            </div>
-<ApiFieldError errors={passwordFieldErrors} field="currentPassword" />
-                        </div>
-
-                        {/* New Password + Confirm Password */}
+                        <PasswordField id="current-password" label="Current Password" value={currentPassword}
+    onChange={(event) => { setCurrentPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, currentpassword: undefined })); }}
+    visible={showCurrentPassword} onToggle={() => setShowCurrentPassword(!showCurrentPassword)}
+    placeholder="Enter your current password" disabled={changingPassword} errors={passwordFieldErrors} field="currentPassword" />
                         <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                            <div>
-                                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                    New Password
-                                </label>
-
-                                <div className="relative mt-2">
-                                    <input
-                                        type={
-                                            showNewPassword
-                                                ? 'text'
-                                                : 'password'
-                                        }
-                                        value={newPassword}
-                                        onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                                        placeholder="Enter your new password"
-                                        minLength={6}
-                                        disabled={changingPassword}
-                                        required
-                                     autoComplete="new-password" />
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowNewPassword(
-                                                !showNewPassword
-                                            )
-                                        }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
-                                        aria-label={
-                                            showNewPassword
-                                                ? 'Hide password'
-                                                : 'Show password'
-                                        }
-                                    >
-                                        <EyeIcon
-                                            visible={showNewPassword}
-                                        />
-                                    </button>
-                                </div>
-<ApiFieldError errors={passwordFieldErrors} field="newPassword" />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                    Confirm New Password
-                                </label>
-
-                                <div className="relative mt-2">
-                                    <input
-                                        type={
-                                            showConfirmPassword
-                                                ? 'text'
-                                                : 'password'
-                                        }
-                                        value={confirmPassword}
-                                        onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                                        placeholder="Confirm your new password"
-                                        minLength={6}
-                                        disabled={changingPassword}
-                                        required
-                                     autoComplete="new-password" />
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowConfirmPassword(
-                                                !showConfirmPassword
-                                            )
-                                        }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
-                                        aria-label={
-                                            showConfirmPassword
-                                                ? 'Hide password'
-                                                : 'Show password'
-                                        }
-                                    >
-                                        <EyeIcon
-                                            visible={showConfirmPassword}
-                                        />
-                                    </button>
-                                </div>
-<ApiFieldError errors={passwordFieldErrors} field="confirmPassword" />
-                            </div>
+                            <PasswordField id="new-password" label="New Password" value={newPassword}
+    onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
+    visible={showNewPassword} onToggle={() => setShowNewPassword(!showNewPassword)}
+    placeholder="Enter your new password" disabled={changingPassword} errors={passwordFieldErrors} field="newPassword" minLength={6} />
+                            <PasswordField id="confirm-password" label="Confirm New Password" value={confirmPassword}
+    onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
+    visible={showConfirmPassword} onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+    placeholder="Confirm your new password" disabled={changingPassword} errors={passwordFieldErrors} field="confirmPassword" minLength={6} />
                         </div>
 
                         {/* Action */}
-                        <div className="mt-6 flex justify-end border-t border-gray-200 pt-5">
-                            <button
+                        <div className="mt-6 flex justify-end border-t border-brand-border pt-5">
+                            <DashboardButton
                                 type="submit"
                                 disabled={changingPassword}
-                                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="primary"
                             >
                                 {changingPassword
                                     ? 'Changing Password...'
                                     : 'Change Password'}
-                            </button>
+                            </DashboardButton>
                         </div>
                     </form>
                 </div>
             </div>
-        </div>
+        </DashboardPage>
     );
 }

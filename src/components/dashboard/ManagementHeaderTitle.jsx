@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { getInternalNavigation } from "../navigation/internalNavigation";
 import "./management-heading.css";
 import { UserRound } from "lucide-react";
+import { customerNavigation, subaccountNavigation, customerProfileLink, subaccountProfileLink } from "../navigation/portalNavigation";
 
 // Use the exact icon component configured for each route in the internal sidebar.
 // The navigation builder includes Super Admin management routes for this lookup;
@@ -15,6 +16,9 @@ const navigationIconByPath = new Map(
   ),
 );
 navigationIconByPath.set("/profile", UserRound);
+for (const item of [...customerNavigation.flatMap(section => section.items), ...subaccountNavigation.flatMap(section => section.items), customerProfileLink, subaccountProfileLink]) {
+  navigationIconByPath.set(item.path, item.icon);
+}
 /** Shared management heading. Presentation only; actions and business logic stay in each page. */
 export default function ManagementHeaderTitle({ title, description, symbol }) {
   const { pathname } = useLocation();

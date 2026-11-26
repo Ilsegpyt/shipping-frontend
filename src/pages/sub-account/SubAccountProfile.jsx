@@ -1,44 +1,11 @@
+import { DashboardPage, DashboardPageHeader, DashboardButton } from "../../components/dashboard/DashboardUI";
+import { ProfileSummary, PasswordField } from "../../components/dashboard/DashboardProfileUI";
 import ApiFieldError from '../../components/common/ApiFieldError';
 import { extractApiErrorMessage, extractApiFieldErrors } from '../../utils/errorUtils';
 import { useState } from 'react';
-import { Eye, EyeOff, LockKeyhole } from 'lucide-react';
+import { UserRound, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../../auth/AuthContext';
 import api from '../../services/api';
-
-function PasswordField({
-    id, label, value, onChange, visible, onToggle, placeholder, disabled, errors, field,
-}) {
-    return (
-        <div>
-            <label htmlFor={id} className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                {label}
-            </label>
-            <div className="relative mt-2">
-                <input
-                    id={id}
-                    type={visible ? 'text' : 'password'}
-                    value={value}
-                    onChange={onChange}
-                    placeholder={placeholder}
-                    disabled={disabled}
-                    required
-                    minLength={id === 'current-password' ? undefined : 8}
-                    autoComplete={id === 'current-password' ? 'current-password' : 'new-password'}
-                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-11 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
-                />
-                <button
-                    type="button"
-                    onClick={onToggle}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 transition hover:text-gray-600"
-                    aria-label={visible ? 'Hide password' : 'Show password'}
-                >
-                    {visible ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-            </div>
-            <ApiFieldError errors={errors} field={field} />
-        </div>
-    );
-}
 
 export default function SubAccountProfile() {
     const { user } = useAuth();
@@ -105,75 +72,68 @@ export default function SubAccountProfile() {
 
 
     return (
-        <div className="space-y-8">
-            <div>
-                <h1 className="text-2xl font-semibold text-gray-900">Profile</h1>
-                <p className="mt-1 text-sm text-gray-500">
-                    View your account information and manage your password.
-                </p>
-            </div>
+        <DashboardPage className="ils-profile">
+            <DashboardPageHeader title="Profile" description="View your account information and manage your password." />
+            <ProfileSummary name={user?.name} email={user?.email} role="Subaccount" />
 
-            <section className="w-full max-w-5xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="border-b border-gray-100 pb-5">
-                    <h2 className="text-base font-semibold text-gray-900">Personal Information</h2>
-                    <p className="mt-1 text-sm text-gray-500">
+            <section className="ils-profile-panel">
+                <div className="border-b border-brand-border pb-5">
+                    <h2 className="ils-profile-section-title"><UserRound size={20} aria-hidden="true" /> Personal Information</h2>
+                    <p className="mt-1 text-sm text-brand-muted">
                         Your account information is read-only. Contact your administrator if it needs to be changed.
                     </p>
                 </div>
 
                 <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
                     <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Name</p>
-                        <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700">
+                        <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">Name</p>
+                        <p className="mt-2 border border-brand-border bg-brand-surface-tint px-3 py-2.5 text-sm text-brand-text">
                             {user?.name || '-'}
                         </p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Email</p>
-                        <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700">
+                        <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">Email</p>
+                        <p className="mt-2 border border-brand-border bg-brand-surface-tint px-3 py-2.5 text-sm text-brand-text">
                             {user?.email || '-'}
                         </p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Phone</p>
-                        <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm text-gray-700">
+                        <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">Phone</p>
+                        <p className="mt-2 border border-brand-border bg-brand-surface-tint px-3 py-2.5 text-sm text-brand-text">
                             {user?.phone || '-'}
                         </p>
                     </div>
                     <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Account Type</p>
-                        <p className="mt-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm capitalize text-gray-700">
+                        <p className="text-xs font-medium uppercase tracking-wide text-brand-muted">Account Type</p>
+                        <p className="mt-2 border border-brand-border bg-brand-surface-tint px-3 py-2.5 text-sm capitalize text-brand-text">
                             {user?.tokenType || 'subaccount'}
                         </p>
                     </div>
                 </div>
             </section>
 
-            <section className="w-full max-w-5xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-start gap-3 border-b border-gray-100 pb-5">
-                    <div className="rounded-lg bg-slate-100 p-2 text-slate-700">
-                        <LockKeyhole size={20} />
-                    </div>
+            <section className="ils-profile-panel">
+                <div className="border-b border-brand-border pb-5">
                     <div>
-                        <h2 className="text-base font-semibold text-gray-900">Change Password</h2>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <h2 className="ils-profile-section-title"><ShieldCheck size={20} aria-hidden="true" /> Change Password</h2>
+                        <p className="mt-1 text-sm text-brand-muted">
                             You can change your password without editing your profile information.
                         </p>
                     </div>
                 </div>
 
                 {passwordError && (
-                    <div role="alert" className="mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <div role="alert" className="mt-5 border border-brand-danger-border bg-brand-danger-soft px-4 py-3 text-sm text-brand-danger">
                         {passwordError}
                     </div>
                 )}
                 {passwordSuccess && (
-                    <div role="status" className="mt-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+                    <div role="status" className="mt-5 border border-brand-success-border bg-brand-success-soft px-4 py-3 text-sm text-brand-success">
                         {passwordSuccess}
                     </div>
                 )}
 
-                <div className="mx-auto mt-6 w-full max-w-3xl rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <div className="mt-6 w-full border border-brand-border bg-brand-surface-tint p-4 sm:p-6">
                     <form onSubmit={handleChangePassword}>
                         <PasswordField
                             id="current-password"
@@ -192,7 +152,7 @@ export default function SubAccountProfile() {
                                 id="new-password"
                                 label="New Password"
                                 value={newPassword}
-                            errors={passwordFieldErrors} field="newPassword"
+                            errors={passwordFieldErrors} field="newPassword" minLength={8}
                                 onChange={(event) => { setNewPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, newpassword: undefined })); }}
                                 visible={showNewPassword}
                                 onToggle={() => setShowNewPassword((value) => !value)}
@@ -203,7 +163,7 @@ export default function SubAccountProfile() {
                                 id="confirm-password"
                                 label="Confirm New Password"
                                 value={confirmPassword}
-                            errors={passwordFieldErrors} field="confirmPassword"
+                            errors={passwordFieldErrors} field="confirmPassword" minLength={8}
                                 onChange={(event) => { setConfirmPassword(event.target.value); setPasswordFieldErrors(previous => ({ ...previous, confirmpassword: undefined })); }}
                                 visible={showConfirmPassword}
                                 onToggle={() => setShowConfirmPassword((value) => !value)}
@@ -212,18 +172,18 @@ export default function SubAccountProfile() {
                             />
                         </div>
 
-                        <div className="mt-6 flex justify-end border-t border-gray-200 pt-5">
-                            <button
+                        <div className="mt-6 flex justify-end border-t border-brand-border pt-5">
+                            <DashboardButton
                                 type="submit"
                                 disabled={changingPassword}
-                                className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                variant="primary"
                             >
                                 {changingPassword ? 'Changing Password...' : 'Change Password'}
-                            </button>
+                            </DashboardButton>
                         </div>
                     </form>
                 </div>
             </section>
-        </div>
+        </DashboardPage>
     );
 }
