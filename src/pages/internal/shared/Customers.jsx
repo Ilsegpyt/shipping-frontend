@@ -1,3 +1,4 @@
+import DashboardFilterDropdown from "../../../components/dashboard/DashboardFilterDropdown";
 import { sanitizePhoneInput } from "../../../utils/phoneInput.js";
 import ApiFieldError from "../../../components/common/ApiFieldError";
 import { DashboardActionItem } from "../../../components/dashboard/DashboardUI";
@@ -581,19 +582,16 @@ export default function Customers() {
                 <DashboardToolbar actions={
                     <>
                         {!isAccountManager && (
-                            <select
+                            <DashboardFilterDropdown
+                                label="Record status"
                                 value={recordStatus}
-                                onChange={(event) => {
-                                    event.stopPropagation();
-                                    handleRecordStatusChange(event);
-                                }}
-                                onClick={(event) => event.stopPropagation()}
-                                className="ils-dashboard-filter-select"
-                            >
-                                <option value="notDeleted">Not Deleted</option>
-                                <option value="deleted">Deleted</option>
-                                <option value="all">All Records</option>
-                            </select>
+                                onChange={(value) => handleRecordStatusChange({ target: { value } })}
+                                options={[
+                                    { value: "notDeleted", label: "Not Deleted" },
+                                    { value: "deleted", label: "Deleted" },
+                                    { value: "all", label: "All Records" },
+                                ]}
+                            />
                         )}
                         {canDelete && selectedCustomerIds.length > 0 && (
                             <DashboardButton

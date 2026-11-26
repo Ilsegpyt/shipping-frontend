@@ -1,3 +1,4 @@
+import { resolveStaticLinkUrl } from "../../../utils/staticLinkPages";
 import ApiFieldError from "../../../components/common/ApiFieldError";
 import { DashboardPage, DashboardPageHeader, DashboardButton, DashboardTableSurface, DashboardStatusBadge, DashboardActionMenu, DashboardActionItem } from "../../../components/dashboard/DashboardUI";
 import { Plus, ChevronDown, ChevronRight, Ellipsis } from "lucide-react";
@@ -772,7 +773,9 @@ export default function Content() {
 
     }
 
-    if (form.type === "Link" && !form.linkUrl.trim()) {
+    const automaticLinkUrl = resolveStaticLinkUrl(form.title, form.linkUrl);
+    const linkUrl = automaticLinkUrl || form.linkUrl.trim();
+    if (form.type === "Link" && !linkUrl) {
 
       setSaveError("Link URL is required.");
 
@@ -809,7 +812,7 @@ export default function Content() {
 
       featuredImage: supportsHeroUpload(form.type, form.linkUrl, form.title) ? form.featuredImage || null : null,
 
-      linkUrl: form.type === "Link" ? form.linkUrl || null : null,
+      linkUrl: form.type === "Link" ? linkUrl : null,
 
       category: form.type === "Post" ? form.category.trim() || null : null,
 
@@ -1400,9 +1403,9 @@ export default function Content() {
               </div>
             )}
 
-            {/* Link URL */}
+            {/* Manual URL only for links without a known static route */}
 
-            {form.type === "Link" && (
+            {form.type === "Link" && !resolveStaticLinkUrl(form.title, form.linkUrl) && (
               <div>
                 <label className="mb-2 block text-sm font-medium text-brand-text">
                   Link URL

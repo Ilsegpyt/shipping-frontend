@@ -1,0 +1,19 @@
+.ils-dashboard-filter-dropdown { position: relative; flex: 0 0 auto; max-width: 100%; }
+.ils-dashboard-filter-trigger { width: 100%; min-width: 9.5rem; justify-content: flex-start; border-radius: 0; }
+.ils-dashboard-filter-trigger span { flex: 1; text-align: left; }
+.ils-dashboard-filter-trigger svg { flex-shrink: 0; }
+.ils-dashboard-filter-trigger .is-open { transform: rotate(180deg); }
+.ils-dashboard-filter-options {
+    position: absolute; top: calc(100% + 4px); right: 0; z-index: 50;
+    width: 100%; min-width: 9.5rem; padding: 4px;
+    border: 1px solid var(--color-border); background: var(--color-surface);
+    box-shadow: 0 6px 18px rgb(20 22 37 / 12%); border-radius: 0;
+}
+.ils-dashboard-filter-option {
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+    width: 100%; padding: .6rem .65rem; text-align: left; cursor: pointer;
+    font-size: .84rem; color: var(--color-primary); border: 0; border-radius: 0;
+    background: var(--color-surface);
+}
+.ils-dashboard-filter-option:hover, .ils-dashboard-filter-option:focus-visible { background: var(--color-surface-blue); outline: 2px solid var(--color-accent); outline-offset: -2px; }
+.ils-dashboard-filter-option[aria-selected="true"] { background: var(--color-primary); color: var(--color-text-inverse); }

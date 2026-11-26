@@ -1,25 +1,8 @@
 import { useEffect, useState } from "react";
 import contentService from "../services/contentService";
 
-const HERO_PAGES = [
-  { paths: ["/join-ils/agent-opportunity", "/agent"], titles: ["agent opportunity"] },
-  { paths: ["/join-ils/recruitment", "/recruitment", "/join-our-team"], titles: ["join our team", "recruitment"] },
-  { paths: ["/contact-ils/locations", "/contact-ils/ils-branches", "/ils-locations", "/locations", "/branches"], titles: ["ils locations", "ils branches", "locations", "branches"] },
-  { paths: ["/contact-ils/get-a-quote", "/get-a-quote", "/quotation", "/quote"], titles: ["quotation", "get a quote", "request a quote", "quote request"] },
-  { paths: ["/resources/nafeza-platform", "/nafeza"], titles: ["nafeza", "nafeza platform"] },
-  { paths: ["/resources/cbm-calculator", "/cbm-calculator"], titles: ["cbm calculator"] },
-  { paths: ["/resources/customs-duties-calculator", "/customs-duties-calculator"], titles: ["customs duties calculator"] },
-];
+import { HERO_PAGES, normalizeTitle, normalizePath } from "../utils/staticLinkPages";
 
-const normalizeTitle = (value) => String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
-const normalizePath = (value) => {
-  if (!value) return "";
-  try {
-    return new URL(String(value), window.location.origin).pathname.toLowerCase().replace(/\/+$/, "") || "/";
-  } catch {
-    return "";
-  }
-};
 const isLink = (item) => ["link", "4"].includes(String(item?.type || "").toLowerCase());
 const isContainer = (item) => ["category", "1", "page", "2"].includes(String(item?.type || "").toLowerCase());
 

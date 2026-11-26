@@ -106,6 +106,18 @@ const getContentTypeName = (type) =>
     ? type
     : ({ 1: "Category", 2: "Page", 3: "Post", 4: "Link" }[type] || "");
 
+// Only allow website-relative paths and HTTP(S) destinations.
+function getSafeCmsLink(value) {
+  const url = String(value || "").trim();
+  if (!url || /[\\\u0000-\u0020]/.test(url)) return null;
+  if (url.startsWith("/") && !url.startsWith("//")) return { to: url };
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) return null;
+    return { href: parsed.href };
+  } catch { return null; }
+}
+
 const normalizeNavTitle = (value = "") =>
   value.trim().toLowerCase().replace(/^ils\s+/, "").replace(/&/g, "and").replace(/\s+/g, " ");
 
@@ -160,10 +172,15 @@ async function getDynamicPageLinks(rootCategory) {
       const type = getContentTypeName(child.type);
       if (type === "Category") {
         await walk(child, [...categoryTrail, child.title].filter(Boolean));
-      } else if (type === "Page" && child.id && child.title) {
+      } else if ((type === "Page" || type === "Link") && child.id && child.title) {
         const prefix = categoryTrail.length
           ? `${categoryTrail.join(" / ")} / `
           : "";
+        if (type === "Link") {
+          const destination = getSafeCmsLink(child.linkUrl);
+          if (destination) links.push({ label: `${prefix}${child.title}`, ...destination });
+          continue;
+        }
         links.push({
           label: `${prefix}${child.title}`,
           to: (isSolutions && SOLUTION_PUBLIC_ROUTES[normalizeNavTitle(child.title)])
@@ -246,7 +263,8 @@ function NavDropdown({ label, links }) {
 
       {isOpen && (
         <div className="absolute left-1/2 top-full z-50 w-64 -translate-x-1/2 rounded-none border border-brand-border bg-white p-2 shadow-xl">
-          <div className="space-y-0.5">
+          <div className="max-h-[60vh] space-y-0.5 overflow-y-auto">
+            {!links.length && <p className="px-3 py-2 text-sm text-brand-text">No pages yet.</p>}
             {links.map((link) => (
               <NavLink
                 key={link.label}
@@ -279,14 +297,13 @@ export default function WebsiteNavbar() {
         const response = await contentService.getRootContent();
         const roots = Array.isArray(response?.data) ? response.data : [];
         const categoryRoots = roots.filter(
-          (item) => getContentTypeName(item.type) === "Category" && item.id,
+          (item) => getContentTypeName(item.type) === "Category" && item.id && item.title,
         );
 
         const nextGroups = navGroups.map((group) => ({ ...group, links: [...group.links] }));
 
         for (const root of categoryRoots) {
           const links = await getDynamicPageLinks(root);
-          if (!links.length) continue;
 
           const groupLabel = getNavGroupLabel(root.title || "");
           let group = nextGroups.find(
@@ -310,7 +327,8 @@ export default function WebsiteNavbar() {
 
           const dynamicLabels = new Set(dynamicByLabel.keys());
           group.links = group.links.filter(
-            (link) => !dynamicLabels.has(normalizeNavTitle(link.label)),
+            (link) => !dynamicLabels.has(normalizeNavTitle(link.label)) &&
+              !links.some((dynamic) => (dynamic.to || dynamic.href) === (link.to || link.href)),
           );
 
           const existingLabels = new Set(
@@ -318,7 +336,7 @@ export default function WebsiteNavbar() {
           );
 
           for (const [key, link] of dynamicByLabel) {
-            if (!existingLabels.has(key)) {
+            if (!existingLabels.has(key) && !group.links.some((existing) => (existing.to || existing.href) === (link.to || link.href))) {
               group.links.push(link);
               existingLabels.add(key);
             }
@@ -370,7 +388,7 @@ export default function WebsiteNavbar() {
           {/* Desktop navigation */}
           <nav
             aria-label="Main navigation"
-            className="hidden items-center gap-1 lg:flex"
+            className="hidden min-w-0 flex-wrap items-center justify-center gap-1 lg:flex"
           >
             {displayNavGroups.map((group) => (
               <NavDropdown
@@ -475,6 +493,7 @@ export default function WebsiteNavbar() {
 
                   {isExpanded && (
                     <div id={panelId} className="space-y-1 pb-2 pl-3">
+                      {!group.links.length && <p className="px-3 py-2 text-sm text-brand-text">No pages yet.</p>}
                       {group.links.map((link) => (
                         <NavLink
                           key={link.label}
